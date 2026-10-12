@@ -19,7 +19,7 @@
     "rust:fmt": "cargo fmt --all --check",
     "rust:clippy": "cargo clippy --all-targets -- -D warnings",
     "rust:test": "cargo test",
-    "rust:test:portable": "cargo test -p dj-assistant-core -p dj-assistant-schema-tests",
+    "rust:test:portable": "cargo test -p dj-assistant-core -p dj-assistant-analysis -p dj-assistant-schema-tests",
     "ci:local": "pnpm lint && pnpm typecheck && pnpm test && pnpm rust:fmt && pnpm rust:clippy && pnpm rust:test",
     "ci:local:portable": "pnpm lint && pnpm typecheck && pnpm test && pnpm rust:fmt && pnpm rust:clippy && pnpm rust:test:portable"
   },

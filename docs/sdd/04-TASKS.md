@@ -76,14 +76,14 @@
 ## Phase 1 — Analysis Engine (Days 16–35)
 
 ### 1.1 ONNX & Models
-- [ ] **T1.1.1** Integrate ONNX Runtime in Rust
-- [ ] **T1.1.2** Model loading + path configuration + version stamp
+- [x] **T1.1.1** Integrate ONNX Runtime in Rust — *`crates/analysis`: `ort` dynamic loading, dylib discovery, SHA-256 verification, executed smoke-test graph*
+- [x] **T1.1.2** Model loading + path configuration + version stamp — *`ModelSpec` (id/version/filename/sha256/rate/channels) + `ModelRegistry` JSON; `ORT_DYLIB_PATH` + platform dylib discovery*
 - [ ] **T1.1.3** BPM + beat grid inference path
 - [ ] **T1.1.4** Key detection (Camelot + classical)
 - [ ] **T1.1.5** Phrase / structure segmentation
 - [ ] **T1.1.6** Vocal presence / density
 - [ ] **T1.1.7** Loudness (EBU R128)
-- [ ] **T1.1.8** Model registry / analysis_version field
+- [ ] **T1.1.8** Model registry / analysis_version field — *registry type in place; DB `analysis_version` column + stamping still to do*
 
 ### 1.2 Pipeline & UI
 - [ ] **T1.2.1** Local analysis job queue

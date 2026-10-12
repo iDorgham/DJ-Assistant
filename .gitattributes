@@ -11,6 +11,7 @@
 *.png binary
 *.ico binary
 *.icns binary
+*.onnx binary
 *.wav binary
 *.flac binary
 *.aiff binary
