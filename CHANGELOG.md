@@ -9,6 +9,14 @@ project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- **GitHub repository + green CI** — the workspace is now under version control and pushed to
+  `github.com/iDorgham/dj-assistant` (private, `main`). The **first Main CI run (`38219344042`) is
+  green on all three jobs**: *Full Validate* on `ubuntu-latest` (lint / typecheck / tests +
+  `cargo fmt --check` / `clippy -D warnings` / `cargo test`) and the reusable `desktop-build` matrix
+  on both **`windows-latest`** and **`macos-latest`** — which closes the macOS half of Phase 0
+  criterion **P0.1**. A `.gitattributes` pins LF for cross-platform checkouts.
+- **Dependabot** (`.github/dependabot.yml`) — weekly grouped updates for the pnpm workspace, the
+  Cargo workspace and GitHub Actions.
 - **Tauri-free core crate** `crates/core` (`dj-assistant-core`) holding the audio discovery
   rules, BLAKE3 fingerprinting, tag metadata extraction, RIFF/AIFF duration parsers and scan
   de-duplication. Keeping this free of Tauri keeps it unit-testable on any toolchain,
@@ -83,6 +91,11 @@ project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   search-filtered list, post-relaunch list) backing the P0.2/P0.6/P0.8 claims.
 
 ### Changed
+
+- **CI workflows** — removed the duplicate pnpm version (`version: 10`) so `pnpm/action-setup` reads
+  the version from `package.json` `packageManager` (single source of truth); Ubuntu jobs now install
+  the canonical `libayatana-appindicator3-dev` (plus `libxdo-dev`/`libssl-dev`) instead of the
+  deprecated `libappindicator3-dev`; the Linux *Full Validate* job caches cargo.
 
 - **`extract_metadata` moved to `dj-assistant-core`** and hardened: AIFF support via an `id3`
   fallback, `TDRC` year handling, container duration fallbacks, and blank-tag trimming.
@@ -172,11 +185,10 @@ project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   `pnpm rust:test:portable` on GNU, or install MSVC.
 - **MSVC toolchain not installed on the current development machine** — the
   `Microsoft Visual Studio` directories and Windows SDK are absent. See runbook §1.1.
-- **No macOS build evidence** — P0.1 requires macOS *and* Windows; there is no macOS machine
-  and no CI build matrix yet (task T0.1.8).
+- **No macOS *workstation*** — macOS boot/build is now covered by CI (`macos-latest` in
+  `desktop-build.yml`), but there is no physical macOS machine for hands-on GUI verification.
 - **No `.m4a` fixture** — `m4a` is an advertised supported extension but no M4A/AAC encoder is
   available in this environment, so it is untested.
-- ESLint is not configured (Prettier + TypeScript `strict` are the current gates).
 - `fixtures/audio/mp3/tagged-mp3-125.mp3` has silent, hand-built audio (no MP3 encoder exists
   in this toolchain). It is valid for **tag-parsing tests only** and must never be used for
   duration/BPM/key assertions.

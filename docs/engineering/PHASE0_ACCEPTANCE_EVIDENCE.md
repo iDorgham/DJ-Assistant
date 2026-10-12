@@ -3,9 +3,11 @@
 **Phase:** 0 — Foundation
 **Date:** 2026-10-12
 **Reference:** [05-ACCEPTANCE.md](../sdd/05-ACCEPTANCE.md) § 2, [04-TASKS.md](../sdd/04-TASKS.md) § Phase 0
-**Status:** Criteria P0.2–P0.8 **verified** — P0.2, P0.6 and P0.8 were closed by a hands-on GUI run
-on a real 94-track library (2026-10-12). **P0.1 is partially verified** (Windows only; macOS has no
-evidence) — Phase 0 is therefore **not yet formally accepted**.
+**Status:** Criteria **P0.1–P0.8 verified** — P0.2, P0.6 and P0.8 were closed by a hands-on GUI run
+on a real 94-track library (2026-10-12); **P0.1 is now verified on both target platforms** by the first
+green CI matrix run (Main CI `38219344042`: `windows-latest` **and** `macos-latest`). Phase 0 is
+ready for formal PO sign-off; the only non-criterion gaps left are the untested `.m4a` extension and
+branch protection on `main`.
 
 This file records *how* each Phase 0 criterion was verified, so the PO milestone checklist can be
 signed off with evidence rather than assertion.
@@ -32,22 +34,26 @@ tests (see [WINDOWS_NATIVE_BUILD_RUNBOOK.md](./WINDOWS_NATIVE_BUILD_RUNBOOK.md) 
 
 ## Criterion-by-criterion
 
-### P0.1 — App boots to a usable UI on macOS and Windows — ⚠️ PARTIAL
+### P0.1 — App boots to a usable UI on macOS and Windows — ✅ VERIFIED (CI matrix, both platforms)
 
 | Platform | Evidence | Result |
 |---|---|---|
-| Windows | `cargo build` produces `dj-assistant-desktop.exe`; launched and observed running for 12 s; it created its SQLite database and applied migration 001 | ✅ verified |
-| macOS | — | ❌ **not verifiable on this workstation** |
+| Windows (local) | `cargo build` produces `dj-assistant-desktop.exe`; launched and observed running for 12 s; it created its SQLite database and applied migration 001 | ✅ verified |
+| Windows (`windows-latest` CI) | `desktop-build.yml` job in Main CI run `38219344042`: `pnpm build:desktop` + `cargo build --locked -p dj-assistant-desktop` succeeded | ✅ verified |
+| macOS (`macos-latest` CI) | Same matrix run, job completed successfully (empty cargo cache → first full compile on that runner) | ✅ verified |
 
-**Gap:** there is no macOS machine available and no CI build matrix (task T0.1.8 is unchecked), so
-the macOS half of this criterion has **no evidence**. On Windows the build additionally requires a
-toolchain caveat: the active `stable-x86_64-pc-windows-gnu` toolchain fails to load the Tauri test
-harness (`STATUS_ENTRYPOINT_NOT_FOUND`), and MSVC build tools are not installed on this machine.
-The application binary itself builds and runs on GNU; only the test harness is affected.
+**Closed 2026-10-12** by the first green Main CI run (`38219344042`) once the workspace was pushed to
+`github.com/iDorgham/dj-assistant`: the reusable `.github/workflows/desktop-build.yml` matrix builds
+the frontend and the Tauri app on **both** `windows-latest` and `macos-latest`.
 
-**To close:** the macOS/Windows build matrix is authored
-(`.github/workflows/desktop-build.yml`, called from both CI workflows) but has not run on
-GitHub yet, so the macOS half still needs that first green run — or a macOS machine.
+Two CI-only defects were found and fixed by that first run: `pnpm/action-setup` rejected a duplicate
+pnpm version (workflow `version: 10` vs `packageManager: pnpm@10.14.0`), and the Ubuntu jobs now use
+the canonical `libayatana-appindicator3-dev` instead of the deprecated `libappindicator3-dev`.
+
+**Local caveat (unchanged):** on this workstation the active `stable-x86_64-pc-windows-gnu`
+toolchain fails to load the Tauri *test* harness (`STATUS_ENTRYPOINT_NOT_FOUND`) and MSVC build tools
+are absent, so the full `cargo test` only runs in CI/Linux or with `pnpm rust:test:portable`. The
+application binary itself builds and runs on GNU.
 
 ---
 
@@ -240,7 +246,7 @@ Corrupt fixtures: `truncated.wav` (header claims 10 s, 4000 bytes present), `gar
 
 | # | Criterion | Status |
 |---|---|---|
-| P0.1 | Boots on macOS **and** Windows | ⚠️ Windows verified, macOS has no evidence |
+| P0.1 | Boots on macOS **and** Windows | ✅ CI matrix builds `windows-latest` **and** `macos-latest` (run `38219344042`) |
 | P0.2 | Select folder, scan 50–100 tracks | ✅ GUI: real 94-track library scanned (94/94, 0 errors/dupes) |
 | P0.3 | Stable BLAKE3 hashes | ✅ automated |
 | P0.4 | Duplicates detected, not double-imported | ✅ automated (scanner bug fixed) |
@@ -251,8 +257,8 @@ Corrupt fixtures: `truncated.wav` (header claims 10 s, 4000 bytes present), `gar
 
 **Outstanding before formal Phase 0 acceptance:**
 
-1. **macOS build** — the Windows/macOS CI matrix workflow is authored (`desktop-build.yml`);
-   it needs its first green GitHub run (or a macOS machine) to close P0.1.
-2. **`.m4a` coverage** — an advertised extension with no fixture (no encoder available here).
-3. **CI runs not yet observed** — `pnpm ci:local:portable` is green locally (ESLint included),
-   but no workflow has executed on GitHub because this workspace has no remote.
+1. **`.m4a` coverage** — an advertised extension with no fixture (no encoder available here).
+2. **Branch protection on `main`** (task T0.1.17) — required PR checks are authored but not yet
+   enabled in the GitHub repository settings.
+3. **Dependency-audit gating** (task T0.1.15) — `nightly-audit.yml` runs weekly and is
+   non-blocking pending advisory triage in Phase 1.

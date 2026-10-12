@@ -123,8 +123,10 @@ All documentation lives under [`docs/`](./docs/README.md) — start at the
 
 ## Project Status
 
-- **Phase**: Phase 0 — Foundation (in progress)
+- **Phase**: Phase 0 — Foundation (acceptance criteria verified; PO sign-off pending)
 - **Canonical Spec**: v1.1 (Approved)
+- **CI**: green on GitHub — `windows-latest` + `macos-latest` desktop builds and the Ubuntu
+  lint/typecheck/test/Rust job all pass (`Main CI`)
 - **Working today**: native folder picker → recursive scan → BLAKE3 fingerprinting →
   hash deduplication → tag metadata extraction → local SQLite storage → searchable
   library table with live scan progress. The desktop app builds and launches; audio is

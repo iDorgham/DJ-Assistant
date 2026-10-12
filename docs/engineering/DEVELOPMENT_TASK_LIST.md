@@ -13,10 +13,11 @@ This is the actionable engineering task list. Check items off as they are comple
 > tag-sourced cover art, BPM, key, rating and comments in the library list (no ONNX
 > analysis yet), backed by an MP3 duration parser and a content-addressed `get_artwork`
 > cache. ESLint 10 (flat config) is wired into
-> `pnpm lint`, and a macOS/Windows desktop-build matrix is authored
-> (`.github/workflows/desktop-build.yml`) pending its first green run. Remaining
-> Phase 0 gaps: dependency-audit gating (`nightly-audit.yml` runs weekly, non-blocking),
-> branch protection, and that first CI matrix run. Windows builders: read
+> `pnpm lint`, and the macOS/Windows desktop-build matrix
+> (`.github/workflows/desktop-build.yml`) is **green on GitHub** as of 2026-10-12
+> (Main CI run `38219344042`: ubuntu Full Validate + `windows-latest` + `macos-latest`).
+> Remaining Phase 0 gaps: dependency-audit gating (`nightly-audit.yml` runs weekly,
+> non-blocking) and branch protection on `main`. Windows builders: read
 > [WINDOWS_NATIVE_BUILD_RUNBOOK.md](./WINDOWS_NATIVE_BUILD_RUNBOOK.md) §1.1 first —
 > the GNU toolchain and paths containing spaces both break the build.
 
@@ -41,7 +42,7 @@ This is the actionable engineering task list. Check items off as they are comple
 - [x] Create `packages/shared` for shared types
 - [x] Set up ESLint, Prettier, TypeScript strict config (ESLint 10 flat config; `pnpm lint` runs all three)
 - [x] Set up `cargo fmt` + Clippy in CI
-- [ ] Basic GitHub Actions CI: lint + typecheck + build (macOS + Windows) — *ubuntu lint/typecheck/test jobs run; the Windows/macOS build matrix is authored but not yet green*
+- [x] Basic GitHub Actions CI: lint + typecheck + build (macOS + Windows) — *first green Main CI run 2026-10-12: Full Validate (ubuntu-latest) + `desktop-build.yml` matrix (`windows-latest`, `macos-latest`)*
 - [x] Add `.env.example` files and document required variables
 - [x] Create `scripts/download-models.sh` (placeholder)
 
@@ -61,7 +62,7 @@ This is the actionable engineering task list. Check items off as they are comple
 ### Exit Criteria — Phase 0
 - [ ] Can point at a folder of 50–100 tracks and see them listed with correct basic metadata
 - [ ] Hashes are stable and duplicates are detected
-- [ ] App builds on macOS and Windows via CI
+- [x] App builds on macOS and Windows via CI
 - [ ] No crashes on malformed / unsupported files (graceful skip + log)
 
 ---

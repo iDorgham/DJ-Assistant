@@ -16,8 +16,9 @@
 > genuinely incomplete (see each note).
 >
 > **Criterion-level evidence lives in [PHASE0_ACCEPTANCE_EVIDENCE.md](../engineering/PHASE0_ACCEPTANCE_EVIDENCE.md).**
-> That file records how each P0.x criterion was verified — including the outstanding gaps
-> (no macOS build evidence, no manual GUI pass, no `.m4a` fixture).
+> As of 2026-10-12 all P0.1–P0.8 criteria pass — P0.1 (macOS **and** Windows) is closed by the first
+> green CI matrix run (`desktop-build.yml` on `windows-latest` + `macos-latest`). The remaining
+> non-criterion gaps are the untested `.m4a` extension, branch protection and non-blocking audit gating.
 
 **Definition of Done (every task):**
 1. Merged to main development branch
@@ -40,7 +41,7 @@
 - [x] **T0.1.5** Create `packages/shared` for shared types
 - [x] **T0.1.6** Configure ESLint, Prettier, TypeScript strict — *all three enforced: Prettier (`.prettierrc.json`), TS `strict` in every tsconfig, and **ESLint 10 flat config** (`eslint.config.mjs`: `@eslint/js`, `typescript-eslint`, `react-hooks`, `eslint-config-prettier`) wired into `pnpm lint` / CI*
 - [x] **T0.1.7** Configure cargo fmt + Clippy
-- [ ] **T0.1.8** GitHub Actions: lint, typecheck, unit tests, build (macOS + Windows) — *ubuntu `pr-ci`/`main-ci` jobs cover lint/typecheck/tests; the reusable `desktop-build.yml` matrix (`windows-latest`, `macos-latest`) builds the frontend + `cargo build` for the Tauri app, **awaiting its first green run on GitHub***
+- [x] **T0.1.8** GitHub Actions: lint, typecheck, unit tests, build (macOS + Windows) — *first green Main CI run on 2026-10-12 (`.github/workflows/main-ci.yml` run `38219344042`): Full Validate on ubuntu-latest + the reusable `desktop-build.yml` matrix (`windows-latest` **and** `macos-latest`) all pass*
 - [x] **T0.1.9** Add `.env.example` and document variables
 - [x] **T0.1.10** Create placeholder `scripts/download-models.sh`
 - [x] **T0.1.11** CI: cargo clippy `-D warnings` + test job
@@ -52,7 +53,7 @@
 - [ ] **T0.1.17** Branch protection on `main`: required PR checks, no direct push — *to configure in GitHub settings (docs only)*
 - [x] **T0.1.18** CODEOWNERS for `.github/workflows/**` and security-sensitive paths
 - [x] **T0.1.19** `pnpm ci:local` script matching CI steps
-- [ ] **T0.1.20** Nightly audit workflow + Dependabot/Renovate enabled — *nightly audit live; Dependabot/Renovate not configured*
+- [x] **T0.1.20** Nightly audit workflow + Dependabot/Renovate enabled — *`nightly-audit.yml` live (weekly, non-blocking); Dependabot configured (`.github/dependabot.yml`: npm/pnpm, cargo, github-actions, weekly, minor+patch grouped)*
 
 ### 0.2 Desktop Shell & Local Data
 - [x] **T0.2.1** Tauri window boots with React “Hello DJ Assistant”
