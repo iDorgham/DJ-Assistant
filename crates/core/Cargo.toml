@@ -1,0 +1,39 @@
+[package]
+name = "dj-assistant-core"
+version = "0.1.0"
+edition = "2021"
+description = "Tauri-free core: audio discovery, fingerprinting and metadata extraction"
+publish = false
+
+# Deliberately free of Tauri (and therefore WebView2). This keeps the library's
+# core logic unit-testable on any toolchain, including
+# stable-x86_64-pc-windows-gnu where the Tauri-linked test harness cannot load.
+[dependencies]
+audiotags = "0.5"
+blake3 = "1.5"
+walkdir = "2.5"
+# Used as a fallback tag reader for containers `audiotags` cannot read (AIFF),
+# and as the primary reader for the extras `audiotags` does not expose (BPM, key,
+# rating, comment, cover art) on ID3-bearing containers.
+id3 = "1.17"
+# Reads FLAC Vorbis comments and picture blocks (the extras `audiotags` hides).
+metaflac = "0.2"
+
+# Only the `scan` diagnostic binary needs SQLite; the library itself stays free of
+# it so it can be tested without a database.
+rusqlite = { version = "0.31", features = ["bundled"], optional = true }
+
+[features]
+default = []
+# Enables the `scan` binary.
+cli = ["dep:rusqlite"]
+
+[[bin]]
+name = "dj-scan"
+path = "src/bin/scan.rs"
+required-features = ["cli"]
+
+[dev-dependencies]
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+sha2 = "0.10"

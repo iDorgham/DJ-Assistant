@@ -1,0 +1,17 @@
+{
+  "name": "@dj-assistant/shared",
+  "version": "0.1.0",
+  "private": true,
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "prepare": "pnpm build",
+    "typecheck": "tsc --noEmit",
+    "lint": "prettier --check \"src/**/*.ts\" \"test/**/*.js\"",
+    "test": "node --test \"test/**/*.test.js\""
+  },
+  "devDependencies": {
+    "typescript": "^5.7.3"
+  }
+}

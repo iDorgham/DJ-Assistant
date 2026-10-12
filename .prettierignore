@@ -1,0 +1,27 @@
+# Dependencies
+node_modules/
+
+# Build output (generated)
+dist/
+build/
+target/
+apps/api/dist/
+packages/shared/dist/
+apps/desktop/dist/
+
+# Tauri generated artifacts
+apps/desktop/src-tauri/gen/
+apps/desktop/src-tauri/target/
+**/Cargo.lock
+
+# Lockfiles
+pnpm-lock.yaml
+
+# Local env
+.env
+.env.local
+
+# Docs are author-formatted (long prose lines, tables, mermaid)
+*.md
+docs/
+fixtures/

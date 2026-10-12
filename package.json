@@ -1,0 +1,37 @@
+{
+  "name": "dj-assistant",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Desktop-first DJ preparation app",
+  "packageManager": "pnpm@10.14.0",
+  "scripts": {
+    "dev:desktop": "pnpm --filter @dj-assistant/desktop dev",
+    "dev:api": "pnpm --filter @dj-assistant/api dev",
+    "build:shared": "pnpm --filter @dj-assistant/shared build",
+    "build:desktop": "pnpm build:shared && pnpm --filter @dj-assistant/desktop build",
+    "build:api": "pnpm build:shared && pnpm --filter @dj-assistant/api build",
+    "lint": "pnpm --recursive run lint && pnpm lint:root && pnpm lint:eslint",
+    "lint:root": "prettier --check \"*.{json,md,yaml,yml,mjs}\" \".github/**/*.yml\"",
+    "lint:eslint": "eslint .",
+    "typecheck": "pnpm build:shared && pnpm --recursive run typecheck",
+    "test": "pnpm --recursive run test",
+    "format": "prettier --write \"**/*.{ts,tsx,js,mjs,json,yaml,yml}\" \"*.md\"",
+    "rust:fmt": "cargo fmt --all --check",
+    "rust:clippy": "cargo clippy --all-targets -- -D warnings",
+    "rust:test": "cargo test",
+    "rust:test:portable": "cargo test -p dj-assistant-core -p dj-assistant-schema-tests",
+    "ci:local": "pnpm lint && pnpm typecheck && pnpm test && pnpm rust:fmt && pnpm rust:clippy && pnpm rust:test",
+    "ci:local:portable": "pnpm lint && pnpm typecheck && pnpm test && pnpm rust:fmt && pnpm rust:clippy && pnpm rust:test:portable"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "@types/node": "^22.13.0",
+    "eslint": "^10.12.0",
+    "eslint-config-prettier": "^10.1.8",
+    "eslint-plugin-react-hooks": "^7.1.1",
+    "globals": "^17.13.0",
+    "prettier": "^3.5.0",
+    "typescript": "^5.7.3",
+    "typescript-eslint": "^8.71.1"
+  }
+}

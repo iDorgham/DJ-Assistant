@@ -1,0 +1,54 @@
+name: Desktop Build
+
+# Reusable workflow: compiles the Tauri desktop app on both supported desktop
+# platforms (macOS + Windows). Called from PR CI and Main CI.
+on:
+  workflow_call:
+
+jobs:
+  build:
+    name: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache cargo
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-
+
+      - name: Install JS
+        run: pnpm install --frozen-lockfile
+
+      # `tauri::generate_context!` embeds the frontend bundle at compile time,
+      # so the web assets must be built before `cargo build`.
+      - name: Build frontend
+        run: pnpm build:desktop
+
+      - name: Build desktop app (Rust)
+        run: cargo build --locked -p dj-assistant-desktop

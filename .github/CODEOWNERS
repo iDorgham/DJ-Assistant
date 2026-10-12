@@ -1,0 +1,4 @@
+# Security-sensitive code ownership per T0.1.18
+* @dj-assistant-core
+.github/workflows/** @dj-assistant-devops
+apps/desktop/src-tauri/src/security.rs @dj-assistant-security

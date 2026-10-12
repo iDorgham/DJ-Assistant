@@ -1,0 +1,14 @@
+[package]
+name = "dj-assistant-schema-tests"
+version = "0.1.0"
+edition = "2021"
+publish = false
+
+# Deliberately depends only on rusqlite (no Tauri). This lets the SQLite schema
+# and query contracts be verified on any host without pulling in the Tauri /
+# WebView2 native stack, which cannot be linked by every Windows toolchain.
+[dependencies]
+rusqlite = { version = "0.31", features = ["bundled"] }
+
+[lib]
+path = "src/lib.rs"

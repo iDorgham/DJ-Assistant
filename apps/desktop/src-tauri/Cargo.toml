@@ -1,0 +1,36 @@
+[package]
+name = "dj-assistant-desktop"
+version = "0.1.0"
+description = "Desktop-first DJ preparation app"
+authors = ["DJ Assistant Team"]
+edition = "2021"
+
+[lib]
+name = "dj_assistant_lib"
+# NOTE: `cdylib`/`staticlib` are only required for Tauri mobile (iOS/Android) targets.
+# They are omitted here because MinGW's `ld` cannot link this crate's export surface
+# as a DLL on x86_64-pc-windows-gnu (fails with "export ordinal too large").
+# Re-add ["staticlib", "cdylib", "rlib"] when a mobile target is introduced.
+crate-type = ["rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2.0.0", features = [] }
+
+[dependencies]
+tauri = { version = "2.0.0", features = [] }
+tauri-plugin-dialog = "2.0.0"
+# Tauri-free core logic (discovery, fingerprinting, metadata). Kept as a separate
+# crate so it stays unit-testable without linking WebView2.
+dj-assistant-core = { path = "../../../crates/core" }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+rusqlite = { version = "0.31", features = ["bundled"] }
+# NOTE: `blake3`, `audiotags` and `walkdir` are intentionally absent here — that
+# logic now lives in dj-assistant-core. Re-add only if this crate needs them directly.
+uuid = { version = "1.10", features = ["v4", "serde"] }
+# Base64-encodes cached cover art for the `get_artwork` command's data URL.
+base64 = "0.22"
+chrono = { version = "0.4", features = ["serde"] }
+thiserror = "1.0"
+log = "0.4"
+env_logger = "0.11"

@@ -1,0 +1,52 @@
+name: Nightly Audit
+
+# Weekly security audit (non-blocking for now). Intended to become gating on
+# critical/high in Phase 1 as advisories are triaged.
+on:
+  schedule:
+    # Mondays at 09:00 UTC (weekly)
+    - cron: "0 9 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: nightly-audit-${{ github.workflow }}
+  cancel-in-progress: true
+
+jobs:
+  audit:
+    name: Dependency Audit
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Install JS
+        run: pnpm install --frozen-lockfile
+
+      - name: pnpm audit (production dependencies only)
+        run: pnpm audit --prod || true
+        # TODO(Phase 1): Fail on critical/high advisories after triage.
+
+      - name: cargo audit (Tauri desktop crate)
+        working-directory: apps/desktop/src-tauri
+        run: |
+          cargo install cargo-audit --locked || true
+          cargo audit || true
+        # TODO(Phase 1): Fail on critical/high advisories after triage.

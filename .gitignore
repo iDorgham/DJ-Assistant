@@ -1,0 +1,40 @@
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+build/
+out/
+*.tsbuildinfo
+
+# Rust
+target/
+apps/desktop/src-tauri/gen/
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# Editor / OS
+.vscode/*
+!.vscode/extensions.json
+.idea/
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+npm-debug.log*
+pnpm-debug.log*
+
+# Local databases / scratch
+*.db
+*.db-journal
+*.sqlite
+
+# Local AI tooling state (not project source)
+.freebuff/
+.kombai/
+.qodo/
+.opencode-notes/

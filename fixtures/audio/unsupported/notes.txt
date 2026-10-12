@@ -1,0 +1,5 @@
+DJ Assistant fixture corpus - non-audio file.
+
+This file is valid UTF-8 text with a .txt extension.  It exists so tests can prove the
+library scanner skips unsupported extensions instead of trying to parse them as audio.
+Ünïcodé content is included on purpose: line three is deliberately not ASCII.
