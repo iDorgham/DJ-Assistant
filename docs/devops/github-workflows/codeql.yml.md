@@ -29,7 +29,7 @@ jobs:
         language: [javascript-typescript]
         # Add rust when CodeQL support/process is confirmed for the repo
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Initialize CodeQL
         uses: github/codeql-action/init@v3

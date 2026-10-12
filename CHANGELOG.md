@@ -99,6 +99,12 @@ project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
+- **GitHub Actions bumped off the deprecated Node 20 runtime** — `actions/checkout` v4→v7,
+  `actions/setup-node` v4→v7, `actions/cache` v4→v6 and `pnpm/action-setup` v4→v6 across the four
+  live workflows (`pr-ci`, `main-ci`, `desktop-build`, `nightly-audit`) and the
+  `docs/devops/github-workflows/*.md` templates. Clears the runner's
+  *"Node.js 20 is deprecated"* warning (all four now target Node 24) and supersedes the four
+  Dependabot `github_actions` PRs.
 - **CI workflows** — removed the duplicate pnpm version (`version: 10`) so `pnpm/action-setup` reads
   the version from `package.json` `packageManager` (single source of truth); Ubuntu jobs now install
   the canonical `libayatana-appindicator3-dev` (plus `libxdo-dev`/`libssl-dev`) instead of the

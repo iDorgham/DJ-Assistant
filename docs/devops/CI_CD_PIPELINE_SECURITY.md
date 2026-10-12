@@ -71,7 +71,7 @@ Avoid `permissions: write-all`. Prefer job-level permissions over workflow-wide 
 - uses: actions/checkout@<full-git-sha>
 
 # Acceptable during early Phase 0 with tracking issue to pin
-- uses: actions/checkout@v4
+- uses: actions/checkout@v7
 
 # Bad
 - uses: some-user/random-action@main
