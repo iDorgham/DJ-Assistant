@@ -1,12 +1,13 @@
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
+import tailwindcss from "@tailwindcss/vite";
 
-// @ts-expect-error process is a nodejs global
+// `process` is typed via the desktop package's `@types/node` dev dependency.
 const host = process.env.TAURI_DEV_HOST;
 
-// https://vitejs.dev/config/
+// https://vite.dev/config/
 export default defineConfig({
-  plugins: [react()],
+  plugins: [react(), tailwindcss()],
   clearScreen: false,
   server: {
     port: 1420,

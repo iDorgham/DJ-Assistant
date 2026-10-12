@@ -59,7 +59,7 @@ function ArtworkThumb({ trackId, hasArtwork }: { trackId: string; hasArtwork: bo
   if (!src) {
     return (
       <div
-        className="h-9 w-9 rounded bg-[#1a1e2b] border border-[#2a2f42] flex items-center justify-center"
+        className="h-9 w-9 rounded-sm bg-[#1a1e2b] border border-[#2a2f42] flex items-center justify-center"
         title={hasArtwork ? "Loading artwork..." : "No embedded artwork"}
       >
         <Music className="w-4 h-4 text-slate-600" />
@@ -72,7 +72,7 @@ function ArtworkThumb({ trackId, hasArtwork }: { trackId: string; hasArtwork: bo
       src={src}
       alt=""
       loading="lazy"
-      className="h-9 w-9 rounded object-cover border border-[#2a2f42]"
+      className="h-9 w-9 rounded-sm object-cover border border-[#2a2f42]"
     />
   );
 }
@@ -170,12 +170,12 @@ export default function App() {
       {/* Top Navigation Bar */}
       <header className="h-14 border-b border-[#2a2f42] bg-[#141721] px-5 flex items-center justify-between">
         <div className="flex items-center space-x-3">
-          <div className="h-8 w-8 rounded-lg bg-gradient-to-tr from-blue-600 to-cyan-400 flex items-center justify-center shadow-lg shadow-blue-500/20">
+          <div className="h-8 w-8 rounded-lg bg-linear-to-tr from-blue-600 to-cyan-400 flex items-center justify-center shadow-lg shadow-blue-500/20">
             <Disc3 className="w-5 h-5 text-white animate-spin-slow" />
           </div>
           <div>
             <span className="font-bold tracking-tight text-base text-white">DJ Assistant</span>
-            <span className="ml-2 text-xs font-semibold px-2 py-0.5 rounded bg-blue-500/10 text-blue-400 border border-blue-500/20">
+            <span className="ml-2 text-xs font-semibold px-2 py-0.5 rounded-sm bg-blue-500/10 text-blue-400 border border-blue-500/20">
               Phase 0 Foundation
             </span>
           </div>
@@ -185,7 +185,7 @@ export default function App() {
           <button
             onClick={handleSelectFolder}
             disabled={scanning}
-            className="flex items-center space-x-2 bg-blue-600 hover:bg-blue-500 disabled:bg-blue-800 text-white text-xs font-medium px-3.5 py-1.5 rounded-md transition shadow shadow-blue-600/30"
+            className="flex items-center space-x-2 bg-blue-600 hover:bg-blue-500 disabled:bg-blue-800 text-white text-xs font-medium px-3.5 py-1.5 rounded-md transition shadow-sm shadow-blue-600/30"
           >
             <FolderOpen className="w-4 h-4" />
             <span>{scanning ? "Scanning..." : "Scan Music Folder"}</span>
@@ -236,7 +236,7 @@ export default function App() {
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Search title, artist, album, path..."
-              className="w-full bg-[#1a1e2b] border border-[#2a2f42] rounded-md pl-9 pr-3 py-1.5 text-xs text-slate-200 placeholder-slate-500 focus:outline-none focus:border-blue-500 transition"
+              className="w-full bg-[#1a1e2b] border border-[#2a2f42] rounded-md pl-9 pr-3 py-1.5 text-xs text-slate-200 placeholder:text-slate-500 focus:outline-hidden focus:border-blue-500 transition"
             />
           </div>
 
@@ -267,7 +267,7 @@ export default function App() {
                 </p>
               </div>
               {currentFolder && (
-                <div className="text-xs bg-[#161924] border border-[#262a3a] px-3 py-1 rounded text-slate-400 font-mono">
+                <div className="text-xs bg-[#161924] border border-[#262a3a] px-3 py-1 rounded-sm text-slate-400 font-mono">
                   Current folder: {currentFolder}
                 </div>
               )}
@@ -332,7 +332,7 @@ export default function App() {
                       {formatDuration(track.durationMs)}
                     </td>
                     <td className="py-2.5 px-4 text-center">
-                      <span className="px-1.5 py-0.5 rounded text-[10px] uppercase font-mono bg-[#212637] text-slate-300 border border-[#2e344a]">
+                      <span className="px-1.5 py-0.5 rounded-sm text-[10px] uppercase font-mono bg-[#212637] text-slate-300 border border-[#2e344a]">
                         {track.format || "AUDIO"}
                       </span>
                     </td>
@@ -349,7 +349,7 @@ export default function App() {
                       {shortHash(track.fileHash)}
                     </td>
                     <td className="py-2.5 px-4 text-center">
-                      <span className="inline-flex items-center space-x-1 px-2 py-0.5 rounded text-[10px] font-medium bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                      <span className="inline-flex items-center space-x-1 px-2 py-0.5 rounded-sm text-[10px] font-medium bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
                         <CheckCircle2 className="w-3 h-3" />
                         <span>Indexed</span>
                       </span>

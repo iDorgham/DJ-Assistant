@@ -115,6 +115,19 @@ project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   `docs/devops/github-workflows/*.md` templates. Clears the runner's
   *"Node.js 20 is deprecated"* warning (all four now target Node 24) and supersedes the four
   Dependabot `github_actions` PRs.
+- **Tailwind CSS v3 → v4** (`^4.3.3`; supersedes Dependabot PR #9). Swapped the PostCSS
+  (`tailwindcss` + `autoprefixer`) pipeline for the official `@tailwindcss/vite` plugin, so
+  `postcss.config.js`, `tailwind.config.js` and the `autoprefixer`/`postcss` dev deps are gone —
+  content detection is automatic. `src/index.css` now starts with `@import "tailwindcss"` and the
+  custom `dj` palette moved from `theme.extend.colors` into `@theme`. Classes renamed to their v4
+  equivalents in `App.tsx` to keep the exact v3 look: `bg-gradient-to-tr`→`bg-linear-to-tr`,
+  `placeholder-slate-500`→`placeholder:text-slate-500`, `focus:outline-none`→`focus:outline-hidden`,
+  and the scale renames bare `rounded`→`rounded-sm` / bare `shadow`→`shadow-sm`.
+- **Vite 6 → 8 (Rolldown) + `@vitejs/plugin-react` 4 → 6** (`vite ^8.3.4`, supersedes Dependabot
+  PR #11, which previously failed with `ERR_PACKAGE_PATH_NOT_EXPORTED` on the Vite 6 `./internal`
+  export). `@tailwindcss/vite` supports Vite 8, and React 18 stays put — plugin-react 6 declares no
+  `react` peer. Verified with `tsc && vite build`; the generated CSS contains the expected v4
+  utilities (`bg-linear-to-tr`, `placeholder:text-slate-500`, `focus:outline-hidden`).
 - **CI workflows** — removed the duplicate pnpm version (`version: 10`) so `pnpm/action-setup` reads
   the version from `package.json` `packageManager` (single source of truth); Ubuntu jobs now install
   the canonical `libayatana-appindicator3-dev` (plus `libxdo-dev`/`libssl-dev`) instead of the
