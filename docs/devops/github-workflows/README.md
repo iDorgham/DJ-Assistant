@@ -28,3 +28,30 @@ YAML inside each `.md` file is the workflow body — strip the markdown fences w
 > activated, and `release.yml` additionally needs code-signing secrets and an Environment
 > with required reviewers before it can be used. Treat the reference templates as design
 > intent, not as a description of running CI.
+
+---
+
+## Branch protection — pending plan (Phase 0 exception, task T0.1.17)
+
+`main` has **no protected branch** yet. Branch protection on a **private** repository requires
+**GitHub Pro or above**; on the Free plan the API rejects the request with
+`403 Upgrade to GitHub Pro or make this repository public to enable this feature`. The repository
+is deliberately private, so this is recorded as a **documented Phase 0 exception** rather than a
+silent gap.
+
+Once the plan allows it (or the repo is made public), set these exact **required status checks**
+(the check-run names produced on `main`) and enable *Require a pull request before merging*:
+
+| Required check |
+|---|
+| `Full Validate` |
+| `Desktop Build (macOS + Windows) / windows-latest` |
+| `Desktop Build (macOS + Windows) / macos-latest` |
+
+```bash
+# protection.json — see the workflow templates above for the full body
+gh api -X PUT repos/<owner>/<repo>/branches/main/protection --input protection.json
+```
+
+`require_code_owner_reviews` must stay **false** until the `@dj-assistant-*` teams referenced by
+[`.github/CODEOWNERS`](../../../.github/CODEOWNERS) actually exist, otherwise PRs cannot be merged.

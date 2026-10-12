@@ -50,7 +50,7 @@
 - [x] **T0.1.14** Tauri CSP + capability allowlists locked to least privilege
 - [ ] **T0.1.15** Dependency audit workflow (cargo audit / npm audit schedule) — *`nightly-audit.yml` live (weekly, non-blocking; tighten to gate on critical/high in Phase 1)*
 - [x] **T0.1.16** Copy GitHub workflow templates into `.github/workflows/` (pr-ci, main-ci) — *actual live: `pr-ci.yml`, `main-ci.yml`, `desktop-build.yml`*
-- [ ] **T0.1.17** Branch protection on `main`: required PR checks, no direct push — *to configure in GitHub settings (docs only)*
+- [ ] **T0.1.17** Branch protection on `main`: required PR checks, no direct push — *blocked by plan: required checks on a **private** repo need GitHub Pro (`403 Upgrade to GitHub Pro or make this repository public`). Documented exception with the exact checks + command in [`docs/devops/github-workflows/README.md`](../../devops/github-workflows/README.md#branch-protection--pending-plan-phase-0-exception-task-t0117)*
 - [x] **T0.1.18** CODEOWNERS for `.github/workflows/**` and security-sensitive paths
 - [x] **T0.1.19** `pnpm ci:local` script matching CI steps
 - [x] **T0.1.20** Nightly audit workflow + Dependabot/Renovate enabled — *`nightly-audit.yml` live (weekly, non-blocking); Dependabot configured (`.github/dependabot.yml`: npm/pnpm, cargo, github-actions, weekly, minor+patch grouped)*

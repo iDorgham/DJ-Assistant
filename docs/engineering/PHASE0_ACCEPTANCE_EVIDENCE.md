@@ -258,7 +258,9 @@ Corrupt fixtures: `truncated.wav` (header claims 10 s, 4000 bytes present), `gar
 **Outstanding before formal Phase 0 acceptance:**
 
 1. **`.m4a` coverage** — an advertised extension with no fixture (no encoder available here).
-2. **Branch protection on `main`** (task T0.1.17) — required PR checks are authored but not yet
-   enabled in the GitHub repository settings.
+2. **Branch protection on `main`** (task T0.1.17) — not enabled: required status checks on a
+   *private* repository require GitHub Pro (the API returns `403 Upgrade to GitHub Pro …`).
+   Documented exception with the exact check names and command in
+   [`docs/devops/github-workflows/README.md`](../devops/github-workflows/README.md#branch-protection--pending-plan-phase-0-exception-task-t0117).
 3. **Dependency-audit gating** (task T0.1.15) — `nightly-audit.yml` runs weekly and is
    non-blocking pending advisory triage in Phase 1.
