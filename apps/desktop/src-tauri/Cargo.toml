@@ -31,6 +31,6 @@ uuid = { version = "1.10", features = ["v4", "serde"] }
 # Base64-encodes cached cover art for the `get_artwork` command's data URL.
 base64 = "0.22"
 chrono = { version = "0.4", features = ["serde"] }
-thiserror = "1.0"
+thiserror = "2.0"
 log = "0.4"
 env_logger = "0.11"
