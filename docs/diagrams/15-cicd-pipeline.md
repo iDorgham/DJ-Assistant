@@ -75,7 +75,7 @@ flowchart TB
     M --> MAIN[main-ci.yml]
     MAIN --> TAG[Git tag v*]
     TAG --> REL[release.yml]
-    SCH[nightly-audit.yml] --> AUDIT[Audit report]
+    SCH[nightly-audit.yml] --> AUDIT[Gated audit: cargo + pnpm]
     CQ[codeql.yml] --> SARIF[Security alerts]
 
     style PR fill:#0f3460,color:#fff

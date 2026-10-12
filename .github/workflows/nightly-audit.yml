@@ -1,7 +1,15 @@
 name: Nightly Audit
 
-# Weekly security audit (non-blocking for now). Intended to become gating on
-# critical/high in Phase 1 as advisories are triaged.
+# Weekly dependency/security audit, gating on advisories (T0.1.15).
+#
+#   * `pnpm audit --prod --audit-level=high` fails on high/critical advisories
+#     in production (non-dev) JS dependencies.
+#   * `cargo audit` fails on any RustSec *vulnerability*. The RustSec advisory
+#     format has no CVSS severity, so "any vulnerability" is the strictest
+#     available gate; non-vulnerability warnings (`unmaintained`, `unsound`)
+#     are reported but do not fail the job.
+#
+# Run it manually from the Actions tab ("Run workflow") after a dependency bump.
 on:
   schedule:
     # Mondays at 09:00 UTC (weekly)
@@ -33,19 +41,19 @@ jobs:
           node-version: 22
           cache: pnpm
 
-      - name: Rust toolchain
-        uses: dtolnay/rust-toolchain@stable
-
       - name: Install JS
         run: pnpm install --frozen-lockfile
 
-      - name: pnpm audit (production dependencies only)
-        run: pnpm audit --prod || true
-        # TODO(Phase 1): Fail on critical/high advisories after triage.
+      - name: pnpm audit (production dependencies, high/critical)
+        run: pnpm audit --prod --audit-level=high
 
-      - name: cargo audit (Tauri desktop crate)
-        working-directory: apps/desktop/src-tauri
-        run: |
-          cargo install cargo-audit --locked || true
-          cargo audit || true
-        # TODO(Phase 1): Fail on critical/high advisories after triage.
+      - name: Install cargo-audit
+        # Prebuilt binary; avoids compiling cargo-audit on every run.
+        uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-audit
+
+      - name: cargo audit (workspace lockfile)
+        # Cargo.lock lives at the workspace root. Advisory severity has no
+        # high/critical split, so this fails on any vulnerability.
+        run: cargo audit

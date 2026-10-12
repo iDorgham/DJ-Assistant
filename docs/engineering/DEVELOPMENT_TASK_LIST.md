@@ -16,9 +16,10 @@ This is the actionable engineering task list. Check items off as they are comple
 > `pnpm lint`, and the macOS/Windows desktop-build matrix
 > (`.github/workflows/desktop-build.yml`) is **green on GitHub** as of 2026-10-12
 > (Main CI run `38219344042`: ubuntu Full Validate + `windows-latest` + `macos-latest`).
-> Remaining Phase 0 gaps: dependency-audit gating (`nightly-audit.yml` runs weekly,
-> non-blocking) and branch protection on `main` (blocked by plan — required checks on a
-> private repo need GitHub Pro; see the workflows doc). Windows builders: read
+> Remaining Phase 0 gap: branch protection on `main` (blocked by plan — required checks on a
+> private repo need GitHub Pro; see the workflows doc). The dependency audit (`nightly-audit.yml`)
+> is now gating weekly and the advertised `.m4a` extension has a fixture (both closed 2026-10-12).
+> Windows builders: read
 > [WINDOWS_NATIVE_BUILD_RUNBOOK.md](./WINDOWS_NATIVE_BUILD_RUNBOOK.md) §1.1 first —
 > the GNU toolchain and paths containing spaces both break the build.
 

@@ -22,16 +22,19 @@ project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   de-duplication. Keeping this free of Tauri keeps it unit-testable on any toolchain,
   including `stable-x86_64-pc-windows-gnu` where the Tauri-linked test harness cannot load.
   `apps/desktop/src-tauri` is now the thin IPC layer on top.
-- **Synthetic audio fixture corpus** — `scripts/make-fixtures.py` generates 13 deterministic,
-  byte-stable fixtures plus `fixtures/audio/manifest.json`: tagged WAV/FLAC/AIFF/MP3, a
-  no-tag WAV, Unicode and apostrophe filenames, four deliberately corrupt files (truncated
-  WAV, garbage MP3, empty FLAC, header-only AIFF), an unsupported `.txt`, and a
+- **Synthetic audio fixture corpus** — `scripts/make-fixtures.py` generates 14 deterministic,
+  byte-stable fixtures plus `fixtures/audio/manifest.json`: tagged WAV/FLAC/AIFF/MP3 and a tagged
+  M4A (uncompressed PCM in an MPEG-4 Part 14 container — no AAC/ALAC encoder exists in this
+  toolchain), a no-tag WAV, Unicode and apostrophe filenames, four deliberately corrupt files
+  (truncated WAV, garbage MP3, empty FLAC, header-only AIFF), an unsupported `.txt`, and a
   byte-identical duplicate pair. No licensed audio is required and regeneration is
   idempotent.
 - **Manifest-driven fixture tests** — `crates/core/tests/fixture_manifest.rs` and
-  `crates/core/tests/scan_corpus.rs` (14 integration tests) assert exact tags, durations,
+  `crates/core/tests/scan_corpus.rs` (15 integration tests) assert exact tags, durations,
   formats and duplicate relationships against the manifest, and drive the full scan pipeline
-  over the corpus.
+  over the corpus. A new assertion pins the manifest's `supported_extensions` to
+  `dj_assistant_core::SUPPORTED_EXTENSIONS`, and the M4A fixture closes the last advertised but
+  untested extension.
 - **RIFF/WAVE duration parser** — `crates/core/src/riff.rs`, reading the `fmt `/`data` chunks.
 - **AIFF duration parser** — `crates/core/src/aiff.rs`, reading `numSampleFrames` and the
   80-bit extended `sampleRate` from the `COMM` chunk.
@@ -85,8 +88,12 @@ project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - **Reusable desktop build matrix** — `.github/workflows/desktop-build.yml` builds the frontend
   and `cargo build -p dj-assistant-desktop` on `windows-latest` **and** `macos-latest`, and is
   called as a job from both `pr-ci.yml` and `main-ci.yml`.
-- **Nightly audit workflow** — `.github/workflows/nightly-audit.yml` runs `pnpm audit --prod`
-  and `cargo audit` weekly (scheduled Monday 09:00 UTC, non-blocking pending Phase 1 triage).
+- **Dependency audit gating** — `.github/workflows/nightly-audit.yml` now **gates** weekly
+  (Mondays 09:00 UTC): `pnpm audit --prod --audit-level=high` fails on high/critical JS
+  advisories, and `cargo audit` (installed from a prebuilt binary via `taiki-e/install-action`,
+  run against the workspace `Cargo.lock`) fails on any RustSec vulnerability. Non-vulnerability
+  RustSec warnings (`unmaintained`/`unsound`) are reported but do not fail the job. The workflow
+  is also manually runnable via `workflow_dispatch` (task T0.1.15).
 - **GUI acceptance evidence** — `docs/evidence/phase0/*.png` (94-track library,
   search-filtered list, post-relaunch list) backing the P0.2/P0.6/P0.8 claims.
 

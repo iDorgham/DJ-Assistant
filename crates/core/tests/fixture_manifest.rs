@@ -115,6 +115,31 @@ fn supported_flag_agrees_with_the_discovery_rules() {
 }
 
 #[test]
+fn supported_extensions_match_the_scanner() {
+    // The manifest documents the extensions the corpus treats as supported. It must
+    // mirror `dj_assistant_core::SUPPORTED_EXTENSIONS`, otherwise the discovery
+    // assertions below would be validating against a stale list.
+    let Some((_root, manifest)) = load_manifest() else {
+        skip_notice();
+        return;
+    };
+
+    let mut manifest_exts = manifest.supported_extensions.clone();
+    manifest_exts.sort();
+
+    let mut scanner_exts: Vec<String> = dj_assistant_core::SUPPORTED_EXTENSIONS
+        .iter()
+        .map(|ext| ext.to_string())
+        .collect();
+    scanner_exts.sort();
+
+    assert_eq!(
+        manifest_exts, scanner_exts,
+        "manifest supported_extensions must mirror dj_assistant_core::SUPPORTED_EXTENSIONS"
+    );
+}
+
+#[test]
 fn tags_match_the_manifest_exactly() {
     // P0.5, the precise version.
     let Some((root, manifest)) = load_manifest() else {

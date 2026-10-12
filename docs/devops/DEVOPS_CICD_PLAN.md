@@ -85,7 +85,7 @@ MVP focus: **Local + CI + signed desktop releases**. Cloud staging/production fo
 | Build desktop (compile) | `tauri build` or `cargo build` | 0–1 |
 | Golden fixtures | custom script | 1 |
 | Export snapshots | custom script | 3 |
-| Dependency audit | `cargo audit`, `pnpm audit` | 0 (warn) → 1 (gate critical) |
+| Dependency audit | `cargo audit`, `pnpm audit --audit-level=high` | 1 (gated; weekly schedule) |
 
 All required checks must be **green** before merge (see AI Automation Plan merge rules).
 
@@ -205,7 +205,7 @@ Templates live in `docs/devops/github-workflows/` (copy into `.github/workflows/
 
 ### Phase 1
 - [ ] Golden fixture job in CI
-- [ ] `cargo audit` gated on critical
+- [x] `cargo audit` gated on critical — *landed early in Phase 0 (T0.1.15): `nightly-audit.yml` gates weekly on any RustSec vulnerability and on `pnpm audit --audit-level=high`*
 - [ ] Build compile job stable on macOS + Windows runners
 
 ### Phase 3

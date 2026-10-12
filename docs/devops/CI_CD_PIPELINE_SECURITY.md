@@ -125,8 +125,8 @@ New Actions require tech-lead approval and SHA pin before use on `main`.
 | Control | Implementation |
 |---------|----------------|
 | Lockfiles | Commit `pnpm-lock.yaml` + `Cargo.lock` |
-| Audit (Rust) | `cargo audit` in nightly + PR on lock change |
-| Audit (JS) | `pnpm audit --prod` (tune severity gate) |
+| Audit (Rust) | `cargo audit` gated weekly against the workspace `Cargo.lock` (`nightly-audit.yml`); fails on any vulnerability |
+| Audit (JS) | `pnpm audit --prod --audit-level=high` gated weekly (`nightly-audit.yml`); fails on high/critical advisories |
 | Dependabot / Renovate | Enable for Actions + cargo + npm |
 | SBOM | Generate on release (CycloneDX/syft) |
 | Binary provenance | GitHub Artifact Attestations (optional Phase 4+) |

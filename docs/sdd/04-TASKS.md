@@ -9,7 +9,7 @@
 > build/run of the code, not against intent. Evidence: `cargo build` produces
 > `dj-assistant-desktop.exe`; the app launches and creates its SQLite database with
 > migrations 001 + 002 applied; `pnpm ci:local:portable`, `cargo fmt --all --check`,
-> `cargo clippy --all-targets -- -D warnings`, `eslint .` and the **83-test** portable Rust
+> `cargo clippy --all-targets -- -D warnings`, `eslint .` and the **84-test** portable Rust
 > suite all pass. Phase 0 also carries a first thin vertical slice — tag-sourced cover art,
 > BPM, key, rating and comments stored via migration 002 and rendered in the library list,
 > plus an MP3 duration parser and the `get_artwork` cache command. Items left unchecked are
@@ -17,8 +17,9 @@
 >
 > **Criterion-level evidence lives in [PHASE0_ACCEPTANCE_EVIDENCE.md](../engineering/PHASE0_ACCEPTANCE_EVIDENCE.md).**
 > As of 2026-10-12 all P0.1–P0.8 criteria pass — P0.1 (macOS **and** Windows) is closed by the first
-> green CI matrix run (`desktop-build.yml` on `windows-latest` + `macos-latest`). The remaining
-> non-criterion gaps are the untested `.m4a` extension, branch protection and non-blocking audit gating.
+> green CI matrix run (`desktop-build.yml` on `windows-latest` + `macos-latest`). The only
+> remaining non-criterion gap is branch protection on `main` — the untested `.m4a` extension and
+> non-gating audit workflow were both closed on 2026-10-12.
 
 **Definition of Done (every task):**
 1. Merged to main development branch
@@ -48,12 +49,12 @@
 - [x] **T0.1.12** Fixture directory layout (`fixtures/audio`, `metadata`, `exports`)
 - [x] **T0.1.13** Path canonicalization utility + traversal unit tests
 - [x] **T0.1.14** Tauri CSP + capability allowlists locked to least privilege
-- [ ] **T0.1.15** Dependency audit workflow (cargo audit / npm audit schedule) — *`nightly-audit.yml` live (weekly, non-blocking; tighten to gate on critical/high in Phase 1)*
+- [x] **T0.1.15** Dependency audit workflow (cargo audit / npm audit schedule) — *`nightly-audit.yml` now **gates** weekly (Mondays 09:00 UTC): `pnpm audit --prod --audit-level=high` fails on high/critical JS advisories, and `cargo audit` (prebuilt via `taiki-e/install-action`, run against the workspace `Cargo.lock`) fails on any RustSec vulnerability; non-vulnerability warnings are reported but do not fail the job*
 - [x] **T0.1.16** Copy GitHub workflow templates into `.github/workflows/` (pr-ci, main-ci) — *actual live: `pr-ci.yml`, `main-ci.yml`, `desktop-build.yml`*
 - [ ] **T0.1.17** Branch protection on `main`: required PR checks, no direct push — *blocked by plan: required checks on a **private** repo need GitHub Pro (`403 Upgrade to GitHub Pro or make this repository public`). Documented exception with the exact checks + command in [`docs/devops/github-workflows/README.md`](../../devops/github-workflows/README.md#branch-protection--pending-plan-phase-0-exception-task-t0117)*
 - [x] **T0.1.18** CODEOWNERS for `.github/workflows/**` and security-sensitive paths
 - [x] **T0.1.19** `pnpm ci:local` script matching CI steps
-- [x] **T0.1.20** Nightly audit workflow + Dependabot/Renovate enabled — *`nightly-audit.yml` live (weekly, non-blocking); Dependabot configured (`.github/dependabot.yml`: npm/pnpm, cargo, github-actions, weekly, minor+patch grouped)*
+- [x] **T0.1.20** Nightly audit workflow + Dependabot/Renovate enabled — *`nightly-audit.yml` live and **gating** (weekly); Dependabot configured (`.github/dependabot.yml`: npm/pnpm, cargo, github-actions, weekly, minor+patch grouped)*
 
 ### 0.2 Desktop Shell & Local Data
 - [x] **T0.2.1** Tauri window boots with React “Hello DJ Assistant”
@@ -61,7 +62,7 @@
 - [x] **T0.2.3** Recursive folder scan with progress events
 - [x] **T0.2.4** BLAKE3 fingerprint (first 1MB + duration)
 - [x] **T0.2.5** Hash-based deduplication
-- [x] **T0.2.6** Metadata extraction (audiotags): title, artist, album, duration, existing tags — *plus tag-sourced BPM, key (Camelot + classical), rating, comments and embedded cover art via `id3`/`metaflac`; durations parsed from headers for MP3/WAV/AIFF/FLAC (`mp3.rs`, `riff.rs`, `aiff.rs`)*
+- [x] **T0.2.6** Metadata extraction (audiotags): title, artist, album, duration, existing tags — *plus tag-sourced BPM, key (Camelot + classical), rating, comments and embedded cover art via `id3`/`metaflac`; durations parsed from headers for MP3/WAV/AIFF/FLAC (`mp3.rs`, `riff.rs`, `aiff.rs`) and from the `mvhd` atom for M4A (`audiotags`/`mp4ameta`)*
 - [x] **T0.2.7** SQLite integration + migration runner
 - [x] **T0.2.8** `tracks` table schema (id, path, hash, metadata, timestamps, workspace_id) — *migration 002 adds `comments`/`artwork_hash`/`artwork_path`/`artwork_mime`*
 - [x] **T0.2.9** Basic IPC: `scan_folder`, `list_tracks`, `get_track` — *plus `get_artwork` (content-addressed cache → `data:` URL)*

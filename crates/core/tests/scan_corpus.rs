@@ -295,7 +295,7 @@ fn tagged_fixtures_yield_expected_metadata() {
     }
 
     // The corpus must cover the formats Phase 0 claims support for.
-    for expected in ["wav", "flac", "aiff", "mp3"] {
+    for expected in ["wav", "flac", "aiff", "mp3", "m4a"] {
         assert!(
             by_format.contains_key(expected),
             "corpus is missing a non-corrupt .{} fixture (found {:?})",

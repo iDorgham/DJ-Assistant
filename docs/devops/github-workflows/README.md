@@ -23,7 +23,8 @@ YAML inside each `.md` file is the workflow body — strip the markdown fences w
 > in `.github/workflows/` and have been updated for the current workspace layout, the Linux
 > WebKitGTK system dependencies Tauri needs, and the real `pnpm lint/typecheck/test` scripts.
 > `pr-ci` and `main-ci` fan out to the reusable `desktop-build.yml` macOS/Windows matrix;
-> `nightly-audit.yml` runs weekly and is non-blocking pending Phase 1 triage. The
+> `nightly-audit.yml` runs weekly and **gates** on high/critical JS advisories and any RustSec
+> vulnerability (task T0.1.15). The
 > `release.yml` and `codeql.yml` templates here are **reference only** — they have not been
 > activated, and `release.yml` additionally needs code-signing secrets and an Environment
 > with required reviewers before it can be used. Treat the reference templates as design

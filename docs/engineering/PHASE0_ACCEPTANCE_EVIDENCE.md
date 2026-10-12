@@ -6,8 +6,8 @@
 **Status:** Criteria **P0.1–P0.8 verified** — P0.2, P0.6 and P0.8 were closed by a hands-on GUI run
 on a real 94-track library (2026-10-12); **P0.1 is now verified on both target platforms** by the first
 green CI matrix run (Main CI `38219344042`: `windows-latest` **and** `macos-latest`). Phase 0 is
-ready for formal PO sign-off; the only non-criterion gaps left are the untested `.m4a` extension and
-branch protection on `main`.
+ready for formal PO sign-off; the only non-criterion gap left is branch protection on `main` (the
+`.m4a` extension and audit gating were closed on 2026-10-12).
 
 This file records *how* each Phase 0 criterion was verified, so the PO milestone checklist can be
 signed off with evidence rather than assertion.
@@ -27,7 +27,7 @@ pnpm ci:local:portable
 On a machine with the MSVC toolchain, `pnpm ci:local` additionally runs the Tauri-linked Rust
 tests (see [WINDOWS_NATIVE_BUILD_RUNBOOK.md](./WINDOWS_NATIVE_BUILD_RUNBOOK.md) §1.1a).
 
-**Totals at time of writing:** 83 portable Rust tests + 20 JS/TS tests, all passing;
+**Totals at time of writing:** 84 portable Rust tests + 20 JS/TS tests, all passing;
 `cargo clippy --all-targets -- -D warnings`, `cargo fmt --all --check` and `eslint .` clean.
 
 ---
@@ -123,7 +123,7 @@ violated the UNIQUE constraint — surfacing as a spurious import **error** rath
 
 `fixture_manifest::tags_match_the_manifest_exactly` asserts **exact** title, artist, album, genre,
 year, format and duration for every readable fixture against `fixtures/audio/manifest.json`
-(13 files, covering all four required formats plus no-tag, Unicode, and apostrophe cases).
+(14 files, covering all four required formats plus M4A, no-tag, Unicode, and apostrophe cases).
 
 Verified independently by the generator using `mutagen` re-reads and `ffprobe`.
 
@@ -148,8 +148,14 @@ original value was loose enough that a completely broken 0 ms duration still pas
 estimated. Independently confirmed against **ffprobe 7.0** over the real 94-track GUI library —
 `scripts/crosscheck-durations.py` reports **worst delta 0 ms** across all 94 files (see P0.6).
 
-**Known gap:** no `.m4a` fixture exists (no M4A/AAC encoder available in this environment), so that
-advertised extension is untested alongside `.aif`.
+**M4A coverage:** `m4a/tagged-m4a-128.m4a` covers the advertised `.m4a` extension. This ffmpeg
+build has no AAC/ALAC encoder, so the fixture stores **uncompressed PCM in an MPEG-4 Part 14
+container** (major brand `M4A `) — the container and its `ilst`/`mvhd` metadata are real and exercise
+the same `mp4ameta` path as an AAC `.m4a`, only the codec differs. Tags and duration are asserted
+alongside the other formats; see the module docstring of `scripts/make-fixtures.py`.
+
+**`.aif` (alternate AIFF extension):** still has no fixture of its own, but `is_supported_audio`
+and the AIFF parser treat `.aif` identically to `.aiff` (unit-tested in `crates/core/src/audio.rs`).
 
 ---
 
@@ -250,17 +256,18 @@ Corrupt fixtures: `truncated.wav` (header claims 10 s, 4000 bytes present), `gar
 | P0.2 | Select folder, scan 50–100 tracks | ✅ GUI: real 94-track library scanned (94/94, 0 errors/dupes) |
 | P0.3 | Stable BLAKE3 hashes | ✅ automated |
 | P0.4 | Duplicates detected, not double-imported | ✅ automated (scanner bug fixed) |
-| P0.5 | Metadata for MP3/FLAC/AIFF/WAV | ✅ automated (2 real bugs fixed); MP3 durations match ffprobe 0 ms |
+| P0.5 | Metadata for MP3/FLAC/AIFF/WAV (plus M4A) | ✅ automated (2 real bugs fixed); MP3 durations match ffprobe 0 ms; M4A fixture added 2026-10-12 |
 | P0.6 | Track list UI fields | ✅ GUI: 94 rows correct, 0 `--:--`, search works; tag columns (art/rating/key/BPM/comments) automated |
 | P0.7 | Corrupt files don't crash the scan | ✅ automated |
 | P0.8 | Persists after restart | ✅ GUI: 94 rows survive full quit + relaunch |
 
 **Outstanding before formal Phase 0 acceptance:**
 
-1. **`.m4a` coverage** — an advertised extension with no fixture (no encoder available here).
-2. **Branch protection on `main`** (task T0.1.17) — not enabled: required status checks on a
+1. **Branch protection on `main`** (task T0.1.17) — not enabled: required status checks on a
    *private* repository require GitHub Pro (the API returns `403 Upgrade to GitHub Pro …`).
    Documented exception with the exact check names and command in
    [`docs/devops/github-workflows/README.md`](../devops/github-workflows/README.md#branch-protection--pending-plan-phase-0-exception-task-t0117).
-3. **Dependency-audit gating** (task T0.1.15) — `nightly-audit.yml` runs weekly and is
-   non-blocking pending advisory triage in Phase 1.
+
+Closed since the previous revision: `.m4a` coverage (fixture added 2026-10-12) and dependency-audit
+gating (task T0.1.15 — `nightly-audit.yml` now gates weekly on high/critical JS advisories and any
+RustSec vulnerability).
