@@ -70,7 +70,9 @@ pub async fn list_tracks(
         "SELECT COUNT(*) FROM tracks"
     };
 
-    let total: usize = if has_query {
+    // rusqlite 0.40 removed the `usize` `FromSql` impl, so COUNT(*) (SQLite's
+    // native i64) is read as `i64` and narrowed for the response payload.
+    let total_rows: i64 = if has_query {
         let mut count_stmt = conn.prepare(count_sql).map_err(|e| e.to_string())?;
         count_stmt
             .query_row([&search_like], |row| row.get(0))
@@ -81,6 +83,8 @@ pub async fn list_tracks(
             .query_row([], |row| row.get(0))
             .map_err(|e| e.to_string())?
     };
+
+    let total = total_rows as usize;
 
     let select_sql = if has_query {
         format!(

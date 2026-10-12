@@ -21,7 +21,7 @@ metaflac = "0.2"
 
 # Only the `scan` diagnostic binary needs SQLite; the library itself stays free of
 # it so it can be tested without a database.
-rusqlite = { version = "0.31", features = ["bundled"], optional = true }
+rusqlite = { version = "0.40", features = ["bundled"], optional = true }
 
 [features]
 default = []

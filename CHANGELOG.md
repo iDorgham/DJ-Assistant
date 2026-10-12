@@ -99,6 +99,16 @@ project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
+- **TypeScript 6.0** — bumped `typescript` to `^6.0.3` across the workspace (supersedes Dependabot
+  PR #13). TS 6 turns two previously-accepted `apps/desktop` patterns into errors: `TS2882`
+  (side-effect `import './index.css'` now needs an ambient module declaration) and `TS2591`
+  (`node:test` / `node:assert/strict` need `@types/node`). Fixed by adding
+  `"types": ["node", "vite/client"]` to `apps/desktop/tsconfig.json` and `@types/node` to the
+  desktop dev dependencies; the desktop `tsc && vite build` passes.
+- **`rusqlite` 0.31 → 0.40** across the workspace (still `bundled`; supersedes Dependabot PR #7).
+  rusqlite 0.40 removed the `usize` `FromSql` impl, so `list_tracks` now reads `COUNT(*)` as `i64`
+  and narrows it (`apps/desktop/src-tauri/src/commands.rs`). Verified with a full portable pass
+  (`cargo clippy -D warnings`, `cargo fmt`, and the core + schema test suites).
 - **GitHub Actions bumped off the deprecated Node 20 runtime** — `actions/checkout` v4→v7,
   `actions/setup-node` v4→v7, `actions/cache` v4→v6 and `pnpm/action-setup` v4→v6 across the four
   live workflows (`pr-ci`, `main-ci`, `desktop-build`, `nightly-audit`) and the

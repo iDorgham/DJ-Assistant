@@ -24,7 +24,7 @@ tauri-plugin-dialog = "2.0.0"
 dj-assistant-core = { path = "../../../crates/core" }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
-rusqlite = { version = "0.31", features = ["bundled"] }
+rusqlite = { version = "0.40", features = ["bundled"] }
 # NOTE: `blake3`, `audiotags` and `walkdir` are intentionally absent here — that
 # logic now lives in dj-assistant-core. Re-add only if this crate needs them directly.
 uuid = { version = "1.10", features = ["v4", "serde"] }
