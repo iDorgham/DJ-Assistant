@@ -62,10 +62,10 @@ This is the actionable engineering task list. Check items off as they are comple
 - [x] Basic IPC commands: `scan_folder`, `list_tracks`, `get_track` — *plus `get_artwork`*
 
 ### Exit Criteria — Phase 0
-- [ ] Can point at a folder of 50–100 tracks and see them listed with correct basic metadata
-- [ ] Hashes are stable and duplicates are detected
+- [x] Can point at a folder of 50–100 tracks and see them listed with correct basic metadata
+- [x] Hashes are stable and duplicates are detected
 - [x] App builds on macOS and Windows via CI
-- [ ] No crashes on malformed / unsupported files (graceful skip + log)
+- [x] No crashes on malformed / unsupported files (graceful skip + log)
 
 ---
 
