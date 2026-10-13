@@ -1,0 +1,93 @@
+{
+  "build": "hd3ee48b_1",
+  "build_number": 1,
+  "depends": [
+    "ucrt >=10.0.20348.0",
+    "vc >=14.3,<15",
+    "vc14_runtime >=14.44.35208"
+  ],
+  "license": "MIT",
+  "license_family": "MIT",
+  "md5": "9be03be6d181015eb907c6b1b9f97e58",
+  "name": "libutf8proc",
+  "sha256": "639a632096defc15efdaa5ff235f601f952092ad8095b12d2f17c770fa70474e",
+  "size": 95649,
+  "subdir": "win-64",
+  "timestamp": 1781116642146,
+  "version": "2.11.3",
+  "fn": "libutf8proc-2.11.3-hd3ee48b_1.conda",
+  "url": "https://repo.anaconda.com/pkgs/main/win-64/libutf8proc-2.11.3-hd3ee48b_1.conda",
+  "channel": "https://repo.anaconda.com/pkgs/main/",
+  "extracted_package_dir": "C:\\Users\\User\\AppData\\Local\\rattler\\cache\\pkgs\\libutf8proc-2.11.3-hd3ee48b_1",
+  "requested_specs": [],
+  "files": [
+    "Library/lib/cmake/utf8proc/utf8proc-config-version.cmake",
+    "Library/lib/cmake/utf8proc/utf8proc-config.cmake",
+    "Library/lib/cmake/utf8proc/utf8proc-targets-release.cmake",
+    "Library/lib/cmake/utf8proc/utf8proc-targets.cmake",
+    "Library/lib/pkgconfig/libutf8proc.pc",
+    "Library/bin/utf8proc.dll",
+    "Library/lib/utf8proc.lib",
+    "Library/include/utf8proc.h"
+  ],
+  "paths_data": {
+    "paths_version": 1,
+    "paths": [
+      {
+        "_path": "Library/lib/cmake/utf8proc/utf8proc-config-version.cmake",
+        "path_type": "hardlink",
+        "sha256": "a5c3b1d2a6bae9f5c9b858360dda37e969d9afddebe0dc0efce71bfa7f6ffe02",
+        "size_in_bytes": 2830
+      },
+      {
+        "_path": "Library/lib/cmake/utf8proc/utf8proc-config.cmake",
+        "path_type": "hardlink",
+        "sha256": "a401945675d546fdb49cce47ee5b2bbc1491b11e56d765470c168ad167f5bcf0",
+        "size_in_bytes": 926
+      },
+      {
+        "_path": "Library/lib/cmake/utf8proc/utf8proc-targets-release.cmake",
+        "path_type": "hardlink",
+        "sha256": "43af0d5ba45975e65ee58b393d851385603631155000728565492179f4a3d162",
+        "size_in_bytes": 934
+      },
+      {
+        "_path": "Library/lib/cmake/utf8proc/utf8proc-targets.cmake",
+        "path_type": "hardlink",
+        "sha256": "6cf837940a0f2fde6bf81610a524e10b149842fe406715e8c8b9624cf4bbbb8d",
+        "size_in_bytes": 4240
+      },
+      {
+        "_path": "Library/lib/pkgconfig/libutf8proc.pc",
+        "path_type": "hardlink",
+        "sha256": "6f62a12a42a18995bd8495a9117053fb907e47067ad7bacd479f91fd1755f1ac",
+        "sha256_in_prefix": "711d4408e5b96a9bc2589e7fa7b161ff461ca8423cccec80765ffc8a1f86718f",
+        "size_in_bytes": 431,
+        "file_mode": "text",
+        "prefix_placeholder": "C:/Users/task_178111609859473/croot/libutf8proc_1781116330615/_h_env"
+      },
+      {
+        "_path": "Library/bin/utf8proc.dll",
+        "path_type": "hardlink",
+        "sha256": "66946bede0151d6c0ef2b645ea3b74d044ebd137a27e24baa34537ba2ac62a06",
+        "size_in_bytes": 367432
+      },
+      {
+        "_path": "Library/lib/utf8proc.lib",
+        "path_type": "hardlink",
+        "sha256": "aa97f45ebb0090b76d03eb292a123bcd731e0e122e9c326f0f80cc1f577aa45c",
+        "size_in_bytes": 8352
+      },
+      {
+        "_path": "Library/include/utf8proc.h",
+        "path_type": "hardlink",
+        "sha256": "a4e498b7392c383cf3b22e662da21e0b48f1264806235d87b5d8bd166232f658",
+        "size_in_bytes": 34049
+      }
+    ]
+  },
+  "link": {
+    "source": "C:\\Users\\User\\AppData\\Local\\rattler\\cache\\pkgs\\libutf8proc-2.11.3-hd3ee48b_1",
+    "type": 3
+  }
+}

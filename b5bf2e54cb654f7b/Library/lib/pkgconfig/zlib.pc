@@ -1,0 +1,14 @@
+prefix=D:/Work/AI/Projects/DJ Assistant/b5bf2e54cb654f7b/Library
+exec_prefix=D:/Work/AI/Projects/DJ Assistant/b5bf2e54cb654f7b/Library
+libdir=${exec_prefix}/lib
+sharedlibdir=${exec_prefix}/lib
+includedir=${exec_prefix}/include
+
+Name: zlib
+Description: zlib compression library
+Version: 1.3.2
+License: Zlib
+
+Requires:
+Libs: -L${libdir} -L${sharedlibdir} -lz
+Cflags: -I${includedir}

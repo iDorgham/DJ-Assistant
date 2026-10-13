@@ -1,0 +1,32 @@
+{
+  "build": "h9deaac8_3",
+  "build_number": 3,
+  "constrains": [
+    "cudatoolkit 12.9|12.9.*",
+    "__cuda >=12"
+  ],
+  "depends": [],
+  "license": "LicenseRef-NVIDIA-End-User-License-Agreement",
+  "md5": "212f99a87310c4e2112e22e34eb4b2e5",
+  "name": "cuda-version",
+  "noarch": "generic",
+  "sha256": "4a40a2be59516e04c27badbfd33fc320c2af9b9db6ac8b5eb5ba60d155a14261",
+  "size": 22634,
+  "subdir": "noarch",
+  "timestamp": 1766423340060,
+  "version": "12.9",
+  "fn": "cuda-version-12.9-h9deaac8_3.conda",
+  "url": "https://repo.anaconda.com/pkgs/main/noarch/cuda-version-12.9-h9deaac8_3.conda",
+  "channel": "https://repo.anaconda.com/pkgs/main/",
+  "extracted_package_dir": "C:\\Users\\User\\AppData\\Local\\rattler\\cache\\pkgs\\cuda-version-12.9-h9deaac8_3",
+  "requested_specs": [],
+  "files": [],
+  "paths_data": {
+    "paths_version": 1,
+    "paths": []
+  },
+  "link": {
+    "source": "C:\\Users\\User\\AppData\\Local\\rattler\\cache\\pkgs\\cuda-version-12.9-h9deaac8_3",
+    "type": 3
+  }
+}

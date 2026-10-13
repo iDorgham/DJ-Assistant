@@ -1,0 +1,10 @@
+prefix=${pcfiledir}/../..
+exec_prefix=${prefix}
+libdir=${exec_prefix}/lib
+includedir=${prefix}/include
+
+Name: icu-uc
+Description: International Components for Unicode: Common Library
+Version: 78.3
+Libs: -L${libdir} -licuuc -licudt
+Cflags: -I${includedir}

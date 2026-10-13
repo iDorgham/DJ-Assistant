@@ -1,0 +1,632 @@
+{
+  "build": "py313haa95532_0",
+  "build_number": 0,
+  "depends": [
+    "attrs >=22.2.0",
+    "jsonschema-specifications >=2023.03.6",
+    "python >=3.13,<3.14.0a0",
+    "python_abi 3.13.* *_cp313",
+    "referencing >=0.28.4",
+    "rpds-py >=0.25.0"
+  ],
+  "license": "MIT",
+  "license_family": "MIT",
+  "md5": "8aa438f60a0a0e245da856f3971acb7d",
+  "name": "jsonschema",
+  "sha256": "83030d797b6bb8b45ee5ed27d4c2d97dff18739ba8ef70b2a3a04e3ac95d40b0",
+  "size": 224876,
+  "subdir": "win-64",
+  "timestamp": 1787319443066,
+  "version": "4.26.0",
+  "fn": "jsonschema-4.26.0-py313haa95532_0.conda",
+  "url": "https://repo.anaconda.com/pkgs/main/win-64/jsonschema-4.26.0-py313haa95532_0.conda",
+  "channel": "https://repo.anaconda.com/pkgs/main/",
+  "extracted_package_dir": "C:\\Users\\User\\AppData\\Local\\rattler\\cache\\pkgs\\jsonschema-4.26.0-py313haa95532_0",
+  "requested_specs": [],
+  "files": [
+    "Scripts/jsonschema-script.py",
+    "Scripts/jsonschema.exe",
+    "Lib/site-packages/jsonschema/benchmarks/__init__.py",
+    "Lib/site-packages/jsonschema/benchmarks/const_vs_enum.py",
+    "Lib/site-packages/jsonschema/benchmarks/contains.py",
+    "Lib/site-packages/jsonschema/benchmarks/import_benchmark.py",
+    "Lib/site-packages/jsonschema/benchmarks/issue232.py",
+    "Lib/site-packages/jsonschema/benchmarks/json_schema_test_suite.py",
+    "Lib/site-packages/jsonschema/benchmarks/nested_schemas.py",
+    "Lib/site-packages/jsonschema/benchmarks/subcomponents.py",
+    "Lib/site-packages/jsonschema/benchmarks/unused_registry.py",
+    "Lib/site-packages/jsonschema/benchmarks/useless_applicator_schemas.py",
+    "Lib/site-packages/jsonschema/benchmarks/useless_keywords.py",
+    "Lib/site-packages/jsonschema/benchmarks/validator_creation.py",
+    "Lib/site-packages/jsonschema-4.26.0.dist-info/INSTALLER",
+    "Lib/site-packages/jsonschema-4.26.0.dist-info/METADATA",
+    "Lib/site-packages/jsonschema-4.26.0.dist-info/RECORD",
+    "Lib/site-packages/jsonschema-4.26.0.dist-info/REQUESTED",
+    "Lib/site-packages/jsonschema-4.26.0.dist-info/WHEEL",
+    "Lib/site-packages/jsonschema-4.26.0.dist-info/direct_url.json",
+    "Lib/site-packages/jsonschema-4.26.0.dist-info/entry_points.txt",
+    "Lib/site-packages/jsonschema/__init__.py",
+    "Lib/site-packages/jsonschema/__main__.py",
+    "Lib/site-packages/jsonschema/_format.py",
+    "Lib/site-packages/jsonschema/_keywords.py",
+    "Lib/site-packages/jsonschema/_legacy_keywords.py",
+    "Lib/site-packages/jsonschema/_types.py",
+    "Lib/site-packages/jsonschema/_typing.py",
+    "Lib/site-packages/jsonschema/_utils.py",
+    "Lib/site-packages/jsonschema/cli.py",
+    "Lib/site-packages/jsonschema/exceptions.py",
+    "Lib/site-packages/jsonschema/protocols.py",
+    "Lib/site-packages/jsonschema/validators.py",
+    "Lib/site-packages/jsonschema/benchmarks/__pycache__/__init__.cpython-313.pyc",
+    "Lib/site-packages/jsonschema/benchmarks/__pycache__/const_vs_enum.cpython-313.pyc",
+    "Lib/site-packages/jsonschema/benchmarks/__pycache__/contains.cpython-313.pyc",
+    "Lib/site-packages/jsonschema/benchmarks/__pycache__/import_benchmark.cpython-313.pyc",
+    "Lib/site-packages/jsonschema/benchmarks/__pycache__/issue232.cpython-313.pyc",
+    "Lib/site-packages/jsonschema/benchmarks/__pycache__/json_schema_test_suite.cpython-313.pyc",
+    "Lib/site-packages/jsonschema/benchmarks/__pycache__/nested_schemas.cpython-313.pyc",
+    "Lib/site-packages/jsonschema/benchmarks/__pycache__/subcomponents.cpython-313.pyc",
+    "Lib/site-packages/jsonschema/benchmarks/__pycache__/unused_registry.cpython-313.pyc",
+    "Lib/site-packages/jsonschema/benchmarks/__pycache__/useless_applicator_schemas.cpython-313.pyc",
+    "Lib/site-packages/jsonschema/benchmarks/__pycache__/useless_keywords.cpython-313.pyc",
+    "Lib/site-packages/jsonschema/benchmarks/__pycache__/validator_creation.cpython-313.pyc",
+    "Lib/site-packages/jsonschema/tests/__init__.py",
+    "Lib/site-packages/jsonschema/tests/_suite.py",
+    "Lib/site-packages/jsonschema/tests/fuzz_validate.py",
+    "Lib/site-packages/jsonschema/tests/test_cli.py",
+    "Lib/site-packages/jsonschema/tests/test_deprecations.py",
+    "Lib/site-packages/jsonschema/tests/test_exceptions.py",
+    "Lib/site-packages/jsonschema/tests/test_format.py",
+    "Lib/site-packages/jsonschema/tests/test_jsonschema_test_suite.py",
+    "Lib/site-packages/jsonschema/tests/test_types.py",
+    "Lib/site-packages/jsonschema/tests/test_utils.py",
+    "Lib/site-packages/jsonschema/tests/test_validators.py",
+    "Lib/site-packages/jsonschema/tests/__pycache__/__init__.cpython-313.pyc",
+    "Lib/site-packages/jsonschema/tests/__pycache__/_suite.cpython-313.pyc",
+    "Lib/site-packages/jsonschema/tests/__pycache__/fuzz_validate.cpython-313.pyc",
+    "Lib/site-packages/jsonschema/tests/__pycache__/test_cli.cpython-313.pyc",
+    "Lib/site-packages/jsonschema/tests/__pycache__/test_deprecations.cpython-313.pyc",
+    "Lib/site-packages/jsonschema/tests/__pycache__/test_exceptions.cpython-313.pyc",
+    "Lib/site-packages/jsonschema/tests/__pycache__/test_format.cpython-313.pyc",
+    "Lib/site-packages/jsonschema/tests/__pycache__/test_jsonschema_test_suite.cpython-313.pyc",
+    "Lib/site-packages/jsonschema/tests/__pycache__/test_types.cpython-313.pyc",
+    "Lib/site-packages/jsonschema/tests/__pycache__/test_utils.cpython-313.pyc",
+    "Lib/site-packages/jsonschema/tests/__pycache__/test_validators.cpython-313.pyc",
+    "Lib/site-packages/jsonschema/tests/typing/__init__.py",
+    "Lib/site-packages/jsonschema/tests/typing/test_all_concrete_validators_match_protocol.py",
+    "Lib/site-packages/jsonschema/benchmarks/issue232/issue.json",
+    "Lib/site-packages/jsonschema/tests/typing/__pycache__/__init__.cpython-313.pyc",
+    "Lib/site-packages/jsonschema/tests/typing/__pycache__/test_all_concrete_validators_match_protocol.cpython-313.pyc",
+    "Lib/site-packages/jsonschema-4.26.0.dist-info/licenses/COPYING",
+    "Lib/site-packages/jsonschema/__pycache__/__init__.cpython-313.pyc",
+    "Lib/site-packages/jsonschema/__pycache__/__main__.cpython-313.pyc",
+    "Lib/site-packages/jsonschema/__pycache__/_format.cpython-313.pyc",
+    "Lib/site-packages/jsonschema/__pycache__/_keywords.cpython-313.pyc",
+    "Lib/site-packages/jsonschema/__pycache__/_legacy_keywords.cpython-313.pyc",
+    "Lib/site-packages/jsonschema/__pycache__/_types.cpython-313.pyc",
+    "Lib/site-packages/jsonschema/__pycache__/_typing.cpython-313.pyc",
+    "Lib/site-packages/jsonschema/__pycache__/_utils.cpython-313.pyc",
+    "Lib/site-packages/jsonschema/__pycache__/cli.cpython-313.pyc",
+    "Lib/site-packages/jsonschema/__pycache__/exceptions.cpython-313.pyc",
+    "Lib/site-packages/jsonschema/__pycache__/protocols.cpython-313.pyc",
+    "Lib/site-packages/jsonschema/__pycache__/validators.cpython-313.pyc"
+  ],
+  "paths_data": {
+    "paths_version": 1,
+    "paths": [
+      {
+        "_path": "Scripts/jsonschema-script.py",
+        "path_type": "hardlink",
+        "sha256": "f83b0fbda3b08c0f642d16a94548247fb5d16cfeb865db413a2e550e182eb775",
+        "size_in_bytes": 208
+      },
+      {
+        "_path": "Scripts/jsonschema.exe",
+        "path_type": "hardlink",
+        "sha256": "f24d102084620e54fe68d07f6e9169118b283f8d33d0c8f4b974c2e05a306059",
+        "size_in_bytes": 54032
+      },
+      {
+        "_path": "Lib/site-packages/jsonschema/benchmarks/__init__.py",
+        "path_type": "hardlink",
+        "sha256": "034b10af10c15474b243ef2bbb72f5d613177f7abd815b81f71fd88076f847d3",
+        "size_in_bytes": 70
+      },
+      {
+        "_path": "Lib/site-packages/jsonschema/benchmarks/const_vs_enum.py",
+        "path_type": "hardlink",
+        "sha256": "0d5162dd60ea05a95914e89b9e3a57d6e4d2af74716b670f805728c1ded492bb",
+        "size_in_bytes": 830
+      },
+      {
+        "_path": "Lib/site-packages/jsonschema/benchmarks/contains.py",
+        "path_type": "hardlink",
+        "sha256": "81ec50a14ac23b0102a1f6edd7d05ea2c419ed614be8f0dd917e3d0d6c0194e8",
+        "size_in_bytes": 786
+      },
+      {
+        "_path": "Lib/site-packages/jsonschema/benchmarks/import_benchmark.py",
+        "path_type": "hardlink",
+        "sha256": "d834483954baa7e6ea2e7ffcdb607f5f9164211bec2765750989d5d9daeecc3b",
+        "size_in_bytes": 779
+      },
+      {
+        "_path": "Lib/site-packages/jsonschema/benchmarks/issue232.py",
+        "path_type": "hardlink",
+        "sha256": "dcb2d82c89411909d5bb2ca8da202ffb1932e4fe8f4451c0371e3ecc82103a81",
+        "size_in_bytes": 521
+      },
+      {
+        "_path": "Lib/site-packages/jsonschema/benchmarks/json_schema_test_suite.py",
+        "path_type": "hardlink",
+        "sha256": "3ef7da6e9518705e3fedcb180d37136ae103f2b9c510661b758e51a935c3d3cb",
+        "size_in_bytes": 320
+      },
+      {
+        "_path": "Lib/site-packages/jsonschema/benchmarks/nested_schemas.py",
+        "path_type": "hardlink",
+        "sha256": "9a8d3b771f82220992388eb608db38839c6ed45cc79252c1a644280f159870ab",
+        "size_in_bytes": 1892
+      },
+      {
+        "_path": "Lib/site-packages/jsonschema/benchmarks/subcomponents.py",
+        "path_type": "hardlink",
+        "sha256": "7c4ca2333b1678ada977b0c4182bae63ebf31ae9f08477334415849c144b288a",
+        "size_in_bytes": 1113
+      },
+      {
+        "_path": "Lib/site-packages/jsonschema/benchmarks/unused_registry.py",
+        "path_type": "hardlink",
+        "sha256": "87047038d73d71e7cfb58ce4a17fd36113b71b25288eb8afd3e61068adef9e3d",
+        "size_in_bytes": 940
+      },
+      {
+        "_path": "Lib/site-packages/jsonschema/benchmarks/useless_applicator_schemas.py",
+        "path_type": "hardlink",
+        "sha256": "1159b9f84b4e105a0b3ff56dda3e12ac2c25c74e4d84fa8db9943a2c830fd437",
+        "size_in_bytes": 3342
+      },
+      {
+        "_path": "Lib/site-packages/jsonschema/benchmarks/useless_keywords.py",
+        "path_type": "hardlink",
+        "sha256": "6e3ff32abd6855cb4596ac9968e6c2b184e01638a23603f30b486bd58f3af261",
+        "size_in_bytes": 867
+      },
+      {
+        "_path": "Lib/site-packages/jsonschema/benchmarks/validator_creation.py",
+        "path_type": "hardlink",
+        "sha256": "52451094b027bacb27aff29d08875a77ac71da95f140b998b6c5e88a2aca7964",
+        "size_in_bytes": 285
+      },
+      {
+        "_path": "Lib/site-packages/jsonschema-4.26.0.dist-info/INSTALLER",
+        "path_type": "hardlink",
+        "sha256": "d0edee15f91b406f3f99726e44eb990be6e34fd0345b52b910c568e0eef6a2a8",
+        "size_in_bytes": 5
+      },
+      {
+        "_path": "Lib/site-packages/jsonschema-4.26.0.dist-info/METADATA",
+        "path_type": "hardlink",
+        "sha256": "05b189866ca98a96da3934bf6b83687ced3ff85325273b77e16b705f6d8b26d2",
+        "size_in_bytes": 7592
+      },
+      {
+        "_path": "Lib/site-packages/jsonschema-4.26.0.dist-info/RECORD",
+        "path_type": "hardlink",
+        "sha256": "90f55c3832ebebca82ca24b21bcc9f646c820932c7622e48707770c12968f5fe",
+        "size_in_bytes": 6523
+      },
+      {
+        "_path": "Lib/site-packages/jsonschema-4.26.0.dist-info/REQUESTED",
+        "path_type": "hardlink",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "size_in_bytes": 0
+      },
+      {
+        "_path": "Lib/site-packages/jsonschema-4.26.0.dist-info/WHEEL",
+        "path_type": "hardlink",
+        "sha256": "942926c567d0b1273d09f20295879abd37507845f6b683eab9f87d808df91100",
+        "size_in_bytes": 87
+      },
+      {
+        "_path": "Lib/site-packages/jsonschema-4.26.0.dist-info/direct_url.json",
+        "path_type": "hardlink",
+        "sha256": "3b2e2474aa7147c85365b9eeaceb53b208d8ced7ddc0c17bed06ec33f07cbc2f",
+        "size_in_bytes": 100
+      },
+      {
+        "_path": "Lib/site-packages/jsonschema-4.26.0.dist-info/entry_points.txt",
+        "path_type": "hardlink",
+        "sha256": "bceeeb5f816cff1215272da99c0b4a8134b17e99e8cc0550d038c29a93319d61",
+        "size_in_bytes": 51
+      },
+      {
+        "_path": "Lib/site-packages/jsonschema/__init__.py",
+        "path_type": "hardlink",
+        "sha256": "a7e470e134bfd0e3c76482722260d6b1d5a099de823d61cc5cbabb06e4314c67",
+        "size_in_bytes": 3941
+      },
+      {
+        "_path": "Lib/site-packages/jsonschema/__main__.py",
+        "path_type": "hardlink",
+        "sha256": "88bb197f6ba9501de294129394c9f22be1c7b760a79df930c318bf73a80bbd20",
+        "size_in_bytes": 115
+      },
+      {
+        "_path": "Lib/site-packages/jsonschema/_format.py",
+        "path_type": "hardlink",
+        "sha256": "96bb3553b892076657f59d846a5b113987909b577d91e7f0d822e8d3c1bc3f8b",
+        "size_in_bytes": 15568
+      },
+      {
+        "_path": "Lib/site-packages/jsonschema/_keywords.py",
+        "path_type": "hardlink",
+        "sha256": "afcfc3aea01f9fa40bc109e65c4820bde89253e51a20bda9da7b8f20d7a57c57",
+        "size_in_bytes": 14949
+      },
+      {
+        "_path": "Lib/site-packages/jsonschema/_legacy_keywords.py",
+        "path_type": "hardlink",
+        "sha256": "dad5aec113d66d84bb10097cc01202feb69b1aebf527875f60ba8d10fa528610",
+        "size_in_bytes": 15191
+      },
+      {
+        "_path": "Lib/site-packages/jsonschema/_types.py",
+        "path_type": "hardlink",
+        "sha256": "7ff9e44c36eb8dadc4ddfb083530bbdf2fe03174d4db5d08fc7eea2b434ddf47",
+        "size_in_bytes": 5456
+      },
+      {
+        "_path": "Lib/site-packages/jsonschema/_typing.py",
+        "path_type": "hardlink",
+        "sha256": "a572e71b2de336d2144ead37ee451fab4c1ed7bd3ce5e1ed2700c9dadfbe9901",
+        "size_in_bytes": 617
+      },
+      {
+        "_path": "Lib/site-packages/jsonschema/_utils.py",
+        "path_type": "hardlink",
+        "sha256": "5efebfc0a2ac941265c328fdfa3d9cf090c5c3ee33e1a5859d57b6a57f21ed4e",
+        "size_in_bytes": 10659
+      },
+      {
+        "_path": "Lib/site-packages/jsonschema/cli.py",
+        "path_type": "hardlink",
+        "sha256": "6aff743ada52c6e8a4a37140c841edc6923e352b97dd632da10a48c74f686c96",
+        "size_in_bytes": 8445
+      },
+      {
+        "_path": "Lib/site-packages/jsonschema/exceptions.py",
+        "path_type": "hardlink",
+        "sha256": "6f8da150339f3c5729ac8e1994da630de2cabfc93dbce86059cb768f20e5c739",
+        "size_in_bytes": 15256
+      },
+      {
+        "_path": "Lib/site-packages/jsonschema/protocols.py",
+        "path_type": "hardlink",
+        "sha256": "960cabc951ea1628d2151033f79721dd5376173fa84c5ca18fd39b732e4ffc22",
+        "size_in_bytes": 7198
+      },
+      {
+        "_path": "Lib/site-packages/jsonschema/validators.py",
+        "path_type": "hardlink",
+        "sha256": "97f171b995b4b0ca05530a9366a1252fb1753f99f3cb7b1068b6d9aab1096fa5",
+        "size_in_bytes": 47159
+      },
+      {
+        "_path": "Lib/site-packages/jsonschema/benchmarks/__pycache__/__init__.cpython-313.pyc",
+        "path_type": "hardlink",
+        "sha256": "bacace796b40d9ffe544cf6bf82ef197581227603d7b91491dcdf80f536e6eb4",
+        "size_in_bytes": 228
+      },
+      {
+        "_path": "Lib/site-packages/jsonschema/benchmarks/__pycache__/const_vs_enum.cpython-313.pyc",
+        "path_type": "hardlink",
+        "sha256": "1b6b99d534dedcf12ea078ae66a7bd98ef44f4141cf058913c59ac413b1af596",
+        "size_in_bytes": 1895
+      },
+      {
+        "_path": "Lib/site-packages/jsonschema/benchmarks/__pycache__/contains.cpython-313.pyc",
+        "path_type": "hardlink",
+        "sha256": "b16814ba5b4b8e79271c18914e2bbf24759bfe3b949e9d7d9ec6a2a4ad2b2c93",
+        "size_in_bytes": 1867
+      },
+      {
+        "_path": "Lib/site-packages/jsonschema/benchmarks/__pycache__/import_benchmark.cpython-313.pyc",
+        "path_type": "hardlink",
+        "sha256": "053b2d3391d0d34039e5e5e6ab7e1258a900271513ea2b8f9b728da78f193b2f",
+        "size_in_bytes": 1310
+      },
+      {
+        "_path": "Lib/site-packages/jsonschema/benchmarks/__pycache__/issue232.cpython-313.pyc",
+        "path_type": "hardlink",
+        "sha256": "a599d1fd2e143f8b8c63b471d2406010b68a09ea7967e6d9ae0c8fdeb8881188",
+        "size_in_bytes": 843
+      },
+      {
+        "_path": "Lib/site-packages/jsonschema/benchmarks/__pycache__/json_schema_test_suite.cpython-313.pyc",
+        "path_type": "hardlink",
+        "sha256": "685af6397c06c2bf6ee243f7ccffe5b93a63c11e635b3da58cb3dcfa8f0bd5c2",
+        "size_in_bytes": 594
+      },
+      {
+        "_path": "Lib/site-packages/jsonschema/benchmarks/__pycache__/nested_schemas.cpython-313.pyc",
+        "path_type": "hardlink",
+        "sha256": "a8f73d77caec62f8042f7f149b8f7e78db9ef73f473b1dcf26f0b8d1563ee8d6",
+        "size_in_bytes": 2394
+      },
+      {
+        "_path": "Lib/site-packages/jsonschema/benchmarks/__pycache__/subcomponents.cpython-313.pyc",
+        "path_type": "hardlink",
+        "sha256": "ae34bb1d3c5ead9682da92b5f28fe79b7a597ff42530dfdf7920067f75f4c9c6",
+        "size_in_bytes": 2217
+      },
+      {
+        "_path": "Lib/site-packages/jsonschema/benchmarks/__pycache__/unused_registry.cpython-313.pyc",
+        "path_type": "hardlink",
+        "sha256": "e99fe108535f0e0c9c75e935dee46afd77f0e9ff73b3bc988f36d9846634c9a8",
+        "size_in_bytes": 1529
+      },
+      {
+        "_path": "Lib/site-packages/jsonschema/benchmarks/__pycache__/useless_applicator_schemas.cpython-313.pyc",
+        "path_type": "hardlink",
+        "sha256": "8deae64a64037120a4c12472cbeab6502dc22cad82cd2b132890869e987e7ddc",
+        "size_in_bytes": 3514
+      },
+      {
+        "_path": "Lib/site-packages/jsonschema/benchmarks/__pycache__/useless_keywords.cpython-313.pyc",
+        "path_type": "hardlink",
+        "sha256": "1eada36c7195f34b901c1c4f83eafc14730a0b932dac20b27420f4e67e516ca7",
+        "size_in_bytes": 2039
+      },
+      {
+        "_path": "Lib/site-packages/jsonschema/benchmarks/__pycache__/validator_creation.cpython-313.pyc",
+        "path_type": "hardlink",
+        "sha256": "1d04bb934b63b256efedfceaaf7a6cc0cf46f08eaa5e83b1e78e75d026d460b8",
+        "size_in_bytes": 520
+      },
+      {
+        "_path": "Lib/site-packages/jsonschema/tests/__init__.py",
+        "path_type": "hardlink",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "size_in_bytes": 0
+      },
+      {
+        "_path": "Lib/site-packages/jsonschema/tests/_suite.py",
+        "path_type": "hardlink",
+        "sha256": "da4d17f7537b74e1e141ce66ad8bf8d0e29fd707a2a23e91301a9680b4faf8f2",
+        "size_in_bytes": 8374
+      },
+      {
+        "_path": "Lib/site-packages/jsonschema/tests/fuzz_validate.py",
+        "path_type": "hardlink",
+        "sha256": "7d403bc932488a1682c09a659147a165ec81f381dc5c472ab58e683c95c83bb2",
+        "size_in_bytes": 1114
+      },
+      {
+        "_path": "Lib/site-packages/jsonschema/tests/test_cli.py",
+        "path_type": "hardlink",
+        "sha256": "03cf6be4b387cbea5e2cf640e580e439a3135aacd03bfc364eef16173fefa613",
+        "size_in_bytes": 28544
+      },
+      {
+        "_path": "Lib/site-packages/jsonschema/tests/test_deprecations.py",
+        "path_type": "hardlink",
+        "sha256": "c86ea6911247a531db5a8c692c2e72e47edf93c7ab18eb3c7fff55e2d081121f",
+        "size_in_bytes": 15754
+      },
+      {
+        "_path": "Lib/site-packages/jsonschema/tests/test_exceptions.py",
+        "path_type": "hardlink",
+        "sha256": "aec12a763927533ddd13225bebf0e232874f1d7b094c45b30ebc54b1c83c1b9a",
+        "size_in_bytes": 24301
+      },
+      {
+        "_path": "Lib/site-packages/jsonschema/tests/test_format.py",
+        "path_type": "hardlink",
+        "sha256": "7959b948c69617694e3cedbc6cf03036f92242f1c240acbe327b808047217c47",
+        "size_in_bytes": 3188
+      },
+      {
+        "_path": "Lib/site-packages/jsonschema/tests/test_jsonschema_test_suite.py",
+        "path_type": "hardlink",
+        "sha256": "b407f192733ae4e47d2f20cf1eed699046a899b2e08d12e727a14f8963ddc638",
+        "size_in_bytes": 8461
+      },
+      {
+        "_path": "Lib/site-packages/jsonschema/tests/test_types.py",
+        "path_type": "hardlink",
+        "sha256": "705e752930e676cc74e8cac87387d72add17f5f22c560c39ba14fc09a9956bc5",
+        "size_in_bytes": 6977
+      },
+      {
+        "_path": "Lib/site-packages/jsonschema/tests/test_utils.py",
+        "path_type": "hardlink",
+        "sha256": "b1aa3be28d4fc9833105fab07a8910378f021524baca1264e459027cc2793ec2",
+        "size_in_bytes": 4163
+      },
+      {
+        "_path": "Lib/site-packages/jsonschema/tests/test_validators.py",
+        "path_type": "hardlink",
+        "sha256": "bb397e6a0c8ba193d3b9fa2e2074b114f7cf62b7487633708c7703ff93725381",
+        "size_in_bytes": 87949
+      },
+      {
+        "_path": "Lib/site-packages/jsonschema/tests/__pycache__/__init__.cpython-313.pyc",
+        "path_type": "hardlink",
+        "sha256": "be325ca83c07a5875a1821345c6ceb2afd97a1fb9652d36f3e8cbfb129adba49",
+        "size_in_bytes": 143
+      },
+      {
+        "_path": "Lib/site-packages/jsonschema/tests/__pycache__/_suite.cpython-313.pyc",
+        "path_type": "hardlink",
+        "sha256": "b30bd4cf8b2673e4e5f6f1efe6483606475b21d94c85a56223bc2d2bf4e91b6e",
+        "size_in_bytes": 13168
+      },
+      {
+        "_path": "Lib/site-packages/jsonschema/tests/__pycache__/fuzz_validate.cpython-313.pyc",
+        "path_type": "hardlink",
+        "sha256": "9a056e162c9a3ddb54f4187c2c99500484cf5c4622b4f66c0e9beaf903e2d9ce",
+        "size_in_bytes": 2254
+      },
+      {
+        "_path": "Lib/site-packages/jsonschema/tests/__pycache__/test_cli.cpython-313.pyc",
+        "path_type": "hardlink",
+        "sha256": "8efaa0d41be80b484fa73fb73383c4008720489f582baed120f2a48f36a8617d",
+        "size_in_bytes": 32779
+      },
+      {
+        "_path": "Lib/site-packages/jsonschema/tests/__pycache__/test_deprecations.cpython-313.pyc",
+        "path_type": "hardlink",
+        "sha256": "f9e67cbfea23a406cff7b295fdeec141e0869ff6a9d422a35fc5cc5123dc9729",
+        "size_in_bytes": 24941
+      },
+      {
+        "_path": "Lib/site-packages/jsonschema/tests/__pycache__/test_exceptions.cpython-313.pyc",
+        "path_type": "hardlink",
+        "sha256": "4e07359f88bd652662cbb4bfceef0c38f9060144e208d455dc02397a91508cc9",
+        "size_in_bytes": 32788
+      },
+      {
+        "_path": "Lib/site-packages/jsonschema/tests/__pycache__/test_format.cpython-313.pyc",
+        "path_type": "hardlink",
+        "sha256": "33c13704d8c4cce7b6260f38353913282f5cf691eb86a36592805554358a1eed",
+        "size_in_bytes": 6327
+      },
+      {
+        "_path": "Lib/site-packages/jsonschema/tests/__pycache__/test_jsonschema_test_suite.cpython-313.pyc",
+        "path_type": "hardlink",
+        "sha256": "cb6d1ea7dd71ea5f687f809decf78c4963e2a56b9983c587a41476962b8dd121",
+        "size_in_bytes": 10406
+      },
+      {
+        "_path": "Lib/site-packages/jsonschema/tests/__pycache__/test_types.cpython-313.pyc",
+        "path_type": "hardlink",
+        "sha256": "3e0d791148f0cd40778038c430eb58c301f9518e22554def69bebd45c90b8dd8",
+        "size_in_bytes": 11870
+      },
+      {
+        "_path": "Lib/site-packages/jsonschema/tests/__pycache__/test_utils.cpython-313.pyc",
+        "path_type": "hardlink",
+        "sha256": "f3d489450a4e0737988cd4c3019dc78d24adc2be974651dec5f34097ce154e50",
+        "size_in_bytes": 7876
+      },
+      {
+        "_path": "Lib/site-packages/jsonschema/tests/__pycache__/test_validators.cpython-313.pyc",
+        "path_type": "hardlink",
+        "sha256": "df1d4c9206d7bf210f73a7f4a17173e3ce2f2d1ab3039d0194e32107b5437074",
+        "size_in_bytes": 131561
+      },
+      {
+        "_path": "Lib/site-packages/jsonschema/tests/typing/__init__.py",
+        "path_type": "hardlink",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "size_in_bytes": 0
+      },
+      {
+        "_path": "Lib/site-packages/jsonschema/tests/typing/test_all_concrete_validators_match_protocol.py",
+        "path_type": "hardlink",
+        "sha256": "2395d4979658512668dc03e4175d25f0c9df934f685caaaf5d6b6d186777b039",
+        "size_in_bytes": 1238
+      },
+      {
+        "_path": "Lib/site-packages/jsonschema/benchmarks/issue232/issue.json",
+        "path_type": "hardlink",
+        "sha256": "79a3ce663311bb9bbc4692abb00f6e93bb9c3d94b9b64286e03fe190e4d0dc79",
+        "size_in_bytes": 117105
+      },
+      {
+        "_path": "Lib/site-packages/jsonschema/tests/typing/__pycache__/__init__.cpython-313.pyc",
+        "path_type": "hardlink",
+        "sha256": "dd41fb13aa15ec5f406c56a3da6689338d5052e61344ab9ac230f5e6729e3739",
+        "size_in_bytes": 150
+      },
+      {
+        "_path": "Lib/site-packages/jsonschema/tests/typing/__pycache__/test_all_concrete_validators_match_protocol.cpython-313.pyc",
+        "path_type": "hardlink",
+        "sha256": "84cac5fca7a83c75f8612ea3fe0e99ec251cb81d936a1b7f5a55eec1c56f2c10",
+        "size_in_bytes": 950
+      },
+      {
+        "_path": "Lib/site-packages/jsonschema-4.26.0.dist-info/licenses/COPYING",
+        "path_type": "hardlink",
+        "sha256": "4f92a015a13c4d1a040bef018aa13430b4f1bc73b41b16bb846c346766de7439",
+        "size_in_bytes": 1057
+      },
+      {
+        "_path": "Lib/site-packages/jsonschema/__pycache__/__init__.cpython-313.pyc",
+        "path_type": "hardlink",
+        "sha256": "28af13cff464a183b9cac881e55fcfdaeca55d45ad5222bd31e9f377629f8889",
+        "size_in_bytes": 3718
+      },
+      {
+        "_path": "Lib/site-packages/jsonschema/__pycache__/__main__.cpython-313.pyc",
+        "path_type": "hardlink",
+        "sha256": "0374891198e6fd12a15b24104482a369ddc936272eb14d7f10970a740a9121e5",
+        "size_in_bytes": 292
+      },
+      {
+        "_path": "Lib/site-packages/jsonschema/__pycache__/_format.cpython-313.pyc",
+        "path_type": "hardlink",
+        "sha256": "772480a5e1bd0d989dc0534aaec9f8ad7e3b1501c86a1861288a5ad90fc21409",
+        "size_in_bytes": 18529
+      },
+      {
+        "_path": "Lib/site-packages/jsonschema/__pycache__/_keywords.cpython-313.pyc",
+        "path_type": "hardlink",
+        "sha256": "cc0de31a65e52dd3372c747c8bf19b94acb51f5597c7e53ea6e1923adb421ac0",
+        "size_in_bytes": 19963
+      },
+      {
+        "_path": "Lib/site-packages/jsonschema/__pycache__/_legacy_keywords.cpython-313.pyc",
+        "path_type": "hardlink",
+        "sha256": "ca4e80fba8bbb9aba55c475c56380de029606258c0f9262ecc73c4049446630a",
+        "size_in_bytes": 17364
+      },
+      {
+        "_path": "Lib/site-packages/jsonschema/__pycache__/_types.cpython-313.pyc",
+        "path_type": "hardlink",
+        "sha256": "f7e4d312058d6fbfd28ed4ad07e0ee10869ce48fae16a8d224be6b948ab46efb",
+        "size_in_bytes": 6848
+      },
+      {
+        "_path": "Lib/site-packages/jsonschema/__pycache__/_typing.cpython-313.pyc",
+        "path_type": "hardlink",
+        "sha256": "8ba036df99155c3c1c3e5ab600a6c30117ba2482dfa2b1b2435e81e3dfe4bf09",
+        "size_in_bytes": 1333
+      },
+      {
+        "_path": "Lib/site-packages/jsonschema/__pycache__/_utils.cpython-313.pyc",
+        "path_type": "hardlink",
+        "sha256": "2a5b12fc913e276f0a5bc56d908c8a36612e354909ab781deda16acd2526fbff",
+        "size_in_bytes": 14366
+      },
+      {
+        "_path": "Lib/site-packages/jsonschema/__pycache__/cli.cpython-313.pyc",
+        "path_type": "hardlink",
+        "sha256": "36d997ceb0e239729dc8f8e1785536114d64b625d9075e18ae29d0f98346934a",
+        "size_in_bytes": 12201
+      },
+      {
+        "_path": "Lib/site-packages/jsonschema/__pycache__/exceptions.cpython-313.pyc",
+        "path_type": "hardlink",
+        "sha256": "5e13b712bb0e992e6bfc8c65148e1a29091cfd028db9a2e00f71abb7356226ab",
+        "size_in_bytes": 21685
+      },
+      {
+        "_path": "Lib/site-packages/jsonschema/__pycache__/protocols.cpython-313.pyc",
+        "path_type": "hardlink",
+        "sha256": "33fcbe365a0561c734f641b992bc205c8b64a87cc4ea1cb80714a6aa757393e0",
+        "size_in_bytes": 6250
+      },
+      {
+        "_path": "Lib/site-packages/jsonschema/__pycache__/validators.cpython-313.pyc",
+        "path_type": "hardlink",
+        "sha256": "770fd7014ce844fc95d50e1b081db6e83c769b295842df0feae6f56970afed6b",
+        "size_in_bytes": 51761
+      }
+    ]
+  },
+  "link": {
+    "source": "C:\\Users\\User\\AppData\\Local\\rattler\\cache\\pkgs\\jsonschema-4.26.0-py313haa95532_0",
+    "type": 3
+  }
+}

@@ -1,0 +1,43 @@
+{
+  "build": "hd7fb8db_0",
+  "build_number": 0,
+  "depends": [
+    "cuda-cudart_win-64 12.9.79 hd7fb8db_0",
+    "cuda-version >=12.9,<12.10.0a0",
+    "ucrt >=10.0.20348.0",
+    "vc >=14.3,<15",
+    "vc14_runtime >=14.44.35208"
+  ],
+  "license": "LicenseRef-NVIDIA-End-User-License-Agreement",
+  "license_family": "Other",
+  "md5": "0e6fa6cbcb0de1eda042ea7e7d0a04a4",
+  "name": "cuda-cudart",
+  "sha256": "63b846e200d2e05fd3e96e73eaa1c247e9126798ed5fa7eb1a1679903074f36d",
+  "size": 168082,
+  "subdir": "win-64",
+  "timestamp": 1772828092280,
+  "version": "12.9.79",
+  "fn": "cuda-cudart-12.9.79-hd7fb8db_0.conda",
+  "url": "https://repo.anaconda.com/pkgs/main/win-64/cuda-cudart-12.9.79-hd7fb8db_0.conda",
+  "channel": "https://repo.anaconda.com/pkgs/main/",
+  "extracted_package_dir": "C:\\Users\\User\\AppData\\Local\\rattler\\cache\\pkgs\\cuda-cudart-12.9.79-hd7fb8db_0",
+  "requested_specs": [],
+  "files": [
+    "Library/bin/cudart64_12.dll"
+  ],
+  "paths_data": {
+    "paths_version": 1,
+    "paths": [
+      {
+        "_path": "Library/bin/cudart64_12.dll",
+        "path_type": "hardlink",
+        "sha256": "760c38928bbe5759f7b31ed6692599eb7ec83cedd5702e84c2b72028a89837e1",
+        "size_in_bytes": 583680
+      }
+    ]
+  },
+  "link": {
+    "source": "C:\\Users\\User\\AppData\\Local\\rattler\\cache\\pkgs\\cuda-cudart-12.9.79-hd7fb8db_0",
+    "type": 3
+  }
+}

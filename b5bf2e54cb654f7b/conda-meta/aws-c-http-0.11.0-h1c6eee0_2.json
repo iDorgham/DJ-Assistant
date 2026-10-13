@@ -1,0 +1,164 @@
+{
+  "build": "h1c6eee0_2",
+  "build_number": 2,
+  "depends": [
+    "aws-c-cal >=0.9.15,<0.9.16.0a0",
+    "aws-c-common >=0.14.5,<0.14.6.0a0",
+    "aws-c-compression >=0.3.2,<0.3.3.0a0",
+    "aws-c-io >=0.27.6,<0.27.7.0a0",
+    "ucrt >=10.0.20348.0",
+    "vc >=14.3,<15",
+    "vc14_runtime >=14.44.35208"
+  ],
+  "license": "Apache-2.0",
+  "license_family": "Apache",
+  "md5": "d9eb42c299173dfc2486e5452e39f209",
+  "name": "aws-c-http",
+  "sha256": "4a500859f904ccc64fb72dbb00fb6d892d6dfe2db4efa42b02ebb1ea3aac0ac2",
+  "size": 205618,
+  "subdir": "win-64",
+  "timestamp": 1789980742899,
+  "version": "0.11.0",
+  "fn": "aws-c-http-0.11.0-h1c6eee0_2.conda",
+  "url": "https://repo.anaconda.com/pkgs/main/win-64/aws-c-http-0.11.0-h1c6eee0_2.conda",
+  "channel": "https://repo.anaconda.com/pkgs/main/",
+  "extracted_package_dir": "C:\\Users\\User\\AppData\\Local\\rattler\\cache\\pkgs\\aws-c-http-0.11.0-h1c6eee0_2",
+  "requested_specs": [],
+  "files": [
+    "Library/lib/cmake/aws-c-http/aws-c-http-config.cmake",
+    "Library/lib/cmake/aws-c-http/shared/aws-c-http-targets-release.cmake",
+    "Library/lib/cmake/aws-c-http/shared/aws-c-http-targets.cmake",
+    "Library/bin/aws-c-http.dll",
+    "Library/bin/elasticurl.exe",
+    "Library/bin/h2benchmark.exe",
+    "Library/include/aws/http/connection.h",
+    "Library/include/aws/http/connection_manager.h",
+    "Library/include/aws/http/exports.h",
+    "Library/include/aws/http/http.h",
+    "Library/include/aws/http/http2_stream_manager.h",
+    "Library/include/aws/http/proxy.h",
+    "Library/include/aws/http/request_response.h",
+    "Library/include/aws/http/server.h",
+    "Library/include/aws/http/statistics.h",
+    "Library/include/aws/http/status_code.h",
+    "Library/include/aws/http/websocket.h",
+    "Library/lib/aws-c-http.lib"
+  ],
+  "paths_data": {
+    "paths_version": 1,
+    "paths": [
+      {
+        "_path": "Library/lib/cmake/aws-c-http/aws-c-http-config.cmake",
+        "path_type": "hardlink",
+        "sha256": "13f6f2fef6508490dc88fb81329829b5e03f2c3727e2cf4fa11d43728cef744d",
+        "size_in_bytes": 623
+      },
+      {
+        "_path": "Library/lib/cmake/aws-c-http/shared/aws-c-http-targets-release.cmake",
+        "path_type": "hardlink",
+        "sha256": "18f5216c4f87597cac1dd5bc8610ac1dd73c10c68420440b20814a0a0dc3aea8",
+        "size_in_bytes": 927
+      },
+      {
+        "_path": "Library/lib/cmake/aws-c-http/shared/aws-c-http-targets.cmake",
+        "path_type": "hardlink",
+        "sha256": "0f9f23acb6a0da5244c9d7673503bc20db5d684067e49a43a5fd8f0a94ad23bf",
+        "size_in_bytes": 4428
+      },
+      {
+        "_path": "Library/bin/aws-c-http.dll",
+        "path_type": "hardlink",
+        "sha256": "5fa7c3f88953ce44ad94a4a7069e3c00de628f3dd62a964353b5a1adf2839bf8",
+        "size_in_bytes": 379208
+      },
+      {
+        "_path": "Library/bin/elasticurl.exe",
+        "path_type": "hardlink",
+        "sha256": "0addeb2868368e2987437008c353f037aac9ab799116206b4b62b170e6d3e59f",
+        "size_in_bytes": 41800
+      },
+      {
+        "_path": "Library/bin/h2benchmark.exe",
+        "path_type": "hardlink",
+        "sha256": "d7cdecc32fc80b1f4fd3d817c1c0b0d718161c0ccaef8e6f91ee8632fce76edd",
+        "size_in_bytes": 30024
+      },
+      {
+        "_path": "Library/include/aws/http/connection.h",
+        "path_type": "hardlink",
+        "sha256": "7e0245be2a2ca986fe86353e6c7e37574c6aef768ef27dd6f8bd992e3b8f0b0c",
+        "size_in_bytes": 28610
+      },
+      {
+        "_path": "Library/include/aws/http/connection_manager.h",
+        "path_type": "hardlink",
+        "sha256": "3d5e35012e7224c7f889e57754322e50a48c13826d97193b0027b0e25e768497",
+        "size_in_bytes": 9058
+      },
+      {
+        "_path": "Library/include/aws/http/exports.h",
+        "path_type": "hardlink",
+        "sha256": "4a8601e7d846e9bd83edd6b558390bbb4975b86529c3b6ba7b3f3eb19265ff52",
+        "size_in_bytes": 853
+      },
+      {
+        "_path": "Library/include/aws/http/http.h",
+        "path_type": "hardlink",
+        "sha256": "0fd97b629f3fda9da50011c3fd3baf5bf9ddbcd0dc4045478d68fd8fc22549d2",
+        "size_in_bytes": 6073
+      },
+      {
+        "_path": "Library/include/aws/http/http2_stream_manager.h",
+        "path_type": "hardlink",
+        "sha256": "230b2ceba7c7b40785384f2f48db1effe2f45fde8897e6de2ffbee916c4b826a",
+        "size_in_bytes": 9108
+      },
+      {
+        "_path": "Library/include/aws/http/proxy.h",
+        "path_type": "hardlink",
+        "sha256": "e579ddde337bbbd48cb8a3114d10b5ec4801698052b1a140ed489ea597685cbf",
+        "size_in_bytes": 20612
+      },
+      {
+        "_path": "Library/include/aws/http/request_response.h",
+        "path_type": "hardlink",
+        "sha256": "d8c6ec3a459f4f6203c44f4d7a01d6dac43b1c953d8407aef7bccf16ab59254d",
+        "size_in_bytes": 51862
+      },
+      {
+        "_path": "Library/include/aws/http/server.h",
+        "path_type": "hardlink",
+        "sha256": "fae58757d6dfef33376b9485a427099c8dee63e6f6ced2d816ec5260c84b5290",
+        "size_in_bytes": 6595
+      },
+      {
+        "_path": "Library/include/aws/http/statistics.h",
+        "path_type": "hardlink",
+        "sha256": "f2fb2d095a89be3c602d4138d2e2e77da9f6b305d267e59a85e41f0622ff4fcc",
+        "size_in_bytes": 2138
+      },
+      {
+        "_path": "Library/include/aws/http/status_code.h",
+        "path_type": "hardlink",
+        "sha256": "efb121a296d11372c850f61c6c21255d0bf54e525276faf96400caaa4f6bf518",
+        "size_in_bytes": 3869
+      },
+      {
+        "_path": "Library/include/aws/http/websocket.h",
+        "path_type": "hardlink",
+        "sha256": "96e156f360e46742b4a45f8fde2bb987e073d5bdb379a4d1aa9877c090ba3e51",
+        "size_in_bytes": 18358
+      },
+      {
+        "_path": "Library/lib/aws-c-http.lib",
+        "path_type": "hardlink",
+        "sha256": "2f21da3ef23d4ec16e55a0bf085804586bb59e5aaadeafc20fe56f3e8d5f3ce0",
+        "size_in_bytes": 87910
+      }
+    ]
+  },
+  "link": {
+    "source": "C:\\Users\\User\\AppData\\Local\\rattler\\cache\\pkgs\\aws-c-http-0.11.0-h1c6eee0_2",
+    "type": 3
+  }
+}
