@@ -17,7 +17,7 @@ Use this to accept phase exits in **product language**. Engineering detail and t
 | # | Check | Must / Should | PO sign-off |
 |---|--------|---------------|-------------|
 | 0.1 | App launches on the target desktop OS(es) we care about for MVP | Must | ☑ (Verified on macOS and Windows via CI matrix #38219344042 & local Windows build) |
-| 0.2 | User can choose a folder and see tracks listed (title, artist, duration, path/status) | Must | ☑ (Verified live GUI run on 94-track library) |
+| 0.2 | User can choose a folder and see tracks listed (title, artist, duration, path/status) | Must | ☐ (Picker opens; picker-to-scan flow not yet verified) |
 | 0.3 | Duplicates are detected sensibly (same file not listed twice as independent unknowns) | Must | ☑ (BLAKE3 fingerprint & dedup verified) |
 | 0.4 | Bad/unsupported files don’t crash the app; they’re skipped or marked clearly | Must | ☑ (Tested on non-audio & corrupted fixtures) |
 | 0.5 | Library list survives restart (local persistence works) | Must | ☑ (Verified local SQLite persistence & migrations) |
