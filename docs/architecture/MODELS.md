@@ -104,7 +104,7 @@ into the spec when the graph changes.
 ## 4. Runtime Integration
 
 - **ONNX Runtime** integrated from Rust in the Tauri-free `crates/analysis`
-  (`dj-assistant-analysis`) crate; the desktop `src-tauri` layer consumes it. Dylib
+  (`dj-assistant-analysis`) crate; `src-tauri` integration is still pending. Dylib
   discovery (`ORT_DYLIB_PATH` → exe/cwd → known platform locations) and SHA-256 model
   verification happen before any inference.
 - Decode with **Symphonia** → resample/normalize as required by each model → inference → post-process (beat snap, Camelot mapping, phrase merge).
