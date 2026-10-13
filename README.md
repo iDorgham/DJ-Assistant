@@ -91,7 +91,7 @@ graph TB
     IPC --> Core
     Core --> Audio
     Core --> DB
-    IPC -.->|HTTPS/WSS<br/>(optional sync)| API
+    IPC -.->|"HTTPS/WSS<br/>(optional sync)"| API
     API --> LLM
     API --> Collab
     API --> Index
