@@ -36,7 +36,22 @@ Canonical note: Energy, mood, danceability, and “groove” are **not** auto-sc
 
 ## 3. Model Registry (Local)
 
-Models live under `models/` (or a configurable path). They are **not** committed as large binaries without Git LFS or a download script.
+Models live under a **configurable models directory** resolved by
+`dj_assistant_analysis::discover_models_dir()` with this precedence:
+
+1. `DJ_ASSISTANT_MODELS_DIR` environment variable (must point at an existing directory;
+   a missing path falls through rather than pinning a broken config)
+2. `models/` relative to the current working directory
+3. `models/` next to the running executable (packaged layout)
+4. `None` — the caller applies its own fallback (the desktop app will use its
+   app-data directory once the analysis pipeline is wired in)
+
+Model assets are resolved per spec with `resolve_model_path(base_dir, &spec)`, which
+joins the spec's relative `filename` (subdirectories allowed, e.g.
+`beat_grid/v1/model.onnx`) and rejects absolute, rooted, and traversing (`..`) paths,
+so a spec can never escape the models directory. `load_model_session(base_dir, &spec)`
+resolves, verifies the SHA-256 digest, and loads the session in one call. Models are
+**not** committed as large binaries without Git LFS or a download script.
 
 Suggested layout:
 
@@ -105,8 +120,9 @@ into the spec when the graph changes.
 
 - **ONNX Runtime** integrated from Rust in the Tauri-free `crates/analysis`
   (`dj-assistant-analysis`) crate; `src-tauri` integration is still pending. Dylib
-  discovery (`ORT_DYLIB_PATH` → exe/cwd → known platform locations) and SHA-256 model
-  verification happen before any inference.
+  discovery (`ORT_DYLIB_PATH` → exe/cwd → known platform locations), model-path
+  resolution (`DJ_ASSISTANT_MODELS_DIR` → cwd `models/` → exe-adjacent `models/`),
+  and SHA-256 model verification happen before any inference.
 - Decode with **Symphonia** → resample/normalize as required by each model → inference → post-process (beat snap, Camelot mapping, phrase merge).
 - Analysis job queue is **local** (per-track + batch). UI receives progress events.
 - Store in SQLite: feature columns + `analysis_status` + `analysis_version` + confidence flags.

@@ -88,6 +88,9 @@ pub enum OnnxError {
     )]
     DylibNotFound(String),
 
+    #[error("Invalid model path '{filename}': {reason}")]
+    InvalidModelPath { filename: String, reason: String },
+
     #[error("Checksum verification failed for model: {0}")]
     Checksum(#[from] ChecksumError),
 

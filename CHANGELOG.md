@@ -9,6 +9,14 @@ project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- **Configurable model asset path (T1.1.2)** — `dj-assistant-analysis` now resolves
+  model files against a configurable models directory: `discover_models_dir()` follows
+  the precedence `DJ_ASSISTANT_MODELS_DIR` → cwd `models/` → exe-adjacent `models/` →
+  caller fallback; `resolve_model_path()` joins a spec's relative filename (subdirectories
+  allowed) and rejects absolute/rooted/`..` paths so a spec can never escape the models
+  directory; `load_model_session()` resolves, verifies the pinned SHA-256, and loads the
+  session in one call, failing before runtime initialization on invalid paths. 14 new
+  tests; documented in `MODELS.md` §3/§4 and `.env.example`.
 - **Analysis engine foundation** — new Tauri-free crate `crates/analysis`
   (`dj-assistant-analysis`) for Phase 1: multi-format decoding via **Symphonia**
   (MP3/WAV/FLAC/AIFF/M4A) to interleaved `f32` PCM, DSP normalization (mono/stereo

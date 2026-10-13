@@ -1,6 +1,10 @@
 //! Model specification and registry definitions.
 
+use std::path::{Component, Path, PathBuf};
+
 use serde::{Deserialize, Serialize};
+
+use crate::error::OnnxError;
 
 /// Specification for an ONNX analysis model.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
@@ -55,6 +59,86 @@ impl ModelSpec {
     }
 }
 
+/// Environment variable overriding the models directory.
+pub const MODELS_DIR_ENV_VAR: &str = "DJ_ASSISTANT_MODELS_DIR";
+
+/// Resolves a model spec's asset path under a base models directory.
+///
+/// `spec.filename` is a spec-authored relative path (it may contain subdirectories,
+/// e.g. `beat_grid/v1/model.onnx`) and is treated as untrusted: absolute paths, rooted
+/// paths, and any non-normal component (`..`, `.`) are rejected so the resolved path
+/// can never escape `base_dir`.
+pub fn resolve_model_path(
+    base_dir: impl AsRef<Path>,
+    spec: &ModelSpec,
+) -> Result<PathBuf, OnnxError> {
+    if spec.filename.is_empty() {
+        return Err(OnnxError::InvalidModelPath {
+            filename: spec.filename.clone(),
+            reason: "filename is empty".to_string(),
+        });
+    }
+
+    let mut resolved = base_dir.as_ref().to_path_buf();
+    for component in Path::new(&spec.filename).components() {
+        match component {
+            Component::Normal(part) => resolved.push(part),
+            other => {
+                return Err(OnnxError::InvalidModelPath {
+                    filename: spec.filename.clone(),
+                    reason: format!("unsupported path component: {other:?}"),
+                });
+            }
+        }
+    }
+    Ok(resolved)
+}
+
+/// Discovers the models directory using the standard precedence chain:
+///
+/// 1. `DJ_ASSISTANT_MODELS_DIR` environment variable (when it points at an existing
+///    directory; a missing env path falls through rather than pinning a broken config)
+/// 2. `models/` relative to the current working directory
+/// 3. `models/` next to the running executable (packaged layout)
+/// 4. `None` — callers apply their own fallback (e.g. an app-data directory)
+pub fn discover_models_dir() -> Option<PathBuf> {
+    let env_dir = std::env::var(MODELS_DIR_ENV_VAR).ok();
+    let cwd = std::env::current_dir().ok()?;
+    let exe_dir = std::env::current_exe()
+        .ok()
+        .and_then(|exe| exe.parent().map(Path::to_path_buf));
+    discover_models_dir_from(env_dir.as_deref(), &cwd, exe_dir.as_deref())
+}
+
+/// Pure form of [`discover_models_dir`] over injected inputs, so the precedence
+/// chain can be tested without mutating process-global environment state.
+fn discover_models_dir_from(
+    env_dir: Option<&str>,
+    cwd: &Path,
+    exe_dir: Option<&Path>,
+) -> Option<PathBuf> {
+    if let Some(dir) = env_dir {
+        let path = PathBuf::from(dir);
+        if path.is_dir() {
+            return Some(path);
+        }
+    }
+
+    let cwd_models = cwd.join("models");
+    if cwd_models.is_dir() {
+        return Some(cwd_models);
+    }
+
+    if let Some(exe) = exe_dir {
+        let exe_models = exe.join("models");
+        if exe_models.is_dir() {
+            return Some(exe_models);
+        }
+    }
+
+    None
+}
+
 /// A registry containing one or more model specifications.
 #[derive(Debug, Clone, Default, Serialize, Deserialize, PartialEq, Eq)]
 pub struct ModelRegistry {
@@ -81,6 +165,153 @@ impl ModelRegistry {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    fn spec_with_filename(filename: &str) -> ModelSpec {
+        ModelSpec {
+            filename: filename.to_string(),
+            ..ModelSpec::smoke_test()
+        }
+    }
+
+    #[test]
+    fn resolve_joins_base_dir_with_spec_filename() {
+        let base = Path::new("models");
+        let resolved = resolve_model_path(base, &spec_with_filename("smoke_test.onnx"))
+            .expect("flat filename should resolve");
+
+        assert_eq!(resolved, base.join("smoke_test.onnx"));
+    }
+
+    #[test]
+    fn resolve_accepts_subdirectory_filename() {
+        let base = Path::new("models");
+        let resolved = resolve_model_path(base, &spec_with_filename("beat_grid/v1/model.onnx"))
+            .expect("nested normal components should resolve");
+
+        assert_eq!(
+            resolved,
+            base.join("beat_grid").join("v1").join("model.onnx")
+        );
+    }
+
+    #[test]
+    fn resolve_rejects_parent_traversal_filename() {
+        let res = resolve_model_path(Path::new("models"), &spec_with_filename("../escape.onnx"));
+
+        assert!(
+            matches!(res, Err(OnnxError::InvalidModelPath { .. })),
+            "expected InvalidModelPath, got {res:?}"
+        );
+    }
+
+    #[test]
+    fn resolve_rejects_nested_parent_traversal_filename() {
+        let res = resolve_model_path(
+            Path::new("models"),
+            &spec_with_filename("beat_grid/v1/../../escape.onnx"),
+        );
+
+        assert!(
+            matches!(res, Err(OnnxError::InvalidModelPath { .. })),
+            "expected InvalidModelPath, got {res:?}"
+        );
+    }
+
+    #[test]
+    fn resolve_rejects_absolute_filename() {
+        let absolute = std::env::temp_dir().join("evil.onnx");
+        let res = resolve_model_path(
+            Path::new("models"),
+            &spec_with_filename(absolute.to_str().expect("temp dir is valid unicode")),
+        );
+
+        assert!(
+            matches!(res, Err(OnnxError::InvalidModelPath { .. })),
+            "expected InvalidModelPath, got {res:?}"
+        );
+    }
+
+    #[test]
+    fn resolve_rejects_rooted_filename() {
+        // "/evil.onnx" is absolute on Unix but merely rooted on Windows; both must be
+        // rejected so a spec cannot pin an OS-dependent filesystem root.
+        let res = resolve_model_path(Path::new("models"), &spec_with_filename("/evil.onnx"));
+
+        assert!(
+            matches!(res, Err(OnnxError::InvalidModelPath { .. })),
+            "expected InvalidModelPath, got {res:?}"
+        );
+    }
+
+    #[test]
+    fn resolve_rejects_empty_filename() {
+        let res = resolve_model_path(Path::new("models"), &spec_with_filename(""));
+
+        assert!(
+            matches!(res, Err(OnnxError::InvalidModelPath { .. })),
+            "expected InvalidModelPath, got {res:?}"
+        );
+    }
+
+    #[test]
+    fn discovery_env_dir_wins_when_it_exists() {
+        let env = tempfile::tempdir().expect("temp env dir");
+
+        let found = discover_models_dir_from(
+            Some(env.path().to_str().expect("temp path is unicode")),
+            Path::new("models"),
+            None,
+        );
+
+        assert_eq!(found.as_deref(), Some(env.path()));
+    }
+
+    #[test]
+    fn discovery_missing_env_dir_falls_through_to_cwd_models() {
+        let cwd = tempfile::tempdir().expect("temp cwd");
+        std::fs::create_dir(cwd.path().join("models")).expect("create models dir");
+
+        let found = discover_models_dir_from(
+            Some("Z:\\definitely-not-a-real-models-dir"),
+            cwd.path(),
+            None,
+        );
+
+        assert_eq!(found.as_deref(), Some(cwd.path().join("models").as_path()));
+    }
+
+    #[test]
+    fn discovery_uses_cwd_models_when_env_unset() {
+        let cwd = tempfile::tempdir().expect("temp cwd");
+        std::fs::create_dir(cwd.path().join("models")).expect("create models dir");
+
+        let found = discover_models_dir_from(None, cwd.path(), None);
+
+        assert_eq!(found.as_deref(), Some(cwd.path().join("models").as_path()));
+    }
+
+    #[test]
+    fn discovery_exe_adjacent_models_dir_is_last_candidate() {
+        let cwd = tempfile::tempdir().expect("temp cwd");
+        let exe_dir = tempfile::tempdir().expect("temp exe dir");
+        std::fs::create_dir(exe_dir.path().join("models")).expect("create models dir");
+
+        let found = discover_models_dir_from(None, cwd.path(), Some(exe_dir.path()));
+
+        assert_eq!(
+            found.as_deref(),
+            Some(exe_dir.path().join("models").as_path())
+        );
+    }
+
+    #[test]
+    fn discovery_returns_none_when_no_candidate_exists() {
+        let cwd = tempfile::tempdir().expect("temp cwd");
+
+        let found = discover_models_dir_from(None, cwd.path(), None);
+
+        assert_eq!(found, None);
+    }
 
     #[test]
     fn smoke_test_spec_serializes_and_deserializes() {
