@@ -78,8 +78,8 @@
 ### 1.1 ONNX & Models
 - [x] **T1.1.1** Integrate ONNX Runtime in Rust — *`crates/analysis`: `ort` dynamic loading, dylib discovery, SHA-256 verification, executed smoke-test graph*
 - [ ] **T1.1.2** Model loading + path configuration + version stamp — *model loading and versioned specs are in place; configurable model asset path remains to do*
-- [ ] **T1.1.3** BPM + beat grid inference path
-- [ ] **T1.1.4** Key detection (Camelot + classical)
+- [x] **T1.1.3** BPM + beat grid inference path — *deterministic onset path in `crates/analysis/src/bpm.rs` (`OnsetAutocorr`), with an ONNX-activation seam reusing the same post-processor; full `bpm` test suite (incl. `beats_are_evenly_spaced_and_align_to_clicks`) green; `cargo fmt --check` + `cargo clippy -p dj-assistant-analysis -- -D warnings` clean; runtime budget well under 3 s/track*
+- [x] **T1.1.4** Key detection (Camelot + classical) — *deterministic chroma path in `crates/analysis/src/key.rs` (`ChromaKeyfinding`): Hann-windowed STFT → 12-bin pitch-class profile (8192-sample window for sub-semitone resolution) → Krumhansl-Kessler key-finding with an ONNX chroma-activation seam; maps 24 keys to classical names + Camelot codes (reusing the wheel in `crates/core`); full `key` test suite green (C major / A minor / G major drones + real FLAC fixture + graceful degradation + Camelot wheel self-check); `cargo fmt`/`clippy` clean*
 - [ ] **T1.1.5** Phrase / structure segmentation
 - [ ] **T1.1.6** Vocal presence / density
 - [ ] **T1.1.7** Loudness (EBU R128)
