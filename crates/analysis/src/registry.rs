@@ -103,18 +103,18 @@ pub fn resolve_model_path(
 /// 4. `None` — callers apply their own fallback (e.g. an app-data directory)
 pub fn discover_models_dir() -> Option<PathBuf> {
     let env_dir = std::env::var(MODELS_DIR_ENV_VAR).ok();
-    let cwd = std::env::current_dir().ok()?;
+    let cwd = std::env::current_dir().ok();
     let exe_dir = std::env::current_exe()
         .ok()
         .and_then(|exe| exe.parent().map(Path::to_path_buf));
-    discover_models_dir_from(env_dir.as_deref(), &cwd, exe_dir.as_deref())
+    discover_models_dir_from(env_dir.as_deref(), cwd.as_deref(), exe_dir.as_deref())
 }
 
 /// Pure form of [`discover_models_dir`] over injected inputs, so the precedence
 /// chain can be tested without mutating process-global environment state.
 fn discover_models_dir_from(
     env_dir: Option<&str>,
-    cwd: &Path,
+    cwd: Option<&Path>,
     exe_dir: Option<&Path>,
 ) -> Option<PathBuf> {
     if let Some(dir) = env_dir {
@@ -124,9 +124,11 @@ fn discover_models_dir_from(
         }
     }
 
-    let cwd_models = cwd.join("models");
-    if cwd_models.is_dir() {
-        return Some(cwd_models);
+    if let Some(cwd) = cwd {
+        let cwd_models = cwd.join("models");
+        if cwd_models.is_dir() {
+            return Some(cwd_models);
+        }
     }
 
     if let Some(exe) = exe_dir {
@@ -254,12 +256,14 @@ mod tests {
     }
 
     #[test]
-    fn discovery_env_dir_wins_when_it_exists() {
+    fn discovery_env_dir_wins_over_existing_cwd_models() {
         let env = tempfile::tempdir().expect("temp env dir");
+        let cwd = tempfile::tempdir().expect("temp cwd");
+        std::fs::create_dir(cwd.path().join("models")).expect("create models dir");
 
         let found = discover_models_dir_from(
             Some(env.path().to_str().expect("temp path is unicode")),
-            Path::new("models"),
+            Some(cwd.path()),
             None,
         );
 
@@ -273,7 +277,7 @@ mod tests {
 
         let found = discover_models_dir_from(
             Some("Z:\\definitely-not-a-real-models-dir"),
-            cwd.path(),
+            Some(cwd.path()),
             None,
         );
 
@@ -285,7 +289,19 @@ mod tests {
         let cwd = tempfile::tempdir().expect("temp cwd");
         std::fs::create_dir(cwd.path().join("models")).expect("create models dir");
 
-        let found = discover_models_dir_from(None, cwd.path(), None);
+        let found = discover_models_dir_from(None, Some(cwd.path()), None);
+
+        assert_eq!(found.as_deref(), Some(cwd.path().join("models").as_path()));
+    }
+
+    #[test]
+    fn discovery_cwd_models_beat_exe_adjacent_models() {
+        let cwd = tempfile::tempdir().expect("temp cwd");
+        let exe_dir = tempfile::tempdir().expect("temp exe dir");
+        std::fs::create_dir(cwd.path().join("models")).expect("create cwd models dir");
+        std::fs::create_dir(exe_dir.path().join("models")).expect("create exe models dir");
+
+        let found = discover_models_dir_from(None, Some(cwd.path()), Some(exe_dir.path()));
 
         assert_eq!(found.as_deref(), Some(cwd.path().join("models").as_path()));
     }
@@ -296,7 +312,7 @@ mod tests {
         let exe_dir = tempfile::tempdir().expect("temp exe dir");
         std::fs::create_dir(exe_dir.path().join("models")).expect("create models dir");
 
-        let found = discover_models_dir_from(None, cwd.path(), Some(exe_dir.path()));
+        let found = discover_models_dir_from(None, Some(cwd.path()), Some(exe_dir.path()));
 
         assert_eq!(
             found.as_deref(),
@@ -305,10 +321,31 @@ mod tests {
     }
 
     #[test]
+    fn discovery_survives_cwd_lookup_failure() {
+        let env = tempfile::tempdir().expect("temp env dir");
+        let exe_dir = tempfile::tempdir().expect("temp exe dir");
+        std::fs::create_dir(exe_dir.path().join("models")).expect("create models dir");
+
+        // cwd lookup failed entirely: the env and exe candidates must still be honored.
+        let found_env = discover_models_dir_from(
+            Some(env.path().to_str().expect("temp path is unicode")),
+            None,
+            Some(exe_dir.path()),
+        );
+        assert_eq!(found_env.as_deref(), Some(env.path()));
+
+        let found_exe = discover_models_dir_from(None, None, Some(exe_dir.path()));
+        assert_eq!(
+            found_exe.as_deref(),
+            Some(exe_dir.path().join("models").as_path())
+        );
+    }
+
+    #[test]
     fn discovery_returns_none_when_no_candidate_exists() {
         let cwd = tempfile::tempdir().expect("temp cwd");
 
-        let found = discover_models_dir_from(None, cwd.path(), None);
+        let found = discover_models_dir_from(None, Some(cwd.path()), None);
 
         assert_eq!(found, None);
     }

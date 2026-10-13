@@ -166,14 +166,49 @@ pub fn load_session_from_file<P: AsRef<Path>>(
 }
 
 /// Resolves a model spec's asset under `base_dir`, verifies its SHA-256 digest, and
-/// loads it as an ONNX session. Path resolution runs before runtime initialization,
-/// so an invalid spec filename fails fast even without ONNX Runtime installed.
+/// loads it as an ONNX session.
+///
+/// Defense in depth before any I/O or runtime initialization:
+/// 1. Lexical resolution rejects absolute/rooted/traversing spec filenames.
+/// 2. Canonical containment rejects links (symlinks, junctions) that resolve outside
+///    `base_dir`.
+/// 3. The file is read exactly once and the verified bytes are loaded from memory, so
+///    the model cannot change between verification and load (TOCTOU). Models relying on
+///    ONNX external data files are therefore not supported by this loader.
 pub fn load_model_session(
     base_dir: impl AsRef<Path>,
     spec: &ModelSpec,
 ) -> Result<Session, OnnxError> {
+    let base_dir = base_dir.as_ref();
     let model_path = resolve_model_path(base_dir, spec)?;
-    load_session_from_file(model_path, Some(&spec.sha256))
+    ensure_resolved_within_models_dir(base_dir, &model_path)?;
+
+    let bytes = std::fs::read(&model_path).map_err(|source| OnnxError::Io {
+        path: model_path.clone(),
+        source,
+    })?;
+    load_session_from_bytes(&bytes, Some(&spec.sha256))
+}
+
+fn ensure_resolved_within_models_dir(base_dir: &Path, model_path: &Path) -> Result<(), OnnxError> {
+    let canonical_base = base_dir
+        .canonicalize()
+        .map_err(|e| OnnxError::InvalidModelPath {
+            filename: base_dir.display().to_string(),
+            reason: format!("models directory cannot be canonicalized: {e}"),
+        })?;
+
+    // A missing file cannot be canonicalized; the read in `load_model_session` reports it.
+    if let Ok(canonical_target) = model_path.canonicalize() {
+        if !canonical_target.starts_with(&canonical_base) {
+            return Err(OnnxError::InvalidModelPath {
+                filename: model_path.display().to_string(),
+                reason: "resolves outside the models directory (linked)".to_string(),
+            });
+        }
+    }
+
+    Ok(())
 }
 
 /// Executes the smoke-test model on a single float input and returns the model output.
@@ -198,6 +233,60 @@ pub fn run_smoke_test(session: &mut Session, input_value: f32) -> Result<f32, On
 mod tests {
     use super::*;
     use crate::registry::ModelSpec;
+
+    #[test]
+    fn load_model_session_rejects_link_escaping_the_models_dir() {
+        let base = tempfile::tempdir().expect("temp models dir");
+        let outside = tempfile::tempdir().expect("temp outside dir");
+
+        // Unix: a file symlink; Windows: a directory junction (needs no privileges).
+        #[cfg(unix)]
+        let spec_filename = {
+            let outside_file = outside.path().join("real.onnx");
+            std::fs::write(&outside_file, b"arbitrary bytes").expect("write outside file");
+            std::os::unix::fs::symlink(&outside_file, base.path().join("link.onnx"))
+                .expect("create symlink");
+            "link.onnx".to_string()
+        };
+        #[cfg(windows)]
+        let spec_filename = {
+            std::fs::write(outside.path().join("real.onnx"), b"arbitrary bytes")
+                .expect("write outside file");
+            // Directory junctions need no privileges; mklink via cmd because
+            // std::os::windows::fs::junction is not in stable std.
+            let strip_device_prefix = |p: &Path| {
+                p.to_str()
+                    .expect("utf-8 temp path")
+                    .strip_prefix(r"\\?\")
+                    .unwrap_or(p.to_str().expect("utf-8 temp path"))
+                    .to_string()
+            };
+            let status = std::process::Command::new("cmd")
+                .args([
+                    "/C",
+                    "mklink",
+                    "/J",
+                    &strip_device_prefix(&base.path().join("linked_dir")),
+                    &strip_device_prefix(outside.path()),
+                ])
+                .status()
+                .expect("run mklink");
+            assert!(status.success(), "mklink /J failed");
+            "linked_dir/real.onnx".to_string()
+        };
+
+        let spec = ModelSpec {
+            filename: spec_filename,
+            ..ModelSpec::smoke_test()
+        };
+
+        let res = load_model_session(base.path(), &spec);
+
+        assert!(
+            matches!(res, Err(OnnxError::InvalidModelPath { .. })),
+            "link escaping the models dir must be InvalidModelPath, got {res:?}"
+        );
+    }
 
     #[test]
     fn load_model_session_rejects_traversal_before_touching_the_runtime() {
