@@ -175,6 +175,11 @@ pub fn load_session_from_file<P: AsRef<Path>>(
 /// 3. The file is read exactly once and the verified bytes are loaded from memory, so
 ///    the model cannot change between verification and load (TOCTOU). Models relying on
 ///    ONNX external data files are therefore not supported by this loader.
+///
+/// Trust boundary: the models directory is user-writable by design, so containment
+/// guards against spec-authored and link-based path escape, not against a local
+/// writer — one who can retarget a link can equally replace the model file itself,
+/// and the pinned SHA-256 digest is the integrity gate for both.
 pub fn load_model_session(
     base_dir: impl AsRef<Path>,
     spec: &ModelSpec,
