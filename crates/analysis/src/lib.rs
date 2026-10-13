@@ -10,10 +10,12 @@ pub mod checksum;
 pub mod decoder;
 pub mod error;
 pub mod key;
+pub mod loudness;
 pub mod normalizer;
 pub mod onnx;
 pub mod phrase;
 pub mod registry;
+pub mod version;
 pub mod vocal;
 
 // Re-exports for convenience
@@ -22,6 +24,7 @@ pub use checksum::{compute_sha256, verify_checksum, verify_file_checksum};
 pub use decoder::{decode_audio_file, DecodedAudio};
 pub use error::{AnalysisError, AudioDecodeError, ChecksumError, NormalizationError, OnnxError};
 pub use key::{detect_key, KeyEstimate, KeyMethod, KeyOptions, KEY_PIPELINE_VERSION};
+pub use loudness::{detect_loudness, LoudnessProfile, LOUDNESS_PIPELINE_VERSION};
 pub use normalizer::{
     peak_normalize, prepare_for_model, resample, rms_normalize, to_mono, to_stereo,
 };
@@ -35,6 +38,9 @@ pub use phrase::{
 };
 pub use registry::{
     discover_models_dir, resolve_model_path, ModelRegistry, ModelSpec, MODELS_DIR_ENV_VAR,
+};
+pub use version::{
+    analysis_version, compute_analysis_version, VersionComponent, ANALYZER_VERSIONS,
 };
 pub use vocal::{
     detect_vocal_presence, VocalMethod, VocalOptions, VocalPoint, VocalProfile,
