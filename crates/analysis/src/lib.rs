@@ -10,6 +10,7 @@ pub mod checksum;
 pub mod decoder;
 pub mod error;
 pub mod key;
+pub mod loudness;
 pub mod normalizer;
 pub mod onnx;
 pub mod phrase;
@@ -22,6 +23,7 @@ pub use checksum::{compute_sha256, verify_checksum, verify_file_checksum};
 pub use decoder::{decode_audio_file, DecodedAudio};
 pub use error::{AnalysisError, AudioDecodeError, ChecksumError, NormalizationError, OnnxError};
 pub use key::{detect_key, KeyEstimate, KeyMethod, KeyOptions, KEY_PIPELINE_VERSION};
+pub use loudness::{detect_loudness, LoudnessProfile, LOUDNESS_PIPELINE_VERSION};
 pub use normalizer::{
     peak_normalize, prepare_for_model, resample, rms_normalize, to_mono, to_stereo,
 };

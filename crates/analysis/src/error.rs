@@ -76,6 +76,9 @@ pub enum AnalysisError {
     #[error("sample rate {0} Hz is unsupported for analysis")]
     UnsupportedSampleRate(u32),
 
+    #[error("EBU R128 loudness measurement failed: {0}")]
+    Loudness(String),
+
     #[error("normalization error: {0}")]
     Normalization(#[from] NormalizationError),
 }
