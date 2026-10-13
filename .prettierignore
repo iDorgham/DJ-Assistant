@@ -21,6 +21,13 @@ pnpm-lock.yaml
 .env
 .env.local
 
+# Local AI tooling state (not project source)
+.freebuff/
+.kombai/
+.qodo/
+.opencode-notes/
+b5bf2e54cb654f7b/
+
 # Docs are author-formatted (long prose lines, tables, mermaid)
 *.md
 docs/

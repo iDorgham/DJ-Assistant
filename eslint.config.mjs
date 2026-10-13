@@ -18,6 +18,9 @@ export default tseslint.config(
       "**/target/**",
       // Rust crate plus Tauri-generated schemas — no lintable JS/TS.
       "apps/desktop/src-tauri/**",
+      // uv-managed Python env kept on disk but not in git; its vendored
+      // site-packages JS bundles are not lintable.
+      "b5bf2e54cb654f7b/**",
     ],
   },
 
