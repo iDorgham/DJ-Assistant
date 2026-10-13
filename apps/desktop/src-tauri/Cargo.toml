@@ -29,7 +29,7 @@ rusqlite = { version = "0.40", features = ["bundled"] }
 # logic now lives in dj-assistant-core. Re-add only if this crate needs them directly.
 uuid = { version = "1.10", features = ["v4", "serde"] }
 # Base64-encodes cached cover art for the `get_artwork` command's data URL.
-base64 = "0.22"
+base64 = "0.23"
 chrono = { version = "0.4", features = ["serde"] }
 thiserror = "1.0"
 log = "0.4"

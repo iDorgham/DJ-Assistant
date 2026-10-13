@@ -786,7 +786,7 @@ dependencies = [
 name = "dj-assistant-desktop"
 version = "0.1.0"
 dependencies = [
- "base64 0.22.1",
+ "base64 0.23.1",
  "chrono",
  "dj-assistant-core",
  "env_logger",
