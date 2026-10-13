@@ -1,0 +1,12 @@
+prefix=${pcfiledir}/../..
+exec_prefix=${prefix}
+libdir=${exec_prefix}/lib
+includedir=${prefix}/include
+
+Name: icu-i18n
+Description: International Components for Unicode: Internationalization Library
+Version: 78.3
+Requires: icu-uc
+Requires.private: icu-uc
+Libs: -L${libdir} -licuin
+Cflags: -I${includedir}

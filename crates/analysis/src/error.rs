@@ -65,6 +65,21 @@ pub enum ChecksumError {
     Io { path: PathBuf, message: String },
 }
 
+/// Errors that can occur during higher-level audio analysis (e.g. BPM / beat-grid
+/// estimation). These represent hard failures; transient inability to find a
+/// tempo is represented as a low-confidence [`crate::bpm::BeatGrid`] instead.
+#[derive(Debug, Error)]
+pub enum AnalysisError {
+    #[error("empty audio samples; cannot analyze")]
+    EmptyAudio,
+
+    #[error("sample rate {0} Hz is unsupported for analysis")]
+    UnsupportedSampleRate(u32),
+
+    #[error("normalization error: {0}")]
+    Normalization(#[from] NormalizationError),
+}
+
 /// Errors that can occur during ONNX Runtime initialization, loading, or execution.
 #[derive(Debug, Error)]
 pub enum OnnxError {

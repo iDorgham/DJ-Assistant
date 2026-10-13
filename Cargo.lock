@@ -771,7 +771,9 @@ dependencies = [
 name = "dj-assistant-analysis"
 version = "0.1.0"
 dependencies = [
+ "num-complex",
  "ort",
+ "rustfft",
  "serde",
  "serde_json",
  "sha2",

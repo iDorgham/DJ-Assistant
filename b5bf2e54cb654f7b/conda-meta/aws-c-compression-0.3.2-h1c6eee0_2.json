@@ -1,0 +1,91 @@
+{
+  "build": "h1c6eee0_2",
+  "build_number": 2,
+  "depends": [
+    "aws-c-common >=0.14.5,<0.14.6.0a0",
+    "ucrt >=10.0.20348.0",
+    "vc >=14.3,<15",
+    "vc14_runtime >=14.44.35208"
+  ],
+  "license": "Apache-2.0",
+  "license_family": "Apache",
+  "md5": "4002370e0ff0c148d05240b5aa261fb6",
+  "name": "aws-c-compression",
+  "sha256": "742f988bba145d166e567fe637895039595c14706693f6de98ba20a27be09058",
+  "size": 29884,
+  "subdir": "win-64",
+  "timestamp": 1789971021071,
+  "version": "0.3.2",
+  "fn": "aws-c-compression-0.3.2-h1c6eee0_2.conda",
+  "url": "https://repo.anaconda.com/pkgs/main/win-64/aws-c-compression-0.3.2-h1c6eee0_2.conda",
+  "channel": "https://repo.anaconda.com/pkgs/main/",
+  "extracted_package_dir": "C:\\Users\\User\\AppData\\Local\\rattler\\cache\\pkgs\\aws-c-compression-0.3.2-h1c6eee0_2",
+  "requested_specs": [],
+  "files": [
+    "Library/bin/aws-c-compression.dll",
+    "Library/lib/cmake/aws-c-compression/shared/aws-c-compression-targets-release.cmake",
+    "Library/lib/cmake/aws-c-compression/shared/aws-c-compression-targets.cmake",
+    "Library/lib/cmake/aws-c-compression/aws-c-compression-config.cmake",
+    "Library/lib/aws-c-compression.lib",
+    "Library/include/aws/compression/compression.h",
+    "Library/include/aws/compression/exports.h",
+    "Library/include/aws/compression/huffman.h"
+  ],
+  "paths_data": {
+    "paths_version": 1,
+    "paths": [
+      {
+        "_path": "Library/bin/aws-c-compression.dll",
+        "path_type": "hardlink",
+        "sha256": "429514069dd2b662b099363ad336ced9491228b9a8a38335ac6fe94743267abc",
+        "size_in_bytes": 27976
+      },
+      {
+        "_path": "Library/lib/cmake/aws-c-compression/shared/aws-c-compression-targets-release.cmake",
+        "path_type": "hardlink",
+        "sha256": "0630dacb582a437764c250340b04d4754e172188a9e88911cd0c228dabcf8dc6",
+        "size_in_bytes": 990
+      },
+      {
+        "_path": "Library/lib/cmake/aws-c-compression/shared/aws-c-compression-targets.cmake",
+        "path_type": "hardlink",
+        "sha256": "477b1c7836d519b5bed060b81a2583f6b51cd7eeb540f99b55f404e9d14cf9c7",
+        "size_in_bytes": 4451
+      },
+      {
+        "_path": "Library/lib/cmake/aws-c-compression/aws-c-compression-config.cmake",
+        "path_type": "hardlink",
+        "sha256": "9c3028bb8d1a556c5d11fe4e5cb969c2bc73fdbf3fb02a96cc5fb0de69a3c503",
+        "size_in_bytes": 598
+      },
+      {
+        "_path": "Library/lib/aws-c-compression.lib",
+        "path_type": "hardlink",
+        "sha256": "9d7cb897e20a5a61991fc07b7bf0044c5683b70df00a58d4f58ca148837a34c9",
+        "size_in_bytes": 4906
+      },
+      {
+        "_path": "Library/include/aws/compression/compression.h",
+        "path_type": "hardlink",
+        "sha256": "4a7e0eba0e35676fbacfb6c1d08ada087a21ec4b3a4245a75c95b72ad23e8aa3",
+        "size_in_bytes": 1128
+      },
+      {
+        "_path": "Library/include/aws/compression/exports.h",
+        "path_type": "hardlink",
+        "sha256": "d247ddc3009872e51bc2c530fdd5086041af1479b1ab46581d63d0c5384eec49",
+        "size_in_bytes": 1030
+      },
+      {
+        "_path": "Library/include/aws/compression/huffman.h",
+        "path_type": "hardlink",
+        "sha256": "a0ae03aa45aa8049d704105d6ccaf52342e94f279c04b5616a9416e5a408c43e",
+        "size_in_bytes": 4752
+      }
+    ]
+  },
+  "link": {
+    "source": "C:\\Users\\User\\AppData\\Local\\rattler\\cache\\pkgs\\aws-c-compression-0.3.2-h1c6eee0_2",
+    "type": 3
+  }
+}

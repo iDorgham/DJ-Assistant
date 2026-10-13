@@ -5,17 +5,21 @@
 //! - DSP normalization: downmixing, channel extraction, linear resampling, peak & RMS normalization.
 //! - ONNX Runtime (`ort`) inference engine: dynamic loading, checksum verification (SHA-256), and session runner.
 
+pub mod bpm;
 pub mod checksum;
 pub mod decoder;
 pub mod error;
+pub mod key;
 pub mod normalizer;
 pub mod onnx;
 pub mod registry;
 
 // Re-exports for convenience
+pub use bpm::{detect_beat_grid, BeatGrid, BpmMethod, BpmOptions, PIPELINE_VERSION};
 pub use checksum::{compute_sha256, verify_checksum, verify_file_checksum};
 pub use decoder::{decode_audio_file, DecodedAudio};
-pub use error::{AudioDecodeError, ChecksumError, NormalizationError, OnnxError};
+pub use error::{AnalysisError, AudioDecodeError, ChecksumError, NormalizationError, OnnxError};
+pub use key::{detect_key, KeyEstimate, KeyMethod, KeyOptions, KEY_PIPELINE_VERSION};
 pub use normalizer::{
     peak_normalize, prepare_for_model, resample, rms_normalize, to_mono, to_stereo,
 };

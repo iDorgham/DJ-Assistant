@@ -1,0 +1,69 @@
+{
+  "build": "hee5a0db_0",
+  "build_number": 0,
+  "depends": [
+    "ucrt >=10.0.20348.0",
+    "vc >=14.3,<15",
+    "vc14_runtime >=14.44.35208"
+  ],
+  "license": "blessing",
+  "license_family": "Other",
+  "md5": "fc36e4a70e3cc8104ec96a4ca359d15b",
+  "name": "sqlite",
+  "sha256": "8adb7b42e99594567e5789c33813b90cc7669183d6760836150ce8a23a7d3813",
+  "size": 968847,
+  "subdir": "win-64",
+  "timestamp": 1789046873980,
+  "version": "3.53.4",
+  "fn": "sqlite-3.53.4-hee5a0db_0.conda",
+  "url": "https://repo.anaconda.com/pkgs/main/win-64/sqlite-3.53.4-hee5a0db_0.conda",
+  "channel": "https://repo.anaconda.com/pkgs/main/",
+  "extracted_package_dir": "C:\\Users\\User\\AppData\\Local\\rattler\\cache\\pkgs\\sqlite-3.53.4-hee5a0db_0",
+  "requested_specs": [],
+  "files": [
+    "Library/bin/sqlite3.dll",
+    "Library/bin/sqlite3.exe",
+    "Library/include/sqlite3.h",
+    "Library/include/sqlite3ext.h",
+    "Library/lib/sqlite3.lib"
+  ],
+  "paths_data": {
+    "paths_version": 1,
+    "paths": [
+      {
+        "_path": "Library/bin/sqlite3.dll",
+        "path_type": "hardlink",
+        "sha256": "192afb2b8c4df328177ee372989fb2a2e70513d17787fa7879ed478049e05456",
+        "size_in_bytes": 1677128
+      },
+      {
+        "_path": "Library/bin/sqlite3.exe",
+        "path_type": "hardlink",
+        "sha256": "b0dcab609167e31ae146542d25a6e76fd9e1c79d768c9392eabb7b744d35bb10",
+        "size_in_bytes": 2230600
+      },
+      {
+        "_path": "Library/include/sqlite3.h",
+        "path_type": "hardlink",
+        "sha256": "1462dc8463b8d2285163c3fcd2cfbb625caf8af3f6ba547810c730d299ae4eba",
+        "size_in_bytes": 690973
+      },
+      {
+        "_path": "Library/include/sqlite3ext.h",
+        "path_type": "hardlink",
+        "sha256": "ac9645e5c9ff0cf176efdd6e75cb5e98f46295d38e02db5c4d208826a39ab4be",
+        "size_in_bytes": 39175
+      },
+      {
+        "_path": "Library/lib/sqlite3.lib",
+        "path_type": "hardlink",
+        "sha256": "597178038ad01590295a5cf4f00f23a63d09b09c7d0536a5c930fd0dd246a2c8",
+        "size_in_bytes": 69020
+      }
+    ]
+  },
+  "link": {
+    "source": "C:\\Users\\User\\AppData\\Local\\rattler\\cache\\pkgs\\sqlite-3.53.4-hee5a0db_0",
+    "type": 3
+  }
+}

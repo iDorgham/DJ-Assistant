@@ -1,0 +1,117 @@
+{
+  "build": "py313haa95532_0",
+  "build_number": 0,
+  "depends": [
+    "python >=3.13,<3.14.0a0",
+    "python_abi 3.13.* *_cp313"
+  ],
+  "license": "BSD-3-Clause",
+  "license_family": "BSD",
+  "md5": "89d03fa8c38b2825bcf4947bdcaff867",
+  "name": "comm",
+  "sha256": "5180a1fedf6c3c20d1b399be9afe5591f265655a441ae058110b6941c3389af4",
+  "size": 17481,
+  "subdir": "win-64",
+  "timestamp": 1763119321831,
+  "version": "0.2.3",
+  "fn": "comm-0.2.3-py313haa95532_0.conda",
+  "url": "https://repo.anaconda.com/pkgs/main/win-64/comm-0.2.3-py313haa95532_0.conda",
+  "channel": "https://repo.anaconda.com/pkgs/main/",
+  "extracted_package_dir": "C:\\Users\\User\\AppData\\Local\\rattler\\cache\\pkgs\\comm-0.2.3-py313haa95532_0",
+  "requested_specs": [],
+  "files": [
+    "Lib/site-packages/comm/__pycache__/__init__.cpython-313.pyc",
+    "Lib/site-packages/comm/__pycache__/base_comm.cpython-313.pyc",
+    "Lib/site-packages/comm/__init__.py",
+    "Lib/site-packages/comm/base_comm.py",
+    "Lib/site-packages/comm/py.typed",
+    "Lib/site-packages/comm-0.2.3.dist-info/INSTALLER",
+    "Lib/site-packages/comm-0.2.3.dist-info/METADATA",
+    "Lib/site-packages/comm-0.2.3.dist-info/RECORD",
+    "Lib/site-packages/comm-0.2.3.dist-info/REQUESTED",
+    "Lib/site-packages/comm-0.2.3.dist-info/WHEEL",
+    "Lib/site-packages/comm-0.2.3.dist-info/direct_url.json",
+    "Lib/site-packages/comm-0.2.3.dist-info/licenses/LICENSE"
+  ],
+  "paths_data": {
+    "paths_version": 1,
+    "paths": [
+      {
+        "_path": "Lib/site-packages/comm/__pycache__/__init__.cpython-313.pyc",
+        "path_type": "hardlink",
+        "sha256": "09cb29196d481201fa8b4940d2e6d49bf4b240842d45bdf1929d8de9afd6c987",
+        "size_in_bytes": 2048
+      },
+      {
+        "_path": "Lib/site-packages/comm/__pycache__/base_comm.cpython-313.pyc",
+        "path_type": "hardlink",
+        "sha256": "3267f44bbf23082d2f991887dfe4390b8fd7aac2beae1f54bb3e18cc26cb4f30",
+        "size_in_bytes": 13240
+      },
+      {
+        "_path": "Lib/site-packages/comm/__init__.py",
+        "path_type": "hardlink",
+        "sha256": "780d9ab9636f16644bd0e240fddf4de0e1f641e34ec4300a2df8cb7a55c556b5",
+        "size_in_bytes": 1442
+      },
+      {
+        "_path": "Lib/site-packages/comm/base_comm.py",
+        "path_type": "hardlink",
+        "sha256": "48d621a3331fb68590c092630307d666c1d4cad354c5323a8d2d5554e8a0d8c5",
+        "size_in_bytes": 10525
+      },
+      {
+        "_path": "Lib/site-packages/comm/py.typed",
+        "path_type": "hardlink",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "size_in_bytes": 0
+      },
+      {
+        "_path": "Lib/site-packages/comm-0.2.3.dist-info/INSTALLER",
+        "path_type": "hardlink",
+        "sha256": "d0edee15f91b406f3f99726e44eb990be6e34fd0345b52b910c568e0eef6a2a8",
+        "size_in_bytes": 5
+      },
+      {
+        "_path": "Lib/site-packages/comm-0.2.3.dist-info/METADATA",
+        "path_type": "hardlink",
+        "sha256": "e475291f8fdedbecbbfd788a2c5de9c912424d23574aba7b9fc51985d7158878",
+        "size_in_bytes": 3661
+      },
+      {
+        "_path": "Lib/site-packages/comm-0.2.3.dist-info/RECORD",
+        "path_type": "hardlink",
+        "sha256": "08292dff306afbfcf4671116609702cfab94dffd77f94bd63b9ea3487fc8d80e",
+        "size_in_bytes": 866
+      },
+      {
+        "_path": "Lib/site-packages/comm-0.2.3.dist-info/REQUESTED",
+        "path_type": "hardlink",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "size_in_bytes": 0
+      },
+      {
+        "_path": "Lib/site-packages/comm-0.2.3.dist-info/WHEEL",
+        "path_type": "hardlink",
+        "sha256": "aad0b0a12256807936d52d4a6f88a1773236ae527564a688bab4e3fe780e8724",
+        "size_in_bytes": 87
+      },
+      {
+        "_path": "Lib/site-packages/comm-0.2.3.dist-info/direct_url.json",
+        "path_type": "hardlink",
+        "sha256": "3aa382c02c39cb091cb993028d29b110275314a8f0047c1a1da85a93b5698e64",
+        "size_in_bytes": 82
+      },
+      {
+        "_path": "Lib/site-packages/comm-0.2.3.dist-info/licenses/LICENSE",
+        "path_type": "hardlink",
+        "sha256": "97a7e0a142b7c1dcd26461b20fc13980988b4449b7446ed776928826fd2ca9c4",
+        "size_in_bytes": 1515
+      }
+    ]
+  },
+  "link": {
+    "source": "C:\\Users\\User\\AppData\\Local\\rattler\\cache\\pkgs\\comm-0.2.3-py313haa95532_0",
+    "type": 3
+  }
+}

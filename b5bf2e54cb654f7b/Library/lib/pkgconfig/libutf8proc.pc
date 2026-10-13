@@ -1,0 +1,10 @@
+prefix=D:/Work/AI/Projects/DJ Assistant/b5bf2e54cb654f7b/Library
+exec_prefix=D:/Work/AI/Projects/DJ Assistant/b5bf2e54cb654f7b/Library/bin
+libdir=D:/Work/AI/Projects/DJ Assistant/b5bf2e54cb654f7b/Library/lib
+includedir=D:/Work/AI/Projects/DJ Assistant/b5bf2e54cb654f7b/Library/include
+
+Name: libutf8proc
+Description: UTF8 processing
+Version: 2.11.3
+Libs: -L${libdir} -lutf8proc
+Cflags: -I${includedir} -DUTF8PROC_EXPORTS

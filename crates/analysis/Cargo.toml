@@ -12,6 +12,9 @@ sha2 = "0.10"
 thiserror = "2.0"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
+# Spectral-flux onset detection for the deterministic BPM/beat-grid path.
+rustfft = "6"
+num-complex = "0.4"
 
 [dev-dependencies]
 tempfile = "3.17"

@@ -1,0 +1,150 @@
+{
+  "build": "h9440e04_0",
+  "build_number": 0,
+  "depends": [
+    "libbrotlicommon >=1.2.0,<1.3.0a0",
+    "libbrotlidec >=1.2.0,<1.3.0a0",
+    "libbrotlienc >=1.2.0,<1.3.0a0",
+    "libkrb5 >=1.22.2,<1.23.0a0",
+    "libssh2 >=1.11.1",
+    "libssh2 >=1.11.1,<2.0a0",
+    "libzlib >=1.3.2,<2.0a0",
+    "ucrt >=10.0.20348.0",
+    "vc >=14.3,<15",
+    "vc14_runtime >=14.44.35208",
+    "zstd >=1.5.7,<1.6.0a0"
+  ],
+  "license": "curl",
+  "license_family": "MIT",
+  "md5": "e8693599c97418bf9e87af3b94be823e",
+  "name": "libcurl",
+  "sha256": "0d22d92732141ef40437b2821fa926b962007a4799603665433821658008ffb2",
+  "size": 468217,
+  "subdir": "win-64",
+  "timestamp": 1788533562443,
+  "version": "8.22.0",
+  "fn": "libcurl-8.22.0-h9440e04_0.conda",
+  "url": "https://repo.anaconda.com/pkgs/main/win-64/libcurl-8.22.0-h9440e04_0.conda",
+  "channel": "https://repo.anaconda.com/pkgs/main/",
+  "extracted_package_dir": "C:\\Users\\User\\AppData\\Local\\rattler\\cache\\pkgs\\libcurl-8.22.0-h9440e04_0",
+  "requested_specs": [],
+  "files": [
+    "Library/bin/libcurl.dll",
+    "Library/lib/libcurl.lib",
+    "Library/include/curl/curl.h",
+    "Library/include/curl/curlver.h",
+    "Library/include/curl/easy.h",
+    "Library/include/curl/header.h",
+    "Library/include/curl/mprintf.h",
+    "Library/include/curl/multi.h",
+    "Library/include/curl/options.h",
+    "Library/include/curl/stdcheaders.h",
+    "Library/include/curl/system.h",
+    "Library/include/curl/typecheck-gcc.h",
+    "Library/include/curl/urlapi.h",
+    "Library/include/curl/websockets.h",
+    "Library/lib/pkgconfig/libcurl.pc"
+  ],
+  "paths_data": {
+    "paths_version": 1,
+    "paths": [
+      {
+        "_path": "Library/bin/libcurl.dll",
+        "path_type": "hardlink",
+        "sha256": "b3fa87b217660adc242a6f12a49ed003b6f24a818e26c9e67579a7860800f10f",
+        "size_in_bytes": 939336
+      },
+      {
+        "_path": "Library/lib/libcurl.lib",
+        "path_type": "hardlink",
+        "sha256": "23fd63ee26d25706d4dd1c8d425aa0623dae81503b88536386bc1552dc59f53a",
+        "size_in_bytes": 22274
+      },
+      {
+        "_path": "Library/include/curl/curl.h",
+        "path_type": "hardlink",
+        "sha256": "9ec2e9040d8d95545a4c331461c54748651edc3852a6ceca0672f858103e0528",
+        "size_in_bytes": 136595
+      },
+      {
+        "_path": "Library/include/curl/curlver.h",
+        "path_type": "hardlink",
+        "sha256": "c4ed114da4eca953a328fa2efa8128308fc32879f15b58c245b2592f4bfaf9dc",
+        "size_in_bytes": 3052
+      },
+      {
+        "_path": "Library/include/curl/easy.h",
+        "path_type": "hardlink",
+        "sha256": "f101da02dd373151ea7b00082cb62c9d6e482361ab26b6d430ee96aab1b71565",
+        "size_in_bytes": 4000
+      },
+      {
+        "_path": "Library/include/curl/header.h",
+        "path_type": "hardlink",
+        "sha256": "e92525a91bb1119034dd45dd42d255ff9b6a49d964ca7105964e0107671b3395",
+        "size_in_bytes": 2922
+      },
+      {
+        "_path": "Library/include/curl/mprintf.h",
+        "path_type": "hardlink",
+        "sha256": "a79657fa15db71e732bcb58bc4645ab65bdb3222767f34be5bab56aa0d4f4cc9",
+        "size_in_bytes": 3078
+      },
+      {
+        "_path": "Library/include/curl/multi.h",
+        "path_type": "hardlink",
+        "sha256": "0466a7c91067cb11c98f37e16103b992b66e84221467c2a70ef951877502f77a",
+        "size_in_bytes": 21154
+      },
+      {
+        "_path": "Library/include/curl/options.h",
+        "path_type": "hardlink",
+        "sha256": "32fe87f843367d25a9db91a47386652402f08c9668617b4c51295ef31d93f8b0",
+        "size_in_bytes": 2402
+      },
+      {
+        "_path": "Library/include/curl/stdcheaders.h",
+        "path_type": "hardlink",
+        "sha256": "d7588b86814a35ffc3766ff6242e6f6705e04401fc9c208a195caff3503af81c",
+        "size_in_bytes": 1362
+      },
+      {
+        "_path": "Library/include/curl/system.h",
+        "path_type": "hardlink",
+        "sha256": "edb2c507a084448a5e3c7e2b9c65c408e22ffeaca5ab0c1ee2e76d82a21113fa",
+        "size_in_bytes": 14943
+      },
+      {
+        "_path": "Library/include/curl/typecheck-gcc.h",
+        "path_type": "hardlink",
+        "sha256": "62bf346ae4dc33bc61cd99a9e935c62dfbcd8120399cdbd5874d15897a57e681",
+        "size_in_bytes": 58092
+      },
+      {
+        "_path": "Library/include/curl/urlapi.h",
+        "path_type": "hardlink",
+        "sha256": "d888326d5bdebb84b5fe133d7ef7703d4e88732757ce4d6b0476f0c668d38a6e",
+        "size_in_bytes": 5870
+      },
+      {
+        "_path": "Library/include/curl/websockets.h",
+        "path_type": "hardlink",
+        "sha256": "05b70dbce5274aa6e360703bb17d67a0390fea18bf4437745a25b08b55d6962b",
+        "size_in_bytes": 3197
+      },
+      {
+        "_path": "Library/lib/pkgconfig/libcurl.pc",
+        "path_type": "hardlink",
+        "sha256": "4f84c85cb1702a71b8c1e4a69ad584f98ccb62810c797c3c874a25e93cbfc5fb",
+        "sha256_in_prefix": "9802d04d73e4961478b31a049ed0e82eb136e2bfadce68f3e30f6e6eb7edd2a7",
+        "size_in_bytes": 2360,
+        "file_mode": "text",
+        "prefix_placeholder": "C:/Users/task_178853289387462/croot/curl-split_1788533437561/_h_env"
+      }
+    ]
+  },
+  "link": {
+    "source": "C:\\Users\\User\\AppData\\Local\\rattler\\cache\\pkgs\\libcurl-8.22.0-h9440e04_0",
+    "type": 3
+  }
+}
