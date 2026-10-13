@@ -12,6 +12,7 @@ pub mod error;
 pub mod key;
 pub mod normalizer;
 pub mod onnx;
+pub mod phrase;
 pub mod registry;
 
 // Re-exports for convenience
@@ -26,6 +27,10 @@ pub use normalizer::{
 pub use onnx::{
     find_onnxruntime_dylib, init_onnx_runtime, load_model_session, load_session_from_bytes,
     load_session_from_file, run_smoke_test,
+};
+pub use phrase::{
+    detect_phrases, Phrase, PhraseMap, PhraseMethod, PhraseOptions, SectionKind,
+    PHRASE_PIPELINE_VERSION,
 };
 pub use registry::{
     discover_models_dir, resolve_model_path, ModelRegistry, ModelSpec, MODELS_DIR_ENV_VAR,
