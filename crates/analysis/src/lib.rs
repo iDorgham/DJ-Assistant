@@ -15,6 +15,7 @@ pub mod normalizer;
 pub mod onnx;
 pub mod phrase;
 pub mod registry;
+pub mod version;
 pub mod vocal;
 
 // Re-exports for convenience
@@ -37,6 +38,9 @@ pub use phrase::{
 };
 pub use registry::{
     discover_models_dir, resolve_model_path, ModelRegistry, ModelSpec, MODELS_DIR_ENV_VAR,
+};
+pub use version::{
+    analysis_version, compute_analysis_version, VersionComponent, ANALYZER_VERSIONS,
 };
 pub use vocal::{
     detect_vocal_presence, VocalMethod, VocalOptions, VocalPoint, VocalProfile,
