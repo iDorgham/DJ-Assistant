@@ -8,6 +8,7 @@ use ort::value::Tensor;
 
 use crate::checksum::{verify_checksum, verify_file_checksum};
 use crate::error::OnnxError;
+use crate::registry::{resolve_model_path, ModelSpec};
 
 static ONNX_INITIALIZED: OnceLock<Result<(), String>> = OnceLock::new();
 
@@ -164,6 +165,17 @@ pub fn load_session_from_file<P: AsRef<Path>>(
         })
 }
 
+/// Resolves a model spec's asset under `base_dir`, verifies its SHA-256 digest, and
+/// loads it as an ONNX session. Path resolution runs before runtime initialization,
+/// so an invalid spec filename fails fast even without ONNX Runtime installed.
+pub fn load_model_session(
+    base_dir: impl AsRef<Path>,
+    spec: &ModelSpec,
+) -> Result<Session, OnnxError> {
+    let model_path = resolve_model_path(base_dir, spec)?;
+    load_session_from_file(model_path, Some(&spec.sha256))
+}
+
 /// Executes the smoke-test model on a single float input and returns the model output.
 /// The smoke-test model graph is `y = Relu(x)`; with a positive input this returns the
 /// input unchanged. See `ModelSpec::smoke_test` for why `Relu` is used.
@@ -186,6 +198,50 @@ pub fn run_smoke_test(session: &mut Session, input_value: f32) -> Result<f32, On
 mod tests {
     use super::*;
     use crate::registry::ModelSpec;
+
+    #[test]
+    fn load_model_session_rejects_traversal_before_touching_the_runtime() {
+        let spec = ModelSpec {
+            filename: "../escape.onnx".to_string(),
+            ..ModelSpec::smoke_test()
+        };
+
+        let res = load_model_session(Path::new("models"), &spec);
+
+        assert!(
+            matches!(res, Err(OnnxError::InvalidModelPath { .. })),
+            "expected InvalidModelPath without runtime involvement, got {res:?}"
+        );
+    }
+
+    #[test]
+    fn load_model_session_resolves_and_loads_smoke_test_model() {
+        let spec = ModelSpec::smoke_test();
+        let base = spec
+            .fixture_path()
+            .parent()
+            .expect("fixture path has a parent")
+            .to_path_buf();
+        assert!(
+            base.join(&spec.filename).exists(),
+            "smoke_test.onnx must exist"
+        );
+
+        if find_onnxruntime_dylib().is_none() {
+            eprintln!(
+                "skipping ONNX inference smoke test: no onnxruntime library found \
+                 (set ORT_DYLIB_PATH to enable it)"
+            );
+            return;
+        }
+
+        let mut session =
+            load_model_session(&base, &spec).expect("should resolve, verify, and load the model");
+
+        let test_val = 42.5f32;
+        let out = run_smoke_test(&mut session, test_val).expect("Should run smoke test inference");
+        assert_eq!(out, test_val);
+    }
 
     #[test]
     fn rejects_mismatched_model_checksum_before_touching_the_runtime() {

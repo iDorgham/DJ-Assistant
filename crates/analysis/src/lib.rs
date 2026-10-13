@@ -24,10 +24,12 @@ pub use normalizer::{
     peak_normalize, prepare_for_model, resample, rms_normalize, to_mono, to_stereo,
 };
 pub use onnx::{
-    find_onnxruntime_dylib, init_onnx_runtime, load_session_from_bytes, load_session_from_file,
-    run_smoke_test,
+    find_onnxruntime_dylib, init_onnx_runtime, load_model_session, load_session_from_bytes,
+    load_session_from_file, run_smoke_test,
 };
-pub use registry::{ModelRegistry, ModelSpec};
+pub use registry::{
+    discover_models_dir, resolve_model_path, ModelRegistry, ModelSpec, MODELS_DIR_ENV_VAR,
+};
 
 /// Crate version string.
 pub fn version() -> &'static str {
