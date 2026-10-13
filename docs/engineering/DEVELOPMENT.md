@@ -204,7 +204,7 @@ Before writing product features, the following should exist:
 - [ ] Local SQLite schema migration system
 - [ ] Folder watcher skeleton
 - [ ] BLAKE3 hashing + basic metadata extraction
-- [ ] ONNX Runtime linked and a smoke-test model runnable
+- [x] ONNX Runtime linked and a smoke-test model runnable — *`crates/analysis` loads `ort` dynamically, verifies the model SHA-256, and executes `fixtures/models/smoke_test.onnx` (`y = Relu(x)`); the inference test skips where no runtime is installed*
 - [ ] CI pipeline (lint + typecheck + unit tests)
 - [ ] This DEVELOPMENT.md kept up to date
 
