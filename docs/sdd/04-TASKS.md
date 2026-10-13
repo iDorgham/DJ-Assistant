@@ -77,7 +77,7 @@
 
 ### 1.1 ONNX & Models
 - [x] **T1.1.1** Integrate ONNX Runtime in Rust — *`crates/analysis`: `ort` dynamic loading, dylib discovery, SHA-256 verification, executed smoke-test graph*
-- [x] **T1.1.2** Model loading + path configuration + version stamp — *`ModelSpec` (id/version/filename/sha256/rate/channels) + `ModelRegistry` JSON; `ORT_DYLIB_PATH` + platform dylib discovery*
+- [ ] **T1.1.2** Model loading + path configuration + version stamp — *model loading and versioned specs are in place; configurable model asset path remains to do*
 - [ ] **T1.1.3** BPM + beat grid inference path
 - [ ] **T1.1.4** Key detection (Camelot + classical)
 - [ ] **T1.1.5** Phrase / structure segmentation
