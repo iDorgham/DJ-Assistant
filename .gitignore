@@ -38,3 +38,6 @@ pnpm-debug.log*
 .kombai/
 .qodo/
 .opencode-notes/
+
+# uv-managed Python environments (hash-named install dirs)
+b5bf2e54cb654f7b/
