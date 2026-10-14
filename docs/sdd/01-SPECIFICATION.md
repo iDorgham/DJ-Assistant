@@ -30,7 +30,7 @@ Analyze locally → Clean tags → Generate cues → Build harmonic/energy-aware
 
 ### P0 — Must Have for MVP (slimmed per `docs/audit/AUDIT-SUMMARY.md`)
 
-> MVP gates on **Import → Analyze → Cue → Export** only. USB-format, B2B collab, and 4/8 Skills move to P1 (see §3 P1). This keeps the 90-day gate achievable.
+> MVP gates on **Import → Analyze → Cue → Build Set → Export** only. USB-format, B2B collab, and 4/8 Skills move to P1 (see §3 P1). This keeps the 90-day gate achievable.
 
 - Local library import & folder watching
 - Local audio analysis (BPM, key, beat grid, phrases, vocal presence, loudness)
