@@ -192,7 +192,7 @@ Treat as high-risk (extra review + tests required):
 - CI matrix: macOS + Windows unit tests
 
 ### Phase 1
-- [x] Golden fixture suite v1 (7 curated tracks + expected-value JSON + integration test)
+- [ ] Golden fixture suite v1 (≥ 10 tracks)
 - [x] Analysis timing benchmark (p50 < 3s assertion in golden test)
 - [x] Confidence flag unit tests (T1.2.4)
 
