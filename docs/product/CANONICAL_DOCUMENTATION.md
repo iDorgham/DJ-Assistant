@@ -197,7 +197,7 @@ Publishes a built set (or any playlist) to the DJ’s own Spotify account as a r
 **Purpose:** Local file access, watch folders, local analysis, export, cache.  
 **Technology:** Tauri v2 (Rust backend + React/TypeScript frontend).  
 **Responsibilities:** Folder scanning (notify crate), file hashing (BLAKE3), metadata reading (audiotags), audio analysis (ONNX Runtime + Symphonia), cue point export, sync with cloud, local waveform cache, SQLite local metadata DB, local rule engine for automations.  
-**Offline Mode:** Works fully offline for analysis, library browsing, set building, tag cleanup, cue generation, and file export. Internet is required only for the post-MVP Spotify Playlist Export. The product cloud is used only for multi-device sync, collaboration, and optional LLM explanations.
+**Offline Mode:** Works fully offline for analysis, library browsing, set building, tag cleanup, cue generation, and file export. Internet is required for multi-device sync, collaboration, optional LLM explanations, and the post-MVP Spotify Playlist Export.
 
 ### 3.8 DJ Brain
 **Purpose:** Personalized intelligence layer that learns the DJ’s preferences over time.  
