@@ -46,6 +46,9 @@ fn parse_camelot(raw: &str) -> Option<(u8, bool)> {
     if trimmed.len() < 2 {
         return None;
     }
+    if !trimmed.is_ascii() {
+        return None;
+    }
     let (digits, letter) = trimmed.split_at(trimmed.len() - 1);
     let number: u8 = digits.parse().ok()?;
     if !(1..=12).contains(&number) {
