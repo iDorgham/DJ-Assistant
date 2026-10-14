@@ -97,7 +97,7 @@ One-click pre-gig workflow: health check → analyze → optional cleanup → cu
 
 - **Run tag cleanup too** → opts the optional step in before continuing.
 - **Analyze now / Generate cues / Smooth curve** → jump to the fix for that item.
-- **Fix all** → runs the remaining fixes in sequence.
+- **Fix all** → previews the remaining fixes, then applies them in sequence after confirmation; each mutation is undoable.
 - **Export / USB pack** → opens the [Export](./07-export.md) dialog with the set preloaded.
 
 ---
