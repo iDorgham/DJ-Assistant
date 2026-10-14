@@ -43,8 +43,8 @@ implemented **desktop-only**:
 - **Privacy:** only track metadata and search queries leave the device; no audio.
   Disconnect/revocation removes the stored tokens.
 - **Reversibility:** creating a playlist is an external side effect, so it is previewed,
-  explicitly confirmed, recorded, and audited; undo = delete/unfollow the created
-  playlist.
+  explicitly confirmed, recorded, and audited; unfollowing only removes it from the DJ's
+  library—it does not delete the playlist or revoke access to a public playlist.
 - **Data:** desktop-local SQLite tables `streaming_accounts`, `streaming_exports`,
   `streaming_matches`. No cloud tables are required.
 
