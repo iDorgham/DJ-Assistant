@@ -271,7 +271,7 @@ Local-first groundwork plus live opt-in enrichment/matching (see ADR-0007; SDD `
 - [ ] **TD.5** Beatport partnership Tier 3 (official feed replaces snapshots)
 - [ ] **TD.6-remaining** Feed-parser fixtures + no-audio invariant for every provider call
 
-### Post-MVP: Enrichment — online tags & artwork, opt-in (TE.4–TE.5 remaining)
+### Post-MVP: Enrichment — online tags & artwork, opt-in (TE.5 remaining)
 
 **Goal:** Fill `track_tag_health` gaps via MusicBrainz + Cover Art Archive, iTunes Search, Deezer, Discogs and AcoustID fingerprinting — ISRC-first → fingerprint → fuzzy with confidence tiers, always preview → apply → undo, writing DB canonical fields and never source files. Only metadata, fingerprints and search queries leave the device.
 
