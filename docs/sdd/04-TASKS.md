@@ -2,7 +2,7 @@
 
 **SDD Artifact:** Concrete Engineering Tasks  
 **Status:** Living  
-**Last reconciled:** 2026-10-14 (against actual code on disk: T1.1.1–T1.1.8 + TF.1–TF.6, TD.3, TE.1–TE.3, TX.2a shipped; T1.2.1/T1.2.3/T1.2.5 backend landed)  
+**Last reconciled:** 2026-10-14 (against actual code on disk: T1.1.1–T1.1.8 + TF.1–TF.6, TD.3, TE.1–TE.4, TM.1/TM.2a shipped; T1.2.1/T1.2.3/T1.2.5 backend landed)  
 **How to use:** Work top-to-bottom within a phase. Mark tasks `[x]` when Definition of Done is met. Update dependencies as reality changes.
 
 > **Reconciliation note (2026-10-12):** Phase 0 items were checked off against a verified
