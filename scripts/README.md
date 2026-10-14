@@ -1,6 +1,6 @@
 # scripts/
 
-Helper scripts for fixtures, models, icons, and local verification. Python scripts run with the `environment.yml` env; shell scripts are documented inline.
+Helper scripts for fixtures, models, icons, and local verification. `environment.yml` is for notebooks; Python scripts require their own dependencies, and shell scripts are documented inline.
 
 | Script | Purpose |
 |--------|---------|
