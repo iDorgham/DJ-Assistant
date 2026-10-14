@@ -160,12 +160,12 @@ pub fn run_analysis_queue(
                     match persist_analysis_failure(guard.conn(), &track_id, &current_version) {
                         Ok(_) => {
                             failed += 1;
-                            ("failed", Some(format!("{e}")))
+                            ("failed".to_string(), Some(format!("{e}")))
                         }
                         Err(db_err) => {
                             failed += 1;
                             (
-                                "failed",
+                                "failed".to_string(),
                                 Some(format!(
                                     "analysis failed ({e}); database persist error ({db_err})"
                                 )),
