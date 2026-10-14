@@ -1,9 +1,9 @@
 # DJ Assistant — Specification-Driven Development (SDD)
 
 **Method:** Specification-Driven Development  
-**Version:** 1.0  
-**Date:** 2026-10-08  
-**Status:** Approved for Engineering Execution
+**Version:** 1.1  
+**Date:** 2026-10-14  
+**Status:** Approved for Engineering Execution (T1.1.1–T1.1.8 + TF/TD.3/TE.1–TE.4/TM.1/TM.2a shipped; audit TA.1–TA.14 integrated)
 
 ---
 
@@ -45,7 +45,11 @@ No significant feature is built without a corresponding entry in Spec → Design
 | `docs/architecture/ARCHITECTURE.md` | Living architecture reference |
 | `docs/engineering/DEVELOPMENT_TASK_LIST.md` | Earlier task checklist (superseded in detail by `04-TASKS.md`) |
 | `docs/architecture/SKILLS_SYSTEM.md` | Skills design detail |
-| `docs/architecture/DATA_MODEL.md` | Data design detail |
+| `docs/architecture/DATA_MODEL.md` | Data design detail (migrations 001–005) |
+| `docs/architecture/SKILLS_SYSTEM.md` | Skills design detail |
+| `docs/audit/` | Spec/function/settings audits → `TA.1–TA.14` in `04-TASKS.md` |
+| [ADR-0006](../ADR/0006-spotify-playlist-export.md) / [ADR-0007](../ADR/0007-similar-tracks-enrichment-multiprovider.md) | Streaming-export + discovery/enrichment strategy |
+| `docs/context/PROJECT_CONTEXT.md` | Single-file digest (plan + progress snapshot §17) |
 | `docs/engineering/SECURITY_AND_PRIVACY.md` | Security & privacy constraints |
 
 The SDD set does **not** replace the Canonical Documentation. It organizes the path from specification to executable work.

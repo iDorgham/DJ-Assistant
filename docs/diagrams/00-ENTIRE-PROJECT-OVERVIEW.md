@@ -154,24 +154,26 @@ flowchart TB
 ```mermaid
 gantt
     title DJ Assistant MVP — 90 Days
-    dateFormat X
-    axisFormat %s
+    dateFormat YYYY-MM-DD
+    axisFormat %m/%d
 
     section Phase 0
-    Foundation (Shell, Scan, SQLite)          :0, 15
+    Foundation (Shell, Scan, SQLite)          :2026-09-01, 15d
 
     section Phase 1
-    Analysis Engine (ONNX)                    :15, 35
+    Analysis Engine (heuristics + ONNX seam)  :2026-09-16, 20d
 
     section Phase 2
-    Library + Tags + Cues                     :30, 55
+    Library + Tags + Cues                     :2026-10-01, 25d
 
     section Phase 3
-    Set Builder + Export + CDJ Validation     :40, 70
+    Set Builder + Export + CDJ Validation     :2026-10-11, 30d
 
     section Phase 4
-    Skills + Gig Ready + Beta                 :60, 90
+    Skills + Gig Ready + Beta                 :2026-10-31, 30d
 ```
+
+> Gantt uses calendar dates (was `dateFormat X` epoch — fragile on GitHub/mermaid.live). Day offsets preserved from the 90-day plan.
 
 | Phase | Goal | Exit Gate |
 |-------|------|-----------|
@@ -267,6 +269,8 @@ flowchart TD
 ---
 
 ## 8. One-Line Summary
+
+> `mindmap` renders in mermaid.live / VS Code but shows as a code block on GitHub. Static fallback: Vision (fastest library→set, 15-min prep) · Architecture (Tauri+Rust+React, local analysis, optional cloud) · Intelligence (LLM constraints/explanations, Beam Search sequencing, scoped Skills) · Delivery (90-day MVP, 5 workstreams/phases, strict gates) · Principles (local-first, reversible, non-destructive, DJ in control).
 
 ```mermaid
 mindmap

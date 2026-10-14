@@ -2,7 +2,7 @@
 
 **Status:** Approved for Engineering  
 **Source of Truth:** Canonical Documentation v1.1 + this document  
-**Last Updated:** 2026-10-08
+**Last Updated:** 2026-10-14
 
 ---
 
@@ -36,10 +36,9 @@
 │                                         ┌────────────────────────────────┐  │
 │                                         │ NATIVE AUDIO ENGINE            │  │
 │                                         │ • Symphonia (Decoding)         │  │
-│                                         │ • ONNX Runtime (BPM/Key/Vocal) │  │
+│                                         │ • Analysis pipeline (deterministic heuristics now; ONNX Runtime seam per analyzer) │  │
 │                                         │ • Structural Segmentation      │  │
-│                                         │ • Quick-XML (rekordbox export) │  │
-│                                         │ • Binary Crate Serializer      │  │
+│                                         │ • Exporters (planned: rekordbox XML, Serato crate — see diagrams/10-export-flow.md) │  │
 │                                         └────────────────────────────────┘  │
 └─────────────────────────────────────────┬───────────────────────────────────┘
                                           │ HTTPS / WSS (optional)
@@ -54,6 +53,10 @@
 └─────────────────────────────────────────────────────────────────────────────┘
 ```
 
+Optional outbound connections are limited to services the user brings: the Cloud Control Plane (§3.2) and
+third-party streaming providers — e.g. **Spotify** for metadata-only playlist export (§3.3). Neither ever
+receives raw audio.
+
 ---
 
 ## 3. Component Responsibilities
@@ -64,9 +67,10 @@
 |-----------|----------------|
 | **React UI** | Waveform visualization, Energy Canvas, Set Builder, Skills panel, Library browser, Tag Cleanup UI |
 | **Rust Core** | Folder watching, file hashing, metadata extraction, orchestration of analysis, local SQLite, rule engine, export generation |
-| **Native Audio Engine** | Decode audio (Symphonia), run ONNX models, compute beat grid / key / phrases / vocal presence / loudness |
-| **Local SQLite** | Track metadata, analysis results, cue points, skill history, user preferences, aliases |
+| **Native Audio Engine** | Decode audio (Symphonia), run deterministic analysis pipeline (BPM/key/phrases/vocals/LUFS heuristics with per-analyzer ONNX seams; full ONNX wiring pending per MODELS.md), compute beat grid / key / phrases / vocal presence / loudness |
+| **Local SQLite** | Track metadata, analysis results, cue points, skill history, user preferences, aliases, streaming-export records |
 | **IPC Layer** | Typed JSON messages between React and Rust (see Canonical §6.1) |
+| **Streaming Export (Spotify)** | Post-MVP: publish a built set (or any playlist) to the DJ's own Spotify account as a metadata-only playlist — OAuth 2.0 PKCE, ISRC/fuzzy matching, review queue. No audio leaves the device |
 
 ### 3.2 Cloud Control Plane
 
@@ -80,6 +84,34 @@
 | **Task Queue** | Background jobs (re-indexing, large exports, etc.) |
 
 **Important:** Cloud never receives raw audio. Only derived features, metadata, and set structures are synced (with explicit user consent).
+
+### 3.3 Streaming Export (Spotify) — Post-MVP
+
+Publishes a built set (or any playlist) to the DJ's **own** Spotify account as a real Spotify playlist, using
+**metadata only**. Each local track is matched to a Spotify track by **ISRC first**, falling back to a fuzzy
+match on normalized title/artist/album plus a **±3 s duration tolerance**, producing a confidence score.
+High-confidence matches are added automatically; medium/low go to a review queue; unmatched tracks are listed
+with a "search Spotify manually" / "skip" option.
+
+- **Auth** — OAuth 2.0 Authorization Code + PKCE (RFC 7636), loopback redirect
+  (`http://127.0.0.1:<port>/callback`) or custom URI scheme, with a public client ID embedded at build time.
+  No client secret and no cloud dependency; tokens live in the OS keychain and refresh locally.
+- **Scopes (minimal)** — `playlist-modify-private` by default; `playlist-modify-public` only if the DJ opts
+  into a public playlist; `playlist-read-private` only when updating an existing playlist. No library or email scopes.
+- **Matching** — mirrors the existing `needs_review` pattern: ISRC-first → fuzzy fallback → confidence tiers →
+  review queue → unmatched report. Local tables live in `streaming_accounts` / `streaming_exports` /
+  `streaming_matches` ([DATA_MODEL.md](./DATA_MODEL.md)).
+- **Provider calls** — Spotify Web API, called directly by the desktop app (see [API_CONTRACTS.md](./API_CONTRACTS.md) §7).
+- **Reversibility** — the created playlist is recorded locally so the DJ can delete it (unfollow) from the app;
+  audit-logged.
+- **Privacy** — only track metadata and search queries leave the device. Audio is never downloaded, streamed,
+  stored, or uploaded, and the app still never uploads the user's audio library.
+
+### 3.4 Discovery, Enrichment & Multi-Provider (foundations shipped; online follow-ups post-MVP)
+
+- **Local similarity** — `similarity.rs` (BPM/key/genre/duration, no I/O) served by `find_similar_tracks`; external similarity reuses the `ScoredTrack` shape with a `source` attached (see [API_CONTRACTS.md](./API_CONTRACTS.md) §2.6).
+- **Gap detection before lookup** — `track_tag_health` is a pure-DB read; opt-in online adapters cache IDs in `external_ids` and record runs in `enrichment_runs` (preview → apply → undo).
+- **Provider registry** — closed `StreamingProvider` / `StoreProvider` enums in `providers.rs`; `streaming_*` tables carry a free-text `provider` column so new targets add matchers, never schema. Spotify is the reference design; **Deezer live matching shipped first** (`provider_match_tracks`, TM.2a) while Spotify awaits TP build. Store buy-links (`store_links_for_track`) are pure search URLs — Beatport has no public catalog API, so charts/radar enter as versioned data (see ADR-0007).
 
 ---
 
@@ -185,6 +217,11 @@ Skills can be enabled/disabled globally or per workspace. Every run is logged wi
 | Set structures | ✓ | ✓ (collaboration) | — |
 | User preferences / Skill history | ✓ | ✓ | — |
 | Embeddings (CLAP etc.) | ✓ | ✓ (search) | — |
+| Streaming-export metadata (provider playlist id, match results) | ✓ | ✗ | — |
+| Streaming account tokens (OS keychain) | ✓ | ✗ | ✓ |
+
+Streaming Export (Spotify) is metadata-only: only track metadata and search queries leave the device.
+Tokens are stored in the OS keychain; audio is never downloaded, streamed, stored, or uploaded.
 
 ---
 
@@ -208,6 +245,7 @@ Skills can be enabled/disabled globally or per workspace. Every run is logged wi
 - Replacing rekordbox / Serato / Traktor as performance software
 - Autonomous agents that take irreversible actions
 - Uploading or streaming user audio libraries
+- Downloading, ripping, streaming, or storing third-party streaming-service audio (Spotify Playlist Export publishes metadata only — §3.3)
 - Social network / content calendar features
 
 ---

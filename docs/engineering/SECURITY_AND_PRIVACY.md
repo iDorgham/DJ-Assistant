@@ -60,6 +60,55 @@ DJ Assistant is built local-first and privacy-respecting by design. This documen
 - Database credentials and LLM keys only in secure secret storage.
 - Regular dependency updates and vulnerability scanning in CI.
 
+### 5.1 Spotify Playlist Export (Post-MVP — Streaming Export, Metadata Only)
+
+Publishes a built set (or any playlist) to the DJ's own Spotify account as a real Spotify playlist. Each local track is matched to a Spotify track by ISRC first, then by a fuzzy match (normalized title/artist/album + ±3 s duration) with a confidence score; high confidence auto-adds, medium/low go to a review queue, and unmatched tracks are reported ("search Spotify manually" / "skip"). Audio is never downloaded, streamed, stored, or uploaded.
+
+**Authentication & tokens**
+- OAuth 2.0 **Authorization Code + PKCE** (RFC 7636), desktop/Tauri, entirely in the app.
+- Embedded **public** client ID only; **no client secret anywhere** and no cloud dependency.
+- Redirect: loopback (`http://127.0.0.1:<port>/callback`) or custom URI scheme; the OAuth `state` parameter is required and verified on callback (CSRF).
+- Access + refresh tokens live in the **OS keychain** — never plaintext, never in the SQLite DB, never logged.
+- **Minimal scopes:** `playlist-modify-private` (default); `playlist-modify-public` only when the DJ explicitly opts into a public playlist; `playlist-read-private` only when updating an existing playlist. No library/email scopes.
+
+**Data flow (metadata only)**
+- Only track metadata (title/artist/album/ISRC/duration) and search queries leave the device. No audio is downloaded, streamed, stored, or uploaded.
+- No AI training on Spotify data.
+
+**Threat model**
+
+| Threat | Mitigation |
+|--------|------------|
+| Token theft / exfiltration | OS keychain storage; tokens never in the DB, logs, or client bundles; short-lived access tokens refreshed from the keychain-held refresh token |
+| Scope creep | Minimal scopes; public/read scopes opt-in only; no library/email scopes requested |
+| Malicious redirect / deep-link interception | Registered/allow-listed redirect URI; loopback bound to `127.0.0.1`; PKCE code verifier blocks code interception |
+| CSRF on the OAuth callback | Random `state` parameter generated per flow and verified before exchanging the code |
+| Over-broad playlist access | Limited to the DJ's own playlists; no access beyond what Spotify permits for owned/collaborative playlists |
+| Accidental public exposure of a playlist | Private by default; making a playlist public requires explicit opt-in |
+
+**Disconnect / revocation**
+- Disconnect removes stored tokens and revokes Spotify access, satisfying the existing GDPR **integration revocation** requirement (see [Canonical Documentation §13 GDPR Compliance](../product/CANONICAL_DOCUMENTATION.md)).
+
+**Rate limits & errors**
+- `429` + `Retry-After` → exponential backoff; `401` → token refresh; surface `403`/`404` to the reviewer.
+
+### 5.2 Discovery, Enrichment & Multi-Provider (TF shipped; TD/TE/TX post-MVP)
+
+The §5.1 posture extends to every provider: only track metadata, audio
+fingerprints (AcoustID/Chromaprint, computed locally) and search queries leave
+the device; audio never does. Additional rules:
+
+- **Opt-in per provider** — external similarity, enrichment lookup, charts/radar
+  and each export target are enabled individually; the shipped foundations
+  (similar scoring, gap detection, buy-links, provider registry) need no network.
+- **Enrichment writes DB only** — online proposals apply to canonical DB fields
+  through preview → apply → undo; source-file hashes must be unchanged after apply.
+- **Unofficial feeds labelled** — chart snapshots and radar feeds without an
+  official API are marked as such in the UI; credential-based scraping is not used.
+- **No in-app playback** — for Spotify, Deezer, Apple Music, YouTube Music,
+  SoundCloud and TIDAL alike: playlist export is metadata-only, and streaming
+  audio inside the app is out of scope.
+
 ---
 
 ## 6. Skills & Automation Safety Rules

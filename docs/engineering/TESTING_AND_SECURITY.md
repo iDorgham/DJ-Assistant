@@ -64,7 +64,7 @@ Exact % gates can be tightened later; **missing tests for new logic is a blockin
 
 - [ ] `cargo test` works in `apps/desktop/src-tauri`
 - [ ] JS/TS test runner (Vitest recommended) for frontend + shared packages
-- [ ] Fixture directory structure: `fixtures/audio/`, `fixtures/metadata/`, `fixtures/exports/`
+- [ ] Fixture directory structure: `fixtures/audio/`, `fixtures/charts/`, `fixtures/models/` (see `fixtures/README.md`)
 - [ ] CI runs unit tests on every PR
 - [ ] Test helpers for temp directories and sample track records
 
@@ -109,12 +109,15 @@ Exact % gates can be tightened later; **missing tests for new logic is a blockin
 | Malformed audio crashes process | Robust decode + skip | Fuzz/corrupt corpus in CI |
 | Path traversal | Canonicalize + root jail | Unit tests with `../` paths |
 | Source file mutation | Read-only open; hash audit | Integration test before/after |
+| Destructive USB format hits wrong drive | Removable-only list, system-drive block, no default, double-confirm, audit log | Unit tests for block-list; manual checklist |
 | LLM prompt injection | JSON schema validation of constraints | Unit tests with adversarial prompts |
 | Skill bulk damage | Preview + undo + kill-switch | Integration tests per Skill |
 | Dependency compromise | Pin + audit + lockfiles | CI dependency review / Dependabot |
 | Token leakage | OS keychain; no log of secrets | Code review checklist |
 | XSS in UI | Tauri CSP + React escaping | CSP config review; no `dangerouslySetInnerHTML` without review |
 | Over-broad FS allowlist | Tauri capabilities least privilege | PR checklist + architecture review |
+| OAuth redirect / deep-link interception | Registered/allow-listed redirect; PKCE; per-flow `state` | Unit tests: mismatched/absent `state` rejected; redirect allow-list enforced |
+| Over-broad integration scopes | Minimal scopes; public/read scopes opt-in only | Scope assertion tests (Spotify export, post-MVP) |
 
 ### 3.3 Security Gates in the PR Loop
 
@@ -169,6 +172,7 @@ Treat as high-risk (extra review + tests required):
 - [ ] XML/crate generation uses safe builders (no string-concat XSS into DJ software)
 - [ ] Source hash audit in export integration test
 - [ ] Constraint parser rejects non-schema LLM output
+- [ ] USB format is high-risk: removable-only enumeration, system-drive block, no default selection, double-confirm, allow-listed OS format commands only, audit-logged; unit tests for block-list + label sanitization
 
 ### Phase 4 — Skills & Cloud
 - [ ] Kill-switch stops in-flight Skills and disables new runs
@@ -203,7 +207,8 @@ Treat as high-risk (extra review + tests required):
 - Transition score monotonicity / sanity tests
 - Export snapshots + load validation
 - Full pipeline hash-unchanged test
-- Hardware checklist executed and signed off
+- USB format verify/certify tests (FAT32 + MBR asserted post-format; exFAT warning gate; system-drive rejection)
+- Hardware checklist executed and signed off (formatted sticks mount on NXS2 + 3000)
 
 ### Phase 4
 - Skill registry enable/disable tests
@@ -211,6 +216,26 @@ Treat as high-risk (extra review + tests required):
 - Gig Ready dry-run test
 - Optional E2E smoke (import → export)
 - Closed beta feedback → regression fixtures
+
+### Post-MVP — Spotify Playlist Export (Streaming Export)
+
+- **Matching engine:** unit tests for ISRC exact match, fuzzy fallback (normalized title/artist/album + ±3 s duration), and confidence-tier classification (high → auto-add; medium/low → review queue; unmatched → reported).
+- **No audio invariant:** export tests assert no audio is read, streamed, stored, or uploaded; source-file BLAKE3 hash is unchanged before/after the export pipeline (extends the existing hash-integrity rule).
+- **Rate limits:** `429` + `Retry-After` triggers exponential backoff with bounded retries; unit tests use a mocked clock/transport.
+- **Token refresh:** `401` triggers a refresh via the keychain-held refresh token; refresh failure surfaces a re-connect prompt; tokens never appear in logs or test snapshots.
+- **OAuth flow:** per-flow `state` parameter (CSRF) rejected if mismatched/absent; PKCE code-verifier/challenge round-trip; redirect URI validated against the allow-list; malicious/deep-link redirects rejected.
+- **Scopes:** tests assert only the minimal default scopes are requested and that public/read scopes require explicit opt-in.
+- **Revocation:** disconnect clears keychain tokens and revokes access, covered by an integration test.
+
+### Post-MVP — Discovery, Enrichment & Multi-Provider (TD / TE / TX)
+
+Shipped foundations (`TF`) are covered by existing suites: `similarity` (8 tests) and `providers` (4 tests) in `dj-assistant-core`; IPC contract tests for `find_similar_tracks` / `track_tag_health` / `store_links_for_track` / `provider_status`; migration 003 applies cleanly over 001/002.
+
+Shipped live scope (`TE.1–TE.4`, `TM.2a`): `enrichment` parsers/confidence (11 tests against verified live API shapes); contract tests for preview/apply/undo + `enrichment:progress` + provider-match payloads; migration 004 verified (applies in order; preview/apply/undo SQL round-trip) with a desktop migration test for CI (the Tauri-linked harness cannot load on the GNU dev toolchain — MSVC CI runs it).
+
+- **Discovery:** snapshot determinism + taste-filter tests; feed-parser fixtures; external similarity returns carry a `source`; no auto-modification of sets (assertion).
+- **Enrichment:** adapter fixtures from recorded responses; confidence-tier tests; undo round-trips per run; quota/backoff with mocked transport; source-hash-unchanged audit after apply.
+- **Multi-provider:** per-provider matcher fixtures; chunked-add/backoff per API; undo (delete/unfollow) per provider; the no-audio invariant extended to every provider transport.
 
 ---
 
