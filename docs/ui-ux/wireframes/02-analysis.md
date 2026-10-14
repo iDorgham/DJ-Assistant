@@ -109,7 +109,7 @@ The `CONF` column uses a 3-bar meter (`▇▇▇` high, `▇▇▁` medium, `▇
 ## Accessibility obligations
 
 - The progress strip is a polite live region; do not announce every track (throttle).
-- The confidence meter must expose a text equivalent (`aria-label` on the status pill).
+- The confidence meter must expose a text equivalent (e.g., an `aria-label` on each meter, not the status pill).
 - Status is conveyed by icon **and** label, so it survives colour-blindness.
 - Review-queue actions are reachable by keyboard and in a logical reading order.
 
