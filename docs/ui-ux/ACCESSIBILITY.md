@@ -129,7 +129,7 @@ when they exist):
 | 1 | Search input removes the default outline (`focus:outline-hidden`) | Add a visible focus ring or outline; verify against §4 |
 | 2 | `text-dim` placeholders (~3.5:1 on the search field's `#1a1e2b` background) | Raise placeholder colour to ≥ 4.5:1, or accept only where non-essential |
 | 3 | Progress bar has no ARIA roles/values yet | Add `role="progressbar"` + `aria-*` as in §6 |
-| 4 | Shell uses `div`s, not landmarks | Add `header` / `main` / footer semantics + labels |
+| 4 | Working area lacks a `main` landmark | Add a `<main>` landmark; retain the existing `<header>` and `<footer>` elements |
 | 5 | Library table rows not keyboard-navigable | Make rows focusable/navigable in Phase 2 |
 | 6 | Reduced-motion not honoured | Add `prefers-reduced-motion` handling for spin/progress |
 | 7 | Live announcements for scan/analysis | Add `aria-live` region with throttled updates |
