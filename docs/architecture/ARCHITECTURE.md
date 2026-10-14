@@ -218,7 +218,7 @@ Skills can be enabled/disabled globally or per workspace. Every run is logged wi
 | User preferences / Skill history | ✓ | ✓ | — |
 | Embeddings (CLAP etc.) | ✓ | ✓ (search) | — |
 | Streaming-export metadata (provider playlist id, match results) | ✓ | ✗ | — |
-| Streaming account tokens (OS keychain) | ✓ | ✗ | ✓ |
+| Streaming account tokens (OS keychain) | ✓ | ✗ | — |
 
 Streaming Export (Spotify) is metadata-only: only track metadata and search queries leave the device.
 Tokens are stored in the OS keychain; audio is never downloaded, streamed, stored, or uploaded.
