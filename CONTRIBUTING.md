@@ -2,7 +2,7 @@
 
 Thank you for your interest in contributing.
 
-This project is in **Phase 1 (Analysis Engine) — Phase 0 accepted 2026-10-12**. The Canonical Documentation, the documents under `docs/`, the audit findings (`docs/audit/`, tracked as `TA.1–TA.14`), and the SDD plan (`docs/sdd/`) are the source of truth.
+This project is in **Phase 1 (Analysis Engine) — Phase 0 accepted 2026-10-12**. The Canonical Documentation is the product and technical source of truth; the SDD plan (`docs/sdd/`) defines execution, with audit findings (`docs/audit/`) tracked as `TA.1–TA.14`.
 
 ---
 
