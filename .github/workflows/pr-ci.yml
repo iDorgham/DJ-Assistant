@@ -21,7 +21,6 @@ jobs:
         uses: actions/checkout@v7
 
       - name: Setup pnpm
-        # Version comes from package.json "packageManager" (single source of truth).
         uses: pnpm/action-setup@v6
 
       - name: Setup Node
@@ -42,12 +41,41 @@ jobs:
       - name: Unit tests
         run: pnpm test
 
+  # Detect which parts of the repo changed so downstream jobs can skip
+  # themselves cheaply without burning macOS/Windows runner minutes.
+  changes:
+    name: Detect changed paths
+    runs-on: ubuntu-latest
+    outputs:
+      rust: ${{ steps.filter.outputs.rust }}
+      tauri: ${{ steps.filter.outputs.tauri }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            rust:
+              - 'crates/**'
+              - 'tests/**'
+              - 'apps/desktop/src-tauri/**'
+              - 'Cargo.toml'
+              - 'Cargo.lock'
+            tauri:
+              - 'apps/desktop/src-tauri/**'
+              - 'apps/desktop/src/**'
+              - 'apps/desktop/index.html'
+              - 'apps/desktop/package.json'
+              - 'packages/**'
+              - 'Cargo.toml'
+              - 'Cargo.lock'
+
   rust-lint-test:
     name: Rust Fmt, Clippy, Test
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: .
+    needs: changes
+    # Skip entirely when no Rust files changed (e.g. pure JS or docs PRs).
+    if: needs.changes.outputs.rust == 'true'
     steps:
       - name: Checkout
         uses: actions/checkout@v7
@@ -71,6 +99,8 @@ jobs:
             ~/.cargo/git
             target
           key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-
 
       - name: fmt
         run: cargo fmt --all --check
@@ -79,8 +109,17 @@ jobs:
         run: cargo clippy --all-targets -- -D warnings
 
       - name: test
-        run: cargo test
+        # Portable subset: skips desktop integration tests that require
+        # a full Tauri/WebKit stack. Keeps CI fast on ubuntu-latest.
+        run: cargo test -p dj-assistant-core -p dj-assistant-analysis -p dj-assistant-schema-tests
 
   desktop-build:
     name: Desktop Build (macOS + Windows)
+    needs: changes
+    # Only run the expensive cross-platform build when Tauri/frontend files
+    # changed AND this is not a Dependabot PR (dep bumps are verified by
+    # rust-lint-test + js-lint-test; a full native compile is unnecessary).
+    if: |
+      needs.changes.outputs.tauri == 'true' &&
+      github.actor != 'dependabot[bot]'
     uses: ./.github/workflows/desktop-build.yml
