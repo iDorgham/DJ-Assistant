@@ -132,7 +132,7 @@ values (BPM, key, duration, counts, hash, format pill).
 **Borders:** 1px, using the border tokens above. No double borders, no heavy dividers.
 
 **Elevation:** flat by default. The primary action may carry a soft colour shadow
-(`shadow-blue-600/30`); nothing else elevates.
+(`shadow-blue-600/30`); the logo tile and inspector/dialog surfaces also use shadows.
 
 ---
 
