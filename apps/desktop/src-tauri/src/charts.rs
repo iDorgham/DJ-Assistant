@@ -28,13 +28,7 @@ fn valid_date(date: &str) -> bool {
     date.len() == 10
         && date.as_bytes()[4] == b'-'
         && date.as_bytes()[7] == b'-'
-        && date.bytes().enumerate().all(|(i, b)| {
-            if i == 4 || i == 7 {
-                true
-            } else {
-                b.is_ascii_digit()
-            }
-        })
+        && chrono::NaiveDate::parse_from_str(date, "%Y-%m-%d").is_ok()
 }
 
 /// Imports one chart snapshot, replacing the same
