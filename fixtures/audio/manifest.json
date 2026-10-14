@@ -1,7 +1,7 @@
 {
   "description": "Deterministic synthetic audio fixtures for the DJ Assistant library scanner. Paths are POSIX-style and relative to fixtures/audio. 'expected' fields are null when the value is expected to be absent. 'extension' and 'supported_extensions' are lower-case and carry no leading dot, matching dj_assistant_core::SUPPORTED_EXTENSIONS and ExtractedMetadata::format. Consumed by crates/core/tests/{fixture_manifest,scan_corpus}.rs.",
   "duration_tolerance_seconds": 0.05,
-  "file_count": 14,
+  "file_count": 21,
   "files": [
     {
       "bytes": 122866,
@@ -162,19 +162,19 @@
       "corrupt": false,
       "duplicate_of": null,
       "expected": {
-        "album": "Naïve Édition 日本語",
-        "artist": "Ünïcodé Ärtîst",
+        "album": "Na\u00c3\u00afve \u00c3\u2030dition \u00e6\u2014\u00a5\u00e6\u0153\u00ac\u00e8\u00aa\u017e",
+        "artist": "\u00c3\u0153n\u00c3\u00afcod\u00c3\u00a9 \u00c3\u201ert\u00c3\u00aest",
         "channels": 1,
         "duration_seconds": 0.952381,
-        "genre": "Électro",
+        "genre": "\u00c3\u2030lectro",
         "sample_rate": 44100,
-        "title": "Trâck (Extended Mix)",
+        "title": "Tr\u00c3\u00a2ck (Extended Mix)",
         "year": 2023
       },
       "extension": "wav",
       "format": "wav",
       "note": "Mono WAV: UTF-8 filename (en dash U+2013) plus Latin-1/Cyrillic/CJK tag text in UTF-8.",
-      "path": "edge/Ünïcodé Ärtîst – Trâck (Extended Mix).wav",
+      "path": "edge/\u00c3\u0153n\u00c3\u00afcod\u00c3\u00a9 \u00c3\u201ert\u00c3\u00aest \u00e2\u20ac\u201c Tr\u00c3\u00a2ck (Extended Mix).wav",
       "readable": true,
       "sha256": "bebece94cab4d8d13d8ae22f966b550e50b63d5109aaf54484c45f76103d08bd",
       "supported": true
@@ -310,6 +310,154 @@
       "readable": true,
       "sha256": "88d90fefbefd8f345cbc0a95217465c04cffe168d135925ce3d12368cb5e461c",
       "supported": true
+    },
+    {
+      "bytes": 1323000,
+      "corrupt": false,
+      "duplicate_of": null,
+      "expected": {
+        "album": "Deep Cuts Vol. 1",
+        "artist": "Kaspar Nyx",
+        "channels": 2,
+        "duration_seconds": 0.937506,
+        "genre": "House",
+        "sample_rate": 44100,
+        "title": "Midnight Groove",
+        "year": 2018
+      },
+      "extension": "wav",
+      "format": "wav",
+      "note": "Stereo PCM16 WAV with an ID3v2.4 chunk written by mutagen (mutagen.wave.WAVE).",
+      "path": "analysis/house-128.wav",
+      "readable": true,
+      "sha256": "88d90fefbefd8f345cbc0a95217465c04cffe168d135925ce3d12368cb5e461c",
+      "supported": true
+    },
+    {
+      "bytes": 1209600,
+      "corrupt": false,
+      "duplicate_of": null,
+      "expected": {
+        "album": "Berlin Sessions",
+        "artist": "Anhalt",
+        "channels": 2,
+        "duration_seconds": 1.714286,
+        "genre": "Techno",
+        "sample_rate": 44100,
+        "title": "Warehouse Pulse",
+        "year": 2019
+      },
+      "extension": "flac",
+      "format": "flac",
+      "note": "FLAC encoded by ffmpeg from an untagged WAV. Tags are ffmpeg '-metadata' entries (year is the Vorbis 'date' field); '-fflags +bitexact' keeps ffmpeg's version string out of the tags. Bytes depend on the ffmpeg build.",
+      "path": "analysis/techno-140.wav",
+      "readable": true,
+      "sha256": "d486d669ae91e14a07ef0d750ecab5b96efbd3820e7a6704df302dfcf767178a",
+      "supported": true
+    },
+    {
+      "bytes": 973240,
+      "corrupt": false,
+      "duplicate_of": null,
+      "expected": {
+        "album": "Jungle Archives",
+        "artist": "Sub Division",
+        "channels": 2,
+        "duration_seconds": 0.68966,
+        "genre": "Drum & Bass",
+        "sample_rate": 44100,
+        "title": "Rolling Deep",
+        "year": 2021
+      },
+      "extension": "aiff",
+      "format": "aiff",
+      "note": "PCM16 big-endian AIFF produced by ffmpeg; ffmpeg does not write AIFF tags, so the ID3v2.4 chunk was written afterwards with mutagen.aiff.AIFF.",
+      "path": "analysis/dnb-174.wav",
+      "readable": true,
+      "sha256": "3c054fdd9a68f06924f9d7112212a6d00c7a3a8232a855d11dc0663b795994f3",
+      "supported": true
+    },
+    {
+      "bytes": 1411200,
+      "corrupt": false,
+      "duplicate_of": null,
+      "expected": {
+        "album": null,
+        "artist": null,
+        "channels": 2,
+        "duration_seconds": null,
+        "genre": null,
+        "sample_rate": 44100,
+        "title": null,
+        "year": null
+      },
+      "extension": "wav",
+      "format": "wav",
+      "note": "Valid stereo PCM16 WAV with no metadata container at all (filename-fallback test).",
+      "path": "analysis/deep-120.wav",
+      "readable": true,
+      "sha256": "2d892f7267307b3fc881d6c0feed0f764a9d4e0004c67d098db558d4c39c0a0c",
+      "supported": true
+    },
+    {
+      "bytes": 1344000,
+      "corrupt": false,
+      "duplicate_of": null,
+      "expected": {
+        "album": null,
+        "artist": null,
+        "channels": null,
+        "duration_seconds": null,
+        "genre": null,
+        "sample_rate": null
+      },
+      "extension": "wav",
+      "format": "wav",
+      "note": "Valid stereo PCM16 WAV with no metadata container at all (filename-fallback test).",
+      "path": "analysis/melodic-126.wav",
+      "readable": true,
+      "sha256": "7a7a9694cf90a3e36a2bfe17345093bbab8074e0f57c8deb891888b0e8ac90a7",
+      "supported": true
+    },
+    {
+      "bytes": 1365676,
+      "corrupt": false,
+      "duplicate_of": null,
+      "expected": {
+        "album": null,
+        "artist": null,
+        "channels": null,
+        "duration_seconds": null,
+        "genre": null,
+        "sample_rate": null
+      },
+      "extension": "wav",
+      "format": "wav",
+      "note": "Valid stereo PCM16 WAV with no metadata container at all (filename-fallback test).",
+      "path": "analysis/apostrophe-124.wav",
+      "readable": true,
+      "sha256": "c4b21ecd9886a3fae6174998dedc02435be49c8acc1fab9ab1f432c61fade2c",
+      "supported": true
+    },
+    {
+      "bytes": 1227132,
+      "corrupt": false,
+      "duplicate_of": null,
+      "expected": {
+        "album": null,
+        "artist": null,
+        "channels": null,
+        "duration_seconds": null,
+        "genre": null,
+        "sample_rate": null
+      },
+      "extension": "wav",
+      "format": "wav",
+      "note": "Valid stereo PCM16 WAV with no metadata container at all (filename-fallback test).",
+      "path": "analysis/techno-138.wav",
+      "readable": true,
+      "sha256": "be794a2de86a910dcb2d85f7de03ee4c6d68cc3acc93b9ef8181a10a6b1105bd",
+      "supported": true
     }
   ],
   "generator": "scripts/make-fixtures.py",
@@ -332,5 +480,5 @@
     "mp3",
     "wav"
   ],
-  "total_bytes": 1078219
+  "total_bytes": 9932067
 }

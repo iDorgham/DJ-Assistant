@@ -1,29 +1,50 @@
 {
-  "description": "Golden analysis fixtures for T1.2.6. 16-beat stereo WAV files. Expected analysis_status only (BPM and key may be None in some environments). The pipeline classification + loudness + phrase_confidence are verified for each fixture.",
+  "description": "Golden analysis fixtures for T1.2.6. 16 beats each, known BPM and key.",
   "tolerances": {
     "bpm": 2.0,
     "key": "exact"
   },
   "fixtures": {
     "analysis/house-128.wav": {
+      "bpm": 128.0,
+      "key_classical": "A minor",
+      "key_camelot": "8A",
       "analysis_status": "needs_review"
     },
     "analysis/techno-140.wav": {
+      "bpm": 140.0,
+      "key_classical": "G minor",
+      "key_camelot": "9A",
       "analysis_status": "needs_review"
     },
     "analysis/dnb-174.wav": {
+      "bpm": 174.0,
+      "key_classical": "E minor",
+      "key_camelot": "11A",
       "analysis_status": "needs_review"
     },
     "analysis/deep-120.wav": {
+      "bpm": 120.0,
+      "key_classical": "A minor",
+      "key_camelot": "8A",
       "analysis_status": "needs_review"
     },
     "analysis/melodic-126.wav": {
+      "bpm": 126.0,
+      "key_classical": "C major",
+      "key_camelot": "8B",
       "analysis_status": "needs_review"
     },
     "analysis/apostrophe-124.wav": {
+      "bpm": 124.0,
+      "key_classical": "D minor",
+      "key_camelot": "7A",
       "analysis_status": "needs_review"
     },
     "analysis/techno-138.wav": {
+      "bpm": 138.0,
+      "key_classical": "F# minor",
+      "key_camelot": "12A",
       "analysis_status": "needs_review"
     }
   }

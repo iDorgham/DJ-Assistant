@@ -178,7 +178,15 @@ fn decode_from_source(
 
         match decoder.decode(&packet) {
             Ok(decoded) => {
-                decoded.copy_to_vec_interleaved::<f32>(&mut all_samples);
+                // Symphonia's `copy_to_vec_interleaved` *resizes* the destination vector to
+                // this packet's sample count, so accumulating has to happen around it:
+                // grow the buffer by this packet's samples first, then copy into the fresh
+                // tail. Copying straight into the running buffer would discard every
+                // packet but the last (a 7.5 s WAV would decode to its 126-frame tail).
+                let n_samples = channels.max(1) * decoded.frames();
+                let start = all_samples.len();
+                all_samples.resize(start + n_samples, 0.0);
+                decoded.copy_to_slice_interleaved(&mut all_samples[start..]);
             }
             Err(SymphoniaError::DecodeError(_)) => {
                 // Gracefully ignore corrupt frames within an otherwise valid stream
@@ -265,6 +273,32 @@ mod tests {
 
         assert!(decoded.sample_rate > 0);
         assert!(!decoded.samples.is_empty());
+    }
+
+    /// Regression: the decode loop used to overwrite the accumulated buffer on every
+    /// packet (Symphonia's `copy_to_vec_interleaved` resizes its destination), so only
+    /// the final packet survived and e.g. `no-tags.wav` decoded to 126 of its 22 050
+    /// frames. Every decoded fixture must come back whole.
+    #[test]
+    fn decodes_every_packet_not_just_the_last() {
+        // 0.5 s of 44.1 kHz stereo PCM16 = 22 050 frames.
+        let wav = decode_audio_file(get_fixture("wav/no-tags.wav")).expect("Should decode wav");
+        assert!(
+            wav.total_frames() > 21_000,
+            "wav decoded to {} frames ({:.3}s), expected ~22 050",
+            wav.total_frames(),
+            wav.duration_seconds
+        );
+
+        // 1.714286 s of 44.1 kHz stereo FLAC = 75 600 frames.
+        let flac =
+            decode_audio_file(get_fixture("flac/tagged-techno-140.flac")).expect("Should decode flac");
+        assert!(
+            flac.total_frames() > 70_000,
+            "flac decoded to {} frames ({:.3}s), expected ~75 600",
+            flac.total_frames(),
+            flac.duration_seconds
+        );
     }
 
     #[test]
