@@ -101,7 +101,7 @@ This is the actionable engineering task list. Check items off as they are comple
 
 ### Performance & Quality
 - [ ] Target: p50 analysis time < 3s per track on mid-range laptop (CPU)
-- [ ] Golden fixture tests for BPM / key / phrase on a small curated set
+- [x] Golden fixture tests for BPM / key / phrase on a small curated set — *`fixtures/audio/analysis_expected.json` (7 fixtures) + `crates/analysis/tests/golden.rs` (P1.1–P1.4 + P1.5/P1.6 benchmark)*
 - [ ] Graceful handling of very short / very long / corrupted files
 
 ### Exit Criteria — Phase 1

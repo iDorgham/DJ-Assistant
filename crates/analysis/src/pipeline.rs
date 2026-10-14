@@ -31,6 +31,36 @@ use crate::vocal::detect_vocal_presence;
 /// reconciliation).
 pub const VOCAL_PRESENCE_THRESHOLD: f32 = 0.5;
 
+/// Below this phrase confidence, a track is flagged for review even when no
+/// analyzer errored. The deterministic novelty curve is conservative; a value
+/// under 0.3 means the segmenter found little structure worth asserting.
+pub const PHRASE_CONFIDENCE_REVIEW_THRESHOLD: f32 = 0.3;
+
+/// Maps analysis results to an `analysis_status` value.
+///
+/// Returns `"needs_review"` when any signal is missing or degraded:
+/// - any analyzer recorded a per-analyzer error, or
+/// - no tempo was established (`bpm` is `None`), or
+/// - no tonal centre was found (`key_camelot` is `None`), or
+/// - phrase confidence is below [`PHRASE_CONFIDENCE_REVIEW_THRESHOLD`].
+///
+/// Returns `"complete"` only when every analyzer produced a usable result.
+pub fn classify_analysis_status(results: &AnalysisResults) -> &'static str {
+    if !results.errors.is_empty() {
+        return "needs_review";
+    }
+    if results.bpm.is_none() {
+        return "needs_review";
+    }
+    if results.key_camelot.is_none() {
+        return "needs_review";
+    }
+    match results.phrase_confidence {
+        Some(c) if c < PHRASE_CONFIDENCE_REVIEW_THRESHOLD => "needs_review",
+        _ => "complete",
+    }
+}
+
 /// Results of a full analysis pass, mapped 1:1 to `tracks` columns (T1.2.3).
 #[derive(Debug, Clone)]
 pub struct AnalysisResults {

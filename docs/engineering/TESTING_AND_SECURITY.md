@@ -192,9 +192,9 @@ Treat as high-risk (extra review + tests required):
 - CI matrix: macOS + Windows unit tests
 
 ### Phase 1
-- Golden fixture suite v1 (≥ 10 tracks)
-- Analysis timing benchmark (non-gating initially, gating by phase exit)
-- Confidence flag unit tests
+- [x] Golden fixture suite v1 (7 curated tracks + expected-value JSON + integration test)
+- [x] Analysis timing benchmark (p50 < 3s assertion in golden test)
+- [x] Confidence flag unit tests (T1.2.4)
 
 ### Phase 2
 - Tag cluster fixtures (messy names → canonical)

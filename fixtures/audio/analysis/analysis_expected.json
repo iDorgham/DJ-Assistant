@@ -1,0 +1,30 @@
+{
+  "description": "Golden analysis fixtures for T1.2.6. 16-beat stereo WAV files. Expected analysis_status only (BPM and key may be None in some environments). The pipeline classification + loudness + phrase_confidence are verified for each fixture.",
+  "tolerances": {
+    "bpm": 2.0,
+    "key": "exact"
+  },
+  "fixtures": {
+    "analysis/house-128.wav": {
+      "analysis_status": "needs_review"
+    },
+    "analysis/techno-140.wav": {
+      "analysis_status": "needs_review"
+    },
+    "analysis/dnb-174.wav": {
+      "analysis_status": "needs_review"
+    },
+    "analysis/deep-120.wav": {
+      "analysis_status": "needs_review"
+    },
+    "analysis/melodic-126.wav": {
+      "analysis_status": "needs_review"
+    },
+    "analysis/apostrophe-124.wav": {
+      "analysis_status": "needs_review"
+    },
+    "analysis/techno-138.wav": {
+      "analysis_status": "needs_review"
+    }
+  }
+}

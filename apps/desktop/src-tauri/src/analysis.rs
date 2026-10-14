@@ -19,35 +19,9 @@ use tauri::{AppHandle, Emitter};
 use crate::db::Database;
 use crate::models::{AnalysisCompletedEvent, AnalysisProgressEvent};
 
-/// Below this phrase confidence, a track is flagged for review even when no
-/// analyzer errored. The deterministic novelty curve is conservative; a value
-/// under 0.3 means the segmenter found little structure worth asserting.
-pub const PHRASE_CONFIDENCE_REVIEW_THRESHOLD: f32 = 0.3;
-
-/// Maps analysis results to a `tracks.analysis_status` value.
-///
-/// Returns `"needs_review"` when any signal is missing or degraded:
-/// - any analyzer recorded a per-analyzer error, or
-/// - no tempo was established (`bpm` is `None`), or
-/// - no tonal centre was found (`key_camelot` is `None`), or
-/// - phrase confidence is below [`PHRASE_CONFIDENCE_REVIEW_THRESHOLD`].
-///
-/// Returns `"complete"` only when every analyzer produced a usable result.
-pub fn classify_analysis_status(results: &AnalysisResults) -> &'static str {
-    if !results.errors.is_empty() {
-        return "needs_review";
-    }
-    if results.bpm.is_none() {
-        return "needs_review";
-    }
-    if results.key_camelot.is_none() {
-        return "needs_review";
-    }
-    match results.phrase_confidence {
-        Some(c) if c < PHRASE_CONFIDENCE_REVIEW_THRESHOLD => "needs_review",
-        _ => "complete",
-    }
-}
+/// Re-exported from the analysis crate so the desktop app and golden tests
+/// share one classification rule.
+pub use dj_assistant_analysis::classify_analysis_status;
 
 /// Persists one track's analysis results to `tracks` and stamps the composite
 /// `analysis_version`, setting `analysis_status` via [`classify_analysis_status`].
