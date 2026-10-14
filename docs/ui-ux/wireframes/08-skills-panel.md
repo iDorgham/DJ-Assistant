@@ -53,7 +53,7 @@ a global kill-switch. Every mutating run is previewable and reversible.
 | # | Element | Behaviour |
 |---|---------|-----------|
 | {1} | Enable/disable list | Per-Skill state; disabling stops it from being triggered |
-| {2} | Global kill-switch | Instantly disables all Skills; single click, always visible |
+| {2} | Global kill-switch | Immediately stops running Skills and disables new runs; single click, always visible |
 | {3} | Skill table | Name, description, last-run time, and current state |
 | {4} | Selected actions | Run / view / undo the selected Skill |
 | {5} | Safety note | Restates the reversibility contract |
