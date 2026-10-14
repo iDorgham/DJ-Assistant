@@ -65,6 +65,29 @@ export function formatRating(rating: number | null | undefined): string {
   return "★".repeat(stars) + "☆".repeat(5 - stars);
 }
 
+/** Renders a 0–1 similarity score as a whole percent, e.g. `93%`. */
+export function formatScore(score: number): string {
+  if (!Number.isFinite(score)) return "—";
+  return `${Math.round(Math.min(1, Math.max(0, score)) * 100)}%`;
+}
+
+/** Human label for a tag-health gap field; unknown fields pass through. */
+export function formatMissingField(field: string): string {
+  const labels: Record<string, string> = {
+    title: "Title",
+    artist: "Artist",
+    album: "Album",
+    genre: "Genre",
+    year: "Year",
+    bpm: "BPM",
+    key: "Key",
+    artwork: "Artwork",
+    isrc: "ISRC",
+    duration: "Duration",
+  };
+  return labels[field] ?? field;
+}
+
 /** Truncates a comment for a table cell; collapses whitespace and never overflows. */
 export function truncateComment(comment: string | null | undefined, maxLength = 40): string {
   if (!comment) return "—";

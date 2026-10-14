@@ -1,0 +1,38 @@
+{
+  "_note": "SAMPLE chart snapshot for format reference and tests. Synthetic entries — replace with real chart data. Import via the chart_import_snapshot IPC command.",
+  "provider": "beatport",
+  "chart": "top100",
+  "genre": "techno",
+  "snapshot_date": "2026-10-14",
+  "entries": [
+    {
+      "position": 1,
+      "title": "Sample Peak A",
+      "artist": "Sample Artist",
+      "label": "Sample Records",
+      "isrc": "XXAAA2600001",
+      "bpm": 132.0,
+      "key_camelot": "11A",
+      "source_url": "https://www.beatport.com/search?q=Sample+Artist+Sample+Peak+A"
+    },
+    {
+      "position": 2,
+      "title": "Sample Peak B",
+      "artist": "Sample Artist",
+      "label": "Sample Records",
+      "isrc": "XXAAA2600002",
+      "bpm": 130.0,
+      "key_camelot": "11A",
+      "source_url": "https://www.beatport.com/search?q=Sample+Artist+Sample+Peak+B"
+    },
+    {
+      "position": 3,
+      "title": "Sample Groove",
+      "artist": "Other Artist",
+      "label": "Other Label",
+      "bpm": 126.0,
+      "key_camelot": "8A",
+      "source_url": "https://www.beatport.com/search?q=Other+Artist+Sample+Groove"
+    }
+  ]
+}

@@ -1,0 +1,110 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="320" viewBox="0 0 1280 320" role="img" aria-label="DJ Assistant — turn a music library into a performance-ready DJ set">
+  <title>DJ Assistant</title>
+  <defs>
+    <linearGradient id="bnBg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#0B0D12"/>
+      <stop offset="1" stop-color="#161A24"/>
+    </linearGradient>
+    <radialGradient id="bnRadialA" cx="0.06" cy="0" r="0.85">
+      <stop offset="0" stop-color="#2563EB" stop-opacity="0.24"/>
+      <stop offset="1" stop-color="#2563EB" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="bnRadialB" cx="0.98" cy="1" r="0.75">
+      <stop offset="0" stop-color="#22D3EE" stop-opacity="0.12"/>
+      <stop offset="1" stop-color="#22D3EE" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="bnBorder" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#2A3040"/>
+      <stop offset="1" stop-color="#171B25"/>
+    </linearGradient>
+    <linearGradient id="bnTile" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#171B25"/>
+      <stop offset="1" stop-color="#0A0C11"/>
+    </linearGradient>
+    <linearGradient id="bnSheen" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#FFFFFF" stop-opacity="0.08"/>
+      <stop offset="0.45" stop-color="#FFFFFF" stop-opacity="0"/>
+    </linearGradient>
+    <linearGradient id="bnTileBorder" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#2E344A"/>
+      <stop offset="1" stop-color="#1A1F2B"/>
+    </linearGradient>
+    <linearGradient id="bnEq" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#5CE1FF"/>
+      <stop offset="1" stop-color="#0090FF"/>
+    </linearGradient>
+    <linearGradient id="bnFade" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#FFFFFF" stop-opacity="0"/>
+      <stop offset="0.28" stop-color="#FFFFFF" stop-opacity="1"/>
+      <stop offset="0.72" stop-color="#FFFFFF" stop-opacity="1"/>
+      <stop offset="1" stop-color="#FFFFFF" stop-opacity="0"/>
+    </linearGradient>
+    <mask id="bnMotifMask">
+      <rect x="880" y="0" width="300" height="320" fill="url(#bnFade)"/>
+    </mask>
+    <filter id="bnGlow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur in="SourceGraphic" stdDeviation="5" result="glowWide"/>
+      <feComponentTransfer in="glowWide" result="glowSoft">
+        <feFuncA type="linear" slope="0.55"/>
+      </feComponentTransfer>
+      <feGaussianBlur in="SourceGraphic" stdDeviation="1.5" result="glowTight"/>
+      <feMerge>
+        <feMergeNode in="glowSoft"/>
+        <feMergeNode in="glowTight"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+    <clipPath id="bnTileClip">
+      <rect x="1.5" y="1.5" width="125" height="125" rx="30"/>
+    </clipPath>
+  </defs>
+
+  <rect width="1280" height="320" rx="24" fill="url(#bnBg)"/>
+  <rect width="1280" height="320" rx="24" fill="url(#bnRadialA)"/>
+  <rect width="1280" height="320" rx="24" fill="url(#bnRadialB)"/>
+
+  <!-- Right motif: faint EQ bars, faded top and bottom -->
+  <g fill="url(#bnEq)" opacity="0.18" mask="url(#bnMotifMask)">
+    <rect x="898" y="138" width="14" height="44" rx="7"/>
+    <rect x="922" y="124" width="14" height="72" rx="7"/>
+    <rect x="946" y="104" width="14" height="112" rx="7"/>
+    <rect x="970" y="84" width="14" height="152" rx="7"/>
+    <rect x="994" y="100" width="14" height="120" rx="7"/>
+    <rect x="1018" y="68" width="14" height="184" rx="7"/>
+    <rect x="1042" y="90" width="14" height="140" rx="7"/>
+    <rect x="1066" y="114" width="14" height="92" rx="7"/>
+    <rect x="1090" y="80" width="14" height="160" rx="7"/>
+    <rect x="1114" y="108" width="14" height="104" rx="7"/>
+    <rect x="1138" y="128" width="14" height="64" rx="7"/>
+  </g>
+
+  <!-- Left lockup -->
+  <g transform="translate(64 112) scale(0.75)">
+    <rect x="1.5" y="1.5" width="125" height="125" rx="30" fill="url(#bnTile)"/>
+    <rect x="1.5" y="1.5" width="125" height="125" fill="url(#bnSheen)" clip-path="url(#bnTileClip)"/>
+    <g fill="url(#bnEq)" filter="url(#bnGlow)">
+      <rect x="18" y="51" width="8" height="26" rx="4"/>
+      <rect x="32" y="41" width="8" height="46" rx="4"/>
+      <rect x="46" y="30" width="8" height="68" rx="4"/>
+      <rect x="60" y="20" width="8" height="88" rx="4"/>
+      <rect x="74" y="30" width="8" height="68" rx="4"/>
+      <rect x="88" y="41" width="8" height="46" rx="4"/>
+      <rect x="102" y="51" width="8" height="26" rx="4"/>
+    </g>
+    <rect x="1.5" y="1.5" width="125" height="125" rx="30" fill="none" stroke="url(#bnTileBorder)" stroke-width="3"/>
+  </g>
+
+  <text x="192" y="176"
+        font-family="ui-sans-serif, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif"
+        font-size="56" font-weight="700" letter-spacing="-1.5" fill="#F1F5F9">DJ Assistant</text>
+
+  <text x="192" y="219"
+        font-family="ui-sans-serif, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif"
+        font-size="22" font-weight="400" fill="#94A3B8">Turn a music library into a performance-ready DJ set.</text>
+
+  <text x="194" y="256"
+        font-family="ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, monospace"
+        font-size="15" font-weight="500" letter-spacing="2" fill="#60A5FA">ANALYZE · CLEAN · CUE · SEQUENCE · EXPORT</text>
+
+  <rect x="0.5" y="0.5" width="1279" height="319" rx="24" fill="none" stroke="url(#bnBorder)"/>
+</svg>

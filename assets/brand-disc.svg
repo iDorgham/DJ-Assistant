@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="128" height="128" viewBox="0 0 128 128" role="img" aria-label="DJ Assistant">
+  <title>DJ Assistant</title>
+  <!-- In-app brand mark: gradient tile + white Disc3 record, matching the
+       header lockup in apps/desktop/src/App.tsx. -->
+  <defs>
+    <linearGradient id="discTile" x1="0" y1="1" x2="1" y2="0">
+      <stop offset="0" stop-color="#2563EB"/>
+      <stop offset="1" stop-color="#22D3EE"/>
+    </linearGradient>
+  </defs>
+  <rect x="1.5" y="1.5" width="125" height="125" rx="30" fill="url(#discTile)" stroke="#FFFFFF" stroke-opacity="0.15" stroke-width="3"/>
+  <g transform="translate(34 34) scale(2.5)" fill="none" stroke="#FFFFFF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <circle cx="12" cy="12" r="10"/>
+    <path d="M6 12c0-1.7.7-3.2 1.8-4.2"/>
+    <circle cx="12" cy="12" r="2"/>
+    <path d="M18 12c0 1.7-.7 3.2-1.8 4.2"/>
+  </g>
+</svg>

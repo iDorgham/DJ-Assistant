@@ -1,8 +1,7 @@
 """Generate the DJ Assistant source app icon (1024x1024 PNG).
 
-Design: rounded-square dark tile, blue->cyan diagonal gradient, vinyl disc with
-grooves, center label, and a highlight sheen. Matches the brand colors used in
-apps/desktop/src/App.tsx (blue-600 -> cyan-400 on #0f1117).
+Design: rounded-square dark tile with a diagonal gradient, a soft top sheen,
+glowing EQ bars, and a subtle gradient border. Mirrors ``assets/logo.svg``.
 
 Run:  python scripts/make_icon.py
 Then: pnpm --filter @dj-assistant/desktop exec tauri icon <output png>
@@ -10,7 +9,6 @@ Then: pnpm --filter @dj-assistant/desktop exec tauri icon <output png>
 
 from __future__ import annotations
 
-import math
 import os
 
 import numpy as np
@@ -23,25 +21,33 @@ S = SIZE * SS
 OUT_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "apps", "desktop", "src-tauri")
 OUT_PNG = os.path.abspath(os.path.join(OUT_DIR, "app-icon.png"))
 
-# Brand palette
-BG_DARK = (15, 17, 23)
-BLUE = (37, 99, 235)      # blue-600
-CYAN = (34, 211, 238)     # cyan-400
-DISC_DARK = (24, 27, 38)
-LABEL = (59, 130, 246)
+# Brand palette (from assets/logo.svg)
+BG_TOP = (23, 27, 37)         # #171B25
+BG_BOTTOM = (10, 12, 17)      # #0A0C11
+BAR_TOP = (92, 225, 255)      # #5CE1FF
+BAR_BOTTOM = (0, 144, 255)    # #0090FF
+BORDER_TOP = (46, 52, 74)     # #2E344A
+BORDER_BOTTOM = (26, 31, 43)  # #1A1F2B
+SHEEN_ALPHA = 20              # ~8% white highlight at the top edge
 
 
-def lerp(a: tuple[int, int, int], b: tuple[int, int, int], t: float) -> tuple[int, int, int]:
-    return tuple(round(a[i] + (b[i] - a[i]) * t) for i in range(3))  # type: ignore[return-value]
-
-
-def make_gradient(size: int) -> Image.Image:
-    """Diagonal blue->cyan gradient (vectorized for speed)."""
+def make_diagonal_gradient(size: int, top_color, bottom_color) -> Image.Image:
+    """Diagonal gradient from top-left to bottom-right."""
     axis = np.linspace(0.0, 1.0, size, dtype=np.float32)
     t = (axis[None, :] + axis[:, None]) / 2.0  # top-left 0 -> bottom-right 1
     arr = np.empty((size, size, 3), dtype=np.uint8)
     for i in range(3):
-        arr[:, :, i] = (BLUE[i] + (CYAN[i] - BLUE[i]) * t).astype(np.uint8)
+        arr[:, :, i] = (top_color[i] + (bottom_color[i] - top_color[i]) * t).astype(np.uint8)
+    return Image.fromarray(arr, "RGB")
+
+
+def make_vertical_gradient(size: int, top_color, bottom_color) -> Image.Image:
+    """Vertical gradient from top to bottom."""
+    axis = np.linspace(0.0, 1.0, size, dtype=np.float32)
+    t = axis[:, None]  # top 0 -> bottom 1
+    arr = np.empty((size, size, 3), dtype=np.uint8)
+    for i in range(3):
+        arr[:, :, i] = (top_color[i] + (bottom_color[i] - top_color[i]) * t).astype(np.uint8)
     return Image.fromarray(arr, "RGB")
 
 
@@ -52,81 +58,79 @@ def rounded_mask(size: int, radius: int) -> Image.Image:
     return mask
 
 
+def make_sheen(size: int, mask: Image.Image) -> Image.Image:
+    """White highlight fading from the top edge, clipped to the tile mask."""
+    axis = np.linspace(0.0, 1.0, size, dtype=np.float32)
+    alpha = np.clip((0.45 - axis) / 0.45, 0.0, 1.0) * SHEEN_ALPHA  # top -> 0 by 45%
+    arr = np.zeros((size, size, 4), dtype=np.uint8)
+    arr[..., 0:3] = 255
+    arr[..., 3] = np.repeat(alpha[:, None], size, axis=1).astype(np.uint8)
+    arr[..., 3] = (arr[..., 3].astype(np.float32) * (np.array(mask, dtype=np.float32) / 255.0)).astype(
+        np.uint8
+    )
+    return Image.fromarray(arr, "RGBA")
+
+
 def build() -> Image.Image:
     # --- Background tile -------------------------------------------------
     tile = Image.new("RGBA", (S, S), (0, 0, 0, 0))
-    grad = make_gradient(S).convert("RGBA")
+    bg_grad = make_diagonal_gradient(S, BG_TOP, BG_BOTTOM).convert("RGBA")
     mask = rounded_mask(S, radius=int(S * 0.22))
-    tile.paste(grad, (0, 0), mask)
+    tile.paste(bg_grad, (0, 0), mask)
 
-    draw = ImageDraw.Draw(tile)
+    # --- Soft top sheen (depth) -----------------------------------------
+    tile.alpha_composite(make_sheen(S, mask))
 
-    # --- Vinyl disc ------------------------------------------------------
-    cx = cy = S / 2
-    disc_r = S * 0.335
+    # --- EQ bars ---------------------------------------------------------
+    # SVG: 7 bars centered, each 8 wide, heights 26..88, y positions 51..20
+    # Scale from 128 to S
+    def sx(v: float) -> float:
+        return v * S / 128.0
 
-    draw.ellipse(
-        [cx - disc_r, cy - disc_r, cx + disc_r, cy + disc_r],
-        fill=DISC_DARK + (255,),
-        outline=(255, 255, 255, 46),
-        width=int(S * 0.004),
-    )
+    bar_w = sx(8)
+    bar_xs = [sx(18), sx(32), sx(46), sx(60), sx(74), sx(88), sx(102)]
+    bar_ys = [sx(51), sx(41), sx(30), sx(20), sx(30), sx(41), sx(51)]
+    bar_hs = [sx(26), sx(46), sx(68), sx(88), sx(68), sx(46), sx(26)]
 
-    # Grooves
-    for i in range(13):
-        r = disc_r * (0.52 + i * 0.036)
-        if r >= disc_r * 0.97:
-            break
-        alpha = 58 if i % 2 == 0 else 34
-        draw.ellipse(
-            [cx - r, cy - r, cx + r, cy + r],
-            outline=(255, 255, 255, alpha),
-            width=max(1, int(S * 0.0022)),
+    def glow(std: float, opacity: float) -> Image.Image:
+        """Blurred copy of the bars at the given opacity."""
+        layer = Image.new("RGBA", (S, S), (0, 0, 0, 0))
+        ld = ImageDraw.Draw(layer)
+        for x, y, h in zip(bar_xs, bar_ys, bar_hs):
+            ld.rounded_rectangle([x, y, x + bar_w, y + h], radius=sx(4), fill=BAR_TOP + (255,))
+        layer = layer.filter(ImageFilter.GaussianBlur(std))
+        a = np.array(layer)
+        a[:, :, 3] = (a[:, :, 3] * opacity).astype(np.uint8)
+        return Image.fromarray(a, "RGBA")
+
+    # Two layers: a wide soft bloom plus a tight halo.
+    tile.alpha_composite(glow(sx(5), 0.55))
+    tile.alpha_composite(glow(sx(1.5), 0.9))
+
+    # Solid bars with vertical gradient
+    bar_grad = make_vertical_gradient(S, BAR_TOP, BAR_BOTTOM).convert("RGBA")
+    for x, y, h in zip(bar_xs, bar_ys, bar_hs):
+        # Create a small gradient patch for each bar
+        bar_tile = Image.new("RGBA", (int(bar_w), int(h)), (0, 0, 0, 0))
+        bar_tile.paste(bar_grad.crop((0, 0, int(bar_w), int(h))), (0, 0))
+        # Round the corners of the bar tile
+        bar_mask = Image.new("L", (int(bar_w), int(h)), 0)
+        ImageDraw.Draw(bar_mask).rounded_rectangle(
+            [0, 0, int(bar_w) - 1, int(h) - 1], radius=int(sx(4)), fill=255
         )
+        bar_tile.putalpha(bar_mask)
+        tile.paste(bar_tile, (int(x), int(y)), bar_mask)
 
-    # --- Center label ----------------------------------------------------
-    label_r = disc_r * 0.38
-    label = Image.new("RGBA", (S, S), (0, 0, 0, 0))
-    ld = ImageDraw.Draw(label)
-    grad_small = make_gradient(S)
-    lmask = Image.new("L", (S, S), 0)
-    ImageDraw.Draw(lmask).ellipse(
-        [cx - label_r, cy - label_r, cx + label_r, cy + label_r], fill=255
+    # --- Gradient border -------------------------------------------------
+    ring = Image.new("L", (S, S), 0)
+    ImageDraw.Draw(ring).rounded_rectangle(
+        [sx(1.5), sx(1.5), sx(126.5), sx(126.5)],
+        radius=int(sx(30)),
+        outline=255,
+        width=int(sx(3)),
     )
-    label.paste(grad_small.convert("RGBA"), (0, 0), lmask)
-    tile.alpha_composite(label)
-
-    # Spindle hole
-    hole_r = label_r * 0.20
-    draw.ellipse(
-        [cx - hole_r, cy - hole_r, cx + hole_r, cy + hole_r],
-        fill=BG_DARK + (255,),
-    )
-
-    # --- Tonearm / needle accent ----------------------------------------
-    arm_w = S * 0.019
-    draw.line(
-        [(cx + disc_r * 0.60, cy - disc_r * 1.34), (cx + disc_r * 1.06, cy - disc_r * 0.30)],
-        fill=(255, 255, 255, 190),
-        width=int(arm_w),
-    )
-    pivot_r = S * 0.030
-    pxc, pyc = cx + disc_r * 1.06, cy - disc_r * 0.30
-    draw.ellipse(
-        [pxc - pivot_r, pyc - pivot_r, pxc + pivot_r, pyc + pivot_r],
-        fill=(255, 255, 255, 225),
-    )
-
-    # --- Specular sheen --------------------------------------------------
-    sheen = Image.new("RGBA", (S, S), (0, 0, 0, 0))
-    sd = ImageDraw.Draw(sheen)
-    sd.ellipse(
-        [cx - disc_r * 1.30, cy - disc_r * 1.55, cx + disc_r * 0.15, cy - disc_r * 0.10],
-        fill=(255, 255, 255, 34),
-    )
-    sheen = sheen.filter(ImageFilter.GaussianBlur(S * 0.035))
-    sheen.putalpha(Image.composite(sheen.getchannel("A"), Image.new("L", (S, S), 0), mask))
-    tile.alpha_composite(sheen)
+    border_grad = make_vertical_gradient(S, BORDER_TOP, BORDER_BOTTOM).convert("RGBA")
+    tile.paste(border_grad, (0, 0), ring)
 
     # --- Clip to tile shape & downscale ---------------------------------
     out = Image.new("RGBA", (S, S), (0, 0, 0, 0))

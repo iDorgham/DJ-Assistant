@@ -4,8 +4,12 @@ use uuid::Uuid;
 
 use crate::db::Database;
 use crate::models::{
-    CuePoint, GetArtworkRequest, GetTrackRequest, GetTrackResponse, ListTracksRequest,
-    ListTracksResponse, ScanFolderRequest, ScanFolderResponse, TrackDetail, TrackSummary,
+    AnalyzeLibraryRequest, AnalyzeLibraryResponse, CuePoint, FindSimilarTracksRequest,
+    FindSimilarTracksResponse, GetArtworkRequest, GetTrackRequest, GetTrackResponse,
+    ListTracksRequest, ListTracksResponse, ProviderAccount, ProviderCapability,
+    ProviderStatusResponse, ScanFolderRequest, ScanFolderResponse, SimilarTrackResult, StoreLink,
+    StoreLinksRequest, StoreLinksResponse, TagHealthRequest, TagHealthResponse, TagHealthTotals,
+    TrackDetail, TrackGaps, TrackSummary,
 };
 use crate::scanner::run_scan;
 use crate::security::validate_and_canonicalize_dir;
@@ -268,4 +272,426 @@ pub async fn get_artwork(
     let mime = mime.unwrap_or_else(|| "image/jpeg".to_string());
     let encoded = base64::engine::general_purpose::STANDARD.encode(bytes);
     Ok(Some(format!("data:{mime};base64,{encoded}")))
+}
+
+#[tauri::command]
+pub async fn analyze_library(
+    app: AppHandle,
+    db: State<'_, Arc<Mutex<Database>>>,
+    request: AnalyzeLibraryRequest,
+) -> Result<AnalyzeLibraryResponse, String> {
+    let db_guard = db.lock().map_err(|e| e.to_string())?;
+    let conn = db_guard.conn();
+
+    let force = request.force.unwrap_or(false);
+    let mut conditions = Vec::new();
+    let mut params: Vec<rusqlite::types::Value> = Vec::new();
+
+    if !force {
+        conditions.push(
+            "(analysis_status != 'complete' OR analysis_version IS NULL OR analysis_version != ?)",
+        );
+        params.push(dj_assistant_analysis::analysis_version().into());
+    }
+
+    let base_sql = if let Some(ref ids) = request.track_ids {
+        if ids.is_empty() {
+            return Err("track_ids cannot be empty when provided".to_string());
+        }
+        let placeholders: Vec<String> = ids.iter().map(|_| "?".to_string()).collect();
+        let mut sql = format!(
+            "SELECT id, file_path FROM tracks WHERE id IN ({})",
+            placeholders.join(",")
+        );
+        if !conditions.is_empty() {
+            sql.push_str(&format!(" AND {}", conditions.join(" AND ")));
+        }
+        for id in ids {
+            params.push(id.clone().into());
+        }
+        sql
+    } else {
+        let mut sql = "SELECT id, file_path FROM tracks".to_string();
+        if !conditions.is_empty() {
+            sql.push_str(&format!(" WHERE {}", conditions.join(" AND ")));
+        }
+        sql
+    };
+
+    let mut stmt = conn.prepare(&base_sql).map_err(|e| e.to_string())?;
+    let mut rows: Vec<(String, String)> = Vec::new();
+    {
+        let mut iter = stmt
+            .query(rusqlite::params_from_iter(params.iter()))
+            .map_err(|e| e.to_string())?;
+        while let Some(row) = iter.next().map_err(|e| e.to_string())? {
+            let id: String = row.get(0).map_err(|e| e.to_string())?;
+            let path: String = row.get(1).map_err(|e| e.to_string())?;
+            rows.push((id, path));
+        }
+    }
+    if rows.is_empty() {
+        return Ok(AnalyzeLibraryResponse {
+            job_id: Uuid::new_v4().to_string(),
+            total: 0,
+        });
+    }
+
+    let job_id = Uuid::new_v4().to_string();
+    let db_clone = Arc::clone(&db);
+    crate::analysis::run_analysis_queue(app, db_clone, job_id.clone(), rows.clone());
+    Ok(AnalyzeLibraryResponse {
+        job_id,
+        total: rows.len(),
+    })
+}
+
+/// Ranks library tracks by mix-compatibility with a seed track.
+///
+/// Purely local: BPM (45%) / Camelot key (35%) / genre (10%) / duration (10%),
+/// renormalised over the signals both tracks have. No network, no audio read.
+#[tauri::command]
+pub async fn find_similar_tracks(
+    db: State<'_, Arc<Mutex<Database>>>,
+    request: FindSimilarTracksRequest,
+) -> Result<FindSimilarTracksResponse, String> {
+    use dj_assistant_core::{find_similar, TrackFeatures};
+
+    let limit = request.limit.unwrap_or(10).clamp(1, 50) as usize;
+    let db_guard = db.lock().map_err(|e| e.to_string())?;
+    let conn = db_guard.conn();
+
+    let load_features = |track_id: &str| -> Result<TrackFeatures, String> {
+        conn.query_row(
+            "SELECT id, bpm, key_camelot, genre, duration_ms FROM tracks WHERE id = ?1",
+            [&track_id],
+            |row| {
+                Ok(TrackFeatures {
+                    id: row.get(0)?,
+                    bpm: row.get(1)?,
+                    key_camelot: row.get(2)?,
+                    genre: row.get(3)?,
+                    duration_ms: row.get(4)?,
+                })
+            },
+        )
+        .map_err(|e| format!("Track not found: {e}"))
+    };
+
+    let seed = load_features(&request.track_id)?;
+
+    let mut stmt = conn
+        .prepare(
+            "SELECT id, bpm, key_camelot, genre, duration_ms FROM tracks WHERE id != ?1 LIMIT 5000",
+        )
+        .map_err(|e| e.to_string())?;
+    let candidates: Vec<TrackFeatures> = stmt
+        .query_map([&request.track_id], |row| {
+            Ok(TrackFeatures {
+                id: row.get(0)?,
+                bpm: row.get(1)?,
+                key_camelot: row.get(2)?,
+                genre: row.get(3)?,
+                duration_ms: row.get(4)?,
+            })
+        })
+        .map_err(|e| e.to_string())?
+        .flatten()
+        .collect();
+
+    let ranked = find_similar(&seed, &candidates, limit);
+    if ranked.is_empty() {
+        return Ok(FindSimilarTracksResponse {
+            seed_track_id: request.track_id,
+            results: Vec::new(),
+        });
+    }
+
+    let placeholders: Vec<String> = ranked.iter().map(|_| "?".to_string()).collect();
+    let sql = format!(
+        "SELECT {TRACK_SUMMARY_COLUMNS} FROM tracks WHERE id IN ({})",
+        placeholders.join(",")
+    );
+    let mut summary_stmt = conn.prepare(&sql).map_err(|e| e.to_string())?;
+    let ids: Vec<&str> = ranked.iter().map(|r| r.track_id.as_str()).collect();
+    let summaries: Vec<TrackSummary> = summary_stmt
+        .query_map(rusqlite::params_from_iter(ids.iter()), map_track_summary)
+        .map_err(|e| e.to_string())?
+        .flatten()
+        .collect();
+
+    let by_id: std::collections::HashMap<&str, &TrackSummary> =
+        summaries.iter().map(|s| (s.id.as_str(), s)).collect();
+    let results: Vec<SimilarTrackResult> = ranked
+        .iter()
+        .filter_map(|r| {
+            by_id
+                .get(r.track_id.as_str())
+                .map(|summary| SimilarTrackResult {
+                    track: (*summary).clone(),
+                    score: r.score,
+                    reasons: r.reasons.clone(),
+                })
+        })
+        .collect();
+
+    Ok(FindSimilarTracksResponse {
+        seed_track_id: request.track_id,
+        results,
+    })
+}
+
+/// Reports which tag/artwork fields are missing or placeholder per track.
+///
+/// Local gap detection only — the read half of enrichment. Online lookup
+/// (MusicBrainz / iTunes / Deezer) consumes this output in a later step and
+/// always goes through preview → apply → undo.
+#[tauri::command]
+pub async fn track_tag_health(
+    db: State<'_, Arc<Mutex<Database>>>,
+    request: TagHealthRequest,
+) -> Result<TagHealthResponse, String> {
+    let db_guard = db.lock().map_err(|e| e.to_string())?;
+    let conn = db_guard.conn();
+
+    let limit = request.limit.unwrap_or(200).clamp(1, 2000) as usize;
+
+    let mut sql = "SELECT id, title, artist, album, genre, year, bpm, key_camelot, \
+        artwork_hash, isrc, duration_ms FROM tracks"
+        .to_string();
+    let mut params: Vec<String> = Vec::new();
+    if let Some(ids) = request.track_ids.as_ref() {
+        if ids.is_empty() {
+            return Err("track_ids cannot be empty when provided".to_string());
+        }
+        let placeholders: Vec<String> = ids.iter().map(|_| "?".to_string()).collect();
+        sql.push_str(&format!(" WHERE id IN ({})", placeholders.join(",")));
+        params.extend(ids.iter().cloned());
+    }
+
+    fn blank(value: &Option<String>) -> bool {
+        value.as_deref().map(str::trim).unwrap_or("").is_empty()
+    }
+
+    struct TagHealthRow {
+        id: String,
+        title: String,
+        artist: String,
+        album: Option<String>,
+        genre: Option<String>,
+        year: Option<i64>,
+        bpm: Option<f64>,
+        key: Option<String>,
+        artwork: Option<String>,
+        isrc: Option<String>,
+        duration_ms: i64,
+    }
+
+    impl TagHealthRow {
+        /// Tag-side gaps come from the shared core definition so the IPC
+        /// surface and the enrichment proposer can never disagree; BPM/key/
+        /// duration are analysis-sourced and checked here.
+        fn missing_fields(&self) -> Vec<String> {
+            let mut missing = dj_assistant_core::missing_fields(&dj_assistant_core::LocalTrack {
+                title: self.title.clone(),
+                artist: self.artist.clone(),
+                album: self.album.clone(),
+                genre: self.genre.clone(),
+                year: self.year.map(|y| y as i32),
+                isrc: self.isrc.clone(),
+                artwork_hash: self.artwork.clone(),
+            });
+            if self.bpm.is_none() {
+                missing.push("bpm".to_string());
+            }
+            if blank(&self.key) {
+                missing.push("key".to_string());
+            }
+            if self.duration_ms <= 0 {
+                missing.push("duration".to_string());
+            }
+            missing
+        }
+    }
+
+    let mut stmt = conn.prepare(&sql).map_err(|e| e.to_string())?;
+    let rows: Vec<TagHealthRow> = stmt
+        .query_map(rusqlite::params_from_iter(params.iter()), |row| {
+            Ok(TagHealthRow {
+                id: row.get(0)?,
+                title: row.get(1)?,
+                artist: row.get(2)?,
+                album: row.get(3)?,
+                genre: row.get(4)?,
+                year: row.get(5)?,
+                bpm: row.get(6)?,
+                key: row.get(7)?,
+                artwork: row.get(8)?,
+                isrc: row.get(9)?,
+                duration_ms: row.get(10)?,
+            })
+        })
+        .map_err(|e| e.to_string())?
+        .flatten()
+        .collect();
+
+    let mut gaps: Vec<TrackGaps> = Vec::new();
+    let mut totals: std::collections::HashMap<String, i64> = std::collections::HashMap::new();
+    let mut with_gaps = 0usize;
+    let mut score_sum = 0.0;
+    for row in &rows {
+        let missing = row.missing_fields();
+        score_sum += dj_assistant_core::tag_health_score(&missing);
+        if missing.is_empty() {
+            continue;
+        }
+        with_gaps += 1;
+        for field in &missing {
+            *totals.entry(field.clone()).or_insert(0) += 1;
+        }
+        if gaps.len() < limit {
+            gaps.push(TrackGaps {
+                track_id: row.id.clone(),
+                title: row.title.clone(),
+                artist: row.artist.clone(),
+                score: dj_assistant_core::tag_health_score(&missing),
+                missing,
+            });
+        }
+    }
+    let mut totals_vec: Vec<TagHealthTotals> = totals
+        .into_iter()
+        .map(|(field, missing_count)| TagHealthTotals {
+            field: field.to_string(),
+            missing_count,
+        })
+        .collect();
+    totals_vec.sort_by(|a, b| {
+        b.missing_count
+            .cmp(&a.missing_count)
+            .then_with(|| a.field.cmp(&b.field))
+    });
+
+    Ok(TagHealthResponse {
+        checked: rows.len(),
+        with_gaps,
+        gaps,
+        totals: totals_vec,
+        average_score: if rows.is_empty() {
+            None
+        } else {
+            Some(score_sum / rows.len() as f64)
+        },
+    })
+}
+
+/// Builds per-store buy-link search URLs for a track (Beatport, Traxsource,
+/// Juno Download, Bandcamp, Discogs). Pure URL construction — no API, no
+/// network, no audio. This is Tier 0 of the store integration (ADR-0007).
+#[tauri::command]
+pub async fn store_links_for_track(
+    db: State<'_, Arc<Mutex<Database>>>,
+    request: StoreLinksRequest,
+) -> Result<StoreLinksResponse, String> {
+    let db_guard = db.lock().map_err(|e| e.to_string())?;
+    let conn = db_guard.conn();
+
+    let (artist, title): (String, String) = conn
+        .query_row(
+            "SELECT artist, title FROM tracks WHERE id = ?1",
+            [&request.track_id],
+            |row| Ok((row.get(0)?, row.get(1)?)),
+        )
+        .map_err(|e| format!("Track not found: {e}"))?;
+
+    let links: Vec<StoreLink> = dj_assistant_core::store_links_for_track(&artist, &title)
+        .into_iter()
+        .map(|l| StoreLink {
+            provider: l.provider,
+            label: l.label,
+            url: l.url,
+        })
+        .collect();
+
+    Ok(StoreLinksResponse {
+        track_id: request.track_id,
+        artist,
+        title,
+        links,
+    })
+}
+
+/// Lists connected streaming accounts plus the supported provider enums.
+///
+/// Today this reads the local `streaming_accounts` table (empty until the
+/// first OAuth flow lands) and advertises the registry both the matcher and
+/// the UI bind to — adding Deezer/Apple Music/YouTube/SoundCloud/TIDAL later
+/// extends rows and matchers, not this contract.
+#[tauri::command]
+pub async fn provider_status(
+    db: State<'_, Arc<Mutex<Database>>>,
+) -> Result<ProviderStatusResponse, String> {
+    let db_guard = db.lock().map_err(|e| e.to_string())?;
+    let conn = db_guard.conn();
+
+    let mut stmt = conn
+        .prepare(
+            "SELECT id, provider, account_label, scopes, expires_at, revoked_at \
+             FROM streaming_accounts WHERE revoked_at IS NULL ORDER BY created_at ASC",
+        )
+        .map_err(|e| e.to_string())?;
+    let connected: Vec<ProviderAccount> = stmt
+        .query_map([], |row| {
+            let scopes_raw: String = row.get(3)?;
+            let scopes: Vec<String> = serde_json::from_str(&scopes_raw).unwrap_or_default();
+            Ok(ProviderAccount {
+                id: row.get(0)?,
+                provider: row.get(1)?,
+                account_label: row.get(2)?,
+                scopes,
+                expires_at: row.get(4)?,
+                revoked_at: row.get(5)?,
+            })
+        })
+        .map_err(|e| e.to_string())?
+        .flatten()
+        .collect();
+
+    Ok(ProviderStatusResponse {
+        connected,
+        supported_streaming: [
+            "spotify",
+            "deezer",
+            "apple_music",
+            "youtube_music",
+            "soundcloud",
+            "tidal",
+        ]
+        .iter()
+        .map(|s| (*s).to_string())
+        .collect(),
+        supported_stores: [
+            "beatport",
+            "traxsource",
+            "juno_download",
+            "bandcamp",
+            "discogs",
+        ]
+        .iter()
+        .map(|s| (*s).to_string())
+        .collect(),
+        capabilities: dj_assistant_core::StreamingProvider::all()
+            .iter()
+            .map(|p| {
+                let caps = p.capabilities();
+                ProviderCapability {
+                    provider: p.as_str().to_string(),
+                    live_match: caps.live_match,
+                    isrc_search: caps.isrc_search,
+                    playlist_write: caps.playlist_write,
+                    needs_app_id: caps.needs_app_id,
+                }
+            })
+            .collect(),
+    })
 }

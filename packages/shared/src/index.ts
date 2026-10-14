@@ -118,3 +118,292 @@ export interface GetArtworkRequest {
  * cached cover art.
  */
 export type GetArtworkResponse = string | null;
+
+// --- Similar tracks (A): local scoring, mirrors models.rs ---
+
+export interface FindSimilarTracksRequest {
+  trackId: string;
+  /** Max results; clamped to 1–50 server-side. Defaults to 10. */
+  limit?: number;
+}
+
+export interface SimilarTrackResult extends TrackSummary {
+  /** Blended similarity in 0–1 (BPM 45% / key 35% / genre 10% / duration 10%). */
+  score: number;
+  /** UI chips, e.g. "same key 8A", "+1.2% BPM apart". */
+  reasons: string[];
+}
+
+export interface FindSimilarTracksResponse {
+  seedTrackId: string;
+  results: SimilarTrackResult[];
+}
+
+// --- Tag health / enrichment gaps (B) ---
+
+export interface TagHealthRequest {
+  /** Restrict to these tracks; omit to scan the whole library. */
+  trackIds?: string[];
+  /** Max gap rows returned. Defaults to 200. */
+  limit?: number;
+}
+
+export interface TrackGaps {
+  trackId: string;
+  title: string;
+  artist: string;
+  /** Field names missing or placeholder, e.g. "album", "bpm", "artwork", "isrc". */
+  missing: string[];
+  /** Tag Health Score 0–100 (identity fields weigh most). */
+  score: number;
+}
+
+export interface TagHealthTotals {
+  field: string;
+  missingCount: number;
+}
+
+export interface TagHealthResponse {
+  checked: number;
+  withGaps: number;
+  gaps: TrackGaps[];
+  totals: TagHealthTotals[];
+  /** Mean Tag Health Score over all checked tracks (100 = complete). */
+  averageScore?: number | null;
+}
+
+// --- Store links + provider status (C) ---
+
+export interface StoreLinksRequest {
+  trackId: string;
+}
+
+export interface StoreLink {
+  provider: string;
+  label: string;
+  url: string;
+}
+
+export interface StoreLinksResponse {
+  trackId: string;
+  artist: string;
+  title: string;
+  links: StoreLink[];
+}
+
+export interface ProviderAccount {
+  id: string;
+  provider: string;
+  accountLabel: string;
+  scopes: string[];
+  expiresAt?: string | null;
+  revokedAt?: string | null;
+}
+
+export type StreamingProviderKind =
+  "spotify" | "deezer" | "apple_music" | "youtube_music" | "soundcloud" | "tidal";
+
+export type StoreProviderKind =
+  "beatport" | "traxsource" | "juno_download" | "bandcamp" | "discogs";
+
+export interface ProviderStatusResponse {
+  /** Connected, non-revoked accounts from `streaming_accounts`. */
+  connected: ProviderAccount[];
+  /** Streaming-export targets the matcher will support (`spotify` first). */
+  supportedStreaming: StreamingProviderKind[];
+  /** Buy-link stores available per track via `store_links_for_track`. */
+  supportedStores: StoreProviderKind[];
+  /** What works today per streaming target (TX.1). */
+  capabilities: ProviderCapability[];
+}
+
+export interface ProviderCapability {
+  provider: string;
+  liveMatch: boolean;
+  isrcSearch: boolean;
+  playlistWrite: boolean;
+  needsAppId: boolean;
+}
+
+// --- Online enrichment: preview → apply → undo (TE.1 / TE.3) ---
+
+export type EnrichmentProviderKind =
+  "musicbrainz" | "itunes" | "deezer" | "discogs" | "lastfm" | "acoustid";
+
+export interface EnrichmentPreviewRequest {
+  /** One provider per run. Defaults to "musicbrainz". */
+  provider?: EnrichmentProviderKind;
+  /** Restrict to these tracks; omit to scan gap tracks library-wide. */
+  trackIds?: string[];
+  /** Max tracks looked up. Defaults to 25. */
+  limit?: number;
+}
+
+export interface ProposedChange {
+  field: string;
+  current?: string | null;
+  proposed: string;
+}
+
+export interface TrackProposal {
+  trackId: string;
+  title: string;
+  artist: string;
+  provider: string;
+  providerId: string;
+  confidence: number;
+  /** "high" | "review" | "low". */
+  tier: string;
+  sourceUrl?: string | null;
+  changes: ProposedChange[];
+}
+
+export interface EnrichmentPreviewResponse {
+  runId: string;
+  provider: string;
+  proposedTracks: number;
+  proposedChanges: number;
+  skipped: number;
+  proposals: TrackProposal[];
+}
+
+export interface EnrichmentProgressEvent {
+  runId: string;
+  processed: number;
+  total: number;
+  trackId: string;
+  status: string;
+}
+
+export interface EnrichmentApplyRequest {
+  runId: string;
+  /** Subset to apply; omit to apply the whole run. */
+  trackIds?: string[];
+}
+
+export interface EnrichmentApplyResponse {
+  runId: string;
+  applied: number;
+  skipped: number;
+}
+
+export interface EnrichmentUndoRequest {
+  runId: string;
+}
+
+export interface EnrichmentUndoResponse {
+  runId: string;
+  restored: number;
+}
+
+// --- Multi-provider matching (TX.2): live reads, no writes ---
+
+export interface ProviderMatchTracksRequest {
+  /** Only "deezer" today; anything else is `unsupported_provider`. */
+  provider: string;
+  trackIds: string[];
+}
+
+export interface ProviderTrackMatch {
+  trackId: string;
+  provider: string;
+  providerId?: string | null;
+  title?: string | null;
+  artist?: string | null;
+  album?: string | null;
+  artworkUrl?: string | null;
+  sourceUrl?: string | null;
+  confidence: number;
+  /** "high" | "review" | "low". */
+  tier: string;
+  /** "matched" | "review" | "unmatched". */
+  status: string;
+}
+
+export interface ProviderMatchTracksResponse {
+  provider: string;
+  matches: ProviderTrackMatch[];
+}
+
+// --- Generic provider contract (TX.1): same matcher, set-scoped later ---
+
+export interface ProviderMatchSetRequest {
+  provider: string;
+  trackIds?: string[];
+  /** Waits on Phase 3 sets — pass trackIds today. */
+  setId?: string;
+}
+
+export interface ProviderExportPlaylistRequest {
+  provider: string;
+  playlistName?: string;
+  trackIds?: string[];
+}
+
+// --- Chart snapshots Tier 1 (TD.3): versioned data, local taste filter ---
+
+export interface ChartEntryInput {
+  position: number;
+  title: string;
+  artist: string;
+  label?: string | null;
+  isrc?: string | null;
+  bpm?: number | null;
+  keyCamelot?: string | null;
+  artworkUrl?: string | null;
+  sourceUrl?: string | null;
+}
+
+export interface ChartImportRequest {
+  provider: string;
+  chart: string;
+  genre: string;
+  snapshotDate: string;
+  entries: ChartEntryInput[];
+  replaceExisting?: boolean;
+}
+
+export interface ChartImportResponse {
+  provider: string;
+  chart: string;
+  genre: string;
+  snapshotDate: string;
+  imported: number;
+  skipped: number;
+}
+
+export interface ChartListRequest {
+  provider?: string;
+  chart?: string;
+  genre?: string;
+  /** Defaults to the latest imported date. */
+  snapshotDate?: string;
+  /** Seed for the taste score (60% tempo / 40% key). */
+  seedTrackId?: string;
+  limit?: number;
+}
+
+export interface ChartEntry {
+  position: number;
+  title: string;
+  artist: string;
+  label?: string | null;
+  isrc?: string | null;
+  bpm?: number | null;
+  keyCamelot?: string | null;
+  artworkUrl?: string | null;
+  sourceUrl?: string | null;
+  /** ISRC-exact join against the library. */
+  owned: boolean;
+  /** 0–1 vs the seed track; absent without seed/entry data. */
+  tasteScore?: number | null;
+}
+
+export interface ChartListResponse {
+  provider: string;
+  chart: string;
+  genre: string;
+  snapshotDate: string;
+  entries: ChartEntry[];
+  total: number;
+}

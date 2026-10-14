@@ -14,6 +14,7 @@ pub mod loudness;
 pub mod normalizer;
 pub mod onnx;
 pub mod phrase;
+pub mod pipeline;
 pub mod registry;
 pub mod version;
 pub mod vocal;
@@ -36,6 +37,7 @@ pub use phrase::{
     detect_phrases, Phrase, PhraseMap, PhraseMethod, PhraseOptions, SectionKind,
     PHRASE_PIPELINE_VERSION,
 };
+pub use pipeline::{run_full_analysis, AnalysisResults, VOCAL_PRESENCE_THRESHOLD};
 pub use registry::{
     discover_models_dir, resolve_model_path, ModelRegistry, ModelSpec, MODELS_DIR_ENV_VAR,
 };
