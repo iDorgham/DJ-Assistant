@@ -303,7 +303,7 @@ pub struct ProviderStatusResponse {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct EnrichmentPreviewRequest {
-    /// "musicbrainz" (default) | "itunes" | "deezer". One provider per run.
+    /// One provider per run: "musicbrainz" (default), "itunes", "deezer", "discogs", "lastfm", or "acoustid" (pending local fingerprinting).
     pub provider: Option<String>,
     /// Restrict to these tracks; omit to scan gap tracks library-wide.
     pub track_ids: Option<Vec<String>>,
