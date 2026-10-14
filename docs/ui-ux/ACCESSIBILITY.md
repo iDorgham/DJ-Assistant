@@ -81,7 +81,7 @@ when they exist):
 ## 4. Focus visibility
 
 - Every focusable element must show a non-colour-only focus indicator (outline or ring)
-  that meets WCAG 2.4.11/2.4.13 (visible, high-contrast focus).
+  that meets WCAG 2.4.7 (Focus Visible) and 2.4.11 (Focus Not Obscured—Minimum).
 - Current `focus:border-blue-500` gives a focus *border* on inputs. Ensure the default
   browser outline is not removed anywhere without an equivalent visible replacement
   (`focus:outline-hidden` is used on the search input — verify an alternative indicator is
