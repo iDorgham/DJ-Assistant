@@ -13,7 +13,7 @@
 ## Functions — P1 first (MVP-adjacent)
 
 - `F-1 Smart playlists + history:` “unplayed 124-126A 2024-26 rating≥4”, overplayed/forgotten counts (DJ Brain v1 read-only).
-- `F-2 Relink:` missing-file finder via BLAKE3 + move detection.
+- `F-2 Relink:` missing-file finder via BLAKE3 + move detection; verify full-file content before relinking.
 - `F-3 Beatgrid editor:` tap-shift, halve/double BPM, correction memory (“remember for similar”).
 - `F-4 Cue templates:` Standard EDM / Extended Club + custom `.cuepreset` share; A/B compare; provenance badge.
 - `F-5 Harmonic traffic-light:` green/yellow/red per transition + mix-out window + vocal-overlap warning.
