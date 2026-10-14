@@ -16,7 +16,7 @@ DJ Assistant is the fastest path from an unorganized music library to a performa
 
 ### 1.2 Core Value Proposition
 - **15-Minute Gig Prep:** Processes 40+ raw audio tracks, calculates precise beat grids/keys, generates 8 hot cues, sequences an energy-mapped set, and exports to rekordbox/Serato in under 15 minutes.
-- **Non-Destructive Workflows:** Zero modification of source audio files. All metadata, cue markers, and set arrangements are exported via standard interchange formats (XML, .crate, CSV).
+- **Non-Destructive Workflows:** Zero modification of source audio files. All metadata, cue markers, and set arrangements are exported via standard interchange formats (XML, .crate, CSV) — and, post-MVP, a metadata-only streaming playlist export (§3.6).
 - **Local-First Processing:** Audio decoding, beat tracking, and structural analysis execute locally via Rust and ONNX Runtime—eliminating cloud upload bandwidth costs and protecting user libraries.
 - **Intelligent Automation:** Rule-based workflows and scoped Skills that reduce repetitive work while keeping the DJ in full control.
 - **True Collaboration:** DJs can prepare B2B sets together without transferring audio files.
@@ -34,7 +34,7 @@ A desktop-first preparation accelerator for DJs. It scans your local music libra
 - Not a live performance tool / Audio Playback/Mixing Engine (does not replace rekordbox, Serato, Traktor, or CDJs).
 - Not a social network or social media & marketing tools (no social posting, AI post drafting, or campaign schedulers).
 - Not a career operating system, label/demo management, or automatic emailing/demo submission tracking.
-- Not a Spotify audio downloader / No audio piracy or streaming downloads from Spotify, Apple Music, YouTube, or Soundcloud.
+- Not a Spotify audio downloader and no audio piracy or streaming downloads from Spotify, Apple Music, YouTube, or Soundcloud. Audio from streaming services is never downloaded, streamed, or stored. (Publishing a **metadata-only** playlist to the DJ’s own Spotify account is a planned **post-MVP** feature — see §15.)
 - Not a content calendar, marketing platform, or open-ended “chat with your music” gimmick.
 - Not an autonomous agent that takes irreversible actions without explicit confirmation.
 
@@ -81,6 +81,9 @@ A desktop-first preparation accelerator for DJs. It scans your local music libra
 > **Export to your DJ software.**  
 > Generate rekordbox XML and Serato crate files. Load your set and play. DJ Assistant is a preparation layer — it works alongside your existing DJ software, not against it.
 >
+> **Publish a set to Spotify (post-MVP).**  
+> Send a finished set straight to your own Spotify account as a real playlist — metadata only. No Spotify audio is ever downloaded, streamed, or stored in the app.
+>
 > **It learns from you.**  
 > Every cue point you move, every track you swap, every set you build, every tag you correct makes the system smarter about your preferences.
 >
@@ -97,11 +100,12 @@ A desktop-first preparation accelerator for DJs. It scans your local music libra
 - Collaborative / B2B set preparation (shared workspaces, co-editing, dual export)
 - Automation Layer + scoped Skills (Cue Master, Tag Surgeon, Prep Auditor, etc.)
 - Export to rekordbox XML and Serato crate
+- Spotify Playlist Export (post-MVP, metadata-only: publish a set to your own Spotify account as a real playlist — no audio download or in-app streaming)
 - DJ Brain: personalized preference model + behavioral history
 - Desktop-first, offline-capable, privacy-respecting
 
 ### Keywords
-DJ, rekordbox, Serato, cue points, BPM, key detection, harmonic mixing, set builder, music library, DJ preparation, phrase detection, energy curve, tag cleanup, B2B, collaborative, automation, skills.
+DJ, rekordbox, Serato, cue points, BPM, key detection, harmonic mixing, set builder, music library, DJ preparation, phrase detection, energy curve, tag cleanup, B2B, collaborative, automation, skills, Spotify playlist export.
 
 ---
 
@@ -109,9 +113,9 @@ DJ, rekordbox, Serato, cue points, BPM, key detection, harmonic mixing, set buil
 
 ### 3.1 Library
 **Purpose:** Import, organize, search, and manage tracks.  
-**Key Features:** Folder scanning, watch folders, metadata extraction, duplicate detection via file hashing (BLAKE3), bulk editing, user ratings, tags, comments, **Smart Tag Cleanup**, version detection, artist graph.  
+**Key Features:** Folder scanning, watch folders, metadata extraction, duplicate detection via file hashing (BLAKE3), bulk editing, user ratings, tags, comments, **Smart Tag Cleanup**, version detection, artist graph. **Discovery foundations (shipped):** local similar-track scoring with reason chips, library-wide Tag Health (missing tags/artwork detection), per-track store buy-links (Beatport, Traxsource, Juno Download, Bandcamp, Discogs), and a provider registry for streaming targets — all offline, no network access. Online enrichment, charts and additional export targets are post-MVP (see §15).  
 **AI Role:** Used for duplicate confidence, metadata suggestions, fuzzy name matching, and version clustering.  
-**What It Does Not Do:** It does not stream music. It does not download from Spotify. It does not replace your DJ software’s library.
+**What It Does Not Do:** It does not stream or download music (including from Spotify). It does not replace your DJ software’s library. (Spotify Playlist Export is a separate, post-MVP, **metadata-only** export — see §3.6 and §15; no audio is downloaded or streamed.)
 
 #### Smart Tag Cleanup (Tag Fix Tools)
 DJs constantly face messy metadata: the same producer appears as “Amelie Lens”, “AMELIE LENS”, “Amelie  Lens”, “Amélie Lens”, or “AmelieLens”. The Smart Tag Cleanup tools solve this without forcing destructive changes.
@@ -168,15 +172,32 @@ DJs constantly face messy metadata: the same producer appears as “Amelie Lens�
 
 ### 3.6 Export
 **Purpose:** Bridge DJ Assistant to the DJ’s actual workflow.  
-**Key Features:** rekordbox XML export, Serato `.crate` export, CSV export, cue point export, **export presets** (Rekordbox + Serato + CSV in one click), dual-crate export for B2B.  
-**AI Role:** None. Deterministic file generation (Rust quick-xml + binary crate serializer).  
-**What It Does Not Do:** It does not write directly to a DJ software’s live database. It does not claim to be the canonical database.
+**Key Features:** rekordbox XML export, Serato `.crate` export, CSV export, cue point export, **export presets** (Rekordbox + Serato + CSV in one click), dual-crate export for B2B, professional **USB media format tool** (FAT32 + exFAT, Pioneer-tuned — see below), and — **post-MVP** — **Spotify Playlist Export** (metadata-only streaming export; see below).  
+**AI Role:** None. Deterministic file generation (Rust quick-xml + binary crate serializer). Spotify matching uses deterministic ISRC comparison plus fuzzy string/duration scoring (no LLM).  
+**What It Does Not Do:** It does not write directly to a DJ software’s live database. It does not claim to be the canonical database. For Spotify it does not download, stream, or store audio — only track metadata and search queries leave the device.
+
+#### Professional USB Media Format (Pioneer-tuned)
+Formats performance media with the best settings for Pioneer equipment:
+- **Default — FAT32 + MBR, single primary active partition** (universal: CDJ-2000 → CDJ-3000X, all XDJ). 32 KB allocation unit, ASCII uppercase volume label ≤ 11 chars, quick format on trusted drives / full format on suspect ones.
+- **Opt-in — exFAT + MBR, single partition, 128 KB clusters**, gated behind an explicit warning: only booths with exFAT-capable players (CDJ-3000 / CDJ-3000X, XDJ-RX3, XDJ-XZ, OPUS-QUAD, XDJ-AZ and newer). CDJ-2000NXS2 and older do **not** read exFAT.
+- **Never:** NTFS, GPT partition scheme, multi-partition layouts, or encrypted/secure partitions.
+- **Flow:** list removable drives only (system drives blocked, no default selection) → choose filesystem with compat badges → double-confirm (formatting erases the drive permanently) → format via OS-native tools → re-verify FS + MBR + writability and emit a compat report → only then offer the USB-pack copy (`/PIONEER` + `/Contents`, never drag-copy; safely eject). Every format is audit-logged. Drive guidance: 32–64 GB ideal, USB Mass Storage Class, no hubs.
+- **Safety note:** formatting is the one sanctioned destructive action in the app — it targets only the user-selected removable drive. The non-destructive guarantee (source audio never modified) is unaffected.
+
+#### Spotify Playlist Export (Post-MVP — Streaming Export Target)
+Publishes a built set (or any playlist) to the DJ’s own Spotify account as a real Spotify playlist, using **metadata only**.
+
+- **Matching:** Each local track is matched to a Spotify track by **ISRC first**, falling back to a fuzzy match on normalized title/artist/album plus a **±3 s duration tolerance**, producing a **match confidence** score. High-confidence matches are added automatically; medium/low go to a **review queue**; unmatched tracks are listed with a **“search Spotify manually” / “skip”** option.
+- **Auth:** OAuth 2.0 Authorization Code with **PKCE**, run entirely in the desktop app (public client ID embedded at build time; **no client secret, no cloud dependency**). Tokens live in the **OS keychain**.
+- **Privacy:** Only track metadata and search queries leave the device. Audio is **never downloaded, streamed, stored, or uploaded**, and there is no in-app streaming playback.
+- **Scopes:** `playlist-modify-private` (default); `playlist-modify-public` only on explicit public opt-in; `playlist-read-private` only when updating an existing playlist. Adds are chunked (≤ 100 URIs per request); `429` → backoff (`Retry-After`), `401` → token refresh.
+- **Reversibility:** A created playlist can be deleted/unfollowed from the app; every export is audit-logged.
 
 ### 3.7 Desktop Companion
 **Purpose:** Local file access, watch folders, local analysis, export, cache.  
 **Technology:** Tauri v2 (Rust backend + React/TypeScript frontend).  
 **Responsibilities:** Folder scanning (notify crate), file hashing (BLAKE3), metadata reading (audiotags), audio analysis (ONNX Runtime + Symphonia), cue point export, sync with cloud, local waveform cache, SQLite local metadata DB, local rule engine for automations.  
-**Offline Mode:** Works fully offline for analysis, library browsing, set building, tag cleanup, cue generation, and export. Cloud only for multi-device sync, collaboration, and optional LLM explanations.
+**Offline Mode:** Works fully offline for analysis, library browsing, set building, tag cleanup, cue generation, and file export. Internet is required only for the post-MVP Spotify Playlist Export. The product cloud is used only for multi-device sync, collaboration, and optional LLM explanations.
 
 ### 3.8 DJ Brain
 **Purpose:** Personalized intelligence layer that learns the DJ’s preferences over time.  
@@ -272,6 +293,8 @@ All Skills are transparent (show reasoning), overridable, logged, and can be dis
 │  • AI Gateway (LLM Provider + Embedding Models)                             │
 └─────────────────────────────────────────────────────────────────────────────┘
 ```
+
+> **Optional outbound (post-MVP):** the desktop app may also call the Spotify Web API directly for metadata-only **Spotify Playlist Export** (§3.6) — no audio, and never routed through the cloud control plane.
 
 ### 4.1 Analysis Pipeline
 1. File validation (format, bitrate, corruption)  
@@ -409,6 +432,13 @@ Binary crate files written to `_Serato_/Subcrates/*.crate` using big-endian byte
     └─ [4 Bytes: "ptrk"] [4 Bytes Length] [UTF-16 String: Absolute File Path]
 ```
 
+**Spotify Playlist (Web API) — Post-MVP Adapter**  
+Metadata-only export that publishes a set (or playlist) to the DJ’s own Spotify account as a real Spotify playlist, via the Spotify Web API:
+- **Auth:** OAuth 2.0 Authorization Code + **PKCE** run entirely in the desktop app (embedded public client ID; no client secret, no cloud dependency); tokens stored in the OS keychain. Minimal, user-owned-playlist scopes — see §3.6.
+- **Matching:** ISRC-first lookup, then fuzzy fallback on normalized title/artist/album with a ±3 s duration tolerance, producing a confidence score. High confidence → auto-add; medium/low → review queue; unmatched → user report with “search Spotify manually” / “skip”.
+- **Payload:** Playlist name/description, matched **Spotify URIs**, and match decisions only. Audio is never downloaded, streamed, stored, or uploaded.
+- **Reversibility:** Playlists created by the app can be deleted from the app; all actions are audit-logged.
+
 ---
 
 ## 5. Data Model & Database Schema (PostgreSQL 16)
@@ -425,6 +455,8 @@ Binary crate files written to `_Serato_/Subcrates/*.crate` using big-endian byte
 - `shared_set_members`, `set_track_contributions`
 - `skills_config`, `automation_rules`, `skill_action_logs`
 - `agent_action_logs` / `audit_log`
+
+> **Streaming export (post-MVP):** metadata-only Spotify Playlist Export uses **desktop-local SQLite** tables only (`streaming_accounts`, `streaming_exports`, `streaming_matches`) — no cloud tables. See `docs/architecture/DATA_MODEL.md` §2.
 
 ### Key Constraints
 - `tracks.file_hash` UNIQUE per workspace
@@ -665,6 +697,8 @@ export interface ExportSetRequest {
   setId: string;
   format: 'rekordbox_xml' | 'serato_crate' | 'preset_all';
   exportPath: string;
+  // Post-MVP: Spotify Playlist Export uses separate spotify_* IPC commands
+  // (see docs/architecture/API_CONTRACTS.md §2.5) — not a file format here.
 }
 
 export interface ExportSetResponse {
@@ -795,7 +829,7 @@ To protect user media libraries, all operations adhere to strict system boundari
 - **UI Responsiveness:** 60 FPS rendering on waveform zoom and energy curve editing.
 - **Export Validation:** 100% pass rate on XML validation schemas for Pioneer rekordbox 6.0+ and Native Instruments Traktor 3.0+.
 - **Memory Footprint:** < 150 MB RAM footprint for the desktop shell idle state.
-- **Offline Functionality:** 100% of core audio analysis, cue generation, tag cleanup, set building, and export functionality operates without internet access. Cloud API access is required solely for vector search syncing, collaboration, and natural language set prompt parsing.
+- **Offline Functionality:** 100% of core **MVP** audio analysis, cue generation, tag cleanup, set building, and file-export functionality operates without internet access. Network access is required solely for vector search syncing, collaboration, natural language set prompt parsing, and — post-MVP, called directly from the desktop app with no product-cloud dependency — the Spotify Web API for Spotify Playlist Export.
 - **Automation Latency:** Rule-triggered Skills that run locally complete in < 500 ms for typical library operations.
 
 ---
@@ -833,6 +867,7 @@ To protect user media libraries, all operations adhere to strict system boundari
 - Open-ended autonomous agents
 - Social integrations
 - Mobile app
+- **Spotify Playlist Export** — planned **post-MVP** only (metadata-only streaming export; see §15). Not part of the 90-day MVP scope.
 
 ### MVP Success Metric
 > A DJ imports 500 tracks, cleans messy tags, analyzes them, builds a 2-hour set (optionally with a B2B partner), exports it to rekordbox, and says: “This saved me two hours.”
@@ -880,6 +915,11 @@ To protect user media libraries, all operations adhere to strict system boundari
 - Serato import (read-only)
 - Basic analytics (library stats)
 - Default automation: import → analyze → cue
+- Spotify Playlist Export (metadata-only streaming export; OAuth 2.0 + PKCE, ISRC-first matching)
+- Discovery & enrichment foundations (shipped): local similar tracks, Tag Health, store buy-links, provider registry
+- Online enrichment (opt-in MusicBrainz / iTunes / Deezer / Discogs / AcoustID via preview → apply → undo)
+- Multi-provider export: Deezer second target behind the generic provider contract
+- Beatport Top 100 / Hype snapshots filtered by library taste + release radar (no public catalog API — data integrations, partnership as Tier 3)
 
 **V2**
 - Collaborative / B2B shared sets (invite, co-editing, track contribution, dual export)
@@ -974,7 +1014,7 @@ To protect user media libraries, all operations adhere to strict system boundari
 | DJ.Studio    | Timeline set building          | Real-time library intelligence, better integration, B2B |
 | Mixed In Key | Key detection, energy          | Integrated workflow, set builder, cue points, tag tools |
 | Beatport     | Discovery, purchasing          | Preparation layer that links to Beatport               |
-| Spotify      | Massive library                | Metadata-only import, no audio download                |
+| Spotify      | Massive library                | Metadata-only import; post-MVP metadata-only playlist export; no audio download |
 
 ### Defensible Assets
 - **DJ Brain** — Personalized preference model + behavioral history
@@ -993,7 +1033,7 @@ To protect user media libraries, all operations adhere to strict system boundari
 
 ### Dangerous Features to Build
 - Live performance tools (rekordbox/Serato will win)
-- Music streaming (licensing nightmare)
+- Third-party music streaming / in-app **streaming playback** of a service’s audio (licensing nightmare) — distinct from **metadata-only playlist export**, which is allowed (see §15). Local file preview/scrubbing is unaffected.
 - Social network (DJs don’t need another)
 - Autonomous email sending (reputation + legal risk)
 - Open-ended agents that can modify libraries without clear previews
@@ -1017,11 +1057,32 @@ To protect user media libraries, all operations adhere to strict system boundari
 **Never:** Write directly to a DJ software’s live database. Never claim to be the canonical database. Never promise bidirectional sync.
 
 ### Spotify / Music Source Strategy
-**Can Build:**
+
+**Can Build (Import):**
 - Import playlist metadata (user’s own playlists)
 - Match against local library
 - Identify missing tracks
 - Link to Beatport/Bandcamp/Amazon/iTunes for purchase
+
+**Shipped foundations (offline, no network):** local similar-track scoring with reason chips, Tag Health gap detection (missing tags/artwork), per-track store buy-links (Beatport, Traxsource, Juno Download, Bandcamp, Discogs) and a closed provider registry — see ADR-0007.
+
+**Can Build (Discovery — post-MVP):**
+- Opt-in external similarity (Last.fm, Deezer/Spotify recommendations) with source badges; never auto-modifies sets
+- Beatport Top 100 per genre + Hype Top 100 as versioned snapshots filtered by library taste (no public catalog API exists — data integrations, not live calls)
+- Release radar over followed artists/labels (opt-in, cached, rate-limited); official Beatport partnership as Tier 3; credential scraping is not the default
+
+**Can Build (Enrichment — post-MVP, opt-in):**
+- Online tag/artwork lookup (MusicBrainz + Cover Art Archive, iTunes Search, Deezer, Discogs, AcoustID fingerprinting) through preview → apply → undo; DB fields only, never source files
+
+**Can Build (Export — Post-MVP): Spotify Playlist Export**
+- Publish a built set (or any playlist) to the DJ’s own Spotify account as a real Spotify playlist — **metadata only**.
+- Match each local track to a Spotify track: **ISRC first**, then a fuzzy match on normalized title/artist/album with a **±3 s duration tolerance**, producing a **match confidence** score.
+- High-confidence matches are added automatically; medium/low go to a **review queue**; unmatched tracks are listed with a **“search Spotify manually” / “skip”** option.
+- OAuth 2.0 Authorization Code + **PKCE** run in the desktop app (embedded public client ID; no client secret; no cloud dependency); tokens live in the OS keychain.
+- Only track metadata and search queries leave the device. Audio is never downloaded, streamed, stored, or uploaded, and there is no in-app streaming playback.
+- A created playlist can be deleted/unfollowed from the app; every export is audit-logged. See §3.6 for the full definition (scopes, chunking, rate-limit handling).
+
+**Multi-provider export (Post-MVP):** Spotify is the reference implementation of a generic provider contract (`provider_match_set` / `provider_export_playlist`); Deezer is the planned second target (open API, ISRC search), then Apple Music / YouTube Music / SoundCloud / TIDAL one at a time. In-app streaming playback of any service's audio is out of scope everywhere.
 
 **Must NOT Build:**
 - Download audio from Spotify
@@ -1029,7 +1090,11 @@ To protect user media libraries, all operations adhere to strict system boundari
 - Store Spotify audio files
 - Bypass purchase
 
-**API Restrictions:** Spotify only allows playlist contents for playlists the user owns or collaborates on. Handle gracefully.
+> These prohibitions target **audio** only. Exporting a **metadata-only** playlist (above) is allowed and is not a download, rip, or stream.
+
+**API Restrictions:**
+- *Import:* Spotify only exposes playlist contents for playlists the user owns or collaborates on. Handle gracefully.
+- *Export (post-MVP):* tracks can only be added to playlists the user owns or collaborates on; the app creates its own playlist by default. Creation/updates use the Spotify Web API with minimal, user-owned-playlist scopes (see §3.6).
 
 ---
 
@@ -1041,7 +1106,7 @@ To protect user media libraries, all operations adhere to strict system boundari
 - Label submission management
 - Career planning
 - Open-ended “chat with your music” chatbot
-- Spotify audio download
+- Spotify (or any streaming service) **audio** download, ripping, or in-app streaming — *metadata-only playlist export is allowed; see §15*
 - Live performance tools
 - Autonomous social posting
 - Autonomous demo submission

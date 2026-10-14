@@ -9,14 +9,59 @@ project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- **Discovery & provider foundations (TF.1–TF.6, shipped, all local, no network)** — offline similar-track scoring (`crates/core/src/similarity.rs`: BPM 45% / Camelot 35% / genre 10% / duration 10%, 8 tests); provider registry + per-store buy-links (`crates/core/src/providers.rs`: Beatport, Traxsource, Juno Download, Bandcamp, Discogs, 4 tests); migration 003 (`isrc`, `external_ids`, `enrichment_runs`, generalized `streaming_*` tables); IPC `find_similar_tracks`, `track_tag_health`, `store_links_for_track`, `provider_status` with shared types + contract tests; library UI (inspector drawer, Tag Health modal, provider status); ADR-0007. Planned follow-ups (post-MVP, non-gating): opt-in external similarity (TD), online tag/artwork enrichment via preview → apply → undo (TE), multi-provider export with Deezer second (TX), Beatport Top 100 / Hype snapshots + release radar as data integrations (no public catalog API).
+- **Round 2 shipped (TE.4, TE.5-partial, TX.1, TD.3; opt-in, metadata only)** — Tag Health Score (core weights + library average, badges in UI, Prep Auditor direction); Discogs / Last.fm / AcoustID adapters (query/parse/tested; keys via `DISCOGS_TOKEN` / `LASTFM_API_KEY` / `ACOUSTID_API_KEY`; AcoustID fingerprinting still needs the native Chromaprint library); generic `provider_match_set` / `provider_export_playlist` IPC + per-provider capabilities (Deezer match live; export returns `not_configured`); chart snapshots Tier 1 (migration 005, validated import, ISRC ownership, 60/40 taste scores, Charts modal with sample loader). Remaining: native fingerprinting + Tag Health Score surfacing in Prep Auditor, Deezer connect/export on `DEEZER_APP_ID` (TX.2b), further targets (TX.3), external similarity + radar (TD.1/2/4/5).
+- **Enrichment live (TE.1–TE.3, TX.2a shipped; opt-in, metadata only)** — pure adapters + confidence in `crates/core/src/enrichment.rs` (MusicBrainz + Cover Art Archive, iTunes 600px art, Deezer ISRC + 1000px art; verified against live responses, 11 tests; audio preview URLs never fetched); desktop transport with MusicBrainz rate limiting; IPC `enrichment_preview` / `enrichment_apply` / `enrichment_undo` + `enrichment:progress` events against migration 004 (`enrichment_candidates`, run snapshots); review UI with tier badges, checkbox apply and per-run undo (artwork fills empty slots only); live Deezer `provider_match_tracks` (ISRC-exact → fuzzy) in the inspector drawer. Remaining (post-MVP, non-gating): Discogs / AcoustID / Last.fm adapters + Tag Health Score (TE.4–TE.5), Deezer connect/export on `DEEZER_APP_ID` (TX.2b), generic provider abstraction (TX.1), further targets (TX.3).
+
+- **Spotify Playlist Export (planned, post-MVP)** — documented across product, SDD,
+  architecture, security, UI/UX, and diagrams: publish a set to the DJ's own Spotify
+  account as a real playlist, **metadata only** (OAuth 2.0 + PKCE on the desktop,
+  ISRC-first matching with a review queue, tokens in the OS keychain; no audio leaves
+  the device). No implementation yet.
+
 - **Configurable model asset path (T1.1.2)** — `dj-assistant-analysis` now resolves
-  model files against a configurable models directory: `discover_models_dir()` follows
-  the precedence `DJ_ASSISTANT_MODELS_DIR` → cwd `models/` → exe-adjacent `models/` →
-  caller fallback; `resolve_model_path()` joins a spec's relative filename (subdirectories
-  allowed) and rejects absolute/rooted/`..` paths so a spec can never escape the models
-  directory; `load_model_session()` resolves, verifies the pinned SHA-256, and loads the
-  session in one call, failing before runtime initialization on invalid paths. 14 new
-  tests; documented in `MODELS.md` §3/§4 and `.env.example`.
+   model files against a configurable models directory: `discover_models_dir()` follows
+   the precedence `DJ_ASSISTANT_MODELS_DIR` → cwd `models/` → exe-adjacent `models/` →
+   caller fallback; `resolve_model_path()` joins a spec's relative filename (subdirectories
+   allowed) and rejects absolute/rooted/`..` paths so a spec can never escape the models
+   directory; `load_model_session()` resolves, verifies the pinned SHA-256, and loads the
+   session in one call, failing before runtime initialization on invalid paths. 14 new
+   tests; documented in `MODELS.md` §3/§4 and `.env.example`.
+- **BPM + beat grid inference (T1.1.3)** — deterministic onset path in
+   `crates/analysis/src/bpm.rs` (`OnsetAutocorr`): spectral-flux onset envelope
+   (rectangular-STFT) + autocorrelation + metrical-level (×0.5/×1/×2) scoring + phase
+   search reconstructing the downbeat at `t₀`; full `bpm` test suite green incl. synthetic
+   click tracks (90/120/128/140 BPM) and real FLAC fixture; ONNX activation-curve seam
+   reserved. <3 s/track.
+- **Key detection (T1.1.4)** — deterministic chroma path in `crates/analysis/src/key.rs`
+   (`ChromaKeyfinding`): Hann-windowed STFT → 12-bin pitch-class profile (8192-sample
+   window for sub-semitone resolution) → Krumhansl-Kessler key-finding → classical name +
+   Camelot code (reusing the wheel in `crates/core`); tests cover C major / A minor / G major
+   drones, real FLAC fixture, graceful degradation, Camelot wheel self-check; ONNX chroma-activation
+   seam reserved.
+- **Phrase / structure segmentation (T1.1.5)** — deterministic beat-grid-snapped novelty
+   path in `crates/analysis/src/phrase.rs` (`detect_phrases`): per-bar RMS (dB energy delta),
+   spectral-flux delta, and 12-bin chroma cosine distance combined into a boundary-novelty
+   curve (mean + 0.5σ threshold, 2-bar min spacing), snapped to {4, 8, 16, 32}-bar phrases
+   (±2-bar tolerance) off the T1.1.3 beat grid, with heuristic intro/build/drop/breakdown/outro
+   labels from track-relative energy profile; degrades to empty map without usable grid; ONNX
+   seam via `PhraseMethod::Onnx`; 8 new tests; full suite 59 green.
+- **Vocal presence / density (T1.1.6)** — deterministic mid/side STFT heuristic in
+   `crates/analysis/src/vocal.rs`: vocal-band energy ratio over ≥150 Hz denominator +
+   center-dominance gate + median smoothing, producing 0..=1 density curve + aggregate with
+   ONNX seam; 11 tests incl. wide-panned-pad and transient-rejection cases.
+- **Loudness EBU R128 (T1.1.7)** — BS.1770-4 measurement in `crates/analysis/src/loudness.rs`
+   (`detect_loudness`) on pure-Rust `ebur128` crate: gated integrated LUFS + true peak (dBTP)
+   + loudness range (Tech 3342); channels fed natively per BS.1770 channel-power sum (mono-downmix
+   would misread correlated stereo ~9 LU; >2ch downmixed to stereo); silence/undefined results
+   floored to -70.0 LUFS; no options struct or method enum — deterministic spec with no tunables;
+   11 tests incl. sine-at-known-LUFS spec anchor, stereo = mono + 3.01 LU, relative-gate
+   exclusion, inter-sample overshoot probe, real-FLAC smoke.
+- **Composite `analysis_version` (T1.1.8)** — `ModelRegistry`/`ModelSpec` in place;
+   `tracks.analysis_version TEXT` column (migration 001); `analysis_version()` computation
+   in `crates/analysis/src/version.rs` (6 tests) aggregating per-analyzer
+   `*_PIPELINE_VERSION` stamps into stable `name:pipeline[@model];...` string driving re-analysis;
+   per-track DB stamping remains for T1.2.x pipeline.
 - **Analysis engine foundation** — new Tauri-free crate `crates/analysis`
   (`dj-assistant-analysis`) for Phase 1: multi-format decoding via **Symphonia**
   (MP3/WAV/FLAC/AIFF/M4A) to interleaved `f32` PCM, DSP normalization (mono/stereo
@@ -32,11 +77,17 @@ project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   `Relu` (not `Identity`) is used so the graph also loads on the operator-trimmed Edge
   WebView2 runtime.
 - **GitHub repository + green CI** — the workspace is now under version control and pushed to
-  `github.com/iDorgham/dj-assistant` (private, `main`). The **first Main CI run (`38219344042`) is
-  green on all three jobs**: *Full Validate* on `ubuntu-latest` (lint / typecheck / tests +
-  `cargo fmt --check` / `clippy -D warnings` / `cargo test`) and the reusable `desktop-build` matrix
-  on both **`windows-latest`** and **`macos-latest`** — which closes the macOS half of Phase 0
-  criterion **P0.1**. A `.gitattributes` pins LF for cross-platform checkouts.
+   `github.com/iDorgham/dj-assistant` (private, `main`). The **first Main CI run (`38219344042`) is
+   green on all three jobs**: *Full Validate* on `ubuntu-latest` (lint / typecheck / tests +
+   `cargo fmt --check` / `clippy -D warnings` / `cargo test`) and the reusable `desktop-build` matrix
+   on both **`windows-latest`** and **`macos-latest`** — which closes the macOS half of Phase 0
+   criterion **P0.1**. A `.gitattributes` pins LF for cross-platform checkouts.
+- **New migrations** — 003 (`isrc`, `external_ids`, `enrichment_runs`, generalized `streaming_*` tables);
+   004 (`enrichment_candidates` proposals + run snapshots `before_state`/`after_state`); 005 (`chart_snapshots`
+   for Beatport Top 100 / Hype weekly ingest). All apply cleanly in order; scanner INSERT is column-explicit
+   so ADD COLUMNs are safe.
+- **ADRs** — ADR-0006 (Spotify playlist export strategy: OAuth 2.0 + PKCE, metadata only, OS keychain);
+   ADR-0007 (similar tracks, enrichment & multi-provider strategy).
 - **Dependabot** (`.github/dependabot.yml`) — weekly grouped updates for the pnpm workspace, the
   Cargo workspace and GitHub Actions.
 - **Tauri-free core crate** `crates/core` (`dj-assistant-core`) holding the audio discovery
@@ -74,8 +125,9 @@ project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   - `apps/api` — 2 tests exercising `GET /health` via Fastify `inject`
 - **Desktop helpers module** — `apps/desktop/src/lib/library.ts`, extracted from `App.tsx` so
   the library view logic is unit-testable without a DOM or Tauri runtime.
-- **App icons** — `apps/desktop/src-tauri/icons/` (32/128/256/512 PNG, `.ico`, `.icns`, plus
-  Windows Store, iOS and Android variants), generated from `app-icon.png`.
+- **App icons refreshed** — new `app-icon.png` source with full regeneration of all platform
+   variants (Windows `.ico`, macOS `.icns`, iOS/Android mipmaps, Windows Store tiles) via
+   `scripts/make_icon.py`.
 - **Phase 0 acceptance evidence** — `docs/engineering/PHASE0_ACCEPTANCE_EVIDENCE.md` records how each P0.x
   criterion was verified and what remains outstanding.
 - **Tooling config** — `.prettierrc.json`, `.prettierignore`, `.gitignore`, and
@@ -201,7 +253,9 @@ project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - **`docs/engineering/WINDOWS_NATIVE_BUILD_RUNBOOK.md`** — documents the MSVC requirement, the
   space-in-path `windres` failure and the `CARGO_TARGET_DIR` workaround, corrects the build
   output path for the workspace layout, and adds five troubleshooting rows.
-- **`README.md`** — project status updated from "Pre-development" to "Phase 0 in progress".
+- **`README.md`** — refreshed in modern minimalist style with restructured copy.
+- **New diagrams** — Spotify playlist export flow (`diagrams/16-spotify-playlist-export.md`),
+   discovery/enrichment/providers overview (`diagrams/17-discovery-enrichment-providers.md`).
 - **Task lists reconciled** — Phase 0 items in `docs/sdd/04-TASKS.md` and
   `docs/engineering/DEVELOPMENT_TASK_LIST.md` checked off against verified evidence.
 - **Rust sources reformatted** with `cargo fmt` and Clippy lints fixed
@@ -245,8 +299,6 @@ project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   `Microsoft Visual Studio` directories and Windows SDK are absent. See runbook §1.1.
 - **No macOS *workstation*** — macOS boot/build is now covered by CI (`macos-latest` in
   `desktop-build.yml`), but there is no physical macOS machine for hands-on GUI verification.
-- **No `.m4a` fixture** — `m4a` is an advertised supported extension but no M4A/AAC encoder is
-  available in this environment, so it is untested.
 - `fixtures/audio/mp3/tagged-mp3-125.mp3` has silent, hand-built audio (no MP3 encoder exists
   in this toolchain). It is valid for **tag-parsing tests only** and must never be used for
   duration/BPM/key assertions.

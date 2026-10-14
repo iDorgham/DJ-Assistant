@@ -14,8 +14,8 @@ flowchart TB
     end
 
     subgraph IPC["Typed IPC Bridge"]
-        CMD[Commands<br/>scan_folder • analyze_tracks<br/>run_skill • build_set • export_set]
-        EVT[Events<br/>scan_progress • analysis_progress<br/>skill_finished]
+        CMD[Commands<br/>scan_folder • analyze_library • find_similar_tracks<br/>enrichment_preview • provider_match_tracks • build_set • export_set]
+        EVT[Events<br/>scan:progress • analysis:progress • analysis:completed<br/>enrichment:progress • skill:progress]
     end
 
     subgraph Rust["Rust Core"]
@@ -54,16 +54,16 @@ sequenceDiagram
     participant ONNX as ONNX Runtime
     participant DB as SQLite
 
-    UI->>IPC: analyze_tracks(track_ids)
-    IPC->>Core: analyze_tracks
-    Core->>DB: mark pending
+    UI->>IPC: analyze_library(track_ids?, force?)
+    IPC->>Core: analyze_library
+    Core->>DB: select stale versions
     loop For each track
-        Core->>ONNX: run inference
+        Core->>ONNX: run analyzer pipeline (heuristic now, ONNX seam)
         ONNX-->>Core: features
-        Core->>DB: store results
-        Core-->>IPC: analysis_progress
+        Core->>DB: persist results + analysis_version
+        Core-->>IPC: analysis:progress
         IPC-->>UI: progress event
     end
-    Core-->>IPC: analyze_tracks result
+    Core-->>IPC: analysis:completed
     IPC-->>UI: complete
 ```

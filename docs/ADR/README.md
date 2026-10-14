@@ -3,7 +3,7 @@
 **Purpose:** Capture significant technical decisions so future contributors understand *why* the system is structured the way it is.
 
 **Status:** Active from Phase 0 onward  
-**Last Updated:** 2026-10-09
+**Last Updated:** 2026-10-14
 
 ---
 
@@ -55,6 +55,8 @@ What else was evaluated and why it was rejected.
 | [0003](./0003-local-first-onnx-analysis.md) | Local-first ONNX analysis | Accepted |
 | [0004](./0004-hybrid-set-builder.md) | Hybrid set builder (LLM constraints + Beam Search) | Accepted |
 | [0005](./0005-tauri-ipc-style.md) | Tauri IPC command style | Accepted |
+| [0006](./0006-spotify-playlist-export.md) | Spotify Playlist Export (desktop PKCE, metadata only) | Accepted (design) / Planned (build, post-MVP) |
+| [0007](./0007-similar-tracks-enrichment-multiprovider.md) | Similar tracks, tag/artwork enrichment & multi-provider strategy | Accepted-partial (TF.1–TF.6, TE.1–TE.3, TD.3, TX.2a shipped; remainder Proposed) |
 
 ---
 

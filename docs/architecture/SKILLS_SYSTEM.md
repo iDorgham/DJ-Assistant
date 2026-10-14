@@ -1,7 +1,7 @@
 # DJ Assistant — Skills System
 
 **Status:** Approved concept (Canonical v1.1)  
-**Last Updated:** 2026-10-08
+**Last Updated:** 2026-10-14
 
 Skills are the primary mechanism for scoped, reversible, inspectable automation in DJ Assistant.
 
@@ -32,6 +32,29 @@ Skills are the primary mechanism for scoped, reversible, inspectable automation 
 | `library_doctor` | Library Doctor | Overall library health score + recommended fixes | Periodic / on demand |
 
 Additional Skills may be added later; the system is designed to be extensible.
+
+### Planned Skills (Post-MVP)
+
+| Skill ID | Name | Primary Responsibility | Typical Trigger |
+|----------|------|------------------------|-----------------|
+| `playlist_publisher` | Playlist Publisher | Publish a built set (or any playlist) to the DJ's own streaming account as a metadata-only playlist (ISRC/fuzzy matching + review queue); Spotify first, then Deezer / Apple Music / … via the provider registry | Set Builder / Export UI, on demand |
+| `metadata_enricher` | Metadata Enricher | Fill `track_tag_health` gaps from opt-in online sources (MusicBrainz, iTunes, Deezer, Discogs, AcoustID) through preview → apply → undo | Tag Health modal, Tag Surgeon |
+
+**Playlist Publisher** is the first Skill that performs an **external side effect**, so it always
+**previews matches and requires explicit confirmation** before publishing. It matches local tracks to provider
+tracks by ISRC first, falling back to a fuzzy match on normalized title/artist/album with a ±3 s duration tolerance
+and a confidence score; high-confidence matches are added automatically, medium/low go to a review queue, and
+unmatched tracks are listed with a "search manually" / "skip" option.
+
+- **Undo** = delete (unfollow) the created playlist, recorded locally in `streaming_exports`.
+- **Audit-logged**: every run writes a `skill_runs` / action-history entry like any other Skill.
+- **Metadata-only**: auth via OAuth 2.0 Authorization Code + PKCE with tokens in the OS keychain; it never
+  downloads, streams, stores, or uploads audio, and the app never uploads the user's audio library.
+- Uses the desktop IPC commands/events (`provider_*`, generalized from `spotify_*`) and local tables in [DATA_MODEL.md](./DATA_MODEL.md) §2 (Streaming Export tables).
+
+**Metadata Enricher** consumes `track_tag_health` gaps, proposes before → after diffs per track, applies them in
+bulk only with confirmation, and records every run in `enrichment_runs` for undo. It writes DB canonical fields
+only — never source audio files — and caches provider IDs in `external_ids` so re-runs are cache hits.
 
 ---
 

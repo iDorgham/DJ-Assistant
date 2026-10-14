@@ -138,11 +138,13 @@ Caches must not store secrets. Invalidate on lockfile change.
 | `AZURE_CREDENTIALS` or SSL.com | Release env | Windows signing alternative |
 | `SLACK_WEBHOOK` | Optional | Release notifications |
 | OpenAI/Anthropic keys | **Never** in desktop CI | Cloud API only; not needed for core desktop CI |
+| `SPOTIFY_CLIENT_ID` | Optional, build-time (**public**) | Spotify OAuth public client ID for the PKCE streaming export; **not a secret** (no client secret exists) |
 
 **Rules:**
 - Prefer GitHub Environments (`release`) with required reviewers
 - Secrets never echoed; mask in logs
 - PRs from forks get **read-only** secrets (GitHub default) — do not rely on secrets for PR CI
+- Streaming exports (e.g. Spotify Playlist Export, post-MVP) use OAuth 2.0 Authorization Code + **PKCE** with a **public** client ID embedded at build time — there is **no client secret** to manage, inject, or rotate. The redirect URI (loopback `http://127.0.0.1:<port>/callback` or a custom URI scheme) must be registered/allow-listed in the Spotify developer dashboard; only the public client ID reaches the build.
 
 ---
 

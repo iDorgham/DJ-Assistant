@@ -14,6 +14,7 @@ Short definitions of product and technical terms used across Canonical, SDD, Arc
 | **DJ Assistant** | Desktop-first preparation accelerator: local analysis → cues → tag cleanup → set building → export. Not a live performance / mixing engine. |
 | **Gig Ready** | One-click workflow that runs a curated sequence (health check → analyze → optional tag cleanup → cues → Prep Auditor → export/USB pack). |
 | **USB Pack** | Packaged export of a set (and related metadata/cues) prepared for performance media. |
+| **Streaming Playlist Export** | Post-MVP export that publishes a built set (or any playlist) to a streaming service account as a real playlist using metadata only — never downloading, streaming, or storing audio. First target: Spotify; Deezer planned second behind a generic provider contract. |
 | **Prep Auditor** | Skill that runs a pre-gig checklist: unanalyzed tracks, missing cues, tag issues, energy gaps, etc. |
 | **Lock & Fill** | Set-builder mode: user locks hero tracks in position; system fills remaining slots optimally. |
 | **Set Template** | Reusable profile of energy curve, BPM ramp, genre bias, and transition preferences derived from a successful set. |
@@ -39,6 +40,7 @@ Short definitions of product and technical terms used across Canonical, SDD, Arc
 | **Energy curve** | Target or measured energy over set time (warmup → peak → close, wave, custom). |
 | **Transition score** | Numeric compatibility between two adjacent tracks (key, BPM, energy, optional semantic). |
 | **Transition risk** | Low / Medium / High flag from key jump + BPM jump + phrase alignment (plus numeric score). |
+| **ISRC** | International Standard Recording Code; a globally unique recording identifier. Primary key for matching a local track to a provider track, with fuzzy title/artist/album matching as the fallback. |
 
 ---
 
@@ -75,6 +77,15 @@ Short definitions of product and technical terms used across Canonical, SDD, Arc
 | **CLAP** | Contrastive language-audio pretraining style embedding (e.g. 512-dim) used for optional semantic search. |
 | **pgvector** | PostgreSQL extension for vector similarity search in the cloud control plane. |
 | **rekordbox XML / Serato crate** | Primary export interchange formats for performance software. |
+| **Spotify URI** | Spotify’s canonical track identifier (e.g. `spotify:track:…`). Used as the target reference when adding a matched track to an exported playlist; never used to fetch audio. |
+| **PKCE** | Proof Key for Code Exchange — OAuth 2.0 extension for public clients. Used for the desktop Spotify authorization flow; no client secret, and tokens are stored in the OS keychain. |
+| **Match confidence** | Score tiering a local→provider track match (ISRC first, else fuzzy title/artist/album with ±3 s duration tolerance) into high (auto-add), medium/low (review queue), or unmatched (manual search / skip). Spotify first; other providers reuse the tiers. |
+| **Similar tracks** | Mix-compatibility ranking of library tracks against a seed track (local: BPM / Camelot key / genre / duration with reason chips; post-MVP: opt-in external sources with a `source` badge). |
+| **Tag Health** | Per-track and library-wide report of missing/placeholder tags and artwork (`track_tag_health`); the read half of enrichment. |
+| **Enrichment** | Opt-in online filling of Tag Health gaps (MusicBrainz, iTunes, Deezer, Discogs, AcoustID) via preview → apply → undo; writes DB fields, never source files. |
+| **Store buy-link** | Tier-0 store integration: a per-track outbound search URL (Beatport, Traxsource, Juno Download, Bandcamp, Discogs). Metadata and links only — never audio. |
+| **Release radar** | Post-MVP digest of new releases from followed artists/labels (opt-in, cached, rate-limited); unofficial feeds are labelled as such. |
+| **Provider registry** | Closed `StreamingProvider` / `StoreProvider` enums plus the `provider` column in `streaming_*` tables, so new targets add matchers, never schema. |
 | **Tauri v2** | Desktop application framework (Rust backend + web UI) chosen for the companion app. |
 
 ---

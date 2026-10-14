@@ -19,8 +19,11 @@ each folder below is self-contained and cross-links to its neighbours.
 | [`devops/`](./devops/) | CI/CD plans, pipeline security, AI automation, workflow templates | [DevOps & CI/CD Plan](./devops/DEVOPS_CICD_PLAN.md) |
 | [`sdd/`](./sdd/) | Specification-Driven Development set (spec → design → plan → tasks → acceptance) | [SDD Overview](./sdd/README.md) |
 | [`diagrams/`](./diagrams/) | Mermaid diagrams for architecture, pipelines, phases, skills, data | [Entire Project Overview](./diagrams/00-ENTIRE-PROJECT-OVERVIEW.md) |
+| [`ui-ux/`](./ui-ux/) | Interface design: principles, design system, screens & flows, accessibility | [UI/UX Index](./ui-ux/README.md) |
 | [`ADR/`](./ADR/) | Architecture Decision Records (the "why") | [ADR Index](./ADR/README.md) |
-| [`evidence/`](./evidence/) | Acceptance evidence (screenshots, captured runs) | [Phase 0 evidence](./evidence/phase0/) |
+| [`audit/`](./audit/) | Spec/function/settings audits + TA.1–TA.14 tracking | [Audit summary](./audit/AUDIT-SUMMARY.md) |
+| [`context/`](./context/) | Single-file project digest for humans + AI agents | [Project Context](./context/PROJECT_CONTEXT.md) |
+| [`evidence/`](./evidence/) | Acceptance evidence (screenshots, captured runs) | [Phase 0 evidence](./engineering/PHASE0_ACCEPTANCE_EVIDENCE.md) |
 
 ---
 
@@ -69,15 +72,37 @@ each folder below is self-contained and cross-links to its neighbours.
 | # | Document | Purpose |
 |---|----------|---------|
 | 00 | [Overview](./sdd/README.md) | Method overview & navigation |
-| 01 | [Specification](./sdd/01-SPECIFICATION.md) | What we are building |
+| 01 | [Specification](./sdd/01-SPECIFICATION.md) | What we are building (slim MVP; P1 = USB/B2B/Skills + S/F) |
 | 02 | [System Design](./sdd/02-SYSTEM-DESIGN.md) | How it is structured |
 | 03 | [Phases & Plan](./sdd/03-PHASES-AND-PLAN.md) | When and in what order |
-| 04 | [Task Breakdown](./sdd/04-TASKS.md) | Concrete engineering tasks |
-| 05 | [Acceptance Criteria](./sdd/05-ACCEPTANCE.md) | How we know it is done |
+| 04 | [Task Breakdown](./sdd/04-TASKS.md) | Concrete engineering tasks (incl. audit-driven `TA.1–TA.14`) |
+| 05 | [Acceptance Criteria](./sdd/05-ACCEPTANCE.md) | How we know it is done (golden fixtures, contract/settings gates) |
+
+## Audit — [`audit/`](./audit/)
+
+| Document | Purpose |
+|----------|---------|
+| [AUDIT-SUMMARY.md](./audit/AUDIT-SUMMARY.md) | Combined pros/cons/fixes/proposals |
+| [01-specs-audit.md](./audit/01-specs-audit.md) | Plan specs review |
+| [02-functions-audit.md](./audit/02-functions-audit.md) | Functions/features review |
+| [03-settings-audit.md](./audit/03-settings-audit.md) | Settings/config review |
+| [04-improvements.md](./audit/04-improvements.md) | Prioritized fixes (TA.1–TA.14) |
+| [05-proposed-specs-functions.md](./audit/05-proposed-specs-functions.md) | New settings S-1–S-7, functions F-1–F-10 / X-1–X-6 |
 
 ## Diagrams — [`diagrams/`](./diagrams/)
 
-See the [diagram index](./diagrams/README.md) for the full set (00–15).
+See the [diagram index](./diagrams/README.md) for the full set (00–17).
+
+## UI/UX — [`ui-ux/`](./ui-ux/)
+
+| Document | Purpose |
+|----------|---------|
+| [README.md](./ui-ux/README.md) | UI/UX index, current status, and the five things to remember |
+| [UX_PRINCIPLES.md](./ui-ux/UX_PRINCIPLES.md) | Personas, the prep loop, design principles, IA, interaction patterns, voice |
+| [DESIGN_SYSTEM.md](./ui-ux/DESIGN_SYSTEM.md) | Colour, typography, spacing, motion, and the component inventory |
+| [SCREENS_AND_FLOWS.md](./ui-ux/SCREENS_AND_FLOWS.md) | Screen inventory, wireframes, and end-to-end flows per phase |
+| [wireframes/](./ui-ux/wireframes/README.md) | Low-fidelity structural wireframes for every screen (00–12) |
+| [ACCESSIBILITY.md](./ui-ux/ACCESSIBILITY.md) | WCAG targets, contrast findings, keyboard model, motion, test checklist |
 
 ## Decisions — [`ADR/`](./ADR/)
 
