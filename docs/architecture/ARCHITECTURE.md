@@ -102,7 +102,7 @@ with a "search Spotify manually" / "skip" option.
   review queue → unmatched report. Local tables live in `streaming_accounts` / `streaming_exports` /
   `streaming_matches` ([DATA_MODEL.md](./DATA_MODEL.md)).
 - **Provider calls** — Spotify Web API, called directly by the desktop app (see [API_CONTRACTS.md](./API_CONTRACTS.md) §7).
-- **Reversibility** — the created playlist is recorded locally so the DJ can delete it (unfollow) from the app;
+- **Reversibility** — the created playlist is recorded locally so the DJ can unfollow it (remove it from the DJ's library) from the app;
   audit-logged.
 - **Privacy** — only track metadata and search queries leave the device. Audio is never downloaded, streamed,
   stored, or uploaded, and the app still never uploads the user's audio library.
