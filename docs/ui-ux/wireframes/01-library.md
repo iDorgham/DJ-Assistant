@@ -14,7 +14,7 @@ shipped screen so far.
 ┌────────────────────────────────────────────────────────────────────────────────────────────────────────────────┐
 │  ◉ DJ Assistant   [ Phase 0 Foundation ]                          [ Scan Music Folder ]  [ ⟳ ]                 │
 ├────────────────────────────────────────────────────────────────────────────────────────────────────────────────┤
-│  {1} [ search title, artist, album, path… ]  [✚ Tag Health]  94 tracks · ⚡ 6 streaming · 5 stores · 0 connected │
+│  {1} [ search title, artist, album, path… ]  [✚ Tag Health] [Charts]  94 tracks · ⚡ 6 streaming · 5 stores · 0 connected │
 ├────────────────────────────────────────────────────────────────────────────────────────────────────────────────┤
 │  {2} #   ART   TITLE              ARTIST         ALBUM      BPM   KEY   RATING  TIME   FMT    STATUS           │
 │────────────────────────────────────────────────────────────────────────────────────────────────────────────────│
@@ -90,7 +90,7 @@ shipped screen so far.
 
 | # | Element | Behaviour |
 |---|---------|-----------|
-| {1} | Search input + Tag Health | Search filters the table live across title, artist, album, and path; no refetch. **Tag Health** opens the gap modal (see [wireframe 12](./12-discovery-enrichment.md)); provider summary shows registry counts with a full-list tooltip |
+| {1} | Search input + Tag Health + Charts | Search filters the table live across title, artist, album, and path; no refetch. **Tag Health** opens the gap/enrichment modal and **Charts** the snapshot modal (see [wireframe 12](./12-discovery-enrichment.md)); provider summary shows registry counts with a full-list tooltip |
 | {2} | Track table | Dense, sticky header, hover highlight; mono numerics; one row per track; **row click opens the inspector drawer** (selected row tinted and marked `=`; click again or `Esc` closes) |
 | {3} | Status message | Reports the last action result (loaded / scan summary / error); middle shows provider status |
 | {4} | Scan progress | Current path + `scanned / total`; bar is determinate when total is known |

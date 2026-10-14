@@ -1,13 +1,11 @@
 # Wireframe — Discovery & Enrichment (12)
 
-**Phase:** 0 foundations ✅ Shipped (local, no network) · Enrichment review ✅ Shipped (opt-in MusicBrainz / iTunes / Deezer) · Charts/radar 📋 Planned
+**Phase:** 0 foundations ✅ Shipped (local, no network) · Enrichment review ✅ Shipped (opt-in MusicBrainz / iTunes / Deezer / Discogs / Last.fm) · Charts ✅ Shipped (snapshots + taste) · Radar/fingerprinting 📋 Planned
 **See also:** [Screens & Flows §4.2 / §4.11 / §4.12 / §5.9 / §5.10](../SCREENS_AND_FLOWS.md) · [Track Detail](./03-track-detail.md) · [Spotify Export](./11-spotify-export.md) · [Discovery diagram](../../diagrams/17-discovery-enrichment-providers.md) · [ADR-0007](../../ADR/0007-similar-tracks-enrichment-multiprovider.md)
 
-Three shipped surfaces share one promise: **everything on this page is computed
-locally — no network access**. Online sources are shown as planned/opt-in and never
-fire automatically.
-
----
+Three shipped surfaces share one promise: **nothing here touches the network
+except through the explicit lookup buttons**. Online sources fire only from the
+review UI, one provider per run, and never automatically.
 
 ## 12A. Inspector drawer (shipped)
 
@@ -33,6 +31,8 @@ Opened by clicking a library row. Overlays the right side; the table stays visib
 ├────────────────────────────────────────────────┤
 │  {3} ⎋ FIND TO BUY (metadata links only)       │
 │  Beatport                          [Copy link] │
+│  {3b} MATCH ON DEEZER — Glue · Bicep · 95% matched  │
+│      [Copy Deezer link]  export needs app ID  │
 │  Traxsource                        [Copy link] │
 │  Juno Download                     [Copy link] │
 │  Bandcamp                          [Copy link] │
@@ -76,7 +76,8 @@ Opened from the toolbar **[Tag Health]** button.
 |---|---------|-----------|
 | {1} | Drawer header | Artwork, identity, BPM/key/duration; gap chips (`missing: …`) with a planned-lookup tooltip; `✕` / `Esc` closes, focus returns to the row |
 | {2} | Similar list | Score % (mono) + reason chips; empty state names what to import ("tracks with BPM and key tags"); click a result to re-target the drawer; post-MVP adds `source` badges (Local / Last.fm / Deezer), explanations, add-to-set |
-| {3} | Buy-links | One row per store; **Copy link** (clipboard + "Copied" confirmation) — never auto-open, never audio; post-MVP charts/radar link here |
+| {3} | Buy-links | One row per store; **Copy link** (clipboard + "Copied" confirmation) — never auto-open, never audio; charts link to the Charts modal |
+| {3b} | Deezer match | Explicit **Match this track** button (ISRC-exact → fuzzy, read-only); result shows title/artist/release + tier + copyable catalog link; export note names the missing app ID |
 | {4} | Modal header + lookup controls | Title + close; the opt-in sentence is always visible, not a tooltip; source picker + explicit lookup button (max 25 tracks per run); live per-track progress |
 | {5} | Proposal list | Tier badge + confidence per track; before → after rows (artwork shows "cover art"); checkboxes default all-checked; apply writes DB fields only; undo restores the run snapshot |
 | {6} | Post-lookup states | Empty proposals ("no new proposals + skipped count"); apply/undo confirmations inline; re-apply of a finished run surfaces the backend error instead of double-writing |
@@ -102,8 +103,10 @@ Opened from the toolbar **[Tag Health]** button.
 - **Tag Health** → modal; bars are sorted by missing count desc, then field name.
 - **Look up online** → one provider per run, proposals recorded server-side; **Apply
   checked** writes DB fields (never source files); **Undo run** restores exact values.
-- Post-MVP: Discogs / AcoustID / Last.fm sources, Tag Health Score, chart snapshots,
-  release radar.
+- **Match on Deezer** → live read-only catalog match in the drawer (ISRC-exact first);
+  export controls stay disabled with the app-ID reason until TX.2b.
+- Post-MVP: native fingerprinting, Tag Health Score surfacing in Prep Auditor, chart
+  snapshot feeds, release radar.
 
 ---
 

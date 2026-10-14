@@ -53,7 +53,7 @@ states, and interaction affordances** — not final pixels. Visual tokens live i
 | 09 | [Gig Ready / Prep Auditor](./09-gig-ready.md) | 4 | 📋 Planned |
 | 10 | [Collaboration (B2B)](./10-collaboration.md) | 4 | 📋 Planned |
 | 11 | [Spotify Playlist Export](./11-spotify-export.md) | Post-MVP | 📋 Planned |
-| 12 | [Discovery & Enrichment](./12-discovery-enrichment.md) | 0 (foundations) / Post-MVP (online) | ✅ Shipped (local) · 📋 Planned (online) |
+| 12 | [Discovery & Enrichment](./12-discovery-enrichment.md) | 0 (foundations + review + charts) / Post-MVP (radar, more adapters) | ✅ Shipped (local + review + charts) · 📋 Planned (radar, fingerprinting) |
 
 ---
 
