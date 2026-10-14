@@ -164,7 +164,10 @@ analysis_files = [
 ]
 
 # Add the analysis files to the manifest
-manifest["files"].extend(analysis_files)
+existing_paths = {entry["path"] for entry in manifest["files"]}
+manifest["files"].extend(
+    entry for entry in analysis_files if entry["path"] not in existing_paths
+)
 
 # Update file count
 manifest["file_count"] = len(manifest["files"])
