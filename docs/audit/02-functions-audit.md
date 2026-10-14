@@ -4,7 +4,7 @@
 
 ## Shipped (verified)
 
-- Library: `scan_folder`, `list_tracks`, `get_track`, `get_artwork` (`API_CONTRACTS.md:23-88`). BLAKE3 (first 1MB+duration) dedup, `audiotags`+`id3`+`metaflac`, SQLite WAL+FK.
+- Library: `scan_folder`, `list_tracks`, `get_track`, `get_artwork` (`API_CONTRACTS.md:23-88`). BLAKE3 (file size + first 1 MiB) dedup, `audiotags`+`id3`+`metaflac`, SQLite WAL+FK.
 - Analysis: decoder (Symphonia MP3/WAV/FLAC/AIFF/M4A), normalizer, ONNX `ort` dynamic, BPM OnsetAutocorr, key STFT→chroma→Krumhansl-Kessler→Camelot, phrase novelty, vocal mid/side, LUFS `ebur128`, `run_full_analysis` graceful degradation.
 - Discovery foundations (TF): `find_similar_tracks` (BPM 45%/key 35%/genre 10%/duration 10%), `track_tag_health`, `store_links_for_track` (Beatport/Traxsource/Juno/Bandcamp/Discogs search URLs), `provider_status` (`API_CONTRACTS.md:380-465`).
 - UI: library list + inspector drawer + Tag Health + provider status. Phase 1 T1.1.1–T1.1.8 done per `04-TASKS.md`.
