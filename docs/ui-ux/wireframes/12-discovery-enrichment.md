@@ -7,6 +7,8 @@ Three shipped surfaces share one promise: **nothing here touches the network
 except through the explicit lookup buttons**. Online sources fire only from the
 review UI, one provider per run, and never automatically.
 
+---
+
 ## 12A. Inspector drawer (shipped)
 
 Opened by clicking a library row. Overlays the right side; the table stays visible.
