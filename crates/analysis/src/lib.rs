@@ -38,8 +38,8 @@ pub use phrase::{
     PHRASE_PIPELINE_VERSION,
 };
 pub use pipeline::{
-    classify_analysis_status, run_full_analysis, AnalysisResults,
-    PHRASE_CONFIDENCE_REVIEW_THRESHOLD, VOCAL_PRESENCE_THRESHOLD,
+    classify_analysis_status, run_full_analysis, AnalysisResults, PHRASE_CONFIDENCE_REVIEW_THRESHOLD,
+    VOCAL_PRESENCE_THRESHOLD,
 };
 pub use registry::{
     discover_models_dir, resolve_model_path, ModelRegistry, ModelSpec, MODELS_DIR_ENV_VAR,
