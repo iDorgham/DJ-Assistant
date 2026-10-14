@@ -407,8 +407,8 @@ flowchart LR
 
 Library is the root. Everything else is reached from it or from a track within it. Skills
 and Collaboration are overlays/drawers that never replace the workspace. The inspector
-drawer and Tag Health modal are the shipped discovery surfaces; online enrichment, charts
-and additional export providers extend them post-MVP.
+drawer and Tag Health modal are shipped discovery surfaces; online enrichment and chart snapshots are live.
+Release Radar and additional export providers remain post-MVP.
 
 ---
 
