@@ -125,7 +125,7 @@ User: prepare set → Export to Spotify
 Record created playlist (deletable from app) + audit log       [no audio read/streamed/uploaded]
 ```
 
-### 3.7 Discovery & Enrichment (TF shipped; TD/TE planned, post-MVP)
+### 3.7 Discovery & Enrichment (TF shipped; TD.3/TE.1–TE.4 shipped; remaining TD/TE planned, post-MVP)
 
 - **Local similarity first**: `similarity.rs` scores BPM/key/genre/duration with no I/O; `find_similar_tracks` serves the inspector drawer. External similarity reuses the `ScoredTrack` shape with a `source` field.
 - **Gap detection before lookup**: `track_tag_health` is a pure-DB read; online adapters (MusicBrainz, iTunes, Deezer, Discogs, AcoustID) are opt-in, cached in `external_ids`, and gated by the preview → apply → undo flow recorded in `enrichment_runs`.
