@@ -82,7 +82,7 @@ Short definitions of product and technical terms used across Canonical, SDD, Arc
 | **Match confidence** | Score tiering a local→provider track match (ISRC first, else fuzzy title/artist/album with ±3 s duration tolerance) into high (auto-add), medium/low (review queue), or unmatched (manual search / skip). Spotify first; other providers reuse the tiers. |
 | **Similar tracks** | Mix-compatibility ranking of library tracks against a seed track (local: BPM / Camelot key / genre / duration with reason chips; post-MVP: opt-in external sources with a `source` badge). |
 | **Tag Health** | Per-track and library-wide report of missing/placeholder tags and artwork (`track_tag_health`); the read half of enrichment. |
-| **Enrichment** | Opt-in online filling of Tag Health gaps (MusicBrainz, iTunes, Deezer, Discogs, AcoustID) via preview → apply → undo; writes DB fields, never source files. |
+| **Enrichment** | Opt-in online filling of eligible Tag Health metadata gaps (MusicBrainz, iTunes, Deezer, Discogs) via preview → apply → undo; AcoustID awaits local Chromaprint support. Writes DB fields, never source files. |
 | **Store buy-link** | Tier-0 store integration: a per-track outbound search URL (Beatport, Traxsource, Juno Download, Bandcamp, Discogs). Metadata and links only — never audio. |
 | **Release radar** | Post-MVP digest of new releases from followed artists/labels (opt-in, cached, rate-limited); unofficial feeds are labelled as such. |
 | **Provider registry** | Closed `StreamingProvider` / `StoreProvider` enums plus the `provider` column in `streaming_*` tables, so new targets add matchers, never schema. |
