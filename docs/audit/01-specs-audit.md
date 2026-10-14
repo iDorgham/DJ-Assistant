@@ -8,7 +8,7 @@
 - P0 / P1 / P2 + Post-MVP split (`01-SPECIFICATION.md:31-88`). Post-MVP = Spotify metadata-only export, Discovery, Enrichment, Multi-provider.
 - Explicit out-of-scope (`01-SPECIFICATION.md:91-99`): no live mixing, no audio download/rip/stream/store, no cloud raw audio, no open agents.
 - Constraints table (`01-SPECIFICATION.md:105-113`): offline core, non-destructive source, hardware CDJ-2000NXS2/3000, USB FAT32+MBR default.
-- Binding acceptance (`05-ACCEPTANCE.md:5`): Global + P0.1-P0.8 + P1.1-P1.8 + P2.1-P2.8 + P3.1-P3.11 + M.1-M.8 + non-gating S/D/E/X.
+- Binding acceptance (`05-ACCEPTANCE.md:5`): Global + P0.1-P0.8 + P1.1-P1.8 + P2.1-P2.12 + P3.1-P3.11 + M.1-M.8 + non-gating S/D/E/X.
 - 90-day plan WS1-WS5 (`03-PHASES-AND-PLAN.md`), task list T0-T4 + TF/TD/TE/TP/TX (`04-TASKS.md`).
 
 ## Pros
