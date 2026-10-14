@@ -127,7 +127,7 @@ when they exist):
 | # | Gap | Action |
 |---|-----|--------|
 | 1 | Search input removes the default outline (`focus:outline-hidden`) | Add a visible focus ring or outline; verify against §4 |
-| 2 | `text-dim` placeholders (~4.0:1) | Raise placeholder colour to ≥ 4.5:1, or accept only where non-essential |
+| 2 | `text-dim` placeholders (~3.5:1 on the search field's `#1a1e2b` background) | Raise placeholder colour to ≥ 4.5:1, or accept only where non-essential |
 | 3 | Progress bar has no ARIA roles/values yet | Add `role="progressbar"` + `aria-*` as in §6 |
 | 4 | Shell uses `div`s, not landmarks | Add `header` / `main` / footer semantics + labels |
 | 5 | Library table rows not keyboard-navigable | Make rows focusable/navigable in Phase 2 |
