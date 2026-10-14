@@ -94,13 +94,11 @@ fn column_exists(conn: &Connection, table: &str, column: &str) -> rusqlite::Resu
     Ok(n > 0)
 }
 
-fn parse_add_column(stmt: &str) -> Option<(String, String)> {
-    let code: Vec<&str> = stmt
-        .lines()
-        .filter(|l| !l.trim_start().starts_with("--"))
-        .collect();
-    let code = code.join(" ");
-    let mut tokens = code.split_whitespace();
+fn parse_add_column_line(line: &str) -> Option<(String, String)> {
+    // Single-line `ALTER TABLE <table> ADD [COLUMN] <column> ...`. Comment lines
+    // never match (they start with `--`), so semicolons inside comments cannot
+    // confuse this, unlike statement splitting on `;`.
+    let mut tokens = line.split_whitespace();
     if tokens.next()?.to_uppercase() != "ALTER" {
         return None;
     }
@@ -127,20 +125,20 @@ fn parse_add_column(stmt: &str) -> Option<(String, String)> {
     Some((table, column))
 }
 
+/// Drop `ALTER TABLE ... ADD COLUMN` lines whose column already exists, keeping
+/// every other line byte-for-byte. Line-based (not `;`-split), so semicolons
+/// inside `--` comments or string literals cannot corrupt statement boundaries.
 fn without_applied_alters(conn: &Connection, sql: &str) -> rusqlite::Result<String> {
     let mut kept = Vec::new();
-    for stmt in sql.split(';') {
-        if stmt.trim().is_empty() {
-            continue;
-        }
-        if let Some((table, column)) = parse_add_column(stmt) {
+    for line in sql.lines() {
+        if let Some((table, column)) = parse_add_column_line(line) {
             if column_exists(conn, &table, &column).unwrap_or(false) {
                 continue;
             }
         }
-        kept.push(stmt);
+        kept.push(line);
     }
-    Ok(kept.join(";"))
+    Ok(kept.join("\n"))
 }
 
 /// Column list must match `get_track`'s tracks SELECT in commands.rs.
@@ -219,6 +217,12 @@ mod tests {
         // Same scenario as db.rs: columns exist but the version row is missing.
         // Re-running apply_schema must filter the bare ALTERs and succeed.
         let conn = open_migrated();
+        assert!(column_exists(&conn, "tracks", "comments").unwrap());
+        let filtered = without_applied_alters(&conn, MIGRATION_002).unwrap();
+        assert!(
+            !filtered.to_uppercase().contains("ADD COLUMN"),
+            "applied ALTERs must be filtered, got: {filtered}"
+        );
         conn.execute("DELETE FROM schema_migrations WHERE version = 2", [])
             .unwrap();
         apply_schema(&conn);

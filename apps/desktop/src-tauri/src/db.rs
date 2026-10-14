@@ -107,15 +107,12 @@ fn column_exists(conn: &Connection, table: &str, column: &str) -> Result<bool> {
     Ok(n > 0)
 }
 
-/// Parse `ALTER TABLE <table> ADD [COLUMN] <column>` from a statement,
-/// ignoring leading `--` comment lines. Returns `None` for anything else.
-fn parse_add_column(stmt: &str) -> Option<(String, String)> {
-    let code: Vec<&str> = stmt
-        .lines()
-        .filter(|l| !l.trim_start().starts_with("--"))
-        .collect();
-    let code = code.join(" ");
-    let mut tokens = code.split_whitespace();
+/// Parse a single-line `ALTER TABLE <table> ADD [COLUMN] <column> ...`.
+/// Returns `None` for anything else. Comment lines never match (they start with
+/// `--`), so semicolons inside comments cannot confuse this, unlike statement
+/// splitting on `;`.
+fn parse_add_column_line(line: &str) -> Option<(String, String)> {
+    let mut tokens = line.split_whitespace();
     if tokens.next()?.to_uppercase() != "ALTER" {
         return None;
     }
@@ -142,24 +139,20 @@ fn parse_add_column(stmt: &str) -> Option<(String, String)> {
     Some((table, column))
 }
 
-/// Remove `ALTER TABLE ... ADD COLUMN` statements whose column already exists.
-/// Every other statement (all `CREATE TABLE/INDEX IF NOT EXISTS`) passes
-/// through untouched, so a retried migration completes the remaining work
-/// instead of failing with "duplicate column name".
+/// Drop `ALTER TABLE ... ADD COLUMN` lines whose column already exists, keeping
+/// every other line byte-for-byte. Line-based (not `;`-split), so semicolons
+/// inside `--` comments or string literals cannot corrupt statement boundaries.
 fn without_applied_alters(conn: &Connection, sql: &str) -> Result<String> {
     let mut kept = Vec::new();
-    for stmt in sql.split(';') {
-        if stmt.trim().is_empty() {
-            continue;
-        }
-        if let Some((table, column)) = parse_add_column(stmt) {
+    for line in sql.lines() {
+        if let Some((table, column)) = parse_add_column_line(line) {
             if column_exists(conn, &table, &column)? {
                 continue;
             }
         }
-        kept.push(stmt);
+        kept.push(line);
     }
-    Ok(kept.join(";"))
+    Ok(kept.join("\n"))
 }
 
 #[cfg(test)]
