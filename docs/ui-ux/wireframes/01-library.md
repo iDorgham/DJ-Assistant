@@ -137,7 +137,7 @@ shipped screen so far.
 - **Refresh (⟳)** → reload the list (icon spins while loading).
 - **Row click** → opens the inspector drawer ([wireframe 12](./12-discovery-enrichment.md)):
   similar tracks, gap chips, buy-links. Click again / `✕` / `Esc` closes.
-- **Tag Health** → gap modal (per-field bars + gap list; online lookup shown as planned).
+- **Tag Health** → gap modal (per-field bars + gap list; online lookup is explicit and opt-in per provider).
 - **Multi-select** _(Phase 2)_ → enables [Tag Cleanup](./05-tag-cleanup.md) and batch actions.
 
 ---
