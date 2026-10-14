@@ -12,9 +12,8 @@ use std::sync::{Arc, Mutex};
 use std::thread;
 use std::time::Instant;
 
-use dj_assistant_analysis::{
-    analysis_version, classify_analysis_status, run_full_analysis, AnalysisResults,
-};
+use dj_assistant_analysis::{analysis_version, run_full_analysis, AnalysisResults};
+pub use dj_assistant_analysis::classify_analysis_status;
 use rusqlite::Connection;
 use tauri::{AppHandle, Emitter};
 
