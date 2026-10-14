@@ -3,9 +3,8 @@
 **Phase:** 0 foundations ✅ Shipped (local, no network) · Enrichment review ✅ Shipped (opt-in MusicBrainz / iTunes / Deezer) · Charts/radar 📋 Planned
 **See also:** [Screens & Flows §4.2 / §4.11 / §4.12 / §5.9 / §5.10](../SCREENS_AND_FLOWS.md) · [Track Detail](./03-track-detail.md) · [Spotify Export](./11-spotify-export.md) · [Discovery diagram](../../diagrams/17-discovery-enrichment-providers.md) · [ADR-0007](../../ADR/0007-similar-tracks-enrichment-multiprovider.md)
 
-Three shipped surfaces share one promise: **everything on this page is computed
-locally — no network access**. Online sources are shown as planned/opt-in and never
-fire automatically.
+Discovery reads run locally; online sources are opt-in and contacted only after an
+explicit lookup.
 
 ---
 
