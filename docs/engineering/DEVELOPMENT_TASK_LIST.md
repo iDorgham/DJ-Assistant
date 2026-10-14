@@ -288,7 +288,7 @@ Local-first groundwork plus live opt-in enrichment/matching (see ADR-0007; SDD `
 
 - [x] **TM.2a** Deezer live matching + drawer UI — shipped (see above)
 - [x] **TM.1** Provider abstraction — shipped (generic `provider_match_set` / `provider_export_playlist` IPC + `ProviderCapabilities` in `provider_status`; export returns `not_configured` until TM.2b/TP)
-- [ ] **TM.1** Provider abstraction (generic IPC, capability flags, Spotify re-implemented on top)
+- [ ] **TM.1-remaining** Spotify re-implementation on top of the provider abstraction
 - [ ] **TM.2b** Deezer connect + export (OAuth, keychain tokens, review queue, undo — needs `DEEZER_APP_ID`)
 - [ ] **TM.3** Apple Music / YouTube Music / SoundCloud / TIDAL (one at a time + undo each)
 - [ ] **TM.4** Tests (per-provider matcher fixtures, chunking/backoff, undo)
