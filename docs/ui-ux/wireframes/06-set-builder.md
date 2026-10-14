@@ -47,7 +47,7 @@ a dual-waveform transition inspector, and alternative swaps. Sequencing is **det
 
 ```
 ┌ Set constraints ────────────────────────────────────────────────────┐
-│  {6} Duration  [ 120m ]     Start BPM  [ 123 ]   Peak BPM  [ 128 ]  │
+│  {6} Duration [120m] Start [123] Peak [128] Close [128]             │
 │      Energy    (•) high      ( ) medium   ( ) journey               │
 │      Genre     [ melodic techno × ]   Mood  [ dark × ]              │
 │      Exclude   [ track, artist, tag… ]                              │
