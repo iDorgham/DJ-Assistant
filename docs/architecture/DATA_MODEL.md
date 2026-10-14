@@ -175,7 +175,7 @@ Added by `003_enrichment_providers.sql`; see ADR-0007 for the strategy.
 #### `external_ids`
 Cached provider-side IDs for one local track (MusicBrainz MBID, Discogs
 release, Deezer/Spotify track id). Written by enrichment runs only, so
-re-runs are cache hits instead of re-queries.
+re-runs still search the provider; stored IDs are not currently read as a cache.
 
 | Column | Type | Notes |
 |--------|------|-------|
