@@ -291,8 +291,8 @@ mod tests {
         );
 
         // 1.714286 s of 44.1 kHz stereo FLAC = 75 600 frames.
-        let flac =
-            decode_audio_file(get_fixture("flac/tagged-techno-140.flac")).expect("Should decode flac");
+        let flac = decode_audio_file(get_fixture("flac/tagged-techno-140.flac"))
+            .expect("Should decode flac");
         assert!(
             flac.total_frames() > 70_000,
             "flac decoded to {} frames ({:.3}s), expected ~75 600",

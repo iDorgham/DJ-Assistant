@@ -655,11 +655,9 @@ mod tests {
 
     #[test]
     fn real_flac_fixture_runs_end_to_end() {
-        // The library-scanner fixture is 42 ms — shorter than one default
-        // frame — so it pins BOTH contracts on real bytes: sub-frame audio
-        // degrades to an empty curve, and frame-size-scaled options run the
-        // full decode -> mid/side -> STFT -> gate -> smoothing path.
-        // (Golden vocal fixtures with real musical length arrive with T1.2.6.)
+        // The library-scanner fixture is 1.7 s of real music, so it pins the full
+        // decode -> mid/side -> STFT -> gate -> smoothing path on real bytes.
+        // Sub-frame degradation is pinned separately with a synthetic clip below.
         let path = std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR"))
             .parent()
             .unwrap()
@@ -669,30 +667,43 @@ mod tests {
             .join("audio")
             .join("flac/tagged-techno-140.flac");
         let audio = crate::decoder::decode_audio_file(&path).expect("fixture should decode");
+        // Regression: the decode loop used to keep only the final packet, which
+        // turned this 1.71 s fixture into 42 ms of audio.
         assert!(
-            audio.duration_seconds < 0.1,
-            "fixture shrank? {:.3}s",
+            (audio.duration_seconds - 1.714286).abs() < 0.05,
+            "fixture decoded to {:.3}s; expected the whole ~1.714s file",
             audio.duration_seconds
         );
 
-        let degraded = detect_vocal_presence(&audio, None).expect("profile");
+        // Real musical length: the default 4096-sample frame fits, so the full
+        // analysis path runs.
+        let profile = detect_vocal_presence(&audio, None).expect("profile");
+        assert_eq!(profile.method, VocalMethod::SpectralHeuristic);
+        assert_eq!(profile.pipeline_version, VOCAL_PIPELINE_VERSION);
+        assert!(
+            !profile.curve.is_empty(),
+            "a 1.7s fixture must produce a vocal curve"
+        );
+        assert!((0.0..=1.0).contains(&profile.presence));
+
+        // Sub-frame audio (shorter than one default frame) still degrades to an
+        // empty curve rather than erroring.
+        let sub_frame = mono_audio(vec![0.2; 512], 44100);
+        let degraded = detect_vocal_presence(&sub_frame, None).expect("profile");
         assert!(degraded.curve.is_empty());
         assert_eq!(degraded.presence, 0.0);
-        assert_eq!(degraded.method, VocalMethod::SpectralHeuristic);
 
+        // Frame-size-scaled options run the same path with a smaller frame.
         let opts = VocalOptions {
             frame_size: 1024,
             hop_size: 512,
             ..Default::default()
         };
-        let profile = detect_vocal_presence(&audio, Some(&opts)).expect("profile");
-        assert!(
-            !profile.curve.is_empty(),
-            "scaled options should fit frames"
-        );
-        assert!((0.0..=1.0).contains(&profile.presence));
+        let scaled = detect_vocal_presence(&audio, Some(&opts)).expect("profile");
+        assert!(!scaled.curve.is_empty(), "scaled options should fit frames");
+        assert!((0.0..=1.0).contains(&scaled.presence));
         let mut last_t = -1.0f64;
-        for p in &profile.curve {
+        for p in &scaled.curve {
             assert!((0.0..=1.0).contains(&p.presence), "presence {}", p.presence);
             assert!(p.start_seconds > last_t, "curve times must ascend");
             assert!(
