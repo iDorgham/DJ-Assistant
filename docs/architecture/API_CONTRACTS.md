@@ -89,49 +89,25 @@ return `null` for `comments` / `artworkHash` until rescanned.
 
 ### 2.2 Analysis
 
-#### `analyze_track`
+#### `analyze_library` (shipped — T1.2.1/T1.2.2/T1.2.3/T1.2.5)
 ```ts
-interface AnalyzeTrackRequest {
-  filePath?: string;   // one of filePath or trackId
-  trackId?: string;
-  genreContext?: string;
-  force?: boolean;     // re-analyze even if current analysis_version matches
+interface AnalyzeLibraryRequest {
+  trackIds?: string[];   // omit to analyze everything needing analysis
+  force?: boolean;       // re-analyze even if analysis_version matches
 }
 
-interface AnalyzeTrackResponse {
-  trackId: string;
-  fileHash: string;
-  bpm: number;
-  keyCamelot: string;
-  keyClassical?: string;
-  durationMs: number;
-  phraseConfidence: number;
-  analysisVersion: string;
-  cues: Array<{
-    slot: number;
-    positionMs: number;
-    label: string;
-    cueType: 'hot_cue' | 'memory_cue' | 'loop';
-    colorHex: string;
-    source: 'skill:cue_master' | 'user' | 'import';
-  }>;
-  lowConfidenceFields?: string[];
-}
-```
-
-#### `analyze_batch` (optional convenience)
-```ts
-interface AnalyzeBatchRequest {
-  trackIds: string[];
-  force?: boolean;
-}
-
-interface AnalyzeBatchResponse {
+interface AnalyzeLibraryResponse {
   jobId: string;
-  queued: number;
+  total: number;
 }
 ```
-Progress via `analysis:progress`.
+Runs the deterministic suite (BPM/key/phrase/vocals/loudness) per track on a
+background thread, persists results + `analysis_version`, and selects
+version-aware rows unless `force:true`. Progress arrives via `analysis:progress`
+(per track) and `analysis:completed` (once the queue drains).
+
+The doc's `analyze_track` / `analyze_batch` remain the single-track and explicit-batch
+variants; `analyze_library` is the library-wide entry point shipped in Phase 1.
 
 ### 2.3 Skills
 
@@ -514,8 +490,8 @@ interface EnrichmentApplyRequest {
 |-------|----------------------|---------|
 | `scan:progress` | `{ jobId, processed, total, currentPath? }` | Folder scan progress |
 | `scan:completed` | `{ jobId, added, skipped, duplicates }` | Scan finished |
-| `analysis:progress` | `{ jobId?, trackId, status, progress01 }` | Per-track / batch analysis |
-| `analysis:completed` | `{ trackId, analysisVersion }` | Single track done |
+| `analysis:progress` | `{ jobId, processed, total, trackId, filePath, analysisStatus, error? }` | Per-track analysis progress (shipped shape) |
+| `analysis:completed` | `{ jobId, total, succeeded, failed, durationMs }` | Analysis queue drained (shipped shape) |
 | `skill:progress` | `{ runId, skillName, message?, progress01? }` | Long-running skill |
 | `skill:completed` | `{ runId, skillName, success }` | Skill finished |
 | `watcher:file_changed` | `{ path, kind }` | Watch-folder notifications |

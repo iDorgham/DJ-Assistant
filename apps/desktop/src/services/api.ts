@@ -9,6 +9,10 @@ import type {
   GetArtworkResponse,
   ScanProgressEvent,
   ScanCompletedEvent,
+  AnalyzeLibraryRequest,
+  AnalyzeLibraryResponse,
+  AnalysisProgressEvent,
+  AnalysisCompletedEvent,
   FindSimilarTracksRequest,
   FindSimilarTracksResponse,
   TagHealthRequest,
@@ -314,6 +318,48 @@ export async function listenToScanCompleted(
   }
   const { listen } = await import("@tauri-apps/api/event");
   const unlisten = await listen<ScanCompletedEvent>("scan:completed", (e) => {
+    callback(e.payload);
+  });
+  return unlisten;
+}
+
+/**
+ * Starts a local analysis run over tracks needing analysis (version-aware
+ * unless force:true). Progress arrives via `analysis:progress` per track and
+ * a single `analysis:completed` when the queue drains.
+ */
+export async function analyzeLibrary(
+  req: AnalyzeLibraryRequest = {}
+): Promise<AnalyzeLibraryResponse> {
+  if (!isTauri) {
+    console.warn("[Mock API] Tauri not detected, returning empty analysis job");
+    return { jobId: "mock-analysis-" + Date.now(), total: 0 };
+  }
+  const { invoke } = await import("@tauri-apps/api/core");
+  return invoke<AnalyzeLibraryResponse>("analyze_library", { request: req });
+}
+
+export async function listenToAnalysisProgress(
+  callback: (event: AnalysisProgressEvent) => void
+): Promise<() => void> {
+  if (!isTauri) {
+    return () => {};
+  }
+  const { listen } = await import("@tauri-apps/api/event");
+  const unlisten = await listen<AnalysisProgressEvent>("analysis:progress", (e) => {
+    callback(e.payload);
+  });
+  return unlisten;
+}
+
+export async function listenToAnalysisCompleted(
+  callback: (event: AnalysisCompletedEvent) => void
+): Promise<() => void> {
+  if (!isTauri) {
+    return () => {};
+  }
+  const { listen } = await import("@tauri-apps/api/event");
+  const unlisten = await listen<AnalysisCompletedEvent>("analysis:completed", (e) => {
     callback(e.payload);
   });
   return unlisten;

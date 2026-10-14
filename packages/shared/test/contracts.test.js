@@ -118,6 +118,54 @@ test("analysis status values match the shared union", () => {
   assert.equal(allowed.has("done"), false);
 });
 
+test("analyze library request/response use camelCase keys", () => {
+  // Mirrors models.rs::AnalyzeLibraryRequest/Response.
+  const req = { trackIds: ["t1", "t2"], force: true };
+  assert.deepEqual(Object.keys(req).sort(), ["force", "trackIds"]);
+  const res = { jobId: "job-1", total: 2 };
+  assert.deepEqual(Object.keys(res).sort(), ["jobId", "total"]);
+});
+
+test("analysis progress event uses camelCase keys", () => {
+  // Mirrors models.rs::AnalysisProgressEvent.
+  const event = {
+    jobId: "job-1",
+    processed: 3,
+    total: 10,
+    trackId: "t2",
+    filePath: "D:\\Music\\a.mp3",
+    analysisStatus: "complete",
+    error: null,
+  };
+  assert.deepEqual(Object.keys(event).sort(), [
+    "analysisStatus",
+    "error",
+    "filePath",
+    "jobId",
+    "processed",
+    "total",
+    "trackId",
+  ]);
+});
+
+test("analysis completed event uses camelCase keys", () => {
+  // Mirrors models.rs::AnalysisCompletedEvent.
+  const event = {
+    jobId: "job-1",
+    total: 10,
+    succeeded: 9,
+    failed: 1,
+    durationMs: 4500,
+  };
+  assert.deepEqual(Object.keys(event).sort(), [
+    "durationMs",
+    "failed",
+    "jobId",
+    "succeeded",
+    "total",
+  ]);
+});
+
 test("cue point payload matches the migrated schema columns", () => {
   // Mirrors apps/desktop/src-tauri/src/models.rs::CuePoint and the
   // cue_points table after the slot/hot_cue_index reconciliation.
