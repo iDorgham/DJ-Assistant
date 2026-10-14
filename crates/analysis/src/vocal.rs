@@ -670,29 +670,35 @@ mod tests {
             .join("flac/tagged-techno-140.flac");
         let audio = crate::decoder::decode_audio_file(&path).expect("fixture should decode");
         assert!(
-            audio.duration_seconds < 0.1,
-            "fixture shrank? {:.3}s",
+            (audio.duration_seconds - 1.714286).abs() < 0.05,
+            "fixture decoded to {:.3}s; expected the whole ~1.714s file",
             audio.duration_seconds
         );
 
-        let degraded = detect_vocal_presence(&audio, None).expect("profile");
+        let profile = detect_vocal_presence(&audio, None).expect("profile");
+        assert_eq!(profile.method, VocalMethod::SpectralHeuristic);
+        assert_eq!(profile.pipeline_version, VOCAL_PIPELINE_VERSION);
+        assert!(
+            !profile.curve.is_empty(),
+            "a 1.7s fixture must produce a vocal curve"
+        );
+        assert!((0.0..=1.0).contains(&profile.presence));
+
+        let sub_frame = mono_audio(vec![0.2; 512], 44100);
+        let degraded = detect_vocal_presence(&sub_frame, None).expect("profile");
         assert!(degraded.curve.is_empty());
         assert_eq!(degraded.presence, 0.0);
-        assert_eq!(degraded.method, VocalMethod::SpectralHeuristic);
 
         let opts = VocalOptions {
             frame_size: 1024,
             hop_size: 512,
             ..Default::default()
         };
-        let profile = detect_vocal_presence(&audio, Some(&opts)).expect("profile");
-        assert!(
-            !profile.curve.is_empty(),
-            "scaled options should fit frames"
-        );
-        assert!((0.0..=1.0).contains(&profile.presence));
+        let scaled = detect_vocal_presence(&audio, Some(&opts)).expect("profile");
+        assert!(!scaled.curve.is_empty(), "scaled options should fit frames");
+        assert!((0.0..=1.0).contains(&scaled.presence));
         let mut last_t = -1.0f64;
-        for p in &profile.curve {
+        for p in &scaled.curve {
             assert!((0.0..=1.0).contains(&p.presence), "presence {}", p.presence);
             assert!(p.start_seconds > last_t, "curve times must ascend");
             assert!(

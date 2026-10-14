@@ -178,7 +178,10 @@ fn decode_from_source(
 
         match decoder.decode(&packet) {
             Ok(decoded) => {
-                decoded.copy_to_vec_interleaved::<f32>(&mut all_samples);
+                let n_samples = channels.max(1) * decoded.frames();
+                let start = all_samples.len();
+                all_samples.resize(start + n_samples, 0.0);
+                decoded.copy_to_slice_interleaved(&mut all_samples[start..]);
             }
             Err(SymphoniaError::DecodeError(_)) => {
                 // Gracefully ignore corrupt frames within an otherwise valid stream

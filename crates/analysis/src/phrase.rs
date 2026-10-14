@@ -488,7 +488,11 @@ fn snap_boundaries(raw: &[usize], total_bars: usize, allowed: &[usize], tol: usi
             .min_by_key(|&l| l.abs_diff(len));
         match snap {
             Some(l) => {
-                cursor += l;
+                let next = cursor + l;
+                if next >= total_bars {
+                    break;
+                }
+                cursor = next;
                 out.push(cursor);
             }
             None => continue,
