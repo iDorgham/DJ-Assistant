@@ -28,6 +28,6 @@
 
 Settings: Profiles, Preview gain/keymap, Library locations+ignore+relink, Model manager, Privacy center, USB policy, Telemetry off-default.
 Functions P1: smart playlists/history, relink, beatgrid editor, cue templates, harmonic light + mix-out + vocal warning, set versioning/diff, USB verify + set sheet, Prep Auditor queue, waveform, bulk tag preview+undo.
-Post-MVP: Deezer via `provider_*`, AcoustID queue, chart diff, release radar, mobile read-only view, collab presence. Reaffirm no audio download/stream/store/playback.
+Post-MVP: Deezer playlist export/OAuth via `provider_*` (requires app ID), AcoustID queue, chart diff, release radar, mobile read-only view, collab presence. Reaffirm no audio download/stream/store/playback.
 
 See split files `01-specs-audit.md`, `02-functions-audit.md`, `03-settings-audit.md`, `04-improvements.md`, `05-proposed-specs-functions.md`.
