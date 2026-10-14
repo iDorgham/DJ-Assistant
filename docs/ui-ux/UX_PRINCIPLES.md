@@ -111,7 +111,7 @@ automation) follows the same three-step shape:
 Preview (what will change, as a diff)  ──►  Apply (explicit confirm)  ──►  Undo (logged)
 ```
 
-There is no fourth path that mutates data without a preview. High-impact actions require
+Folder imports are an explicit exception; user-directed bulk edits of existing data require a preview. High-impact actions require
 explicit confirmation; low-impact ones still leave an undo trail.
 
 ### 5.4 Surface confidence, never fake certainty
