@@ -63,14 +63,17 @@ pub async fn chart_import_snapshot(
 
     let db_guard = db.lock().map_err(|e| e.to_string())?;
     let conn = db_guard.conn();
-    if request.replace_existing.unwrap_or(true) {
-        conn.execute(
-            "DELETE FROM chart_snapshots WHERE provider = ?1 AND chart = ?2 AND genre = ?3 AND snapshot_date = ?4",
-            rusqlite::params![provider, chart, genre, date],
-        )
-        .map_err(|e| e.to_string())?;
+    // Validate first: rows are skipped per entry, and the saved snapshot is
+    // only replaced when at least one entry passes — an all-invalid import
+    // preserves the old snapshot instead of deleting it and reporting
+    // success with `imported: 0`.
+    struct ValidEntry<'a> {
+        entry: &'a crate::models::ChartEntryInput,
+        title: &'a str,
+        artist: &'a str,
+        isrc: Option<String>,
     }
-    let mut imported = 0usize;
+    let mut valid: Vec<ValidEntry<'_>> = Vec::new();
     let mut skipped = 0usize;
     for entry in &request.entries {
         let title = entry.title.trim();
@@ -85,6 +88,34 @@ pub async fn chart_import_snapshot(
             .map(str::trim)
             .filter(|s| !s.is_empty())
             .map(|s| s.to_ascii_uppercase());
+        valid.push(ValidEntry {
+            entry,
+            title,
+            artist,
+            isrc,
+        });
+    }
+    if valid.is_empty() {
+        return Err(format!(
+            "all {} entries invalid (blank title/artist or position outside 1–100) — existing snapshot preserved",
+            request.entries.len()
+        ));
+    }
+    if request.replace_existing.unwrap_or(true) {
+        conn.execute(
+            "DELETE FROM chart_snapshots WHERE provider = ?1 AND chart = ?2 AND genre = ?3 AND snapshot_date = ?4",
+            rusqlite::params![provider, chart, genre, date],
+        )
+        .map_err(|e| e.to_string())?;
+    }
+    let mut imported = 0usize;
+    for valid_entry in &valid {
+        let ValidEntry {
+            entry,
+            title,
+            artist,
+            isrc,
+        } = valid_entry;
         conn.execute(
             "INSERT INTO chart_snapshots
              (id, provider, chart, genre, snapshot_date, position,

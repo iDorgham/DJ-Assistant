@@ -38,19 +38,25 @@ pub struct RateLimiter {
 }
 
 impl RateLimiter {
+    /// Reserves a request slot atomically: the check and the timestamp update
+    /// happen under one lock acquisition with no `.await` in between, so two
+    /// concurrent preview calls cannot read the same timestamp and fire
+    /// together. The reservation lands in the future (`now + delay`), which
+    /// serializes back-to-back callers without holding the mutex asleep.
     async fn wait_for(&self, slot: &Mutex<Option<Instant>>, interval: Duration) {
         let delay = {
-            let guard = slot.lock().unwrap_or_else(|e| e.into_inner());
-            match *guard {
-                Some(last) => interval.saturating_sub(last.elapsed()),
-                None => Duration::ZERO,
-            }
+            let mut guard = slot.lock().unwrap_or_else(|e| e.into_inner());
+            let now = Instant::now();
+            let delay = match *guard {
+                Some(reserved_until) if reserved_until > now => reserved_until - now,
+                _ => Duration::ZERO,
+            };
+            *guard = Some(now + delay + interval);
+            delay
         };
         if !delay.is_zero() {
             tokio::time::sleep(delay).await;
         }
-        let mut guard = slot.lock().unwrap_or_else(|e| e.into_inner());
-        *guard = Some(Instant::now());
     }
 
     async fn wait_musicbrainz(&self) {
@@ -341,6 +347,39 @@ pub async fn enrichment_preview(
     let total = targets.len();
 
     for (index, target) in targets.iter().enumerate() {
+        // Cache first: `external_ids` already holds this provider's ID for
+        // the track, so re-searching would burn quota to re-learn it. The
+        // link (and its earlier run's reviewable proposals) stands — the DJ
+        // applies from the earlier run.
+        let cached: Option<String> = {
+            let db_guard = db.lock().map_err(|e| e.to_string())?;
+            match db_guard.conn().query_row(
+                "SELECT provider_id FROM external_ids WHERE track_id = ?1 AND provider = ?2",
+                rusqlite::params![target.id, provider.as_str()],
+                |row| row.get(0),
+            ) {
+                Ok(id) => Some(id),
+                Err(rusqlite::Error::QueryReturnedNoRows) => None,
+                Err(e) => return Err(format!("enrichment cache lookup failed: {e}")),
+            }
+        };
+        if let Some(provider_id) = cached {
+            skipped += 1;
+            emit_progress(
+                &app,
+                &EnrichmentProgressEvent {
+                    run_id: run_id.clone(),
+                    processed: index + 1,
+                    total,
+                    track_id: target.id.clone(),
+                    status: format!(
+                        "skipped: already linked to {} ({provider_id}) — apply from the earlier run",
+                        provider.as_str()
+                    ),
+                },
+            );
+            continue;
+        }
         let url = match provider {
             EnrichmentProvider::MusicBrainz => {
                 musicbrainz_search_url(&target.artist, &target.title)

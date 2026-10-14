@@ -21,7 +21,10 @@ test("sample snapshot carries chart identity", () => {
   assert.equal(sample.provider, "beatport");
   assert.ok(["top100", "hype"].includes(sample.chart));
   assert.ok(sample.genre.length > 0);
-  assert.match(sample.snapshot_date, /^\d{4}-\d{2}-\d{2}$/);
+  // camelCase to match the IPC contract (serde rename_all = "camelCase"):
+  // the whole file must be passable to chart_import_snapshot as-is.
+  assert.match(sample.snapshotDate, /^\d{4}-\d{2}-\d{2}$/);
+  assert.equal("snapshot_date" in sample, false, "no snake_case request keys");
   assert.ok(Array.isArray(sample.entries) && sample.entries.length > 0);
 });
 
@@ -38,6 +41,9 @@ test("sample entries satisfy the import contract", () => {
     }
     if (entry.bpm !== undefined) {
       assert.ok(entry.bpm > 0 && entry.bpm < 1000);
+    }
+    for (const key of ["key_camelot", "source_url", "artwork_url"]) {
+      assert.equal(key in entry, false, `${key} must be camelCase for the IPC contract`);
     }
   }
 });

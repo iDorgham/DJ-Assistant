@@ -275,6 +275,10 @@ mod tests {
         );
         assert_eq!(camelot_distance("8A", "nope"), None);
         assert_eq!(camelot_distance("13A", "8A"), None);
+        // Non-ASCII input must degrade to None, never panic on a byte split.
+        assert_eq!(camelot_distance("é", "8A"), None);
+        assert_eq!(camelot_distance("8A", "8Á"), None);
+        assert_eq!(camelot_distance("日本語", "8A"), None);
     }
 
     #[test]

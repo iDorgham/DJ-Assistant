@@ -48,8 +48,10 @@ fn load_targets(
                 artist,
                 isrc,
             }),
+            // A missing row means an unknown ID: report unmatched, not fatal.
+            // Any other SQLite failure (I/O, schema, type) aborts the batch —
+            // silently grading it `unmatched` would hide real breakage.
             Err(rusqlite::Error::QueryReturnedNoRows) => {
-                // Unknown IDs are reported, not fatal to the batch.
                 targets.push(MatchTarget {
                     track_id: track_id.clone(),
                     title: String::new(),
@@ -57,7 +59,7 @@ fn load_targets(
                     isrc: None,
                 });
             }
-            Err(e) => return Err(e.to_string()),
+            Err(e) => return Err(format!("cannot load track {track_id}: {e}")),
         }
     }
     Ok(targets)
@@ -100,32 +102,44 @@ async fn match_deezer(
             matches.push(unmatched(track_id));
             continue;
         }
-        // ISRC-exact first; fuzzy search otherwise.
-        let mut url = isrc
+        // ISRC-exact first; fuzzy search otherwise — including when the
+        // exact lookup misses or fails, so ISRC tracks still get the
+        // promised title/artist fallback instead of a silent `unmatched`.
+        let isrc_url = isrc
             .as_deref()
             .filter(|s| !s.trim().is_empty())
             .and_then(deezer_isrc_url);
+        let mut url = isrc_url.clone();
         let mut exact = url.is_some();
         if url.is_none() {
             url = deezer_search_url(artist, title);
             exact = false;
         }
-        let result = match url {
-            None => None,
-            Some(endpoint) => {
-                // Deezer publishes no request quota; the shared limiter stays
-                // reserved for providers that need one (MusicBrainz).
-                match client.get(&endpoint).send().await {
-                    Ok(response) if response.status().is_success() => match response.text().await {
-                        Ok(text) => parse_deezer_response(&text, artist, title, 1)
-                            .ok()
-                            .and_then(|mut c| c.pop()),
-                        Err(_) => None,
-                    },
-                    _ => None,
-                }
+        let fetch = async |endpoint: &str| -> Option<dj_assistant_core::ProviderCandidate> {
+            // Deezer publishes no request quota; the shared limiter stays
+            // reserved for providers that need one (MusicBrainz).
+            match client.get(endpoint).send().await {
+                Ok(response) if response.status().is_success() => match response.text().await {
+                    Ok(text) => parse_deezer_response(&text, artist, title, 1)
+                        .ok()
+                        .and_then(|mut c| c.pop()),
+                    Err(_) => None,
+                },
+                _ => None,
             }
         };
+        let mut result = match url {
+            None => None,
+            Some(endpoint) => fetch(&endpoint).await,
+        };
+        if result.is_none() && exact {
+            // Exact ISRC lookup missed: retry once with fuzzy search.
+            url = deezer_search_url(artist, title);
+            exact = false;
+            if let Some(endpoint) = url {
+                result = fetch(&endpoint).await;
+            }
+        }
         match result {
             None => matches.push(unmatched(track_id)),
             Some(candidate) => {

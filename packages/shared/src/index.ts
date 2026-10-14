@@ -227,6 +227,12 @@ export interface ProviderCapability {
 
 // --- Online enrichment: preview → apply → undo (TE.1 / TE.3) ---
 
+/** Confidence tier for a proposal or provider match. */
+export type ConfidenceTier = "high" | "review" | "low";
+
+/** Lifecycle status of a provider catalog match. */
+export type ProviderMatchStatus = "matched" | "review" | "unmatched";
+
 export type EnrichmentProviderKind =
   "musicbrainz" | "itunes" | "deezer" | "discogs" | "lastfm" | "acoustid";
 
@@ -252,8 +258,7 @@ export interface TrackProposal {
   provider: string;
   providerId: string;
   confidence: number;
-  /** "high" | "review" | "low". */
-  tier: string;
+  tier: ConfidenceTier;
   sourceUrl?: string | null;
   changes: ProposedChange[];
 }
@@ -314,10 +319,8 @@ export interface ProviderTrackMatch {
   artworkUrl?: string | null;
   sourceUrl?: string | null;
   confidence: number;
-  /** "high" | "review" | "low". */
-  tier: string;
-  /** "matched" | "review" | "unmatched". */
-  status: string;
+  tier: ConfidenceTier;
+  status: ProviderMatchStatus;
 }
 
 export interface ProviderMatchTracksResponse {

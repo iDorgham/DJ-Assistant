@@ -110,7 +110,9 @@ def build() -> Image.Image:
     # Solid bars with vertical gradient
     bar_grad = make_vertical_gradient(S, BAR_TOP, BAR_BOTTOM).convert("RGBA")
     for x, y, h in zip(bar_xs, bar_ys, bar_hs):
-        # Create a small gradient patch for each bar
+        # Full gradient ramp per bar: crop a 1px-wide full-height column and
+        # resize it to the bar so every bar spans cyan→blue (cropping the top
+        # h/S would leave tall bars short of blue and tint short bars cyan).
         bar_tile = Image.new("RGBA", (int(bar_w), int(h)), (0, 0, 0, 0))
         bar_tile.paste(bar_grad.crop((0, 0, 1, S)).resize((int(bar_w), int(h))), (0, 0))
         # Round the corners of the bar tile

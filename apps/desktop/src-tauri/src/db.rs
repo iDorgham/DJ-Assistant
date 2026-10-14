@@ -74,7 +74,14 @@ impl Database {
             )?;
 
             if applied == 0 {
-                self.conn.execute_batch(sql)?;
+                // Retry-safe: bare `ALTER TABLE ... ADD COLUMN` fails with
+                // "duplicate column name" if a previous run crashed between the
+                // ALTER and the version INSERT. Strip already-applied ALTERs so
+                // re-running a migration is a no-op even without the guard.
+                let filtered = without_applied_alters(&self.conn, sql)?;
+                if !filtered.trim().is_empty() {
+                    self.conn.execute_batch(&filtered)?;
+                }
                 self.conn.execute(
                     "INSERT INTO schema_migrations (version) VALUES (?1)",
                     [version],
@@ -88,6 +95,71 @@ impl Database {
     pub fn conn(&self) -> &Connection {
         &self.conn
     }
+}
+
+/// True when `column` already exists on `table`. Used to make bare
+/// `ALTER TABLE ... ADD COLUMN` statements retry-safe (SQLite has no
+/// `ADD COLUMN IF NOT EXISTS` on all supported versions).
+fn column_exists(conn: &Connection, table: &str, column: &str) -> Result<bool> {
+    // Table names are internal constants, never user input.
+    let sql = format!("SELECT COUNT(*) FROM pragma_table_info('{table}') WHERE name = ?1");
+    let n: i64 = conn.query_row(&sql, [column], |row| row.get(0))?;
+    Ok(n > 0)
+}
+
+/// Parse `ALTER TABLE <table> ADD [COLUMN] <column>` from a statement,
+/// ignoring leading `--` comment lines. Returns `None` for anything else.
+fn parse_add_column(stmt: &str) -> Option<(String, String)> {
+    let code: Vec<&str> = stmt
+        .lines()
+        .filter(|l| !l.trim_start().starts_with("--"))
+        .collect();
+    let code = code.join(" ");
+    let mut tokens = code.split_whitespace();
+    if tokens.next()?.to_uppercase() != "ALTER" {
+        return None;
+    }
+    if tokens.next()?.to_uppercase() != "TABLE" {
+        return None;
+    }
+    let table = tokens
+        .next()?
+        .trim_matches(['"', '[', ']', '`'])
+        .to_string();
+    if tokens.next()?.to_uppercase() != "ADD" {
+        return None;
+    }
+    let mut next = tokens.next()?.to_string();
+    if next.to_uppercase() == "COLUMN" {
+        next = tokens.next()?.to_string();
+    }
+    let column = next
+        .trim_matches(['"', '[', ']', '`', ';', '(', '\''])
+        .to_string();
+    if table.is_empty() || column.is_empty() {
+        return None;
+    }
+    Some((table, column))
+}
+
+/// Remove `ALTER TABLE ... ADD COLUMN` statements whose column already exists.
+/// Every other statement (all `CREATE TABLE/INDEX IF NOT EXISTS`) passes
+/// through untouched, so a retried migration completes the remaining work
+/// instead of failing with "duplicate column name".
+fn without_applied_alters(conn: &Connection, sql: &str) -> Result<String> {
+    let mut kept = Vec::new();
+    for stmt in sql.split(';') {
+        if stmt.trim().is_empty() {
+            continue;
+        }
+        if let Some((table, column)) = parse_add_column(stmt) {
+            if column_exists(conn, &table, &column)? {
+                continue;
+            }
+        }
+        kept.push(stmt);
+    }
+    Ok(kept.join(";"))
 }
 
 #[cfg(test)]
@@ -152,6 +224,30 @@ mod tests {
             assert!(cand_cols.contains(&col.to_string()), "missing column {col}");
         }
         // Re-applying over an existing database is a no-op (version-tracked).
-        db.init_migrations().expect("reapplying migrations must be a no-op");
+        db.init_migrations()
+            .expect("reapplying migrations must be a no-op");
+    }
+
+    #[test]
+    fn retry_after_crash_between_alter_and_version_stamp_is_a_noop() {
+        // Simulate a crash after migration 002's ALTERs ran but before its
+        // version row was recorded: the columns exist, the guard says "not
+        // applied". A retry must complete instead of failing with
+        // "duplicate column name".
+        let db = Database::new_in_memory().expect("migrations must apply");
+        db.conn()
+            .execute("DELETE FROM schema_migrations WHERE version = 2", [])
+            .expect("version row must be deletable");
+        db.init_migrations()
+            .expect("retrying a partially-applied migration must succeed");
+        let count: i64 = db
+            .conn()
+            .query_row(
+                "SELECT COUNT(*) FROM schema_migrations WHERE version = 2",
+                [],
+                |row| row.get(0),
+            )
+            .expect("version must be queryable");
+        assert_eq!(count, 1, "migration 002 must be re-stamped after retry");
     }
 }

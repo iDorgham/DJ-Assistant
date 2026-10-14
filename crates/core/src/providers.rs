@@ -161,6 +161,23 @@ pub fn encode_query(raw: &str) -> String {
     out
 }
 
+/// Escapes a value for embedding inside a double-quoted Lucene phrase
+/// (`"..."`). Form-encoding turns spaces into `+`, which the server decodes
+/// back to spaces — without quotes a multiword value would leak terms outside
+/// its `field:` clause and broaden the search.
+pub fn lucene_phrase(raw: &str) -> String {
+    let mut out = String::with_capacity(raw.len() + 2);
+    out.push('"');
+    for c in raw.chars() {
+        if c == '"' || c == '\\' {
+            out.push('\\');
+        }
+        out.push(c);
+    }
+    out.push('"');
+    out
+}
+
 /// Builds the search URL for one store. Returns `None` when both artist and
 /// title are blank (a search for nothing helps nobody).
 pub fn store_search_url(provider: StoreProvider, artist: &str, title: &str) -> Option<String> {

@@ -11,7 +11,7 @@
 //! preview → apply → undo. Only metadata and search queries leave the device;
 //! audio preview/stream URLs in provider responses are never fetched.
 
-use crate::providers::encode_query;
+use crate::providers::{encode_query, lucene_phrase};
 
 /// Enrichment / external-similarity sources.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -199,10 +199,11 @@ pub fn propose_fields(local: &LocalTrack, candidate: &ProviderCandidate) -> Vec<
 /// Normalizes a name for comparison: lowercase, punctuation dropped, whitespace
 /// collapsed. `"BICEP"` and `"Bicep (Official)"` normalize alike except for the
 /// parenthetical — kept deliberately so mixes/edits still match.
+/// Unicode alphanumerics are preserved so CJK/Cyrillic names still compare.
 pub fn normalize_name(raw: &str) -> String {
-    raw.to_ascii_lowercase()
+    raw.to_lowercase()
         .chars()
-        .map(|c| if c.is_ascii_alphanumeric() { c } else { ' ' })
+        .map(|c| if c.is_alphanumeric() { c } else { ' ' })
         .collect::<String>()
         .split_whitespace()
         .collect::<Vec<_>>()
@@ -271,10 +272,12 @@ pub fn musicbrainz_search_url(artist: &str, title: &str) -> Option<String> {
         return None;
     }
     // Lucene `recording:`/`artist:` clauses beat a bare query for DJ catalogs.
+    // Values are quoted phrases so multiword names stay inside their clause
+    // after the server decodes `+` back to spaces.
     let clauses = format!(
         "recording:{} AND artist:{}",
-        encode_query(title.trim()),
-        encode_query(artist.trim())
+        encode_query(&lucene_phrase(title.trim())),
+        encode_query(&lucene_phrase(artist.trim()))
     );
     Some(format!(
         "https://musicbrainz.org/ws/2/recording/?query={clauses}&fmt=json&limit=5&inc=isrcs"
@@ -617,16 +620,33 @@ fn parse_year(raw: &str) -> Option<i32> {
         .filter(|y| (1000..=2100).contains(y))
 }
 
+/// Full credited artist string for a MusicBrainz recording: every
+/// `artist-credit` entry's name joined by its `joinphrase`, so featured and
+/// collaborating artists survive into matching and proposed tags.
+fn artist_credit_name(value: &serde_json::Value) -> Option<String> {
+    let credits = value.get("artist-credit")?.as_array()?;
+    let mut out = String::new();
+    for credit in credits {
+        let name = credit
+            .get("name")
+            .and_then(|v| v.as_str())
+            .map(str::trim)
+            .filter(|s| !s.is_empty())?;
+        out.push_str(name);
+        if let Some(join) = credit.get("joinphrase").and_then(|v| v.as_str()) {
+            out.push_str(join);
+        }
+    }
+    let trimmed = out.trim();
+    if trimmed.is_empty() {
+        None
+    } else {
+        Some(trimmed.to_string())
+    }
+}
+
 fn first_artist_credit(value: &serde_json::Value) -> Option<String> {
-    value
-        .get("artist-credit")?
-        .as_array()?
-        .first()?
-        .get("name")?
-        .as_str()
-        .map(str::trim)
-        .filter(|s| !s.is_empty())
-        .map(str::to_string)
+    artist_credit_name(value)
 }
 
 /// Parses a MusicBrainz recording search response. Tolerates missing
@@ -987,6 +1007,35 @@ mod tests {
         assert_eq!(confidence_tier(0.92), "high");
         assert_eq!(confidence_tier(0.65), "review");
         assert_eq!(confidence_tier(0.2), "low");
+    }
+
+    #[test]
+    fn normalization_preserves_unicode_names() {
+        assert_eq!(normalize_name("BICEP"), "bicep");
+        assert_eq!(normalize_name("  Amélie   Lens  "), "amélie lens");
+        // Identical non-ASCII names must compare, not collapse to empty.
+        assert_eq!(normalize_name("菅野よう子"), "菅野よう子");
+        assert!(
+            (match_confidence("菅野よう子", "Tank!", "菅野よう子", "Tank!") - 0.92).abs() < 1e-9
+        );
+        assert!((match_confidence("Rüfüs", "Sundream", "Rüfüs", "Sundream") - 0.92).abs() < 1e-9);
+    }
+
+    #[test]
+    fn musicbrainz_clauses_quote_multiword_values() {
+        let url = musicbrainz_search_url("Sample Artist", "Sample Peak A").unwrap();
+        // Quoted phrases keep every term inside its field: clause after
+        // decoding is recording:"Sample Peak A" AND artist:"Sample Artist".
+        assert!(url.contains("recording:%22Sample+Peak+A%22"), "{url}");
+        assert!(url.contains("artist:%22Sample+Artist%22"), "{url}");
+    }
+
+    #[test]
+    fn musicbrainz_parser_joins_featured_artists() {
+        let doc = r#"{"recordings":[{"id":"mbid-1","title":"Glue","artist-credit":[{"name":"Bicep","joinphrase":" feat. "},{"name":"Clara 3000"}],"releases":[],"isrcs":[]}]}"#;
+        let cands = parse_musicbrainz_response(doc, "Bicep feat. Clara 3000", "Glue", 5).unwrap();
+        assert_eq!(cands.len(), 1);
+        assert_eq!(cands[0].artist, "Bicep feat. Clara 3000");
     }
 
     #[test]

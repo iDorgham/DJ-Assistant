@@ -118,7 +118,21 @@ export async function storeLinksForTrack(req: StoreLinksRequest): Promise<StoreL
  */
 export async function providerStatus(): Promise<ProviderStatusResponse> {
   if (!isTauri) {
-    return { connected: [], supportedStreaming: [], supportedStores: [], capabilities: [] };
+    // Mock mirrors the backend enums in commands.rs::provider_status so the
+    // badges report the advertised targets even outside Tauri.
+    return {
+      connected: [],
+      supportedStreaming: [
+        "spotify",
+        "deezer",
+        "apple_music",
+        "youtube_music",
+        "soundcloud",
+        "tidal",
+      ],
+      supportedStores: ["beatport", "traxsource", "juno_download", "bandcamp", "discogs"],
+      capabilities: [],
+    };
   }
   const { invoke } = await import("@tauri-apps/api/core");
   return invoke<ProviderStatusResponse>("provider_status");

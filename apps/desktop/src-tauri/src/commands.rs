@@ -284,39 +284,48 @@ pub async fn analyze_library(
     let conn = db_guard.conn();
 
     let force = request.force.unwrap_or(false);
+    // NOTE: params must follow placeholder order in the SQL below. The
+    // `IN (...)` ID placeholders come first, so the version value is pushed
+    // *after* the IDs — binding it first mis-assigns it to the first ID
+    // placeholder and returns no work for explicit selections.
     let mut conditions = Vec::new();
-    let mut params: Vec<rusqlite::types::Value> = Vec::new();
-
     if !force {
         conditions.push(
             "(analysis_status != 'complete' OR analysis_version IS NULL OR analysis_version != ?)",
         );
-        params.push(dj_assistant_analysis::analysis_version().into());
     }
 
-    let base_sql = if let Some(ref ids) = request.track_ids {
-        if ids.is_empty() {
-            return Err("track_ids cannot be empty when provided".to_string());
-        }
-        let placeholders: Vec<String> = ids.iter().map(|_| "?".to_string()).collect();
-        let mut sql = format!(
-            "SELECT id, file_path FROM tracks WHERE id IN ({})",
-            placeholders.join(",")
-        );
-        if !conditions.is_empty() {
-            sql.push_str(&format!(" AND {}", conditions.join(" AND ")));
-        }
-        for id in ids {
-            params.push(id.clone().into());
-        }
-        sql
-    } else {
-        let mut sql = "SELECT id, file_path FROM tracks".to_string();
-        if !conditions.is_empty() {
-            sql.push_str(&format!(" WHERE {}", conditions.join(" AND ")));
-        }
-        sql
-    };
+    let (base_sql, params): (String, Vec<rusqlite::types::Value>) =
+        if let Some(ref ids) = request.track_ids {
+            if ids.is_empty() {
+                return Err("track_ids cannot be empty when provided".to_string());
+            }
+            let placeholders: Vec<String> = ids.iter().map(|_| "?".to_string()).collect();
+            let mut sql = format!(
+                "SELECT id, file_path FROM tracks WHERE id IN ({})",
+                placeholders.join(",")
+            );
+            if !conditions.is_empty() {
+                sql.push_str(&format!(" AND {}", conditions.join(" AND ")));
+            }
+            let mut params: Vec<rusqlite::types::Value> =
+                ids.iter().map(|id| id.clone().into()).collect();
+            if !force {
+                params.push(dj_assistant_analysis::analysis_version().into());
+            }
+            (sql, params)
+        } else {
+            let mut sql = "SELECT id, file_path FROM tracks".to_string();
+            if !conditions.is_empty() {
+                sql.push_str(&format!(" WHERE {}", conditions.join(" AND ")));
+            }
+            let params: Vec<rusqlite::types::Value> = if !force {
+                vec![dj_assistant_analysis::analysis_version().into()]
+            } else {
+                Vec::new()
+            };
+            (sql, params)
+        };
 
     let mut stmt = conn.prepare(&base_sql).map_err(|e| e.to_string())?;
     let mut rows: Vec<(String, String)> = Vec::new();
@@ -380,10 +389,11 @@ pub async fn find_similar_tracks(
 
     let seed = load_features(&request.track_id)?;
 
+    // Rank every candidate: the pre-sort subset must be deliberate, not an
+    // unordered `LIMIT 5000` that can hide the best match in large libraries.
+    // Scoring is cheap pure math over small feature rows.
     let mut stmt = conn
-        .prepare(
-            "SELECT id, bpm, key_camelot, genre, duration_ms FROM tracks WHERE id != ?1",
-        )
+        .prepare("SELECT id, bpm, key_camelot, genre, duration_ms FROM tracks WHERE id != ?1")
         .map_err(|e| e.to_string())?;
     let candidates: Vec<TrackFeatures> = stmt
         .query_map([&request.track_id], |row| {
