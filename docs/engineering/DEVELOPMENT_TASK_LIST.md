@@ -245,7 +245,7 @@ This is the actionable engineering task list. Check items off as they are comple
 - [ ] Mobile companion (out of scope for early post-MVP)
 - [ ] Cloud-only advanced features behind clear opt-in
 
-### Shipped foundations: discovery, enrichment & multi-provider (TF.1–TF.6 + TE.1–TE.3 + TX.2a)
+### Shipped foundations: discovery, enrichment & multi-provider (TF.1–TF.6 + TE.1–TE.4 + TM.2a)
 
 Local-first groundwork plus live opt-in enrichment/matching (see ADR-0007; SDD `04-TASKS.md` § Post-MVP). No audio is ever fetched or stored.
 
@@ -258,7 +258,7 @@ Local-first groundwork plus live opt-in enrichment/matching (see ADR-0007; SDD `
 - [x] **TE.1** Enrichment adapters (`crates/core/src/enrichment.rs`: MusicBrainz, iTunes, Deezer query/parse/confidence, verified against live responses, 11 tests)
 - [x] **TE.2** Match pipeline + `enrichment_preview` (per-provider rate limits, `enrichment:progress` events, `external_ids` cache)
 - [x] **TE.3** Enrichment review UI (provider picker, before → after diffs, tier badges, checkbox apply, undo per run, artwork fills empty slots only)
-- [x] **TX.2a** Deezer live matching (`provider_match_tracks`, ISRC-exact → fuzzy) + per-track drawer UI; export/connect wait on `DEEZER_APP_ID`
+- [x] **TM.2a** Deezer live matching (`provider_match_tracks`, ISRC-exact → fuzzy) + per-track drawer UI; export/connect wait on `DEEZER_APP_ID`
 
 ### Post-MVP: Discovery — external similarity, charts & release radar (TD.3 shipped; TD.1/2/4–6 remaining)
 
@@ -275,23 +275,23 @@ Local-first groundwork plus live opt-in enrichment/matching (see ADR-0007; SDD `
 
 **Goal:** Fill `track_tag_health` gaps via MusicBrainz + Cover Art Archive, iTunes Search, Deezer, Discogs and AcoustID fingerprinting — ISRC-first → fingerprint → fuzzy with confidence tiers, always preview → apply → undo, writing DB canonical fields and never source files. Only metadata, fingerprints and search queries leave the device.
 
-- [x] **TE.1–TE.3** Adapters (MusicBrainz/iTunes/Deezer) + match pipeline + review UI — shipped (see above)
+- [x] **TE.1–TE.4** Adapters (MusicBrainz/iTunes/Deezer) + match pipeline + review UI — shipped (see above)
 - [x] **TE.4** Tag Health Score — shipped (`tag_health_score` weights + library average; badges in the Tag Health modal; Prep Auditor direction)
 - [x] **TE.5-partial** Discogs / Last.fm / AcoustID adapters — query builders + parsers + tests shipped; keyed via `DISCOGS_TOKEN` / `LASTFM_API_KEY` / `ACOUSTID_API_KEY`; AcoustID fingerprint computation still needs the native Chromaprint library
 - [ ] **TE.5-remaining** Native Chromaprint fingerprinting + quota/backoff tests with mocked transport + no-audio invariant audit
 
-### Post-MVP: Multi-provider streaming export (TX.1, TX.2b–TX.4 remaining)
+### Post-MVP: Multi-provider streaming export (TM.1, TM.2b–TM.4 remaining)
 
-### Post-MVP: Multi-provider streaming export (TX.1–TX.4)
+### Post-MVP: Multi-provider streaming export (TM.1–TM.4)
 
 **Goal:** Generalize the Spotify reference (TP.1–TP.7) behind `provider_match_set` / `provider_export_playlist`; Deezer second (open API + ISRC search), then Apple Music / YouTube Music / SoundCloud / TIDAL. Metadata-only playlists everywhere; in-app streaming playback stays out of scope for all providers.
 
-- [x] **TX.2a** Deezer live matching + drawer UI — shipped (see above)
-- [x] **TX.1** Provider abstraction — shipped (generic `provider_match_set` / `provider_export_playlist` IPC + `ProviderCapabilities` in `provider_status`; export returns `not_configured` until TX.2b/TP)
-- [ ] **TX.1** Provider abstraction (generic IPC, capability flags, Spotify re-implemented on top)
-- [ ] **TX.2b** Deezer connect + export (OAuth, keychain tokens, review queue, undo — needs `DEEZER_APP_ID`)
-- [ ] **TX.3** Apple Music / YouTube Music / SoundCloud / TIDAL (one at a time + undo each)
-- [ ] **TX.4** Tests (per-provider matcher fixtures, chunking/backoff, undo)
+- [x] **TM.2a** Deezer live matching + drawer UI — shipped (see above)
+- [x] **TM.1** Provider abstraction — shipped (generic `provider_match_set` / `provider_export_playlist` IPC + `ProviderCapabilities` in `provider_status`; export returns `not_configured` until TM.2b/TP)
+- [ ] **TM.1** Provider abstraction (generic IPC, capability flags, Spotify re-implemented on top)
+- [ ] **TM.2b** Deezer connect + export (OAuth, keychain tokens, review queue, undo — needs `DEEZER_APP_ID`)
+- [ ] **TM.3** Apple Music / YouTube Music / SoundCloud / TIDAL (one at a time + undo each)
+- [ ] **TM.4** Tests (per-provider matcher fixtures, chunking/backoff, undo)
 
 ### Post-MVP: Spotify Playlist Export (Streaming Export — metadata only)
 

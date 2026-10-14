@@ -106,7 +106,7 @@ Opened from the toolbar **[Tag Health]** button.
 - **Look up online** → one provider per run, proposals recorded server-side; **Apply
   checked** writes DB fields (never source files); **Undo run** restores exact values.
 - **Match on Deezer** → live read-only catalog match in the drawer (ISRC-exact first);
-  export controls stay disabled with the app-ID reason until TX.2b.
+  export controls stay disabled with the app-ID reason until TM.2b.
 - Post-MVP: native fingerprinting, Tag Health Score surfacing in Prep Auditor, chart
   snapshot feeds, release radar.
 

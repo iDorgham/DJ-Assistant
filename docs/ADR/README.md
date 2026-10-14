@@ -56,7 +56,7 @@ What else was evaluated and why it was rejected.
 | [0004](./0004-hybrid-set-builder.md) | Hybrid set builder (LLM constraints + Beam Search) | Accepted |
 | [0005](./0005-tauri-ipc-style.md) | Tauri IPC command style | Accepted |
 | [0006](./0006-spotify-playlist-export.md) | Spotify Playlist Export (desktop PKCE, metadata only) | Accepted (design) / Planned (build, post-MVP) |
-| [0007](./0007-similar-tracks-enrichment-multiprovider.md) | Similar tracks, tag/artwork enrichment & multi-provider strategy | Accepted-partial (TF.1–TF.6, TE.1–TE.3, TD.3, TX.2a shipped; remainder Proposed) |
+| [0007](./0007-similar-tracks-enrichment-multiprovider.md) | Similar tracks, tag/artwork enrichment & multi-provider strategy | Accepted-partial (TF.1–TF.6, TE.1–TE.4, TD.3, TM.2a shipped; remainder Proposed) |
 
 ---
 

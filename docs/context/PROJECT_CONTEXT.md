@@ -427,8 +427,8 @@ Wired in `apps/desktop/src-tauri/src/lib.rs`:
 | `enrichment_apply` | Apply recorded proposals to DB fields (never source files); artwork fills empty slots |
 | `enrichment_undo` | Restore a run's before-state snapshot; run marked `undone` |
 | `provider_match_tracks` | Live Deezer match (ISRC-exact → fuzzy, stateless, no key, no writes) |
-| `provider_match_set` | Generic set match (TX.1; trackIds today, `set_id` waits on Phase 3 sets) |
-| `provider_export_playlist` | Returns `not_configured` naming the missing credential until TX.2b/TP |
+| `provider_match_set` | Generic set match (TM.1; trackIds today, `set_id` waits on Phase 3 sets) |
+| `provider_export_playlist` | Returns `not_configured` naming the missing credential until TM.2b/TP |
 | `chart_import_snapshot` | Import a versioned chart snapshot (validated, idempotent re-import) |
 | `chart_list` | List a snapshot with ISRC ownership + taste scores vs a seed track |
 | `provider_match_set` / `provider_export_playlist` | Generic multi-provider match/export contract (TM.1; Spotify re-implementation waits on TP) |

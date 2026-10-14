@@ -1,9 +1,8 @@
 # 17 — Discovery, Enrichment & Providers
 
-Shipped: local foundations (`TF`) + live opt-in enrichment (`TE.1–TE.4`,
-5 sources) + Deezer matching (`TX.2a`) + chart snapshots (`TD.3`) + generic
-provider contract (`TX.1`). Still post-MVP: similarity/radar (`TD.1/2/4/5`),
-fingerprinting (`TE.5`), connect/export (`TX.2b`/`TX.3`, `TP.x`).
+Shipped: local foundations (`TF`) + live opt-in enrichment (`TE.1–TE.4`) and
+Deezer matching (`TM.2a`). Still post-MVP: external similarity/charts remainder (`TD.1–TD.2`, `TD.4–TD.6`),
+adapter expansion (`TE.5`), provider connect/export (`TM.2b`/`TM.3`/`TM.4`, `TP.x`).
 See ADR-0007, `API_CONTRACTS.md` §2.6–§2.7 and wireframe 12.
 
 ```mermaid
