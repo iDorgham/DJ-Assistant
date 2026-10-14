@@ -1,6 +1,6 @@
 # ADR-0006: Spotify Playlist Export (Desktop PKCE, Metadata Only)
 
-**Status:** Proposed  
+**Status:** Accepted  
 **Date:** 2026-10-14  
 **Deciders:** Product + Engineering
 
