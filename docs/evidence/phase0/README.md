@@ -1,6 +1,6 @@
 # Phase 0 evidence
 
-Captured acceptance runs for Phase 0 (accepted 2026-10-12). Criterion-level verification lives in [`../engineering/PHASE0_ACCEPTANCE_EVIDENCE.md`](../engineering/PHASE0_ACCEPTANCE_EVIDENCE.md).
+Captured acceptance runs for Phase 0 (accepted 2026-10-12). Criterion-level verification lives in [`../../engineering/PHASE0_ACCEPTANCE_EVIDENCE.md`](../../engineering/PHASE0_ACCEPTANCE_EVIDENCE.md).
 
 | File | Shows |
 |------|-------|
