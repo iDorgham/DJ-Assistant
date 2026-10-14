@@ -93,11 +93,11 @@ This is the actionable engineering task list. Check items off as they are comple
 - [x] Vocal presence / density estimation — *deterministic mid/side STFT heuristic in `crates/analysis/src/vocal.rs`: vocal-band energy ratio (≥150 Hz denom) + center-dominance gate + median smoothing → 0..=1 density curve + aggregate; ONNX seam; 11 tests incl. wide-panned-pad/transient-rejection*
 - [x] Loudness (EBU R128 LUFS) — *BS.1770-4 in `crates/analysis/src/loudness.rs` on `ebur128`: gated integrated LUFS + true peak (dBTP) + loudness range (Tech 3342); native BS.1770 channel-power sum; silence floored to -70 LUFS; no options/enum; 11 tests incl. sine-at-known-LUFS, stereo=mono+3.01LU, relative-gate, inter-sample overshoot, real-FLAC smoke*
 - [ ] Spectral brightness (optional but useful)
-- [ ] Per-track analysis job queue (local)
-- [ ] Analysis progress UI (per-track + overall)
-- [ ] Store analysis results in SQLite (`analysis_status`, `analysis_version`, feature columns)
-- [ ] Low-confidence flagging / “needs review” state
-- [ ] Re-analysis support when models or pipeline version change
+- [x] Per-track analysis job queue (local) — *`commands::analyze_library` + `analysis.rs::run_analysis_queue` (version-aware selection, background thread, per-track progress + completed events)*
+- [x] Analysis progress UI (per-track + overall) — *shared contracts + `analyzeLibrary`/`listenToAnalysis*` API wrappers + Analyze button + cyan progress bar + refresh-on-completed in `App.tsx`; contract tests green*
+- [x] Store analysis results in SQLite (`analysis_status`, `analysis_version`, feature columns) — *`persist_analysis_results` writes BPM/key/vocal-presence/phrase-confidence/LUFS + composite `analysis_version`, sets `analysis_status='complete'`; failure path stamps attempted version*
+- [ ] Low-confidence flagging / "needs review" state
+- [x] Re-analysis support when pipeline version changes — *`analyze_library` skips rows whose `analysis_version` matches current composite unless `force:true`; failures re-runnable*
 
 ### Performance & Quality
 - [ ] Target: p50 analysis time < 3s per track on mid-range laptop (CPU)

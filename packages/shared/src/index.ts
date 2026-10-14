@@ -119,6 +119,42 @@ export interface GetArtworkRequest {
  */
 export type GetArtworkResponse = string | null;
 
+// --- Analysis queue (T1.2.1 / T1.2.2): analyze_library + progress events ---
+// Mirrors apps/desktop/src-tauri/src/models.rs (serde camelCase). The backend
+// selects tracks needing analysis (version-aware unless force:true), runs the
+// deterministic suite per track, and emits one `analysis:progress` per track
+// plus a single `analysis:completed` when the queue drains.
+
+export interface AnalyzeLibraryRequest {
+  /** Track IDs to analyze; omit to analyze everything needing analysis. */
+  trackIds?: string[];
+  /** Re-analyze even when analysisVersion already matches. */
+  force?: boolean;
+}
+
+export interface AnalyzeLibraryResponse {
+  jobId: string;
+  total: number;
+}
+
+export interface AnalysisProgressEvent {
+  jobId: string;
+  processed: number;
+  total: number;
+  trackId: string;
+  filePath: string;
+  analysisStatus: AnalysisStatus;
+  error?: string | null;
+}
+
+export interface AnalysisCompletedEvent {
+  jobId: string;
+  total: number;
+  succeeded: number;
+  failed: number;
+  durationMs: number;
+}
+
 // --- Similar tracks (A): local scoring, mirrors models.rs ---
 
 export interface FindSimilarTracksRequest {

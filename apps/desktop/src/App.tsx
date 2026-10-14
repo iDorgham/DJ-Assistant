@@ -3,6 +3,8 @@ import type {
   TrackSummary,
   ScanProgressEvent,
   ScanCompletedEvent,
+  AnalysisProgressEvent,
+  AnalysisCompletedEvent,
   SimilarTrackResult,
   StoreLinksResponse,
   TagHealthResponse,
@@ -18,6 +20,9 @@ import {
   scanFolder,
   listTracks,
   getArtwork,
+  analyzeLibrary,
+  listenToAnalysisProgress,
+  listenToAnalysisCompleted,
   findSimilarTracks,
   trackTagHealth,
   storeLinksForTrack,
@@ -137,6 +142,10 @@ export default function App() {
   const [scanning, setScanning] = useState(false);
   const [progress, setProgress] = useState<ScanProgressEvent | null>(null);
   const [statusMessage, setStatusMessage] = useState<string>("Ready");
+
+  // Analysis queue (T1.2.2): version-aware run with per-track progress events.
+  const [analyzing, setAnalyzing] = useState(false);
+  const [analysisProgress, setAnalysisProgress] = useState<AnalysisProgressEvent | null>(null);
 
   // Discovery / enrichment / provider state (local-first; online lookup is planned).
   const [selectedTrack, setSelectedTrack] = useState<TrackSummary | null>(null);
@@ -440,11 +449,13 @@ export default function App() {
     }
   };
 
-  // Listen to Tauri scan events
+  // Listen to Tauri scan + analysis events
   useEffect(() => {
     let unlistenProgress: (() => void) | undefined;
     let unlistenCompleted: (() => void) | undefined;
     let unlistenEnrichment: (() => void) | undefined;
+    let unlistenAnalysisProgress: (() => void) | undefined;
+    let unlistenAnalysisCompleted: (() => void) | undefined;
 
     listenToScanProgress((payload) => {
       setProgress(payload);
@@ -475,13 +486,36 @@ export default function App() {
       unlistenEnrichment = fn;
     });
 
+    listenToAnalysisProgress((payload) => {
+      setAnalysisProgress(payload);
+      if (payload.analysisStatus === "failed") {
+        console.error(`Analysis failed for ${payload.filePath}: ${payload.error}`);
+      }
+    }).then((fn) => {
+      unlistenAnalysisProgress = fn;
+    });
+
+    listenToAnalysisCompleted((summary: AnalysisCompletedEvent) => {
+      setAnalyzing(false);
+      setAnalysisProgress(null);
+      setStatusMessage(
+        `Analysis complete! ${summary.succeeded} succeeded, ${summary.failed} failed in ${(summary.durationMs / 1000).toFixed(1)}s`
+      );
+      refreshLibrary();
+    }).then((fn) => {
+      unlistenAnalysisCompleted = fn;
+    });
+
     return () => {
       if (unlistenProgress) unlistenProgress();
       if (unlistenCompleted) unlistenCompleted();
       if (unlistenEnrichment) unlistenEnrichment();
+      if (unlistenAnalysisProgress) unlistenAnalysisProgress();
+      if (unlistenAnalysisCompleted) unlistenAnalysisCompleted();
     };
-    // Listeners are registered once; the completion handler calls the loader
-    // captured at mount, which is enough to reload the library after a scan.
+    // Listeners are registered once; the completion handlers call the loader
+    // captured at mount, which is enough to reload the library after a scan or
+    // analysis run.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -515,6 +549,27 @@ export default function App() {
     }
   };
 
+  const handleAnalyze = async () => {
+    if (analyzing) return;
+    setAnalyzing(true);
+    setAnalysisProgress(null);
+    setStatusMessage("Starting analysis...");
+    try {
+      const res = await analyzeLibrary({});
+      if (res.total === 0) {
+        setAnalyzing(false);
+        setStatusMessage("No tracks need analysis (all up to date).");
+      } else {
+        setStatusMessage(`Analyzing ${res.total} track${res.total === 1 ? "" : "s"}...`);
+      }
+    } catch (err) {
+      console.error("Error starting analysis:", err);
+      setAnalyzing(false);
+      setAnalysisProgress(null);
+      setStatusMessage(`Analysis failed: ${err}`);
+    }
+  };
+
   const filteredTracks = useMemo(() => filterTracks(tracks, searchQuery), [tracks, searchQuery]);
 
   return (
@@ -541,6 +596,16 @@ export default function App() {
           >
             <FolderOpen className="w-4 h-4" />
             <span>{scanning ? "Scanning..." : "Scan Music Folder"}</span>
+          </button>
+
+          <button
+            onClick={handleAnalyze}
+            disabled={analyzing || scanning}
+            className="flex items-center space-x-2 bg-cyan-600 hover:bg-cyan-500 disabled:bg-cyan-900 text-white text-xs font-medium px-3.5 py-1.5 rounded-md transition shadow-sm shadow-cyan-600/30"
+            title="Analyze all tracks that need it (version-aware; BPM, key, phrases, vocals, loudness)"
+          >
+            <Sparkles className={`w-4 h-4 ${analyzing ? "animate-pulse" : ""}`} />
+            <span>{analyzing ? "Analyzing..." : "Analyze"}</span>
           </button>
 
           <button
@@ -573,6 +638,32 @@ export default function App() {
                 className="bg-blue-500 h-1.5 rounded-full transition-all duration-200"
                 style={{
                   width: `${scanPercent(progress.scannedFiles, progress.totalFiles)}%`,
+                }}
+              />
+            </div>
+          </div>
+        )}
+
+        {/* Analysis progress (T1.2.2) */}
+        {analyzing && analysisProgress && (
+          <div className="bg-[#141d28] border-b border-cyan-500/30 px-5 py-2.5 flex flex-col space-y-1.5 transition-all">
+            <div className="flex justify-between items-center text-xs">
+              <span className="text-cyan-400 font-medium flex items-center space-x-1.5">
+                <Sparkles className="w-3.5 h-3.5 animate-pulse" />
+                <span>
+                  Analyzing:{" "}
+                  {analysisProgress.filePath.split(/[\\/]/).pop() ?? analysisProgress.filePath}
+                </span>
+              </span>
+              <span className="text-slate-400 font-mono">
+                {analysisProgress.processed} / {analysisProgress.total} tracks
+              </span>
+            </div>
+            <div className="w-full bg-[#10131d] rounded-full h-1.5 overflow-hidden">
+              <div
+                className="bg-cyan-500 h-1.5 rounded-full transition-all duration-200"
+                style={{
+                  width: `${scanPercent(analysisProgress.processed, analysisProgress.total)}%`,
                 }}
               />
             </div>
