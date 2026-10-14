@@ -477,7 +477,7 @@ missing credential), `chart_import_snapshot` / `chart_list`, and per-provider
 
 ```ts
 interface ProviderMatchSetRequest {
-  provider: string;             // e.g. "spotify" | "deezer"
+  provider: 'deezer';             // only supported provider today
   setId: string;
   trackIds?: string[];
   fuzzyDurationToleranceMs?: number; // default 3000 (±3 s)
