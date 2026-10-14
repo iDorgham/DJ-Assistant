@@ -27,7 +27,7 @@
 ## Cons
 
 1. **Energy hole:** Set Builder needs energy curve, but Canonical says energy/mood not auto-scored. Blocker for P3.2-P3.4.
-2. **No undo infra yet:** spec requires preview+undo for all bulk/AI mutations, no `skill_runs` before/after implementation verified in `db.rs`.
+2. **Generic Skill undo incomplete:** `undo_skill_run` and its round-trip test remain pending (TA.4); enrichment already supports preview+apply+undo via `enrichment_runs`.
 3. **No watcher/bulk edit:** watch folders (`notify`), bulk apply, aliases (`P2.3-P2.4`) spec'd but not in commands list.
 4. **Waveform/cue editor missing:** blocks Cue Master acceptance (editable, snap-to-grid, provenance).
 5. **USB format risk:** destructive + irreversible in MVP without dry-run, rescan, type-to-confirm.
