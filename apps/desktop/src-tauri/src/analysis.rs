@@ -144,11 +144,11 @@ pub fn run_analysis_queue(
                     match persist_analysis_results(guard.conn(), &track_id, &results) {
                         Ok(_) => {
                             succeeded += 1;
-                            (review_status, None)
+                            (review_status.clone(), None)
                         }
                         Err(e) => {
                             failed += 1;
-                            ("failed", Some(format!("database persist error: {e}")))
+                            ("failed".to_string(), Some(format!("database persist error: {e}")))
                         }
                     }
                 }
