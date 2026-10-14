@@ -152,6 +152,6 @@ mod tests {
             assert!(cand_cols.contains(&col.to_string()), "missing column {col}");
         }
         // Re-applying over an existing database is a no-op (version-tracked).
-        Database::new_in_memory().expect("fresh databases must still migrate");
+        db.init_migrations().expect("reapplying migrations must be a no-op");
     }
 }
