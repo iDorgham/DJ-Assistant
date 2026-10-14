@@ -182,6 +182,7 @@ pub fn run_analysis_queue(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use dj_assistant_analysis::PHRASE_CONFIDENCE_REVIEW_THRESHOLD;
 
     fn base_results() -> AnalysisResults {
         AnalysisResults {
