@@ -95,7 +95,7 @@ This is the actionable engineering task list. Check items off as they are comple
 - [ ] Spectral brightness (optional but useful)
 - [x] Per-track analysis job queue (local) — *`commands::analyze_library` + `analysis.rs::run_analysis_queue` (version-aware selection, background thread, per-track progress + completed events)*
 - [x] Analysis progress UI (per-track + overall) — *shared contracts + `analyzeLibrary`/`listenToAnalysis*` API wrappers + Analyze button + cyan progress bar + refresh-on-completed in `App.tsx`; contract tests green*
-- [x] Store analysis results in SQLite (`analysis_status`, `analysis_version`, feature columns) — *`persist_analysis_results` writes BPM/key/grid/phrases/vocals/LUFS + composite `analysis_version`, sets `analysis_status='complete'`; failure path stamps attempted version*
+- [x] Store analysis results in SQLite (`analysis_status`, `analysis_version`, feature columns) — *`persist_analysis_results` writes BPM/key/LUFS/vocal-presence/phrase-confidence + composite `analysis_version`, sets classified `analysis_status`; failure path stamps attempted version*
 - [x] Low-confidence flagging / "needs review" state — *`classify_analysis_status` in `analysis.rs`: errors non-empty, bpm/key None, or phrase_confidence < 0.3 → `needs_review`; persist path writes classified status; 7 unit tests + schema test green*
 - [x] Re-analysis support when models or pipeline version change — *`analyze_library` skips rows whose `analysis_version` matches current composite unless `force:true`; failures re-runnable*
 
