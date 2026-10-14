@@ -39,13 +39,13 @@ if ($startIdx -ge 0 -and $endIdx -ge 0) {
         $debugLines = @(
             "    // Debug info when assertion fails",
             "    if status != expected.analysis_status {",
-            "        eprintln!(\"{} \\\"analysis_status\\\" mismatch: expected \\\"{}\\\", got \\\"{}\\\"\", label, expected.analysis_status, status);",
-            "        eprintln!(\"  results.bpm: {:?}\", results.bpm);",
-            "        eprintln!(\"  results.key_camelot: {:?}\", results.key_camelot);",
-            "        eprintln!(\"  results.key_classical: {:?}\", results.key_classical);",
-            "        eprintln!(\"  results.loudness_lufs: {:?}\", results.loudness_lufs);",
-            "        eprintln!(\"  results.phrase_confidence: {:?}\", results.phrase_confidence);",
-            "        eprintln!(\"  results.errors: {:?}\", results.errors);",
+            '        eprintln!("{} \"analysis_status\" mismatch: expected \"{}\", got \"{}\"", label, expected.analysis_status, status);',
+            '        eprintln!("  results.bpm: {:?}", results.bpm);',
+            '        eprintln!("  results.key_camelot: {:?}", results.key_camelot);',
+            '        eprintln!("  results.key_classical: {:?}", results.key_classical);',
+            '        eprintln!("  results.loudness_lufs: {:?}", results.loudness_lufs);',
+            '        eprintln!("  results.phrase_confidence: {:?}", results.phrase_confidence);',
+            '        eprintln!("  results.errors: {:?}", results.errors);',
             "    }"
         )
         
