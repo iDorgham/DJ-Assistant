@@ -74,8 +74,8 @@ One-click pre-gig workflow: health check → analyze → optional cleanup → cu
 
 1. **Health check** — library readable, no corrupt files.
 2. **Analyze** — all tracks analyzed (skips fresh via `analysis_version`).
-3. **Generate cues** — 8 hot + memory cues (optional if already cued).
-4. **Tag cleanup** — optional bulk normalisation.
+3. **Tag cleanup** — optional bulk normalisation.
+4. **Generate cues** — 8 hot + memory cues (optional if already cued).
 5. **Prep Auditor** — readiness checklist (unanalyzed, missing cues, tag issues, energy gaps).
 6. **Export / USB pack** — produce performance files.
 
