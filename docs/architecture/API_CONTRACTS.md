@@ -2,7 +2,7 @@
 
 **Status:** Living (Phase 0 baseline)  
 **Source of Truth:** Canonical Documentation §6 + this document  
-**Last Updated:** 2026-10-12
+**Last Updated:** 2026-10-14
 
 This document defines the **Tauri IPC** (desktop) and **Cloud HTTP** contracts. Types should be mirrored in `packages/shared` and kept in sync with Rust command handlers.
 
@@ -222,6 +222,289 @@ interface ExportSetResponse {
 }
 ```
 
+#### `usb_list_drives`
+Enumerates **removable** drives only. System/boot/internal drives are never listed.
+```ts
+interface UsbListDrivesRequest {} // no params
+
+interface UsbListDrivesResponse {
+  drives: Array<{
+    deviceId: string;   // opaque OS device identifier (never a raw path from the UI)
+    label?: string;
+    sizeBytes: number;
+    model?: string;
+    filesystem?: string;
+    partitionScheme?: string; // e.g. 'MBR' | 'GPT' | 'unknown'
+    removable: true;
+  }>;
+}
+```
+
+#### `usb_format_drive`
+Destructive and irreversible — requires explicit `deviceId` from `usb_list_drives` plus
+acknowledgement. Never accepts a system drive. Pioneer-tuned defaults apply.
+```ts
+interface UsbFormatDriveRequest {
+  deviceId: string;
+  filesystem: 'fat32' | 'exfat'; // default 'fat32' (universal); 'exfat' requires confirmExfatRisk
+  volumeLabel?: string;          // ASCII uppercase, ≤ 11 chars; sanitized in Rust
+  fullFormat?: boolean;          // default false (quick); true for suspect drives
+  acknowledgeDataLoss: true;     // explicit double-confirm from the UI
+  confirmExfatRisk?: boolean;    // required when filesystem === 'exfat': booth must be exFAT-capable
+}
+
+interface UsbFormatDriveResponse {
+  jobId: string; // progress via usb-format:progress, completion via usb-format:completed
+}
+
+// usb-format:completed payload:
+// { jobId, deviceId, filesystem, partitionScheme: 'MBR',
+//   compat: 'universal' | 'exfat-limited',
+//   compatNote: string } — 'universal' = FAT32+MBR (all CDJ/XDJ);
+// 'exfat-limited' = CDJ-3000 / 3000X / XDJ-RX3 / XDJ-XZ / OPUS-QUAD / XDJ-AZ and newer only.
+```
+
+### 2.5 Streaming Export (Spotify) — Post-MVP
+
+Metadata-only publishing of a set (or any playlist) to the DJ's own Spotify account. All provider calls are
+made by the desktop app; see §7 for the external endpoints. Tokens live in the OS keychain.
+
+#### `spotify_connect`
+```ts
+interface SpotifyConnectRequest {
+  // Opens the system browser to Spotify's authorization endpoint.
+  // OAuth 2.0 Authorization Code + PKCE (RFC 7636); loopback redirect
+  // http://127.0.0.1:<port>/callback (custom URI scheme fallback).
+  // Public client ID is embedded at build time (no client secret).
+  visibility?: 'private' | 'public'; // requested default; default 'private'
+}
+
+interface SpotifyConnectResponse {
+  status: 'pending'; // completion delivered via event spotify:auth_completed
+}
+```
+
+#### `spotify_disconnect`
+```ts
+interface SpotifyDisconnectRequest {
+  accountId?: string; // omit to disconnect the active account
+}
+
+interface SpotifyDisconnectResponse {
+  success: boolean;
+  tokensRevoked: boolean; // tokens removed from the OS keychain
+}
+```
+
+#### `spotify_status`
+```ts
+interface SpotifyStatusRequest {} // no params
+
+interface SpotifyStatusResponse {
+  connected: boolean;
+  accountLabel?: string;
+  expiresAt?: string; // ISO; access token refreshed locally
+  scopes: string[];   // e.g. ['playlist-modify-private']
+  exports?: Array<{   // recent exports (used to offer undo)
+    exportId: string;
+    setId: string;
+    providerPlaylistId: string;
+    playlistName: string;
+    visibility: 'private' | 'public';
+    status: 'created' | 'updated' | 'partial' | 'deleted' | 'failed';
+    matchedCount: number;
+    unmatchedCount: number;
+    createdAt: string;
+  }>;
+}
+```
+
+#### `spotify_match_set`
+```ts
+interface SpotifyMatchSetRequest {
+  setId: string;
+  trackIds?: string[];               // optional explicit subset; else all set tracks
+  fuzzyDurationToleranceMs?: number; // default 3000 (±3 s)
+}
+
+interface SpotifyMatchSetResponse {
+  matchRunId: string;
+  matched: number;   // high confidence (auto-add)
+  review: number;    // medium / low confidence (review queue)
+  unmatched: number;
+  matches: Array<{
+    trackId: string;
+    providerTrackUri?: string;
+    method: 'isrc' | 'fuzzy' | 'manual';
+    confidence: number; // 0–1
+    status: 'matched' | 'review' | 'unmatched' | 'skipped';
+  }>;
+}
+```
+Progress via event `spotify:match_progress`.
+
+#### `spotify_export_playlist`
+```ts
+interface SpotifyExportPlaylistRequest {
+  setId: string;
+  matchRunId?: string;                // reuse a prior match run; else match first
+  playlistName: string;
+  visibility?: 'private' | 'public';  // 'public' requires opt-in + playlist-modify-public scope
+  providerPlaylistId?: string;        // set to update an existing playlist (needs playlist-read-private)
+  includeReviewMatches?: boolean;     // default false; only high-confidence unless overridden
+}
+
+interface SpotifyExportPlaylistResponse {
+  exportId: string;
+  providerPlaylistId: string;
+  playlistUrl: string;
+  addedCount: number;
+  skippedCount: number;
+  status: 'created' | 'updated' | 'partial';
+}
+```
+Progress via event `spotify:export_progress`; completion via `spotify:export_completed`. Track URIs are
+chunked at ≤ 100 per request.
+
+#### `spotify_delete_playlist`
+```ts
+interface SpotifyDeletePlaylistRequest {
+  exportId: string; // created playlist recorded locally in streaming_exports (undo)
+}
+
+interface SpotifyDeletePlaylistResponse {
+  success: boolean; // playlist deleted / unfollowed on Spotify
+}
+```
+
+### 2.6 Discovery & Enrichment (IPC — Implemented, Local Only)
+
+These commands run entirely on-device with no network access. They are the
+shipped foundations (`TF`) for the post-MVP discovery / enrichment scope
+(ADR-0007); online adapters and the generic provider match/export contracts
+(§2.7) extend them without changing these shapes.
+
+#### `find_similar_tracks`
+```ts
+interface FindSimilarTracksRequest {
+  trackId: string;
+  limit?: number; // max results; clamped to 1–50 server-side; default 10
+}
+
+interface SimilarTrackResult extends TrackSummary {
+  score: number;    // blended similarity 0–1 (BPM 45% / key 35% / genre 10% / duration 10%)
+  reasons: string[]; // UI chips, e.g. "same key 8A", "+1.2% BPM apart"
+}
+
+interface FindSimilarTracksResponse {
+  seedTrackId: string;
+  results: SimilarTrackResult[];
+}
+```
+
+#### `track_tag_health`
+```ts
+interface TagHealthRequest {
+  trackIds?: string[]; // restrict; omit to scan the whole library
+  limit?: number;      // max gap rows; default 200
+}
+
+interface TrackGaps {
+  trackId: string;
+  title: string;
+  artist: string;
+  missing: string[]; // e.g. "album", "bpm", "artwork", "isrc"; "artist" means "Unknown Artist"
+}
+
+interface TagHealthResponse {
+  checked: number;
+  withGaps: number;
+  gaps: TrackGaps[];
+  totals: Array<{ field: string; missingCount: number }>; // sorted desc
+}
+```
+
+#### `store_links_for_track`
+```ts
+interface StoreLinksRequest {
+  trackId: string;
+}
+
+// Tier 0 store integration: pure search-URL construction (no API, no audio).
+// Beatport has no public catalog API; charts/radar arrive as data (ADR-0007).
+interface StoreLink {
+  provider: string; // "beatport" | "traxsource" | "juno_download" | "bandcamp" | "discogs"
+  label: string;
+  url: string;      // outbound https search URL
+}
+
+interface StoreLinksResponse {
+  trackId: string;
+  artist: string;
+  title: string;
+  links: StoreLink[];
+}
+```
+
+#### `provider_status`
+```ts
+interface ProviderAccount {
+  id: string;
+  provider: string;
+  accountLabel: string;
+  scopes: string[];
+  expiresAt?: string | null;
+  revokedAt?: string | null;
+}
+
+interface ProviderStatusResponse {
+  connected: ProviderAccount[]; // non-revoked rows from streaming_accounts
+  supportedStreaming: string[]; // ["spotify","deezer","apple_music","youtube_music","soundcloud","tidal"]
+  supportedStores: string[];    // ["beatport","traxsource","juno_download","bandcamp","discogs"]
+}
+```
+
+### 2.7 Provider Match / Export & Enrichment Runs (Partially Implemented)
+
+Generic contracts generalizing the `spotify_*` commands in §2.5. Spotify is the
+reference implementation; Deezer matching is live. **Shipped:** `enrichment_preview`
+/ `enrichment_apply` / `enrichment_undo` (+ `enrichment:progress` event),
+`provider_match_tracks`, `provider_match_set` (trackIds today; `set_id` waits on
+Phase 3 sets), `provider_export_playlist` (returns `not_configured` naming the
+missing credential), `chart_import_snapshot` / `chart_list`, and per-provider
+`capabilities` in `provider_status`. **Planned:** set-scoped matching (Phase 3),
+`provider_connect` + writes (need application IDs / OAuth).
+
+```ts
+interface ProviderMatchSetRequest {
+  provider: string;             // e.g. "spotify" | "deezer"
+  setId: string;
+  trackIds?: string[];
+  fuzzyDurationToleranceMs?: number; // default 3000 (±3 s)
+}
+
+interface ProviderExportPlaylistRequest {
+  provider: string;
+  setId: string;
+  matchRunId?: string;
+  playlistName: string;
+  visibility?: 'private' | 'public';
+  providerPlaylistId?: string;
+  includeReviewMatches?: boolean; // default false
+}
+
+interface EnrichmentPreviewRequest {
+  provider: string;             // e.g. "musicbrainz" | "itunes" | "deezer" | "discogs"
+  trackIds?: string[];          // omit = all tracks with gaps
+}
+
+interface EnrichmentApplyRequest {
+  runId: string;                // from the preview run
+  trackIds?: string[];          // subset; else all proposed
+}
+// Undo = restore the run's before_state (recorded in enrichment_runs).
+```
+
 ---
 
 ## 3. Tauri IPC — Events (Rust → UI)
@@ -235,6 +518,13 @@ interface ExportSetResponse {
 | `skill:progress` | `{ runId, skillName, message?, progress01? }` | Long-running skill |
 | `skill:completed` | `{ runId, skillName, success }` | Skill finished |
 | `watcher:file_changed` | `{ path, kind }` | Watch-folder notifications |
+| `spotify:auth_progress` | `{ status, accountLabel? }` | OAuth PKCE flow started/completed |
+| `spotify:auth_completed` | `{ connected, accountLabel?, scopes }` | PKCE flow finished; tokens stored in keychain |
+| `spotify:match_progress` | `{ matchRunId, processed, total, matched, review, unmatched }` | ISRC/fuzzy match progress |
+| `spotify:export_progress` | `{ exportId, added, total, playlistUrl? }` | Chunked playlist-add progress |
+| `spotify:export_completed` | `{ exportId, providerPlaylistId, addedCount, skippedCount }` | Export finished |
+| `usb-format:progress` | `{ jobId, deviceId, stage, progress01? }` | USB format stages (verify → format → re-verify) |
+| `usb-format:completed` | `{ jobId, deviceId, filesystem, partitionScheme, compat }` | Format done + CDJ-compat certification |
 | `error` | `{ code, message, context? }` | Surfaceable errors |
 
 Exact payload shapes will be finalized in `packages/shared` during Phase 0–1.
@@ -331,6 +621,12 @@ Core types that must live in `packages/shared` (names illustrative):
 - `SetSummary`, `SetTrack`
 - `SkillRunSummary`
 - `AnalysisStatus`
+- `UsbDrive`, `UsbFormatJob`, `UsbCompatReport` (USB media format)
+- `SpotifyAccount`, `SpotifyMatch`, `SpotifyExport` (streaming export)
+- `SimilarTrackResult`, `TrackGaps`, `TagHealthResponse` (discovery & enrichment — implemented)
+- `StoreLink`, `ProviderAccount`, `ProviderStatusResponse`, `ProviderCapability` (provider registry — implemented)
+- `TrackProposal`, `EnrichmentPreviewResponse`, `EnrichmentApplyResponse`, `EnrichmentUndoResponse` (enrichment runs — implemented)
+- `ProviderTrackMatch`, `ChartEntry`, `ChartListResponse` (matching + charts — implemented)
 - Constraint and filter types used by both IPC and HTTP
 
 ---
@@ -340,6 +636,53 @@ Core types that must live in `packages/shared` (names illustrative):
 1. Additive fields are preferred; breaking changes require a version bump discussion and ADR if cross-cutting.
 2. New commands/events must be documented here before merge of the implementing PR.
 3. Cloud OpenAPI (or equivalent) will be generated from the Fastify routes once the API scaffold exists; this markdown remains the human-readable contract.
+
+---
+
+## 7. External Third-Party APIs (Desktop-Called)
+
+These endpoints are called **directly by the desktop app**, never by the cloud control plane. Only track
+metadata and search queries leave the device; audio is never uploaded, downloaded, streamed, or stored.
+
+### Spotify Web API (Streaming Export — Post-MVP)
+
+Base URL: `https://api.spotify.com/v1`  
+Auth: OAuth 2.0 Authorization Code + PKCE (RFC 7636), public client ID embedded at build time (no client
+secret); tokens stored in the OS keychain and refreshed locally.
+
+| Method | Path | Purpose |
+|--------|------|---------|
+| GET | `/search` | Match a local track by ISRC / normalized title + artist + album (±3 s duration) |
+| GET | `/me` | Resolve the DJ's `user_id` for playlist creation |
+| POST | `/users/{user_id}/playlists` | Create a new playlist |
+| POST | `/playlists/{playlist_id}/tracks` | Add tracks (≤ 100 URIs per request, chunked) |
+| DELETE | `/playlists/{playlist_id}/followers` | Unfollow (delete) the created playlist — undo |
+
+Scopes (minimal): `playlist-modify-private` (default); `playlist-modify-public` only when the DJ opts into a
+public playlist; `playlist-read-private` only when updating an existing playlist. No library or email scopes.
+
+Error handling: `429` → honor `Retry-After` with exponential backoff; `401` → refresh token, then retry;
+`403` / `404` → surfaced to the UI.
+
+### Planned Provider APIs (Post-MVP — TD / TE / TX)
+
+Same metadata-only posture: only track metadata, fingerprints and search
+queries leave the device; audio is never uploaded, downloaded, streamed, or
+stored. Every source is opt-in with caching and rate limiting.
+
+| Source | Use | Auth |
+|--------|-----|------|
+| MusicBrainz + Cover Art Archive | title/artist/label, ISRC, release date, high-res cover | none (1 req/s limit) |
+| iTunes Search API | 600px artwork, genre, release date | none |
+| Deezer public API | ISRC search, 1000px artwork, genre; live catalog matching | none for reads; OAuth + app ID for writes |
+| Discogs API | label, cat#, versions, electronic-catalog depth | `DISCOGS_TOKEN` (personal token, strict limits) |
+| AcoustID | identify untagged files via locally-computed Chromaprint (native lib pending — query/parse ready) | `ACOUSTID_API_KEY` |
+| Last.fm API | genre correction, `track.search` (similar graph is TD.1) | `LASTFM_API_KEY` |
+
+Beatport / Traxsource / Juno Download expose **no stable public catalog API**
+for a desktop client: charts and release radar enter as versioned snapshot
+data plus per-track buy-links (Tier 0–2, ADR-0007); an official Beatport
+partnership is Tier 3. Credential-based scraping is not the default path.
 
 ---
 
