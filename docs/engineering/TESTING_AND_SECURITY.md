@@ -231,7 +231,7 @@ Treat as high-risk (extra review + tests required):
 
 Shipped foundations (`TF`) are covered by existing suites: `similarity` (8 tests) and `providers` (4 tests) in `dj-assistant-core`; IPC contract tests for `find_similar_tracks` / `track_tag_health` / `store_links_for_track` / `provider_status`; migration 003 applies cleanly over 001/002.
 
-Shipped live scope (`TE.1–TE.4`, `TM.2a`): `enrichment` parsers/confidence (11 tests against verified live API shapes); contract tests for preview/apply/undo + `enrichment:progress` + provider-match payloads; migration 004 verified (applies in order; preview/apply/undo SQL round-trip) with a desktop migration test for CI (the Tauri-linked harness cannot load on the GNU dev toolchain — MSVC CI runs it).
+Shipped live scope (`TE.1–TE.4`, `TM.2a`): `enrichment` parsers/confidence (11 tests against verified live API shapes); contract tests for preview/apply/undo + `enrichment:progress` + provider-match payloads; migration 004 verified (applies in order; preview/apply/undo SQL round-trip) with a desktop migration test run by `cargo test` on Ubuntu CI (on a local Windows-GNU toolchain the Tauri-linked harness cannot load — use MSVC for full `cargo test` or `pnpm rust:test:portable`).
 
 - **Discovery:** snapshot determinism + taste-filter tests; feed-parser fixtures; external similarity returns carry a `source`; no auto-modification of sets (assertion).
 - **Enrichment:** adapter fixtures from recorded responses; confidence-tier tests; undo round-trips per run; quota/backoff with mocked transport; source-hash-unchanged audit after apply.
