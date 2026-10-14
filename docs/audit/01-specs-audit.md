@@ -21,7 +21,7 @@
 
 ## Cons
 
-1. **P0 still broad:** import + ONNX + 8 cues + Tag Surgeon + Beam Search + basic Skills framework are MVP. USB format is P1. Slip risk.
+1. **P0 still broad:** import + ONNX + 8 cues + Tag Surgeon + Beam Search + basic Skills framework are MVP. USB is classified P1, but P3.9–P3.11 and the MVP gate still require it. Slip risk.
 2. **Duplication drift:** Canonical 828+ lines vs SDD vs ARCH vs 18 diagrams. No spec-lint. Example drift already: set/similarity formula Canonical `0.35/0.30/0.20/0.15` vs shipped `0.45/0.35/0.10/0.10` (`API_CONTRACTS.md:395`).
 3. **Manual-heavy acceptance:** ~60% rows = `Manual`. No golden corpus size, no fixed benchmark hardware (“mid-range laptop” undefined).
 4. **Missing specs:** error-code catalog, log/telemetry retention, frontend perf budget, backup/restore, file move/rename handling, batch concurrency, model update/rollback, constraint-parser LLM provider (cloud vs local) decision.
