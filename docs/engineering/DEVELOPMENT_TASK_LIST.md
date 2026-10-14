@@ -97,7 +97,7 @@ This is the actionable engineering task list. Check items off as they are comple
 - [x] Analysis progress UI (per-track + overall) — *shared contracts + `analyzeLibrary`/`listenToAnalysis*` API wrappers + Analyze button + cyan progress bar + refresh-on-completed in `App.tsx`; contract tests green*
 - [x] Store analysis results in SQLite (`analysis_status`, `analysis_version`, feature columns) — *`persist_analysis_results` writes BPM/key/grid/phrases/vocals/LUFS + composite `analysis_version`, sets `analysis_status='complete'`; failure path stamps attempted version*
 - [ ] Low-confidence flagging / "needs review" state
-- [x] Re-analysis support when models or pipeline version change — *`analyze_library` skips rows whose `analysis_version` matches current composite unless `force:true`; failures re-runnable*
+- [x] Re-analysis support when pipeline version changes — *`analyze_library` skips rows whose `analysis_version` matches current composite unless `force:true`; failures re-runnable*
 
 ### Performance & Quality
 - [ ] Target: p50 analysis time < 3s per track on mid-range laptop (CPU)
