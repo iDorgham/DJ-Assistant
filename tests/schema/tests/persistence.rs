@@ -421,6 +421,104 @@ fn get_track_returns_a_detail_row_and_its_cues() {
 }
 
 #[test]
+fn analysis_status_accepts_needs_review_and_complete() {
+    // T1.2.4: the persist path writes 'needs_review' when signals are missing
+    // and 'complete' when all analyzers succeeded. This test mirrors the exact
+    // UPDATE from analysis.rs::persist_analysis_results and verifies both
+    // statuses are storable and readable.
+    let db_path = temp_db("analysis-status.db");
+    let conn = open_migrated_at(&db_path);
+    insert_track(
+        &conn,
+        &SeedTrack {
+            id: "t1",
+            title: "Test Track",
+            artist: "Artist",
+            album: None,
+            duration_ms: 1000,
+            hash: "h1",
+            created_at: "2026-01-01T00:00:00Z",
+        },
+    );
+
+    // Mirror the UPDATE from persist_analysis_results with needs_review.
+    conn.execute(
+        "UPDATE tracks SET
+            bpm = ?1,
+            key_camelot = ?2,
+            key_classical = ?3,
+            loudness_lufs = ?4,
+            vocal_presence = ?5,
+            phrase_confidence = ?6,
+            analysis_status = ?7,
+            analysis_version = ?8,
+            updated_at = ?9
+         WHERE id = ?10",
+        params![
+            None::<f64>,
+            None::<String>,
+            None::<String>,
+            None::<f64>,
+            0i64,
+            None::<f64>,
+            "needs_review",
+            "test-v1",
+            "2026-01-02T00:00:00Z",
+            "t1",
+        ],
+    )
+    .expect("needs_review UPDATE must succeed");
+
+    let status: String = conn
+        .query_row(
+            "SELECT analysis_status FROM tracks WHERE id = 't1'",
+            [],
+            |r| r.get(0),
+        )
+        .expect("analysis_status must be readable");
+    assert_eq!(status, "needs_review");
+
+    // Now write complete with all signals present.
+    conn.execute(
+        "UPDATE tracks SET
+            bpm = ?1,
+            key_camelot = ?2,
+            key_classical = ?3,
+            loudness_lufs = ?4,
+            vocal_presence = ?5,
+            phrase_confidence = ?6,
+            analysis_status = ?7,
+            analysis_version = ?8,
+            updated_at = ?9
+         WHERE id = ?10",
+        params![
+            128.0f64,
+            "8A",
+            "A minor",
+            -8.0f64,
+            0i64,
+            0.75f64,
+            "complete",
+            "test-v1",
+            "2026-01-02T00:00:00Z",
+            "t1",
+        ],
+    )
+    .expect("complete UPDATE must succeed");
+
+    let status: String = conn
+        .query_row(
+            "SELECT analysis_status FROM tracks WHERE id = 't1'",
+            [],
+            |r| r.get(0),
+        )
+        .expect("analysis_status must be readable");
+    assert_eq!(status, "complete");
+
+    let _ = std::fs::remove_file(&db_path);
+}
+
+#[test]
 fn concurrent_second_connection_sees_committed_tracks() {
     // The app holds one connection; a second reader (e.g. a future CLI or test) must
     // see committed rows. This is what makes WAL mode useful and proves durability

@@ -95,13 +95,13 @@ This is the actionable engineering task list. Check items off as they are comple
 - [ ] Spectral brightness (optional but useful)
 - [x] Per-track analysis job queue (local) — *`commands::analyze_library` + `analysis.rs::run_analysis_queue` (version-aware selection, background thread, per-track progress + completed events)*
 - [x] Analysis progress UI (per-track + overall) — *shared contracts + `analyzeLibrary`/`listenToAnalysis*` API wrappers + Analyze button + cyan progress bar + refresh-on-completed in `App.tsx`; contract tests green*
-- [x] Store analysis results in SQLite (`analysis_status`, `analysis_version`, feature columns) — *`persist_analysis_results` writes BPM/key/vocal-presence/phrase-confidence/LUFS + composite `analysis_version`, sets `analysis_status='complete'`; failure path stamps attempted version*
-- [ ] Low-confidence flagging / "needs review" state
-- [x] Re-analysis support when pipeline version changes — *`analyze_library` skips rows whose `analysis_version` matches current composite unless `force:true`; failures re-runnable*
+- [x] Store analysis results in SQLite (`analysis_status`, `analysis_version`, feature columns) — *`persist_analysis_results` writes BPM/key/LUFS/vocal-presence/phrase-confidence + composite `analysis_version`, sets classified `analysis_status`; failure path stamps attempted version*
+- [x] Low-confidence flagging / "needs review" state — *`classify_analysis_status` in `analysis.rs`: errors non-empty, bpm/key None, or phrase_confidence < 0.3 → `needs_review`; persist path writes classified status; 7 unit tests + schema test green*
+- [x] Re-analysis support when models or pipeline version change — *`analyze_library` skips rows whose `analysis_version` matches current composite unless `force:true`; failures re-runnable*
 
 ### Performance & Quality
 - [ ] Target: p50 analysis time < 3s per track on mid-range laptop (CPU)
-- [ ] Golden fixture tests for BPM / key / phrase on a small curated set
+- [x] Golden fixture tests for BPM / key / phrase on a small curated set — *`fixtures/audio/analysis_expected.json` (7 fixtures) + `crates/analysis/tests/golden.rs` (P1.1–P1.4 + P1.5/P1.6 benchmark)*
 - [ ] Graceful handling of very short / very long / corrupted files
 
 ### Exit Criteria — Phase 1

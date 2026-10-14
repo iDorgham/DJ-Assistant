@@ -90,9 +90,9 @@
 - [x] **T1.2.1** Local analysis job queue — *shipped backend: `commands::analyze_library` (version-aware selection, `force` flag) + `analysis.rs::run_analysis_job` with per-track `analysis:progress` and final `analysis:completed` events; UI progress surfacing still to verify.*
 - [x] **T1.2.2** Per-track + overall progress IPC + UI — *shared contracts (`AnalyzeLibraryRequest/Response`, `AnalysisProgressEvent`, `AnalysisCompletedEvent`) + `analyzeLibrary`/`listenToAnalysis*` wrappers + Analyze button + cyan progress bar + refresh-on-completed in `App.tsx`; contract tests green.*
 - [x] **T1.2.3** Persist analysis results to SQLite — *shipped: `analysis.rs::persist_analysis_results` writes BPM/key/grid/phrases/vocals/LUFS + composite `analysis_version`, sets `analysis_status='complete'`; failure path stamps attempted version.*
-- [ ] **T1.2.4** Low-confidence / needs_review flagging — *`AnalysisStatus` includes `needs_review` (`packages/shared`); analyzer confidence → flag mapping pending.*
+- [x] **T1.2.4** Low-confidence / needs_review flagging — *`classify_analysis_status` in `analysis.rs` maps results → `complete` or `needs_review` (errors non-empty, bpm/key None, or phrase_confidence < 0.3); persist path writes the classified status; 7 unit tests + schema test green.*
 - [x] **T1.2.5** Re-analyze support when version changes — *shipped: `analyze_library` skips rows whose `analysis_version` matches current composite unless `force:true`; failures re-runnable.*
-- [ ] **T1.2.6** Golden fixture test harness (small curated set)
+- [x] **T1.2.6** Golden fixture test harness — *`fixtures/audio/analysis/analysis_expected.json` (7 curated fixtures with expected key/status + phrase_confidence) + `crates/analysis/tests/golden.rs` (P1.1–P1.4 verification + classification + P1.5/P1.6 benchmark with p50 < 3s assertion).*
 
 **Phase 1 Exit Check:** See `05-ACCEPTANCE.md` § Phase 1
 

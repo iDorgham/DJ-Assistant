@@ -1,4 +1,4 @@
-//! Local analysis job queue + SQLite persistence (T1.2.1 / T1.2.2 / T1.2.3).
+//! Local analysis job queue + SQLite persistence (T1.2.1 / T1.2.2 / T1.2.3 / T1.2.4).
 //!
 //! `run_analysis_queue` drains a list of `(track_id, file_path)` pairs on a
 //! background thread (mirroring `scanner::run_scan`): for each track it runs the
@@ -19,15 +19,20 @@ use tauri::{AppHandle, Emitter};
 use crate::db::Database;
 use crate::models::{AnalysisCompletedEvent, AnalysisProgressEvent};
 
+/// Re-exported from the analysis crate so the desktop app and golden tests
+/// share one classification rule.
+pub use dj_assistant_analysis::classify_analysis_status;
+
 /// Persists one track's analysis results to `tracks` and stamps the composite
-/// `analysis_version`, setting `analysis_status = 'complete'`. Mirrors
-/// `commands.rs::get_track`'s column set; the exact SQL is contract-tested in
-/// `tests/schema`.
+/// `analysis_version`, setting `analysis_status` via [`classify_analysis_status`].
+/// Mirrors `commands.rs::get_track`'s column set; the exact SQL is
+/// contract-tested in `tests/schema`.
 pub fn persist_analysis_results(
     conn: &Connection,
     track_id: &str,
     results: &AnalysisResults,
 ) -> rusqlite::Result<()> {
+    let status = classify_analysis_status(results);
     let now = chrono::Utc::now().to_rfc3339();
     conn.execute(
         "UPDATE tracks SET
@@ -37,7 +42,7 @@ pub fn persist_analysis_results(
             loudness_lufs       = ?,
             vocal_presence      = ?,
             phrase_confidence   = ?,
-            analysis_status     = 'complete',
+            analysis_status     = ?,
             analysis_version    = ?,
             updated_at          = ?
          WHERE id = ?",
@@ -48,6 +53,7 @@ pub fn persist_analysis_results(
             results.loudness_lufs.map(f64::from),
             if results.vocal_presence { 1i64 } else { 0i64 },
             results.phrase_confidence.map(f64::from),
+            status,
             &results.analysis_version,
             now,
             track_id,
@@ -104,6 +110,7 @@ pub fn run_analysis_queue(
 
             let (status, error) = match run_full_analysis(&file_path) {
                 Ok(results) => {
+                    let review_status = classify_analysis_status(&results).to_string();
                     let guard = match db.lock() {
                         Ok(g) => g,
                         Err(_) => break,
@@ -111,11 +118,14 @@ pub fn run_analysis_queue(
                     match persist_analysis_results(guard.conn(), &track_id, &results) {
                         Ok(_) => {
                             succeeded += 1;
-                            ("complete", None)
+                            (review_status.clone(), None)
                         }
                         Err(e) => {
                             failed += 1;
-                            ("failed", Some(format!("database persist error: {e}")))
+                            (
+                                "failed".to_string(),
+                                Some(format!("database persist error: {e}")),
+                            )
                         }
                     }
                 }
@@ -127,12 +137,12 @@ pub fn run_analysis_queue(
                     match persist_analysis_failure(guard.conn(), &track_id, &current_version) {
                         Ok(_) => {
                             failed += 1;
-                            ("failed", Some(format!("{e}")))
+                            ("failed".to_string(), Some(format!("{e}")))
                         }
                         Err(db_err) => {
                             failed += 1;
                             (
-                                "failed",
+                                "failed".to_string(),
                                 Some(format!(
                                     "analysis failed ({e}); database persist error ({db_err})"
                                 )),
@@ -150,7 +160,7 @@ pub fn run_analysis_queue(
                     total,
                     track_id: track_id.clone(),
                     file_path: file_path.clone(),
-                    analysis_status: status.to_string(),
+                    analysis_status: status.clone(),
                     error,
                 },
             );
@@ -167,4 +177,71 @@ pub fn run_analysis_queue(
             },
         );
     });
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn base_results() -> AnalysisResults {
+        AnalysisResults {
+            bpm: Some(128.0),
+            key_camelot: Some("8A".to_string()),
+            key_classical: Some("A minor".to_string()),
+            loudness_lufs: Some(-8.0),
+            vocal_presence: false,
+            phrase_confidence: Some(0.75),
+            analysis_version: "test".to_string(),
+            errors: Vec::new(),
+        }
+    }
+
+    #[test]
+    fn complete_when_all_signals_present() {
+        assert_eq!(classify_analysis_status(&base_results()), "complete");
+    }
+
+    #[test]
+    fn needs_review_when_bpm_missing() {
+        let mut r = base_results();
+        r.bpm = None;
+        assert_eq!(classify_analysis_status(&r), "needs_review");
+    }
+
+    #[test]
+    fn needs_review_when_key_missing() {
+        let mut r = base_results();
+        r.key_camelot = None;
+        assert_eq!(classify_analysis_status(&r), "needs_review");
+    }
+
+    #[test]
+    fn needs_review_when_phrase_confidence_low() {
+        let mut r = base_results();
+        r.phrase_confidence = Some(0.1);
+        assert_eq!(classify_analysis_status(&r), "needs_review");
+    }
+
+    #[test]
+    fn needs_review_when_any_analyzer_errored() {
+        let mut r = base_results();
+        r.errors.push("bpm: no tempo established".to_string());
+        assert_eq!(classify_analysis_status(&r), "needs_review");
+    }
+
+    #[test]
+    fn phrase_confidence_at_threshold_is_complete() {
+        let mut r = base_results();
+        r.phrase_confidence = Some(PHRASE_CONFIDENCE_REVIEW_THRESHOLD);
+        assert_eq!(classify_analysis_status(&r), "complete");
+    }
+
+    #[test]
+    fn needs_review_when_phrase_confidence_none() {
+        // phrase_confidence is None only on a hard detector error, but treat
+        // it as review-worthy defensively.
+        let mut r = base_results();
+        r.phrase_confidence = None;
+        assert_eq!(classify_analysis_status(&r), "needs_review");
+    }
 }
