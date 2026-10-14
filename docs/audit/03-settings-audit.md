@@ -23,7 +23,7 @@
 2. **Missing knobs:** `RUST_LOG`, SQLite path, analysis threads/concurrency, model checksum pin, feature flags, telemetry opt-out, USB allowlist/policy, OAuth loopback port range, artwork cache size.
 3. **Bleeding-edge toolchain:** Vite 8, Tailwind 4, TS 6, pnpm 10, `ort 2.0-rc`. Stability + plugin compat risk on Windows MSVC/GNU.
 4. **Window size:** 1280x800 cramped for 3-pane (library + waveform + set). Recommend 1440x900 default, min 1100x700.
-5. **CI gaps:** branch protection exception T0117 (private repo needs Pro), no Cargo Dependabot, no secrets-scan live (only template `release/codeql`), no nightly model-perf regression.
+5. **CI gaps:** branch protection exception T0117 (private repo needs Pro), no secrets-scan live (only template `release/codeql`), no nightly model-perf regression.
 6. **OAuth loopback unspecified:** port pick, firewall prompt, custom-scheme fallback on Windows not in `tauri.conf.json`/docs.
 7. **No log retention:** size/rotation/PII redaction for `scan:`/`analysis:` logs undefined.
 
