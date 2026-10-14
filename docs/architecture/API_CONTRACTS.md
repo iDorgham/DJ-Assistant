@@ -104,10 +104,9 @@ interface AnalyzeLibraryResponse {
 Runs the deterministic suite (BPM/key/phrase/vocals/loudness) per track on a
 background thread, persists results + `analysis_version`, and selects
 version-aware rows unless `force:true`. Progress arrives via `analysis:progress`
-(per track) and `analysis:completed` (once the queue drains).
+(per track) and `analysis:completed` (once the queue drains). When no tracks need analysis, the response has `total: 0` and no `analysis:completed` is emitted. An empty `trackIds` array is rejected with an error; omit the field instead.
 
-The doc's `analyze_track` / `analyze_batch` remain the single-track and explicit-batch
-variants; `analyze_library` is the library-wide entry point shipped in Phase 1.
+Only `analyze_library` is currently implemented; `analyze_track` and `analyze_batch` are not registered IPC commands.
 
 ### 2.3 Skills
 

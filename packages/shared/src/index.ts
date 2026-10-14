@@ -143,7 +143,7 @@ export interface AnalysisProgressEvent {
   total: number;
   trackId: string;
   filePath: string;
-  analysisStatus: string;
+  analysisStatus: AnalysisStatus;
   error?: string | null;
 }
 
