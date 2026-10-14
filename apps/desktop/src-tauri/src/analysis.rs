@@ -12,16 +12,14 @@ use std::sync::{Arc, Mutex};
 use std::thread;
 use std::time::Instant;
 
-use dj_assistant_analysis::{analysis_version, run_full_analysis, AnalysisResults};
+use dj_assistant_analysis::{
+    analysis_version, classify_analysis_status, run_full_analysis, AnalysisResults,
+};
 use rusqlite::Connection;
 use tauri::{AppHandle, Emitter};
 
 use crate::db::Database;
 use crate::models::{AnalysisCompletedEvent, AnalysisProgressEvent};
-
-/// Re-exported from the analysis crate so the desktop app and golden tests
-/// share one classification rule.
-pub use dj_assistant_analysis::classify_analysis_status;
 
 /// Persists one track's analysis results to `tracks` and stamps the composite
 /// `analysis_version`, setting `analysis_status` via [`classify_analysis_status`].
@@ -182,6 +180,7 @@ pub fn run_analysis_queue(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use dj_assistant_analysis::PHRASE_CONFIDENCE_REVIEW_THRESHOLD;
 
     fn base_results() -> AnalysisResults {
         AnalysisResults {
