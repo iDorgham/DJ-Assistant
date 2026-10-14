@@ -470,7 +470,11 @@ fn analysis_status_accepts_needs_review_and_complete() {
     .expect("needs_review UPDATE must succeed");
 
     let status: String = conn
-        .query_row("SELECT analysis_status FROM tracks WHERE id = 't1'", [], |r| r.get(0))
+        .query_row(
+            "SELECT analysis_status FROM tracks WHERE id = 't1'",
+            [],
+            |r| r.get(0),
+        )
         .expect("analysis_status must be readable");
     assert_eq!(status, "needs_review");
 
@@ -503,7 +507,11 @@ fn analysis_status_accepts_needs_review_and_complete() {
     .expect("complete UPDATE must succeed");
 
     let status: String = conn
-        .query_row("SELECT analysis_status FROM tracks WHERE id = 't1'", [], |r| r.get(0))
+        .query_row(
+            "SELECT analysis_status FROM tracks WHERE id = 't1'",
+            [],
+            |r| r.get(0),
+        )
         .expect("analysis_status must be readable");
     assert_eq!(status, "complete");
 

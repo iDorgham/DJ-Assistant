@@ -148,7 +148,10 @@ pub fn run_analysis_queue(
                         }
                         Err(e) => {
                             failed += 1;
-                            ("failed".to_string(), Some(format!("database persist error: {e}")))
+                            (
+                                "failed".to_string(),
+                                Some(format!("database persist error: {e}")),
+                            )
                         }
                     }
                 }
