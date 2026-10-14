@@ -5,7 +5,7 @@
 //! results correctly, and meets timing acceptance criteria (P1.5/P1.6).
 //!
 //! In this test environment (Symphonia 0.6 + custom ffmpeg build) some fields
-//! may be `None` due to short synthetic clip length / WAV decoder truncation.
+//! may be `None` due to short synthetic clip length.
 //! The p50 timing target is validated on fixed benchmark hardware separately.
 //! What matters here is that:
 //!   - The pipeline runs without error
@@ -71,8 +71,8 @@ fn fixture_path(rel: &str) -> PathBuf {
 fn run_fixture(rel: &str, expected: &Expected) -> AnalysisResults {
     let path = fixture_path(rel);
     assert!(path.exists(), "fixture must exist: {}", path.display());
-    let results = run_full_analysis(&path)
-        .unwrap_or_else(|e| panic!("analysis of {rel} must succeed: {e}"));
+    let results =
+        run_full_analysis(&path).unwrap_or_else(|e| panic!("analysis of {rel} must succeed: {e}"));
 
     let label = rel;
 
@@ -208,12 +208,15 @@ fn golden_fixture_benchmark() {
         timings.push((rel, elapsed));
     }
 
-    assert!(!timings.is_empty(), "at least one fixture must be benchmarked");
+    assert!(
+        !timings.is_empty(),
+        "at least one fixture must be benchmarked"
+    );
 
     timings.sort_by(|a, b| b.1.partial_cmp(&a.1).unwrap());
 
     let total: f64 = timings.iter().map(|(_, t)| t).sum();
-    let p50 = if timings.len() % 2 == 0 {
+    let p50 = if timings.len().is_multiple_of(2) {
         (timings[timings.len() / 2 - 1].1 + timings[timings.len() / 2].1) / 2.0
     } else {
         timings[timings.len() / 2].1
@@ -223,7 +226,10 @@ fn golden_fixture_benchmark() {
     for (rel, t) in &timings {
         println!("  {t:8.3}s  {rel}");
     }
-    println!("  p50: {p50:.3}s  total: {total:.3}s  count: {}", timings.len());
+    println!(
+        "  p50: {p50:.3}s  total: {total:.3}s  count: {}",
+        timings.len()
+    );
 
     // P1.5: p50 < 3s per track.
     assert!(p50 < 3.0, "p50 analysis time {p50:.3}s exceeds 3s target");
