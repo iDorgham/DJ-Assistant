@@ -1,6 +1,6 @@
 # Data Model (Conceptual)
 
-> Conceptual only — authoritative tables live in `docs/architecture/DATA_MODEL.md` (migrations 001–005) and `apps/desktop/src-tauri/migrations/`. Shipped tables beyond this sketch: `external_ids`, `enrichment_runs`/`enrichment_candidates`, `streaming_*`, `chart_snapshots`, `tracks.isrc`/`artwork_*`.
+> Conceptual only — `docs/architecture/DATA_MODEL.md` summarizes the schemas; authoritative SQL is in `docs/product/CANONICAL_DOCUMENTATION.md` §5, and shipped SQLite changes are in `apps/desktop/src-tauri/migrations/`. Shipped tables beyond this sketch: `external_ids`, `enrichment_runs`/`enrichment_candidates`, `streaming_*`, `chart_snapshots`, `tracks.isrc`/`artwork_*`.
 
 ```mermaid
 erDiagram
