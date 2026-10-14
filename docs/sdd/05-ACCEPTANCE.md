@@ -137,7 +137,7 @@ All Phase 0–3 criteria remain green, **plus**:
 |---|-----------|--------------|
 | D.1 | Similar-tracks results carry a `source` (local / Last.fm / provider) and never auto-modify sets | Unit + manual |
 | D.2 | External similarity is opt-in per provider; only IDs + metadata cross the network, cached ≥ 30 days | Code review + unit |
-| D.3 | Chart snapshots are versioned data with a taste filter (BPM ±3%, Camelot, owned-vs-missing via ISRC) | Fixture tests |
+| D.3 | Chart snapshots are versioned data with a taste score (60% tempo / 40% key) and ISRC-exact ownership | Fixture tests |
 | D.4 | Release radar is opt-in, cached and rate-limited; unofficial feeds are labelled as such | Manual + unit |
 | E.1 | Enrichment runs preview → apply → undo; bulk apply needs explicit confirmation | Manual + undo tests |
 | E.2 | Enrichment writes DB canonical fields only; source-file BLAKE3 hashes are unchanged | Automated hash audit |
