@@ -145,7 +145,7 @@ Each run that published a local set to a provider playlist (recorded so it can b
 |--------|------|-------|
 | id | TEXT (UUID) | Primary key |
 | provider | TEXT | e.g. `spotify` |
-| set_id | TEXT | FK → sets |
+| set_id | TEXT | Nullable; no FK constraint in migration 003 |
 | provider_playlist_id | TEXT | Provider playlist id (used for undo) |
 | playlist_name | TEXT | |
 | visibility | TEXT | private / public |
