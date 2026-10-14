@@ -1,10 +1,34 @@
 import { useEffect, useState, useMemo } from "react";
-import type { TrackSummary, ScanProgressEvent, ScanCompletedEvent } from "@dj-assistant/shared";
+import type {
+  TrackSummary,
+  ScanProgressEvent,
+  ScanCompletedEvent,
+  SimilarTrackResult,
+  StoreLinksResponse,
+  TagHealthResponse,
+  ProviderStatusResponse,
+  EnrichmentPreviewResponse,
+  EnrichmentProgressEvent,
+  EnrichmentProviderKind,
+  ProviderTrackMatch,
+  ChartListResponse,
+} from "@dj-assistant/shared";
 import {
   openFolderDialog,
   scanFolder,
   listTracks,
   getArtwork,
+  findSimilarTracks,
+  trackTagHealth,
+  storeLinksForTrack,
+  providerStatus,
+  enrichmentPreview,
+  enrichmentApply,
+  enrichmentUndo,
+  listenToEnrichmentProgress,
+  providerMatchTracks,
+  chartImportSnapshot,
+  chartList,
   listenToScanProgress,
   listenToScanCompleted,
 } from "./services/api";
@@ -18,6 +42,16 @@ import {
   ShieldCheck,
   Disc3,
   CheckCircle2,
+  Sparkles,
+  ExternalLink,
+  Copy,
+  Check,
+  Activity,
+  PlugZap,
+  Globe,
+  Undo2,
+  BarChart3,
+  X,
 } from "lucide-react";
 import {
   filterTracks,
@@ -25,6 +59,8 @@ import {
   formatDuration,
   formatKey,
   formatRating,
+  formatScore,
+  formatMissingField,
   scanPercent,
   shortHash,
   truncateComment,
@@ -34,7 +70,15 @@ import {
  * Lazily loads one track's cached cover art and falls back to a placeholder
  * icon while loading, for missing art, or when the cache read fails.
  */
-function ArtworkThumb({ trackId, hasArtwork }: { trackId: string; hasArtwork: boolean }) {
+function ArtworkThumb({
+  trackId,
+  hasArtwork,
+  large = false,
+}: {
+  trackId: string;
+  hasArtwork: boolean;
+  large?: boolean;
+}) {
   const [src, setSrc] = useState<string | null>(null);
 
   useEffect(() => {
@@ -59,10 +103,14 @@ function ArtworkThumb({ trackId, hasArtwork }: { trackId: string; hasArtwork: bo
   if (!src) {
     return (
       <div
-        className="h-9 w-9 rounded-sm bg-[#1a1e2b] border border-[#2a2f42] flex items-center justify-center"
+        className={
+          large
+            ? "h-20 w-20 rounded-md bg-[#1a1e2b] border border-[#2a2f42] flex items-center justify-center"
+            : "h-9 w-9 rounded-sm bg-[#1a1e2b] border border-[#2a2f42] flex items-center justify-center"
+        }
         title={hasArtwork ? "Loading artwork..." : "No embedded artwork"}
       >
-        <Music className="w-4 h-4 text-slate-600" />
+        <Music className={large ? "w-8 h-8 text-slate-600" : "w-4 h-4 text-slate-600"} />
       </div>
     );
   }
@@ -72,7 +120,11 @@ function ArtworkThumb({ trackId, hasArtwork }: { trackId: string; hasArtwork: bo
       src={src}
       alt=""
       loading="lazy"
-      className="h-9 w-9 rounded-sm object-cover border border-[#2a2f42]"
+      className={
+        large
+          ? "h-20 w-20 rounded-md object-cover border border-[#2a2f42]"
+          : "h-9 w-9 rounded-sm object-cover border border-[#2a2f42]"
+      }
     />
   );
 }
@@ -85,6 +137,39 @@ export default function App() {
   const [scanning, setScanning] = useState(false);
   const [progress, setProgress] = useState<ScanProgressEvent | null>(null);
   const [statusMessage, setStatusMessage] = useState<string>("Ready");
+
+  // Discovery / enrichment / provider state (local-first; online lookup is planned).
+  const [selectedTrack, setSelectedTrack] = useState<TrackSummary | null>(null);
+  const [similar, setSimilar] = useState<SimilarTrackResult[]>([]);
+  const [similarLoading, setSimilarLoading] = useState(false);
+  const [storeLinks, setStoreLinks] = useState<StoreLinksResponse | null>(null);
+  const [selectedGaps, setSelectedGaps] = useState<string[]>([]);
+  const [copiedUrl, setCopiedUrl] = useState<string | null>(null);
+  const [healthOpen, setHealthOpen] = useState(false);
+  const [health, setHealth] = useState<TagHealthResponse | null>(null);
+  const [healthLoading, setHealthLoading] = useState(false);
+  const [providers, setProviders] = useState<ProviderStatusResponse | null>(null);
+
+  // Online enrichment review (TE.3): explicit lookup → diff review → apply → undo.
+  const [enrichProvider, setEnrichProvider] = useState<EnrichmentProviderKind>("musicbrainz");
+  const [enrichLoading, setEnrichLoading] = useState(false);
+  const [enrichProgress, setEnrichProgress] = useState<EnrichmentProgressEvent | null>(null);
+  const [preview, setPreview] = useState<EnrichmentPreviewResponse | null>(null);
+  const [checkedProposals, setCheckedProposals] = useState<string[]>([]);
+  const [applyMessage, setApplyMessage] = useState<string | null>(null);
+
+  // Deezer catalog match for the inspected track (TX.2: live reads, no writes).
+  const [deezerMatch, setDeezerMatch] = useState<ProviderTrackMatch | null>(null);
+  const [deezerLoading, setDeezerLoading] = useState(false);
+
+  // Chart snapshots Tier 1 (TD.3): versioned data with local taste filtering.
+  const [chartsOpen, setChartsOpen] = useState(false);
+  const [chartGenre, setChartGenre] = useState("techno");
+  const [chartKind, setChartKind] = useState("top100");
+  const [chartData, setChartData] = useState<ChartListResponse | null>(null);
+  const [chartLoading, setChartLoading] = useState(false);
+  const [chartError, setChartError] = useState<string | null>(null);
+  const [matchToSelected, setMatchToSelected] = useState(true);
 
   // Load tracks
   const refreshLibrary = async () => {
@@ -109,10 +194,257 @@ export default function App() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // Provider registry: supported streaming targets + buy-link stores, and any
+  // connected accounts. Empty `connected` until the first OAuth flow lands.
+  useEffect(() => {
+    providerStatus()
+      .then(setProviders)
+      .catch((err) => console.error("Failed to load provider status:", err));
+  }, []);
+
+  // Selection drawer data: similar tracks, store buy-links, and this track's
+  // tag gaps. All local reads; online enrichment is a planned follow-up.
+  useEffect(() => {
+    if (!selectedTrack) {
+      setSimilar([]);
+      setStoreLinks(null);
+      setSelectedGaps([]);
+      setDeezerMatch(null);
+      return;
+    }
+    let cancelled = false;
+    const trackId = selectedTrack.id;
+    setSimilarLoading(true);
+    setDeezerMatch(null);
+    findSimilarTracks({ trackId, limit: 8 })
+      .then((res) => {
+        if (!cancelled) setSimilar(res.results);
+      })
+      .catch((err) => {
+        console.error("Failed to load similar tracks:", err);
+        if (!cancelled) setSimilar([]);
+      })
+      .finally(() => {
+        if (!cancelled) setSimilarLoading(false);
+      });
+    storeLinksForTrack({ trackId })
+      .then((res) => {
+        if (!cancelled) setStoreLinks(res);
+      })
+      .catch((err) => {
+        console.error("Failed to load store links:", err);
+        if (!cancelled) setStoreLinks(null);
+      });
+    trackTagHealth({ trackIds: [trackId], limit: 1 })
+      .then((res) => {
+        if (!cancelled) setSelectedGaps(res.gaps[0]?.missing ?? []);
+      })
+      .catch((err) => {
+        console.error("Failed to load tag gaps:", err);
+        if (!cancelled) setSelectedGaps([]);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [selectedTrack]);
+
+  const openTagHealth = async () => {
+    setHealthOpen(true);
+    setHealthLoading(true);
+    setPreview(null);
+    setCheckedProposals([]);
+    setApplyMessage(null);
+    setEnrichProgress(null);
+    try {
+      setHealth(await trackTagHealth({}));
+    } catch (err) {
+      console.error("Failed to load tag health:", err);
+      setHealth(null);
+    } finally {
+      setHealthLoading(false);
+    }
+  };
+
+  const copyStoreUrl = async (url: string) => {
+    try {
+      await navigator.clipboard.writeText(url);
+      setCopiedUrl(url);
+      window.setTimeout(() => {
+        setCopiedUrl((current) => (current === url ? null : current));
+      }, 1500);
+    } catch (err) {
+      console.error("Failed to copy store URL:", err);
+    }
+  };
+
+  const runEnrichmentPreview = async () => {
+    setEnrichLoading(true);
+    setApplyMessage(null);
+    setPreview(null);
+    setCheckedProposals([]);
+    try {
+      const res = await enrichmentPreview({ provider: enrichProvider, limit: 25 });
+      setPreview(res);
+      setCheckedProposals(res.proposals.map((p) => p.trackId));
+      // Refresh gap data underneath the review (titles may already match).
+      setHealth(await trackTagHealth({}));
+    } catch (err) {
+      console.error("Enrichment lookup failed:", err);
+      setApplyMessage(`Lookup failed: ${err}`);
+    } finally {
+      setEnrichLoading(false);
+      setEnrichProgress(null);
+    }
+  };
+
+  const toggleProposal = (trackId: string) => {
+    setCheckedProposals((current) =>
+      current.includes(trackId) ? current.filter((id) => id !== trackId) : [...current, trackId]
+    );
+  };
+
+  const runEnrichmentApply = async () => {
+    if (!preview || checkedProposals.length === 0) return;
+    setEnrichLoading(true);
+    try {
+      const res = await enrichmentApply({ runId: preview.runId, trackIds: checkedProposals });
+      setApplyMessage(
+        `Applied ${res.applied} field${res.applied === 1 ? "" : "s"}${res.skipped > 0 ? `, skipped ${res.skipped}` : ""}. Undo is available for this run.`
+      );
+      setPreview({
+        ...preview,
+        proposals: preview.proposals.filter((p) => !checkedProposals.includes(p.trackId)),
+      });
+      setCheckedProposals([]);
+      refreshLibrary();
+      setHealth(await trackTagHealth({}));
+    } catch (err) {
+      console.error("Enrichment apply failed:", err);
+      setApplyMessage(`Apply failed: ${err}`);
+    } finally {
+      setEnrichLoading(false);
+    }
+  };
+
+  const runEnrichmentUndo = async () => {
+    if (!preview) return;
+    setEnrichLoading(true);
+    try {
+      const res = await enrichmentUndo({ runId: preview.runId });
+      setApplyMessage(`Undone — restored ${res.restored} track${res.restored === 1 ? "" : "s"}.`);
+      setPreview(null);
+      setCheckedProposals([]);
+      refreshLibrary();
+      setHealth(await trackTagHealth({}));
+    } catch (err) {
+      console.error("Enrichment undo failed:", err);
+      setApplyMessage(`Undo failed: ${err}`);
+    } finally {
+      setEnrichLoading(false);
+    }
+  };
+
+  const runDeezerMatch = async () => {
+    if (!selectedTrack) return;
+    setDeezerLoading(true);
+    setDeezerMatch(null);
+    try {
+      const res = await providerMatchTracks({ provider: "deezer", trackIds: [selectedTrack.id] });
+      setDeezerMatch(res.matches[0] ?? null);
+    } catch (err) {
+      console.error("Deezer match failed:", err);
+    } finally {
+      setDeezerLoading(false);
+    }
+  };
+
+  const loadCharts = async (
+    genre: string = chartGenre,
+    chart: string = chartKind,
+    useSelected: boolean = matchToSelected
+  ) => {
+    setChartLoading(true);
+    setChartError(null);
+    try {
+      setChartData(
+        await chartList({
+          provider: "beatport",
+          chart,
+          genre,
+          seedTrackId: useSelected ? (selectedTrack?.id ?? undefined) : undefined,
+        })
+      );
+    } catch (err) {
+      console.error("Chart list failed:", err);
+      setChartData(null);
+      setChartError(`${err}`);
+    } finally {
+      setChartLoading(false);
+    }
+  };
+
+  const openCharts = () => {
+    setChartsOpen(true);
+    loadCharts();
+  };
+
+  const loadSampleSnapshot = async () => {
+    setChartLoading(true);
+    setChartError(null);
+    try {
+      // Mirrors fixtures/charts/beatport-top100-techno.SAMPLE.json (synthetic demo data).
+      const res = await chartImportSnapshot({
+        provider: "beatport",
+        chart: chartKind,
+        genre: chartGenre,
+        snapshotDate: new Date().toISOString().slice(0, 10),
+        entries: [
+          {
+            position: 1,
+            title: "Sample Peak A",
+            artist: "Sample Artist",
+            label: "Sample Records",
+            isrc: "XXAAA2600001",
+            bpm: 132.0,
+            keyCamelot: "11A",
+            sourceUrl: "https://www.beatport.com/search?q=Sample+Artist+Sample+Peak+A",
+          },
+          {
+            position: 2,
+            title: "Sample Peak B",
+            artist: "Sample Artist",
+            label: "Sample Records",
+            isrc: "XXAAA2600002",
+            bpm: 130.0,
+            keyCamelot: "11A",
+            sourceUrl: "https://www.beatport.com/search?q=Sample+Artist+Sample+Peak+B",
+          },
+          {
+            position: 3,
+            title: "Sample Groove",
+            artist: "Other Artist",
+            label: "Other Label",
+            bpm: 126.0,
+            keyCamelot: "8A",
+            sourceUrl: "https://www.beatport.com/search?q=Other+Artist+Sample+Groove",
+          },
+        ],
+      });
+      setStatusMessage(`Chart snapshot imported: ${res.imported} entries, skipped ${res.skipped}`);
+      await loadCharts();
+    } catch (err) {
+      console.error("Sample snapshot import failed:", err);
+      setChartError(`${err}`);
+    } finally {
+      setChartLoading(false);
+    }
+  };
+
   // Listen to Tauri scan events
   useEffect(() => {
     let unlistenProgress: (() => void) | undefined;
     let unlistenCompleted: (() => void) | undefined;
+    let unlistenEnrichment: (() => void) | undefined;
 
     listenToScanProgress((payload) => {
       setProgress(payload);
@@ -137,13 +469,33 @@ export default function App() {
       unlistenCompleted = fn;
     });
 
+    listenToEnrichmentProgress((payload) => {
+      setEnrichProgress(payload);
+    }).then((fn) => {
+      unlistenEnrichment = fn;
+    });
+
     return () => {
       if (unlistenProgress) unlistenProgress();
       if (unlistenCompleted) unlistenCompleted();
+      if (unlistenEnrichment) unlistenEnrichment();
     };
     // Listeners are registered once; the completion handler calls the loader
     // captured at mount, which is enough to reload the library after a scan.
     // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Esc closes the inspector drawer and the Tag Health modal.
+  useEffect(() => {
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setSelectedTrack(null);
+        setHealthOpen(false);
+        setChartsOpen(false);
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
   }, []);
 
   const handleSelectFolder = async () => {
@@ -166,7 +518,7 @@ export default function App() {
   const filteredTracks = useMemo(() => filterTracks(tracks, searchQuery), [tracks, searchQuery]);
 
   return (
-    <div className="flex flex-col h-screen bg-[#0f1117] text-slate-100 font-sans">
+    <div className="relative flex flex-col h-screen bg-[#0f1117] text-slate-100 font-sans">
       {/* Top Navigation Bar */}
       <header className="h-14 border-b border-[#2a2f42] bg-[#141721] px-5 flex items-center justify-between">
         <div className="flex items-center space-x-3">
@@ -241,6 +593,34 @@ export default function App() {
           </div>
 
           <div className="flex items-center space-x-4 text-xs text-slate-400">
+            <button
+              onClick={openTagHealth}
+              className="flex items-center space-x-1.5 px-2.5 py-1.5 rounded-md bg-[#1e2230] hover:bg-[#252b3d] text-slate-300 border border-[#2a2f42] transition"
+              title="Show missing tags and artwork across the library (local gap detection; online lookup planned)"
+            >
+              <Activity className="w-3.5 h-3.5 text-amber-400" />
+              <span>Tag Health</span>
+            </button>
+            <button
+              onClick={openCharts}
+              className="flex items-center space-x-1.5 px-2.5 py-1.5 rounded-md bg-[#1e2230] hover:bg-[#252b3d] text-slate-300 border border-[#2a2f42] transition"
+              title="Beatport Top 100 / Hype snapshots with taste filtering (versioned data — no catalog API)"
+            >
+              <BarChart3 className="w-3.5 h-3.5 text-violet-400" />
+              <span>Charts</span>
+            </button>
+            {providers && (
+              <span
+                className="hidden lg:flex items-center space-x-1"
+                title={`Streaming: ${providers.supportedStreaming.join(", ")} · Stores: ${providers.supportedStores.join(", ")}`}
+              >
+                <PlugZap className="w-3.5 h-3.5 text-slate-500" />
+                <span>
+                  {providers.supportedStreaming.length} streaming ·{" "}
+                  {providers.supportedStores.length} stores · {providers.connected.length} connected
+                </span>
+              </span>
+            )}
             <span className="flex items-center space-x-1">
               <HardDrive className="w-3.5 h-3.5 text-slate-500" />
               <span>{filteredTracks.length} tracks</span>
@@ -295,7 +675,17 @@ export default function App() {
               </thead>
               <tbody className="divide-y divide-[#1b1f2d]">
                 {filteredTracks.map((track, idx) => (
-                  <tr key={track.id} className="hover:bg-[#181c28] transition duration-150 group">
+                  <tr
+                    key={track.id}
+                    onClick={() =>
+                      setSelectedTrack((current) => (current?.id === track.id ? null : track))
+                    }
+                    title="Click to inspect: similar tracks, tag gaps, buy-links"
+                    className={`hover:bg-[#181c28] transition duration-150 group cursor-pointer ${
+                      selectedTrack?.id === track.id ? "bg-[#1a2133]" : ""
+                    }`}
+                  >
+                    {" "}
                     <td className="py-2.5 px-4 text-center text-slate-500 font-mono text-[11px]">
                       {idx + 1}
                     </td>
@@ -362,12 +752,593 @@ export default function App() {
         </div>
       </div>
 
+      {/* Track inspector drawer: similar tracks, tag gaps, buy-links */}
+      {selectedTrack && (
+        <aside className="absolute right-0 top-14 bottom-7 w-[380px] max-w-[92vw] bg-[#12151e] border-l border-[#2a2f42] overflow-y-auto shadow-2xl z-20">
+          <div className="p-4 border-b border-[#222738]">
+            <div className="flex items-start justify-between gap-2">
+              <div className="flex items-start space-x-3 min-w-0">
+                <ArtworkThumb
+                  trackId={selectedTrack.id}
+                  hasArtwork={!!selectedTrack.artworkHash}
+                  large
+                />
+                <div className="min-w-0">
+                  <p className="text-sm font-semibold text-slate-100 truncate">
+                    {selectedTrack.title || "Untitled"}
+                  </p>
+                  <p className="text-xs text-slate-400 truncate">
+                    {selectedTrack.artist || "Unknown Artist"}
+                  </p>
+                  <p className="text-[11px] text-slate-500 font-mono mt-1">
+                    {formatBpm(selectedTrack.bpm)} ·{" "}
+                    {formatKey(selectedTrack.keyCamelot, selectedTrack.keyClassical)} ·{" "}
+                    {formatDuration(selectedTrack.durationMs)}
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => setSelectedTrack(null)}
+                className="p-1.5 rounded-md hover:bg-[#252b3d] text-slate-400 transition"
+                title="Close inspector (Esc)"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+            {selectedGaps.length > 0 && (
+              <div className="mt-3 flex flex-wrap gap-1.5">
+                {selectedGaps.map((field) => (
+                  <span
+                    key={field}
+                    className="px-1.5 py-0.5 rounded-sm text-[10px] font-medium bg-amber-500/10 text-amber-400 border border-amber-500/20"
+                    title="Missing locally — online lookup (MusicBrainz / iTunes / Deezer) is planned and opt-in"
+                  >
+                    missing: {formatMissingField(field)}
+                  </span>
+                ))}
+              </div>
+            )}
+          </div>
+
+          <div className="p-4 border-b border-[#222738]">
+            <p className="text-[11px] uppercase tracking-wider font-semibold text-slate-400 flex items-center space-x-1.5">
+              <Sparkles className="w-3.5 h-3.5 text-blue-400" />
+              <span>Similar tracks (local mix-compatibility)</span>
+            </p>
+            {similarLoading ? (
+              <p className="text-xs text-slate-500 mt-2">Scoring library…</p>
+            ) : similar.length === 0 ? (
+              <p className="text-xs text-slate-500 mt-2">
+                No comparable tracks yet — import more music with BPM and key tags.
+              </p>
+            ) : (
+              <ul className="mt-2 space-y-2">
+                {similar.map((result) => (
+                  <li key={result.id}>
+                    <button
+                      onClick={() => {
+                        const next = tracks.find((t) => t.id === result.id);
+                        if (next) setSelectedTrack(next);
+                      }}
+                      className="w-full text-left p-2 rounded-md bg-[#1a1e2b] hover:bg-[#222738] border border-[#2a2f42] transition"
+                      title={result.reasons.join(" · ")}
+                    >
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="text-xs font-medium text-slate-200 truncate">
+                          {result.title || "Untitled"}
+                        </span>
+                        <span className="text-[11px] font-mono text-blue-400 shrink-0">
+                          {formatScore(result.score)}
+                        </span>
+                      </div>
+                      <div className="flex items-center justify-between gap-2 mt-0.5">
+                        <span className="text-[11px] text-slate-500 truncate">
+                          {result.artist || "Unknown Artist"}
+                        </span>
+                        <span className="text-[10px] font-mono text-slate-500 shrink-0">
+                          {formatBpm(result.bpm)} ·{" "}
+                          {formatKey(result.keyCamelot, result.keyClassical)}
+                        </span>
+                      </div>
+                      {result.reasons.length > 0 && (
+                        <p className="text-[10px] text-slate-500 mt-1 truncate">
+                          {result.reasons.join(" · ")}
+                        </p>
+                      )}
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+
+          <div className="p-4">
+            <p className="text-[11px] uppercase tracking-wider font-semibold text-slate-400 flex items-center space-x-1.5">
+              <ExternalLink className="w-3.5 h-3.5 text-emerald-400" />
+              <span>Find to buy (metadata links only)</span>
+            </p>
+            {!storeLinks || storeLinks.links.length === 0 ? (
+              <p className="text-xs text-slate-500 mt-2">No store links for this track.</p>
+            ) : (
+              <ul className="mt-2 space-y-1.5">
+                {storeLinks.links.map((link) => (
+                  <li
+                    key={link.provider}
+                    className="flex items-center justify-between gap-2 p-2 rounded-md bg-[#1a1e2b] border border-[#2a2f42]"
+                  >
+                    <span className="text-xs text-slate-300">{link.label}</span>
+                    <button
+                      onClick={() => copyStoreUrl(link.url)}
+                      className="flex items-center space-x-1 px-2 py-1 rounded-sm text-[11px] bg-[#212637] hover:bg-[#2a3049] text-slate-300 border border-[#2e344a] transition"
+                      title={link.url}
+                    >
+                      {copiedUrl === link.url ? (
+                        <Check className="w-3 h-3 text-emerald-400" />
+                      ) : (
+                        <Copy className="w-3 h-3" />
+                      )}
+                      <span>{copiedUrl === link.url ? "Copied" : "Copy link"}</span>
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
+            <p className="text-[10px] text-slate-600 mt-2">
+              Links open the store's own search page. No audio is fetched; Beatport charts and
+              release radar arrive as data integrations next.
+            </p>
+          </div>
+
+          <div className="p-4 border-t border-[#222738]">
+            <p className="text-[11px] uppercase tracking-wider font-semibold text-slate-400 flex items-center space-x-1.5">
+              <PlugZap className="w-3.5 h-3.5 text-violet-400" />
+              <span>Match on Deezer (live read, no key)</span>
+            </p>
+            {!deezerMatch && !deezerLoading && (
+              <button
+                onClick={runDeezerMatch}
+                className="mt-2 px-2.5 py-1.5 rounded-md bg-[#1e2230] hover:bg-[#252b3d] text-slate-300 border border-[#2a2f42] text-xs transition"
+                title="ISRC-exact first, then fuzzy search. Writes nothing."
+              >
+                Match this track
+              </button>
+            )}
+            {deezerLoading && <p className="text-xs text-slate-500 mt-2">Matching…</p>}
+            {deezerMatch && (
+              <div className="mt-2 p-2 rounded-md bg-[#1a1e2b] border border-[#2a2f42] text-xs">
+                {deezerMatch.providerId ? (
+                  <>
+                    <p className="text-slate-200 truncate">
+                      {deezerMatch.title} — {deezerMatch.artist}
+                    </p>
+                    <p className="text-[11px] text-slate-500 mt-0.5">
+                      {deezerMatch.album ?? "Unknown release"} · {deezerMatch.status} ·{" "}
+                      {formatScore(deezerMatch.confidence)}
+                    </p>
+                    {deezerMatch.sourceUrl && (
+                      <button
+                        onClick={() => copyStoreUrl(deezerMatch.sourceUrl!)}
+                        className="mt-1.5 flex items-center space-x-1 px-2 py-1 rounded-sm text-[11px] bg-[#212637] hover:bg-[#2a3049] text-slate-300 border border-[#2e344a] transition"
+                        title={deezerMatch.sourceUrl}
+                      >
+                        {copiedUrl === deezerMatch.sourceUrl ? (
+                          <Check className="w-3 h-3 text-emerald-400" />
+                        ) : (
+                          <Copy className="w-3 h-3" />
+                        )}
+                        <span>
+                          {copiedUrl === deezerMatch.sourceUrl ? "Copied" : "Copy Deezer link"}
+                        </span>
+                      </button>
+                    )}
+                  </>
+                ) : (
+                  <p className="text-slate-500">No Deezer match for this track.</p>
+                )}
+                <p
+                  className="text-[10px] text-slate-600 mt-1.5"
+                  title="Playlist export needs a Deezer application ID (TX follow-up)"
+                >
+                  Playlist export: needs a Deezer app ID — matching stays read-only.
+                </p>
+              </div>
+            )}
+          </div>
+        </aside>
+      )}
+
+      {/* Tag Health modal: library-wide missing tags/artwork */}
+      {healthOpen && (
+        <div className="absolute inset-0 bg-black/60 z-30 flex items-center justify-center p-6">
+          <div className="w-[560px] max-w-full max-h-full overflow-y-auto bg-[#12151e] border border-[#2a2f42] rounded-lg shadow-2xl">
+            <div className="p-4 border-b border-[#222738] flex items-center justify-between">
+              <p className="text-sm font-semibold text-slate-100 flex items-center space-x-2">
+                <Activity className="w-4 h-4 text-amber-400" />
+                <span>Tag Health — missing tags &amp; artwork</span>
+              </p>
+              <button
+                onClick={() => setHealthOpen(false)}
+                className="p-1.5 rounded-md hover:bg-[#252b3d] text-slate-400 transition"
+                title="Close"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+            <div className="p-4">
+              {healthLoading ? (
+                <p className="text-xs text-slate-500">Scanning library gaps…</p>
+              ) : !health ? (
+                <p className="text-xs text-slate-500">Could not load tag health.</p>
+              ) : (
+                <>
+                  <p className="text-xs text-slate-400">
+                    {health.withGaps} of {health.checked} tracks have gaps.
+                    {health.averageScore != null && (
+                      <>
+                        {" "}
+                        Library score:{" "}
+                        <span className="font-mono text-slate-200">
+                          {Math.round(health.averageScore)}
+                        </span>
+                        /100
+                      </>
+                    )}{" "}
+                    Online lookup is explicit and opt-in per provider — only metadata and search
+                    queries leave this device, never audio.
+                  </p>
+                  <div className="mt-3 flex items-center gap-2">
+                    <label htmlFor="enrich-provider" className="text-xs text-slate-400">
+                      Source
+                    </label>
+                    <select
+                      id="enrich-provider"
+                      value={enrichProvider}
+                      onChange={(e) => setEnrichProvider(e.target.value as EnrichmentProviderKind)}
+                      className="bg-[#1a1e2b] border border-[#2a2f42] rounded-md px-2 py-1.5 text-xs text-slate-200"
+                      disabled={enrichLoading}
+                      title="Discogs / Last.fm need exported API keys (see .env.example)"
+                    >
+                      <option value="musicbrainz">MusicBrainz (no key)</option>
+                      <option value="itunes">iTunes Search (no key)</option>
+                      <option value="deezer">Deezer (no key)</option>
+                      <option value="discogs">Discogs (needs DISCOGS_TOKEN)</option>
+                      <option value="lastfm">Last.fm (needs LASTFM_API_KEY)</option>
+                      <option value="acoustid" disabled>
+                        AcoustID (fingerprinting pending)
+                      </option>
+                    </select>
+                    <button
+                      onClick={runEnrichmentPreview}
+                      disabled={enrichLoading || health.withGaps === 0}
+                      className="flex items-center space-x-1.5 px-2.5 py-1.5 rounded-md bg-blue-600 hover:bg-blue-500 disabled:bg-blue-800 text-white text-xs font-medium transition"
+                      title="Look up to 25 gap tracks on the selected source. Nothing is applied yet."
+                    >
+                      <Globe className="w-3.5 h-3.5" />
+                      <span>{enrichLoading && !preview ? "Looking up…" : "Look up online"}</span>
+                    </button>
+                  </div>
+                  {enrichProgress && (
+                    <p className="text-[11px] text-slate-500 font-mono mt-2">
+                      {enrichProgress.processed} / {enrichProgress.total} · {enrichProgress.status}
+                    </p>
+                  )}
+                  {applyMessage && <p className="text-xs text-slate-300 mt-2">{applyMessage}</p>}
+                  {preview && preview.proposals.length > 0 && (
+                    <div className="mt-3">
+                      <div className="flex items-center justify-between">
+                        <p className="text-[11px] uppercase tracking-wider font-semibold text-slate-500">
+                          Proposals from {preview.provider} ({preview.proposedTracks} tracks,{" "}
+                          {preview.proposedChanges} changes
+                          {preview.skipped > 0 ? `, ${preview.skipped} skipped` : ""})
+                        </p>
+                      </div>
+                      <ul className="mt-2 space-y-2 max-h-72 overflow-y-auto">
+                        {preview.proposals.map((proposal) => (
+                          <li
+                            key={proposal.trackId}
+                            className="p-2 rounded-md bg-[#1a1e2b] border border-[#2a2f42] text-xs"
+                          >
+                            <label className="flex items-start gap-2 cursor-pointer">
+                              <input
+                                type="checkbox"
+                                checked={checkedProposals.includes(proposal.trackId)}
+                                onChange={() => toggleProposal(proposal.trackId)}
+                                className="mt-1 accent-blue-500"
+                              />
+                              <span className="min-w-0 flex-1">
+                                <span className="flex items-center gap-2">
+                                  <span className="text-slate-200 truncate">
+                                    {proposal.title} — {proposal.artist}
+                                  </span>
+                                  <span
+                                    className={`shrink-0 px-1.5 py-0.5 rounded-sm text-[10px] font-medium border ${
+                                      proposal.tier === "high"
+                                        ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20"
+                                        : proposal.tier === "review"
+                                          ? "bg-amber-500/10 text-amber-400 border-amber-500/20"
+                                          : "bg-slate-500/10 text-slate-400 border-slate-500/20"
+                                    }`}
+                                    title={`Match confidence ${formatScore(proposal.confidence)}`}
+                                  >
+                                    {proposal.tier} · {formatScore(proposal.confidence)}
+                                  </span>
+                                </span>
+                                <span className="block mt-1 space-y-0.5">
+                                  {proposal.changes.map((change) => (
+                                    <span key={change.field} className="block text-[11px]">
+                                      <span className="text-slate-500">
+                                        {formatMissingField(change.field)}:{" "}
+                                      </span>
+                                      <span className="text-slate-500 line-through">
+                                        {change.field === "artwork"
+                                          ? "none"
+                                          : (change.current ?? "—")}
+                                      </span>
+                                      <span className="text-slate-500"> → </span>
+                                      <span className="text-emerald-400">
+                                        {change.field === "artwork"
+                                          ? "cover art"
+                                          : truncateComment(change.proposed, 60)}
+                                      </span>
+                                    </span>
+                                  ))}
+                                </span>
+                              </span>
+                            </label>
+                          </li>
+                        ))}
+                      </ul>
+                      <div className="mt-3 flex items-center gap-2">
+                        <button
+                          onClick={runEnrichmentApply}
+                          disabled={enrichLoading || checkedProposals.length === 0}
+                          className="px-3 py-1.5 rounded-md bg-emerald-600 hover:bg-emerald-500 disabled:bg-emerald-800 text-white text-xs font-medium transition"
+                          title="Write checked proposals to DB canonical fields (never source files). Artwork fills empty slots only."
+                        >
+                          {enrichLoading
+                            ? "Applying…"
+                            : `Apply checked (${checkedProposals.length})`}
+                        </button>
+                        <button
+                          onClick={runEnrichmentUndo}
+                          disabled={enrichLoading}
+                          className="flex items-center space-x-1.5 px-3 py-1.5 rounded-md bg-[#1e2230] hover:bg-[#252b3d] text-slate-300 border border-[#2a2f42] text-xs transition"
+                          title="Restore this run's before-state snapshot"
+                        >
+                          <Undo2 className="w-3.5 h-3.5" />
+                          <span>Undo run</span>
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                  {preview && preview.proposals.length === 0 && (
+                    <p className="text-xs text-slate-500 mt-3">
+                      No new proposals from {preview.provider}
+                      {preview.skipped > 0 ? ` (${preview.skipped} skipped)` : ""}.
+                    </p>
+                  )}
+                  {health.totals.length > 0 && (
+                    <div className="mt-3 space-y-1.5">
+                      {health.totals.map((total) => (
+                        <div key={total.field} className="flex items-center gap-2 text-xs">
+                          <span className="w-24 shrink-0 text-slate-400">
+                            {formatMissingField(total.field)}
+                          </span>
+                          <div className="flex-1 h-1.5 rounded-full bg-[#1a1e2b] overflow-hidden">
+                            <div
+                              className="h-1.5 rounded-full bg-amber-500"
+                              style={{
+                                width: `${health.checked ? Math.round((total.missingCount / health.checked) * 100) : 0}%`,
+                              }}
+                            />
+                          </div>
+                          <span className="w-10 text-right font-mono text-slate-400">
+                            {total.missingCount}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  {health.gaps.length > 0 && (
+                    <div className="mt-4">
+                      <p className="text-[11px] uppercase tracking-wider font-semibold text-slate-500">
+                        Tracks with gaps (first {health.gaps.length})
+                      </p>
+                      <ul className="mt-2 space-y-1.5 max-h-64 overflow-y-auto">
+                        {health.gaps.map((gap) => (
+                          <li
+                            key={gap.trackId}
+                            className="p-2 rounded-md bg-[#1a1e2b] border border-[#2a2f42] text-xs"
+                          >
+                            <p className="text-slate-200 truncate">
+                              {gap.title || "Untitled"} — {gap.artist || "Unknown Artist"}
+                              <span
+                                className="ml-2 font-mono text-[11px] text-slate-400"
+                                title="Tag Health Score 0–100"
+                              >
+                                {Math.round(gap.score)}
+                              </span>
+                            </p>
+                            <p className="text-[11px] text-amber-400/90 mt-0.5">
+                              {gap.missing.map(formatMissingField).join(", ")}
+                            </p>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                </>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Charts modal: versioned snapshots with taste filtering (TD.3) */}
+      {chartsOpen && (
+        <div className="absolute inset-0 bg-black/60 z-30 flex items-center justify-center p-6">
+          <div className="w-[620px] max-w-full max-h-full overflow-y-auto bg-[#12151e] border border-[#2a2f42] rounded-lg shadow-2xl">
+            <div className="p-4 border-b border-[#222738] flex items-center justify-between">
+              <p className="text-sm font-semibold text-slate-100 flex items-center space-x-2">
+                <BarChart3 className="w-4 h-4 text-violet-400" />
+                <span>Charts — snapshots, filtered by taste</span>
+              </p>
+              <button
+                onClick={() => setChartsOpen(false)}
+                className="p-1.5 rounded-md hover:bg-[#252b3d] text-slate-400 transition"
+                title="Close"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+            <div className="p-4">
+              <div className="flex flex-wrap items-center gap-2 text-xs">
+                <select
+                  value={chartKind}
+                  onChange={(e) => {
+                    setChartKind(e.target.value);
+                    loadCharts(chartGenre, e.target.value, matchToSelected);
+                  }}
+                  className="bg-[#1a1e2b] border border-[#2a2f42] rounded-md px-2 py-1.5 text-slate-200"
+                  title="Beatport chart"
+                >
+                  <option value="top100">Top 100</option>
+                  <option value="hype">Hype Top 100</option>
+                </select>
+                <select
+                  value={chartGenre}
+                  onChange={(e) => {
+                    setChartGenre(e.target.value);
+                    loadCharts(e.target.value, chartKind, matchToSelected);
+                  }}
+                  className="bg-[#1a1e2b] border border-[#2a2f42] rounded-md px-2 py-1.5 text-slate-200"
+                  title="Genre"
+                >
+                  {[
+                    "techno",
+                    "house",
+                    "tech-house",
+                    "melodic-house-techno",
+                    "deep-house",
+                    "minimal-deep-tech",
+                    "progressive-house",
+                    "trance",
+                    "drum-and-bass",
+                  ].map((genre) => (
+                    <option key={genre} value={genre}>
+                      {genre}
+                    </option>
+                  ))}
+                </select>
+                <label className="flex items-center gap-1.5 text-slate-400 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={matchToSelected}
+                    onChange={(e) => {
+                      setMatchToSelected(e.target.checked);
+                      loadCharts(chartGenre, chartKind, e.target.checked);
+                    }}
+                    className="accent-blue-500"
+                  />
+                  Taste-match to selected track
+                </label>
+                <button
+                  onClick={() => loadCharts()}
+                  disabled={chartLoading}
+                  className="px-2.5 py-1.5 rounded-md bg-[#1e2230] hover:bg-[#252b3d] text-slate-300 border border-[#2a2f42] transition"
+                >
+                  Refresh
+                </button>
+              </div>
+              <p className="text-[11px] text-slate-500 mt-2">
+                Versioned snapshot data — Beatport exposes no public catalog API. Ownership is
+                ISRC-exact; taste is 60% tempo / 40% key vs the selected track.
+              </p>
+              {chartLoading ? (
+                <p className="text-xs text-slate-500 mt-3">Loading snapshot…</p>
+              ) : chartError ? (
+                <div className="mt-3">
+                  <p className="text-xs text-slate-400">{chartError}</p>
+                  <button
+                    onClick={loadSampleSnapshot}
+                    disabled={chartLoading}
+                    className="mt-2 px-2.5 py-1.5 rounded-md bg-blue-600 hover:bg-blue-500 disabled:bg-blue-800 text-white text-xs font-medium transition"
+                    title="Imports 3 clearly-marked synthetic entries (demo format reference)"
+                  >
+                    Load sample snapshot
+                  </button>
+                  <p className="text-[11px] text-slate-500 mt-2">
+                    Import format reference:{" "}
+                    <span className="font-mono">fixtures/charts/*.SAMPLE.json</span>
+                  </p>
+                </div>
+              ) : (
+                chartData && (
+                  <div className="mt-3">
+                    <p className="text-[11px] uppercase tracking-wider font-semibold text-slate-500">
+                      {chartData.provider} {chartData.chart} · {chartData.genre} ·{" "}
+                      {chartData.snapshotDate} ({chartData.total})
+                    </p>
+                    <ul className="mt-2 space-y-1.5 max-h-80 overflow-y-auto">
+                      {chartData.entries.map((entry) => (
+                        <li
+                          key={entry.position}
+                          className="p-2 rounded-md bg-[#1a1e2b] border border-[#2a2f42] text-xs"
+                        >
+                          <div className="flex items-center gap-2">
+                            <span className="w-7 shrink-0 font-mono text-slate-500">
+                              {entry.position}
+                            </span>
+                            <span className="min-w-0 flex-1 truncate text-slate-200">
+                              {entry.title} — {entry.artist}
+                            </span>
+                            {entry.owned && (
+                              <span
+                                className="shrink-0 px-1.5 py-0.5 rounded-sm text-[10px] font-medium bg-emerald-500/10 text-emerald-400 border border-emerald-500/20"
+                                title="ISRC matches a library track"
+                              >
+                                owned
+                              </span>
+                            )}
+                            {entry.tasteScore != null && (
+                              <span
+                                className="shrink-0 font-mono text-[11px] text-blue-400"
+                                title="Taste match vs the selected track"
+                              >
+                                {formatScore(entry.tasteScore)}
+                              </span>
+                            )}
+                          </div>
+                          <p className="text-[11px] text-slate-500 mt-0.5 ml-9">
+                            {entry.label ?? "Unknown label"} · {formatBpm(entry.bpm)} ·{" "}
+                            {formatKey(entry.keyCamelot, null)}
+                          </p>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Footer / Status Bar */}
       <footer className="h-7 border-t border-[#222738] bg-[#11131c] px-4 flex items-center justify-between text-[11px] text-slate-400">
         <div className="flex items-center space-x-2">
           <div className="h-2 w-2 rounded-full bg-emerald-500" />
           <span>{statusMessage}</span>
         </div>
+        {providers && (
+          <div
+            className="font-mono text-[10px] text-slate-500 hidden md:block"
+            title={`Streaming export targets: ${providers.supportedStreaming.join(", ")} — Buy-link stores: ${providers.supportedStores.join(", ")}`}
+          >
+            {providers.connected.length} connected · {providers.supportedStreaming.length} streaming
+            · {providers.supportedStores.length} stores
+          </div>
+        )}
         <div className="font-mono text-[10px] text-slate-400">
           BLAKE3 Fingerprint • SQLite Core • Offline
         </div>

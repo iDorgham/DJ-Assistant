@@ -22,6 +22,9 @@ tauri-plugin-dialog = "2.0.0"
 # Tauri-free core logic (discovery, fingerprinting, metadata). Kept as a separate
 # crate so it stays unit-testable without linking WebView2.
 dj-assistant-core = { path = "../../../crates/core" }
+# Local ONNX analysis engine: decode + deterministic analyzers (bpn/key/phrase/vocal/loudness)
+# and the composite analysis_version. Wired in for the T1.2.x job queue.
+dj-assistant-analysis = { path = "../../../crates/analysis" }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 rusqlite = { version = "0.40", features = ["bundled"] }
@@ -30,6 +33,13 @@ rusqlite = { version = "0.40", features = ["bundled"] }
 uuid = { version = "1.10", features = ["v4", "serde"] }
 # Base64-encodes cached cover art for the `get_artwork` command's data URL.
 base64 = "0.23"
+# Online enrichment + provider matching (TE.1 / TX.2): metadata-only HTTPS.
+# native-tls = OS TLS (schannel / Security.framework / openssl) with no extra
+# build tools; CI already installs libssl-dev on ubuntu. Only JSON APIs and
+# cover-art images are fetched — audio preview/stream URLs are never touched.
+reqwest = { version = "0.13", default-features = false, features = ["json", "native-tls"] }
+# Async timers for provider rate limiting (MusicBrainz: max ~1 req/s).
+tokio = { version = "1", features = ["time"] }
 chrono = { version = "0.4", features = ["serde"] }
 thiserror = "2.0"
 log = "0.4"

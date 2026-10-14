@@ -10,21 +10,37 @@
 pub mod aiff;
 pub mod audio;
 pub mod dedup;
+pub mod enrichment;
 pub mod fingerprint;
 pub mod metadata;
 pub mod mp3;
+pub mod providers;
 pub mod riff;
+pub mod similarity;
 
 pub use aiff::aiff_duration_ms;
 pub use audio::{discover_audio_files, is_supported_audio, SUPPORTED_EXTENSIONS};
 pub use dedup::{DuplicateKind, ScanDeduplicator};
+pub use enrichment::{
+    acoustid_lookup_url, average_health_score, confidence_tier, cover_art_front_url,
+    deezer_isrc_url, deezer_search_url, discogs_search_url, itunes_artwork_600, itunes_search_url,
+    lastfm_search_url, match_confidence, missing_fields, musicbrainz_search_url, normalize_name,
+    parse_acoustid_response, parse_deezer_response, parse_discogs_response, parse_itunes_response,
+    parse_lastfm_response, parse_musicbrainz_response, propose_fields, split_discogs_title,
+    tag_health_score, EnrichmentProvider, FieldProposal, LocalTrack, ProviderCandidate,
+};
 pub use fingerprint::{compute_file_fingerprint, FINGERPRINT_WINDOW};
 pub use metadata::{
     cache_artwork, camelot_from_key, extract_metadata, CachedArtwork, EmbeddedArtwork,
     ExtractedMetadata,
 };
 pub use mp3::mp3_duration_ms;
+pub use providers::{
+    store_links_for_track, store_search_url, ProviderCapabilities, StoreLink, StoreProvider,
+    StreamingProvider,
+};
 pub use riff::wav_duration_ms;
+pub use similarity::{bpm_similarity, camelot_distance, find_similar, ScoredTrack, TrackFeatures};
 
 use std::path::Path;
 

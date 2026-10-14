@@ -1,0 +1,38 @@
+{
+  "_note": "SAMPLE chart snapshot for format reference and tests. Synthetic entries — replace with real chart data. Keys are camelCase to match the chart_import_snapshot IPC contract (serde rename_all). Pass the whole object as the request.",
+  "provider": "beatport",
+  "chart": "top100",
+  "genre": "techno",
+  "snapshotDate": "2026-10-14",
+  "entries": [
+    {
+      "position": 1,
+      "title": "Sample Peak A",
+      "artist": "Sample Artist",
+      "label": "Sample Records",
+      "isrc": "XXAAA2600001",
+      "bpm": 132.0,
+      "keyCamelot": "11A",
+      "sourceUrl": "https://www.beatport.com/search?q=Sample+Artist+Sample+Peak+A"
+    },
+    {
+      "position": 2,
+      "title": "Sample Peak B",
+      "artist": "Sample Artist",
+      "label": "Sample Records",
+      "isrc": "XXAAA2600002",
+      "bpm": 130.0,
+      "keyCamelot": "11A",
+      "sourceUrl": "https://www.beatport.com/search?q=Sample+Artist+Sample+Peak+B"
+    },
+    {
+      "position": 3,
+      "title": "Sample Groove",
+      "artist": "Other Artist",
+      "label": "Other Label",
+      "bpm": 126.0,
+      "keyCamelot": "8A",
+      "sourceUrl": "https://www.beatport.com/search?q=Other+Artist+Sample+Groove"
+    }
+  ]
+}

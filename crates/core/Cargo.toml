@@ -11,6 +11,8 @@ publish = false
 [dependencies]
 audiotags = "0.5"
 blake3 = "1.5"
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
 walkdir = "2.5"
 # Used as a fallback tag reader for containers `audiotags` cannot read (AIFF),
 # and as the primary reader for the extras `audiotags` does not expose (BPM, key,

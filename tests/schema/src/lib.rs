@@ -52,7 +52,9 @@ fn apply_schema(conn: &Connection) {
     .expect("schema_migrations table must be creatable");
 
     // Match db.rs: apply each migration at most once, in order, so reopening an
-    // existing database is a no-op rather than an error.
+    // existing database is a no-op rather than an error. Bare ALTERs are
+    // additionally filtered so a retry after a crash between the ALTER and the
+    // version INSERT does not fail with "duplicate column name".
     for (version, sql) in MIGRATIONS {
         let already: i64 = conn
             .query_row(
@@ -63,8 +65,12 @@ fn apply_schema(conn: &Connection) {
             .expect("schema_migrations must be queryable");
 
         if already == 0 {
-            conn.execute_batch(sql)
-                .unwrap_or_else(|e| panic!("migration {version} must apply cleanly: {e}"));
+            let filtered =
+                without_applied_alters(conn, sql).expect("migration SQL must be filterable");
+            if !filtered.trim().is_empty() {
+                conn.execute_batch(&filtered)
+                    .unwrap_or_else(|e| panic!("migration {version} must apply cleanly: {e}"));
+            }
             conn.execute(
                 "INSERT INTO schema_migrations (version) VALUES (?1)",
                 [version],
@@ -80,6 +86,59 @@ pub fn open_migrated() -> Connection {
     let conn = Connection::open_in_memory().expect("in-memory sqlite");
     apply_schema(&conn);
     conn
+}
+
+fn column_exists(conn: &Connection, table: &str, column: &str) -> rusqlite::Result<bool> {
+    let sql = format!("SELECT COUNT(*) FROM pragma_table_info('{table}') WHERE name = ?1");
+    let n: i64 = conn.query_row(&sql, [column], |row| row.get(0))?;
+    Ok(n > 0)
+}
+
+fn parse_add_column_line(line: &str) -> Option<(String, String)> {
+    // Single-line `ALTER TABLE <table> ADD [COLUMN] <column> ...`. Comment lines
+    // never match (they start with `--`), so semicolons inside comments cannot
+    // confuse this, unlike statement splitting on `;`.
+    let mut tokens = line.split_whitespace();
+    if tokens.next()?.to_uppercase() != "ALTER" {
+        return None;
+    }
+    if tokens.next()?.to_uppercase() != "TABLE" {
+        return None;
+    }
+    let table = tokens
+        .next()?
+        .trim_matches(['"', '[', ']', '`'])
+        .to_string();
+    if tokens.next()?.to_uppercase() != "ADD" {
+        return None;
+    }
+    let mut next = tokens.next()?.to_string();
+    if next.to_uppercase() == "COLUMN" {
+        next = tokens.next()?.to_string();
+    }
+    let column = next
+        .trim_matches(['"', '[', ']', '`', ';', '(', '\''])
+        .to_string();
+    if table.is_empty() || column.is_empty() {
+        return None;
+    }
+    Some((table, column))
+}
+
+/// Drop `ALTER TABLE ... ADD COLUMN` lines whose column already exists, keeping
+/// every other line byte-for-byte. Line-based (not `;`-split), so semicolons
+/// inside `--` comments or string literals cannot corrupt statement boundaries.
+fn without_applied_alters(conn: &Connection, sql: &str) -> rusqlite::Result<String> {
+    let mut kept = Vec::new();
+    for line in sql.lines() {
+        if let Some((table, column)) = parse_add_column_line(line) {
+            if column_exists(conn, &table, &column).unwrap_or(false) {
+                continue;
+            }
+        }
+        kept.push(line);
+    }
+    Ok(kept.join("\n"))
 }
 
 /// Column list must match `get_track`'s tracks SELECT in commands.rs.
@@ -151,6 +210,32 @@ mod tests {
             )
             .unwrap();
         assert_eq!(tables, 5, "all Phase 0 tables must exist");
+    }
+
+    #[test]
+    fn retry_after_crash_between_alter_and_version_stamp_is_a_noop() {
+        // Same scenario as db.rs: columns exist but the version row is missing.
+        // Re-running apply_schema must filter the bare ALTERs and succeed.
+        let conn = open_migrated();
+        assert!(column_exists(&conn, "tracks", "comments").unwrap());
+        let filtered = without_applied_alters(&conn, MIGRATION_002).unwrap();
+        assert!(
+            !filtered.to_uppercase().contains("ADD COLUMN"),
+            "applied ALTERs must be filtered, got: {filtered}"
+        );
+        conn.execute("DELETE FROM schema_migrations WHERE version = 2", [])
+            .unwrap();
+        apply_schema(&conn);
+        let count: i64 = conn
+            .query_row(
+                "SELECT COUNT(*) FROM schema_migrations WHERE version = 2",
+                [],
+                |r| r.get(0),
+            )
+            .unwrap();
+        assert_eq!(count, 1, "migration 002 must be re-stamped after retry");
+        // And a full second pass is a clean no-op.
+        apply_schema(&conn);
     }
 
     #[test]

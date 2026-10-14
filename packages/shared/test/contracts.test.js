@@ -136,3 +136,271 @@ test("cue point payload matches the migrated schema columns", () => {
   assert.equal(cue.cueType, "hot_cue");
   assert.equal("hotCueIndex" in cue, false, "slot replaced the old hot_cue_index field");
 });
+
+test("find similar tracks request/response use camelCase keys", () => {
+  // Mirrors models.rs::FindSimilarTracksRequest/Response + SimilarTrackResult
+  // (which flattens TrackSummary, so track keys stay camelCase too).
+  const req = { trackId: "t1", limit: 10 };
+  assert.deepEqual(Object.keys(req).sort(), ["limit", "trackId"]);
+  const result = {
+    ...trackSummaryFromRust,
+    score: 0.93,
+    reasons: ["same key 8A", "same BPM"],
+  };
+  assert.ok(result.score >= 0 && result.score <= 1, "score is 0–1");
+  assert.ok(Array.isArray(result.reasons));
+  assert.equal("track_id" in result, false, "flattened summary must stay camelCase");
+  const res = { seedTrackId: "t1", results: [result] };
+  assert.deepEqual(Object.keys(res).sort(), ["results", "seedTrackId"]);
+});
+
+test("tag health payload exposes gaps and per-field totals", () => {
+  // Mirrors models.rs::TagHealthResponse.
+  const res = {
+    checked: 94,
+    withGaps: 12,
+    gaps: [
+      {
+        trackId: "t2",
+        title: "X",
+        artist: "Unknown Artist",
+        missing: ["artist", "bpm", "artwork", "isrc"],
+        score: 51,
+      },
+    ],
+    totals: [{ field: "isrc", missingCount: 12 }],
+    averageScore: 88.5,
+  };
+  assert.deepEqual(Object.keys(res).sort(), [
+    "averageScore",
+    "checked",
+    "gaps",
+    "totals",
+    "withGaps",
+  ]);
+  assert.deepEqual(Object.keys(res.gaps[0]).sort(), [
+    "artist",
+    "missing",
+    "score",
+    "title",
+    "trackId",
+  ]);
+  assert.deepEqual(Object.keys(res.totals[0]).sort(), ["field", "missingCount"]);
+});
+
+test("store links payload carries provider, label and https url", () => {
+  // Mirrors models.rs::StoreLinksResponse; URLs are store search pages only.
+  const res = {
+    trackId: "t1",
+    artist: "Bicep",
+    title: "Glue",
+    links: [
+      {
+        provider: "beatport",
+        label: "Beatport",
+        url: "https://www.beatport.com/search?q=Bicep+Glue",
+      },
+    ],
+  };
+  assert.deepEqual(Object.keys(res).sort(), ["artist", "links", "title", "trackId"]);
+  for (const link of res.links) {
+    assert.deepEqual(Object.keys(link).sort(), ["label", "provider", "url"]);
+    assert.ok(link.url.startsWith("https://"), "store links are outbound https only");
+  }
+});
+
+test("provider status payload uses the closed provider enums", () => {
+  // Mirrors models.rs::ProviderStatusResponse + core provider registry.
+  const res = {
+    connected: [],
+    supportedStreaming: [
+      "spotify",
+      "deezer",
+      "apple_music",
+      "youtube_music",
+      "soundcloud",
+      "tidal",
+    ],
+    supportedStores: ["beatport", "traxsource", "juno_download", "bandcamp", "discogs"],
+    capabilities: [
+      {
+        provider: "deezer",
+        liveMatch: true,
+        isrcSearch: true,
+        playlistWrite: false,
+        needsAppId: true,
+      },
+    ],
+  };
+  assert.deepEqual(Object.keys(res).sort(), [
+    "capabilities",
+    "connected",
+    "supportedStores",
+    "supportedStreaming",
+  ]);
+  assert.ok(
+    res.supportedStreaming.includes("spotify"),
+    "spotify stays the reference export target"
+  );
+  assert.ok(
+    res.supportedStores.includes("beatport"),
+    "beatport covered via buy-links (no catalog API)"
+  );
+});
+
+test("enrichment preview/apply/undo payloads use camelCase keys", () => {
+  // Mirrors models.rs::EnrichmentPreviewResponse + TrackProposal + apply/undo.
+  const previewReq = { provider: "musicbrainz", limit: 25 };
+  assert.deepEqual(Object.keys(previewReq).sort(), ["limit", "provider"]);
+  const res = {
+    runId: "run-1",
+    provider: "musicbrainz",
+    proposedTracks: 1,
+    proposedChanges: 2,
+    skipped: 0,
+    proposals: [
+      {
+        trackId: "t2",
+        title: "X",
+        artist: "Unknown Artist",
+        provider: "musicbrainz",
+        providerId: "mbid-1",
+        confidence: 0.92,
+        tier: "high",
+        sourceUrl: "https://musicbrainz.org/recording/mbid-1",
+        changes: [
+          { field: "artist", current: "Unknown Artist", proposed: "Bicep" },
+          { field: "album", current: null, proposed: "Bicep" },
+        ],
+      },
+    ],
+  };
+  assert.deepEqual(Object.keys(res).sort(), [
+    "proposals",
+    "proposedChanges",
+    "proposedTracks",
+    "provider",
+    "runId",
+    "skipped",
+  ]);
+  const proposal = res.proposals[0];
+  assert.ok(proposal.confidence >= 0 && proposal.confidence <= 1);
+  assert.deepEqual(Object.keys(proposal.changes[0]).sort(), ["current", "field", "proposed"]);
+  const applyRes = { runId: "run-1", applied: 2, skipped: 0 };
+  assert.deepEqual(Object.keys(applyRes).sort(), ["applied", "runId", "skipped"]);
+  const undoRes = { runId: "run-1", restored: 1 };
+  assert.deepEqual(Object.keys(undoRes).sort(), ["restored", "runId"]);
+});
+
+test("enrichment progress event uses camelCase keys", () => {
+  const event = {
+    runId: "run-1",
+    processed: 3,
+    total: 10,
+    trackId: "t2",
+    status: "proposed (high)",
+  };
+  assert.deepEqual(Object.keys(event).sort(), ["processed", "runId", "status", "total", "trackId"]);
+});
+
+test("provider match payload carries tier and status per track", () => {
+  // Mirrors models.rs::ProviderMatchTracksResponse (TX.1/TX.2a: live reads, no writes).
+  const res = {
+    provider: "deezer",
+    matches: [
+      {
+        trackId: "t1",
+        provider: "deezer",
+        providerId: "389034231",
+        title: "Glue",
+        artist: "Bicep",
+        album: "Glue",
+        artworkUrl: "https://cdn-images.dzcdn.net/images/cover/abc/1000x1000-000000-80-0-0.jpg",
+        sourceUrl: "https://www.deezer.com/track/389034231",
+        confidence: 0.95,
+        tier: "high",
+        status: "matched",
+      },
+    ],
+  };
+  assert.deepEqual(Object.keys(res).sort(), ["matches", "provider"]);
+  const match = res.matches[0];
+  assert.ok(["matched", "review", "unmatched"].includes(match.status));
+  assert.ok(["high", "review", "low"].includes(match.tier));
+});
+
+test("chart snapshot import/list payloads use camelCase keys", () => {
+  // Mirrors models.rs::ChartImportRequest/Response + ChartListResponse.
+  // Shape-validated against fixtures/charts/beatport-top100-techno.SAMPLE.json.
+  const importReq = {
+    provider: "beatport",
+    chart: "top100",
+    genre: "techno",
+    snapshotDate: "2026-10-14",
+    entries: [
+      {
+        position: 1,
+        title: "Sample Peak A",
+        artist: "Sample Artist",
+        label: "Sample Records",
+        isrc: "XXAAA2600001",
+        bpm: 132.0,
+        keyCamelot: "11A",
+        sourceUrl: "https://www.beatport.com/search?q=Sample+Artist+Sample+Peak+A",
+      },
+    ],
+  };
+  assert.deepEqual(Object.keys(importReq).sort(), [
+    "chart",
+    "entries",
+    "genre",
+    "provider",
+    "snapshotDate",
+  ]);
+  const importRes = {
+    provider: "beatport",
+    chart: "top100",
+    genre: "techno",
+    snapshotDate: "2026-10-14",
+    imported: 3,
+    skipped: 0,
+  };
+  assert.deepEqual(Object.keys(importRes).sort(), [
+    "chart",
+    "genre",
+    "imported",
+    "provider",
+    "skipped",
+    "snapshotDate",
+  ]);
+  const listRes = {
+    provider: "beatport",
+    chart: "top100",
+    genre: "techno",
+    snapshotDate: "2026-10-14",
+    entries: [
+      {
+        position: 1,
+        title: "Sample Peak A",
+        artist: "Sample Artist",
+        label: "Sample Records",
+        isrc: "XXAAA2600001",
+        bpm: 132.0,
+        keyCamelot: "11A",
+        artworkUrl: null,
+        sourceUrl: "https://www.beatport.com/search?q=Sample+Artist+Sample+Peak+A",
+        owned: false,
+        tasteScore: 0.93,
+      },
+    ],
+    total: 3,
+  };
+  assert.deepEqual(Object.keys(listRes).sort(), [
+    "chart",
+    "entries",
+    "genre",
+    "provider",
+    "snapshotDate",
+    "total",
+  ]);
+});

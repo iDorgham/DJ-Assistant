@@ -1,0 +1,35 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32" role="img" aria-label="DJ Assistant">
+  <title>DJ Assistant</title>
+  <!-- Simplified mark for 16–32px rendering: five bars, no glow. -->
+  <defs>
+    <linearGradient id="favBg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#171B25"/>
+      <stop offset="1" stop-color="#0A0C11"/>
+    </linearGradient>
+    <linearGradient id="favSheen" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#FFFFFF" stop-opacity="0.08"/>
+      <stop offset="0.45" stop-color="#FFFFFF" stop-opacity="0"/>
+    </linearGradient>
+    <linearGradient id="favBorder" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#2E344A"/>
+      <stop offset="1" stop-color="#1A1F2B"/>
+    </linearGradient>
+    <linearGradient id="favEq" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#5CE1FF"/>
+      <stop offset="1" stop-color="#0090FF"/>
+    </linearGradient>
+    <clipPath id="favClip">
+      <rect x="0.5" y="0.5" width="31" height="31" rx="8"/>
+    </clipPath>
+  </defs>
+  <rect x="0.5" y="0.5" width="31" height="31" rx="8" fill="url(#favBg)"/>
+  <rect x="0.5" y="0.5" width="31" height="31" fill="url(#favSheen)" clip-path="url(#favClip)"/>
+  <g fill="url(#favEq)">
+    <rect x="5" y="12" width="3" height="8" rx="1.5"/>
+    <rect x="9.75" y="9.5" width="3" height="13" rx="1.5"/>
+    <rect x="14.5" y="7" width="3" height="18" rx="1.5"/>
+    <rect x="19.25" y="9.5" width="3" height="13" rx="1.5"/>
+    <rect x="24" y="12" width="3" height="8" rx="1.5"/>
+  </g>
+  <rect x="0.5" y="0.5" width="31" height="31" rx="8" fill="none" stroke="url(#favBorder)"/>
+</svg>

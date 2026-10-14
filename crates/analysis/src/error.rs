@@ -81,6 +81,9 @@ pub enum AnalysisError {
 
     #[error("normalization error: {0}")]
     Normalization(#[from] NormalizationError),
+
+    #[error("audio decode failed: {0}")]
+    Decode(#[from] AudioDecodeError),
 }
 
 /// Errors that can occur during ONNX Runtime initialization, loading, or execution.
