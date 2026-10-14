@@ -1,6 +1,6 @@
 # Data Model (Conceptual)
 
-Local SQLite is source of truth. Cloud holds only opted-in derived data.
+> Conceptual only — `docs/architecture/DATA_MODEL.md` summarizes the schemas; authoritative SQL is in `docs/product/CANONICAL_DOCUMENTATION.md` §5, and shipped SQLite changes are in `apps/desktop/src-tauri/migrations/`. Shipped tables beyond this sketch: `external_ids`, `enrichment_runs`/`enrichment_candidates`, `streaming_*`, `chart_snapshots`, `tracks.isrc`/`artwork_*`.
 
 ```mermaid
 erDiagram
@@ -11,12 +11,9 @@ erDiagram
 
     TRACK ||--o{ CUE_POINT : has
     TRACK ||--o{ PHRASE_MARKER : has
-    TRACK }o--|| ANALYSIS_RESULT : "has one"
 
     SET ||--o{ SET_TRACK : ordered
     SET_TRACK }o--|| TRACK : references
-
-    SKILL_RUN }o--|| SKILL_DEF : "instance of"
 
     TRACK {
         uuid id PK
@@ -74,22 +71,25 @@ erDiagram
 ```mermaid
 flowchart LR
     subgraph Local["Local Only"]
-        A[Raw Audio]
-        B[Waveform Cache]
-        C[Full Analysis Results]
+        L_A[Raw Audio]
+        L_B[Waveform Cache]
+        L_C[Full Analysis Results]
     end
 
     subgraph Optional["Optional Sync"]
-        D[Metadata]
-        E[Cues]
-        F[Set Structures]
-        G[Embeddings]
+        O_D[Metadata]
+        O_E[Cues]
+        O_F[Set Structures]
+        O_G[Embeddings]
     end
 
     subgraph Never["Never Transmitted"]
-        A
-        B
+        N_A[Raw Audio]
+        N_B[Waveform Cache]
     end
+
+    L_A -.->|never| N_A
+    L_B -.->|never| N_B
 
     style Local fill:#1a1a2e,stroke:#e94560,color:#eee
     style Optional fill:#0f3460,stroke:#533483,color:#fff

@@ -17,7 +17,7 @@ Use this to accept phase exits in **product language**. Engineering detail and t
 | # | Check | Must / Should | PO sign-off |
 |---|--------|---------------|-------------|
 | 0.1 | App launches on the target desktop OS(es) we care about for MVP | Must | ☑ (Verified on macOS and Windows via CI matrix #38219344042 & local Windows build) |
-| 0.2 | User can choose a folder and see tracks listed (title, artist, duration, path/status) | Must | ☐ (Picker opens; picker-to-scan flow not yet verified) |
+| 0.2 | User can choose a folder and see tracks listed (title, artist, duration, path/status) | Must | ☑ (Verified: folder picker → live scan → 94-track library run, see PHASE0_ACCEPTANCE_EVIDENCE.md) |
 | 0.3 | Duplicates are detected sensibly (same file not listed twice as independent unknowns) | Must | ☑ (BLAKE3 fingerprint & dedup verified) |
 | 0.4 | Bad/unsupported files don’t crash the app; they’re skipped or marked clearly | Must | ☑ (Tested on non-audio & corrupted fixtures) |
 | 0.5 | Library list survives restart (local persistence works) | Must | ☑ (Verified local SQLite persistence & migrations) |
@@ -102,6 +102,20 @@ Notes / waivers: ________________________________
 **PO decision:** ☐ Accepted · ☐ Accepted with waivers · ☐ Rejected  
 
 Notes / waivers: ________________________________
+
+---
+
+## Post-MVP / Backlog (not in MVP scope)
+
+Items here are **out of the 90-day MVP** and do not block any phase. They are candidate follow-ups for V1.5+.
+
+| # | Item | Target | Notes |
+|---|------|--------|-------|
+| B.1 | Spotify Playlist Export (metadata-only) | Post-MVP (V1.5) | Publish a built set (or any playlist) to the DJ’s own Spotify account as a real playlist. OAuth 2.0 + PKCE in the desktop app (no client secret; tokens in OS keychain); ISRC-first matching with fuzzy title/artist/album + ±3 s fallback → confidence tiers → review queue → unmatched report. Reversible + audit-logged. Metadata only — no audio download/streaming/storage, no in-app playback. Reuse Canonical §15. No MVP phase item depends on this. |
+| B.2 | Similar tracks + Tag Health + store buy-links + provider registry (foundations) | ✅ Shipped | Local similarity scoring, gap detection, per-store buy-links and the provider registry are implemented, tested and visible in the library UI (TF.1–TF.6). No network access. |
+| B.3 | Discovery: external similarity, Beatport charts/hype, release radar | Partial (TD.3 shipped) | Chart snapshots Tier 1 live (import + taste filter + Charts modal), including Beatport Top 100 / Hype snapshots filtered by taste (no public catalog API). Deezer live matching shipped (TM.2a, read-only). Opt-in Last.fm/Spotify similarity, release radar, and partnership as Tier 3 remain. Metadata only. |
+| B.4 | Enrichment: online tags & artwork (opt-in) | ✅ Shipped (5 sources) | Live lookup with preview → apply → undo, tier badges, artwork into empty slots only, DB fields only. MusicBrainz / iTunes / Deezer keyless; Discogs / Last.fm keyed; AcoustID query-ready (fingerprinting pending). Tag Health Score shipped. |
+| B.5 | Multi-provider streaming export (Deezer, Apple Music, …) | Partial (match live; export needs app ID) | `provider_match_tracks` live for Deezer; connect/export wait on `DEEZER_APP_ID` (TM.2b). Generic provider_match_set/export_playlist IPC + capabilities live; Spotify reference + further targets remain. Metadata-only playlists; no in-app playback for any provider. |
 
 ---
 

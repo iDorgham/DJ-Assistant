@@ -32,7 +32,7 @@ A **desktop-first preparation accelerator** (not a live mixer). Local analysis (
 
 - Live performance / mixing engine  
 - Social network or marketing suite  
-- Spotify/YouTube downloader or piracy tool  
+- Spotify/YouTube downloader or piracy tool — no audio download, ripping, or in-app streaming (a **metadata-only** Spotify playlist export is a planned post-MVP direction; see Canonical §15)
 - Autonomous agent that changes the library without confirmation  
 - Replacement for rekordbox / Serato / CDJs as the performance surface  
 
@@ -50,6 +50,10 @@ A **desktop-first preparation accelerator** (not a live mixer). Local analysis (
 ## Explicit out of MVP
 
 Live mixing, social features, open-ended agents, training on user audio, full multi-device product polish, deep collaboration UX (basic B2B can follow core prep).
+
+**Post-MVP directions (planned, not in MVP):** **Spotify Playlist Export** — publish a built set (or any playlist) to the DJ’s own Spotify account as a real playlist using metadata only. Local tracks are matched to Spotify tracks by ISRC first, then a fuzzy title/artist/album match with a ±3 s tolerance; high-confidence matches are added automatically, medium/low-confidence matches go to a review queue, and unmatched tracks get manual-search/skip options. Auth is OAuth 2.0 + PKCE in the desktop app, with tokens in the OS keychain. No audio is ever downloaded, streamed, or stored, and there is no in-app streaming playback.
+**Shipped foundations (offline):** local similar-track scoring, Tag Health gap detection, per-store buy-links and a provider registry — no network access.
+**Post-MVP discovery & enrichment (planned):** opt-in external similarity (Last.fm, Deezer/Spotify), Beatport Top 100 / Hype snapshots filtered by library taste plus release radar (no public catalog API — data integrations; partnership as Tier 3), and opt-in online tag/artwork lookup (MusicBrainz, iTunes, Deezer, Discogs, AcoustID) via preview → apply → undo. **Multi-provider export (planned):** Spotify as reference, Deezer second, then Apple Music / YouTube Music / SoundCloud / TIDAL — metadata-only playlists, never in-app playback.
 
 ## Success metrics (product)
 

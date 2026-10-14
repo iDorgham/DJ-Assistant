@@ -109,6 +109,7 @@ New Actions require tech-lead approval and SHA pin before use on `main`.
 - Mask all secrets in GitHub UI
 - Prohibit secrets in `GITHUB_OUTPUT` or world-readable files
 - Use OIDC + cloud roles instead of long-lived cloud keys when cloud CD exists
+- Public OAuth client IDs (e.g. Spotify PKCE streaming export, post-MVP) are **not secrets** — do not store them as secrets; there is no client secret to leak.
 
 ---
 
@@ -192,6 +193,7 @@ Any change under `.github/workflows/` must complete:
 | Local-first analysis | Desktop CI builds ONNX path locally on runner; no cloud analysis API required for core tests |
 | No secrets in client | Desktop build env must not bake API keys into binaries |
 | Reversible Skills | Not directly a CI concern; enforced by unit/integration tests in PR CI |
+| Third-party OAuth integrations (Spotify Playlist Export) use a PKCE public client | No client secret to inject, rotate, or leak in CI or binaries; only the public client ID is a build-time variable. Redirect URI is allow-listed in the provider dashboard, not in CI. |
 
 ---
 

@@ -13,9 +13,10 @@
 2. **Local-first** — Core value must work offline from the first usable build.
 3. **Reversibility by default** — Every mutating feature ships with preview + undo.
 4. **Hardware is a gate** — Exports are not “done” until they load on real Pioneer CDJs.
-5. **Weekly internal builds** from Day 15 onward.
-6. **Closed beta** starts no earlier than Day 61.
-7. **Public MVP** gated on the acceptance criteria in `05-ACCEPTANCE.md`.
+5. **Slim MVP** — MVP gates on Import → Analyze → Cue → Export only; USB-format + B2B + extra Skills are P1 (per `docs/audit/AUDIT-SUMMARY.md`).
+6. **Weekly internal builds** from Day 15 onward.
+7. **Closed beta** starts no earlier than Day 61.
+8. **Public MVP** gated on the acceptance criteria in `05-ACCEPTANCE.md`.
 
 ---
 
@@ -101,6 +102,7 @@ Phases intentionally overlap once foundations exist.
 - Library Health Score
 - Prep Auditor Skill
 - Cue Master v1 (structural cues + review UI)
+- Professional Preview Player (waveform + grid + beat jump + artwork, prep-only single-deck; T2.4.1–T2.4.7)
 
 ### Exit Gate
 - Messy ~1,000-track library can be cleaned in one focused review pass
@@ -121,6 +123,7 @@ Phases intentionally overlap once foundations exist.
 - Transition explanations
 - rekordbox XML exporter
 - Serato .crate exporter
+- Professional USB media format tool (FAT32 + exFAT, Pioneer-tuned: FAT32 + MBR default for universal CDJ/XDJ compat; exFAT opt-in for exFAT-capable booths only) + post-format verify/certify
 - Hardware validation on CDJ-2000NXS2 / CDJ-3000
 
 ### Exit Gate
@@ -172,22 +175,48 @@ Smaller teams must ruthlessly cut to pure P0.
 
 | Risk | Impact | Mitigation |
 |------|--------|------------|
-| Analysis quality insufficient on real libraries | High | Early fixture collection, closed beta feedback, model iteration |
-| Export incompatibility with CDJs | High | Hardware validation as phase gate, not afterthought |
-| Scope creep into live performance features | High | Strict non-goals enforcement |
-| ONNX performance on lower-end machines | Medium | Quantization, progressive analysis, clear hardware guidance |
+| Analysis quality insufficient on real libraries | High | Early fixture collection, closed beta feedback, model iteration; golden 50-track corpus TA.6 |
+| Scoring-formula drift (Canonical vs shipped weights) | High | Lock one formula versioned with `analysis_version` + unit pin TA.2 |
+| Export incompatibility with CDJs | High | Hardware validation as phase gate, not afterthought; FAT32 + MBR default (universal), exFAT gated behind explicit booth-capability warning |
+| Accidental data loss from USB formatting (destructive, irreversible) | High | P1 only; removable-only enumeration, system-drive block, explicit drive selection (no default), rescan + type-to-confirm + dry-run + MBR verify + audit log; covered by T3.2.6/T3.2.9 + TA.8 |
+| Scope creep into live performance features | High | Strict non-goals enforcement; slim MVP principle §1.5 |
+| ONNX performance on lower-end machines | Medium | Quantization, progressive analysis, clear hardware guidance; fixed bench spec TA.6 |
 | LLM constraint parsing unreliability | Medium | Schema validation + structured UI fallback |
+| Settings sprawl (env vs tauri.conf vs SQLite prefs) | Medium | Validated `settings.schema.json` TA.7 |
 | Under-estimated polish for beta | Medium | Phase 4 explicitly reserved for polish + beta |
 
 ---
 
 ## 11. Post-MVP Direction (Not Scheduled)
 
+> **Scheduling note:** Phase 4 is the 90-day MVP. Everything in this section is **after** that MVP and adds no gate to any phase or to MVP acceptance in `05-ACCEPTANCE.md`.
+
 - Deeper preference model (“DJ Brain”)
 - Advanced vector search
 - Richer B2B collaboration
 - Additional export targets
+- Discovery (similar tracks, charts, release radar), enrichment (online tags/artwork) and multi-provider streaming export — task IDs `TD.x` / `TE.x` / `TM.x` in `04-TASKS.md` (foundations `TF.x` + early slices `TD.3`, `TE.1–TE.4`, `TM.1`/`TM.2a` shipped, non-gating)
 - Continuous delivery of P1/P2 on 4–6 week cycles
+
+### Streaming Export — Spotify Playlist Export (Post-MVP)
+
+Publishes a built set (or any playlist) to the DJ’s own Spotify account as a real Spotify playlist, **metadata only**. Tracks are matched by ISRC first, falling back to fuzzy normalized title/artist/album + ±3 s duration with a confidence score; high-confidence matches auto-add, medium/low go to a review queue, unmatched are reported with “search Spotify manually” / “skip”. Connects via **OAuth 2.0 Authorization Code + PKCE** entirely in the desktop app (embedded public client ID; no client secret, no cloud dependency); tokens live in the OS keychain. Audio is never downloaded, streamed, stored, or uploaded.
+
+- **Depends on:** a shipped Set Builder + Export baseline (Phase 3) and the review/`needs_review` pattern — not on any MVP gate.
+- **Sequencing:** pick up only after MVP; task IDs `TP.1–TP.7` are reserved in `04-TASKS.md`.
+- **No impact on MVP:** does not change Phase 0–4 exit criteria or MVP Success Metrics; its acceptance is explicitly non-gating (see `05-ACCEPTANCE.md`).
+
+### Discovery, Enrichment & Multi-Provider Export (Post-MVP)
+
+Local foundations + early slices are **shipped and non-gating** (`TF.1–TF.6`, `TD.3` chart snapshots + migration 005, `TE.1–TE.4` adapters/pipeline/review UI/health score + migration 004, `TM.1`/`TM.2a` provider abstraction + Deezer live match — all visible in the library UI today). The online follow-ups stay post-MVP and non-gating:
+
+- **Discovery (`TD.x`):** opt-in external similarity (Last.fm, Deezer/Spotify recommendations) with source badges (`TD.1–TD.2` planned); Beatport Top 100 / Hype snapshots filtered by library taste (**`TD.3` shipped**: migration 005 + `chart_import_snapshot`/`chart_list` + Charts modal); release radar over followed artists/labels (`TD.4` planned); a Beatport partnership as the long-term Tier 3 (`TD.5`). No catalog API exists today, so charts enter as versioned data, not live calls.
+- **Enrichment (`TE.x`):** opt-in online tag/artwork lookup through preview → apply → undo; writes DB fields, never source files. **`TE.1–TE.4` shipped** (MusicBrainz/iTunes/Deezer adapters + pipeline + review UI + health score); `TE.5` (Chromaprint/quotas) planned.
+- **Multi-provider export (`TM.x`, was `TX.x`):** Spotify as the reference design of a generic provider contract; **Deezer live matching shipped first (`TM.2a`)**, Deezer connect/export + others planned. In-app streaming playback stays out of scope for every provider.
+
+- **Depends on:** the shipped TF foundations plus the review/`needs_review` pattern — not on any MVP gate.
+- **Sequencing:** pick up only after MVP.
+- **No impact on MVP:** acceptance is explicitly non-gating (see `05-ACCEPTANCE.md`).
 
 ---
 
@@ -196,3 +225,4 @@ Smaller teams must ruthlessly cut to pure P0.
 - Canonical Documentation remains the product/technical source of truth.
 - This phase plan sequences the work; it does not override the specification.
 - Any change to phase exit criteria requires explicit agreement and update to `05-ACCEPTANCE.md`.
+- Audit is advisory: `docs/audit/AUDIT-SUMMARY.md` + `04-improvements.md` feed `04-TASKS.md` TA.x; TA.x completion is tracked like any phase task.
