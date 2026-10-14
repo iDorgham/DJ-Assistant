@@ -145,7 +145,7 @@ Run before merging any UI change:
 
 - [ ] Keyboard: complete the flow using only `Tab`/`Shift+Tab`/`Enter`/`Space`/`Esc`.
 - [ ] Focus is always visible; nothing removes the outline without a replacement.
-- [ ] Zoom/scale: at 150% OS text scaling, nothing clips or overlaps.
+- [ ] Zoom/scale: at 200% OS text scaling, nothing clips or overlaps.
 - [ ] Contrast: new colours meet the ratios in §2.
 - [ ] Status: every status has an icon **and** a text label (not colour alone).
 - [ ] Screen reader: landmarks, table headers, progress announcements are sane.
