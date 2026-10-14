@@ -35,7 +35,7 @@ flowchart TB
     Sim -.->|"source badge"| Ext
     Charts -.->|"taste filter"| UI
     Radar -.->|"digest"| UI
-    Export -.->|"undo = delete"| Lib
+    Export -.->|"undo = unfollow"| Lib
 
     style Local fill:#0B0D12,stroke:#00D9FF,stroke-width:1.5px,color:#E9EDF3
     style Online fill:#0B0D12,stroke:#888888,stroke-width:1px,stroke-dasharray:5,5,color:#E9EDF3
