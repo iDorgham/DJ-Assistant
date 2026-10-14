@@ -13,7 +13,7 @@ screens; the header, toolbar, and status bar are constant.
 
 ```
 ┌──────────────────────────────────────────────────────────────────────────────────────────────────┐
-│  ◉ DJ Assistant   [ Phase 1 · Analysis ]            [ Gig Ready ]  [ Export ]  [ Skills ]  [ ⟳ ] │
+│  ◉ DJ Assistant   [ Phase 0 Foundation ]        [ Scan Music Folder ]  [ ⟳ ]                 │
 ├──────────────────────────────────────────────────────────────────────────────────────────────────┤
 │  {1} progress strip — visible only while a job is running                                        │
 │  ⟳ Scanning  D:\Music\deep\track.flac            128 / 402 files                                 │
