@@ -27,7 +27,7 @@ Render these in any Mermaid-compatible viewer (GitHub, VS Code Mermaid extension
 | [14-testing-security-gates.md](./14-testing-security-gates.md) | Testing pyramid + security gates in the PR/phase loop |
 | [15-cicd-pipeline.md](./15-cicd-pipeline.md) | PR CI → main → release flow + pipeline security controls |
 | [16-spotify-playlist-export.md](./16-spotify-playlist-export.md) | Post-MVP Spotify playlist export: match → review → publish → undo (metadata only) |
-| [17-discovery-enrichment-providers.md](./17-discovery-enrichment-providers.md) | Shipped local foundations + live enrichment/Deezer matching; remaining online tracks (TD/TE.4+/TX) |
+| [17-discovery-enrichment-providers.md](./17-discovery-enrichment-providers.md) | Shipped local foundations + live enrichment/Deezer matching; remaining online tracks (TD.1–TD.2/TD.4–TD.6, TE.5, TM, TP) |
 
 ---
 
