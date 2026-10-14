@@ -48,7 +48,7 @@ fn load_targets(
                 artist,
                 isrc,
             }),
-            Err(_) => {
+            Err(rusqlite::Error::QueryReturnedNoRows) => {
                 // Unknown IDs are reported, not fatal to the batch.
                 targets.push(MatchTarget {
                     track_id: track_id.clone(),
@@ -57,6 +57,7 @@ fn load_targets(
                     isrc: None,
                 });
             }
+            Err(e) => return Err(e.to_string()),
         }
     }
     Ok(targets)
