@@ -8,7 +8,7 @@ Helper scripts for fixtures, models, icons, and local verification. `environment
 | `make-smoke-model.py` | Regenerate the 61-byte `fixtures/models/smoke_test.onnx` (`y = Relu(x)`) without the `onnx` wheel |
 | `make_icon.py` | Render `assets/logo.svg` → `apps/desktop/src-tauri/app-icon.png` (then run `tauri icon` for platform variants) |
 | `download-models.sh` | Placeholder for real ONNX weight downloads (Phase 1) |
-| `crosscheck-durations.py` | Verify fixture durations against ffprobe |
+| `crosscheck-durations.py` | Compare a random sample of track durations from a SQLite DB with ffprobe |
 | `show-fixture-durations.py` | Print fixture duration table |
 | `inspect-db.py` | Inspect the local SQLite library DB |
 | `summarize-scan.py` | Summarize a scan run |
