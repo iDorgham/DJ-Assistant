@@ -166,25 +166,57 @@ The target: a 40-track library analyzed, cleaned, cued, sequenced, and exported 
 Each stage of the preparation pipeline is a **Skill** — a scoped, reversible processing unit backed by `skill_runs` records with full `before_state / after_state` snapshots. Run the entire chain end-to-end or step through one stage at a time. Every automated decision is reviewable before it is committed.
 
 ```mermaid
-flowchart TB
-    Lib[("Library<br/>folder + SQLite")] --> Analyze["1 · Analyze<br/>BPM · key · grid · phrases · vocals · LUFS"]
-    Analyze --> ReviewA{"Low confidence?<br/>needs_review"}
-    ReviewA -- yes --> FixA["Spot-check +<br/>correction memory"]
-    FixA --> Clean
-    ReviewA -- no --> Clean["2 · Clean<br/>fuzzy tags · aliases · dedupe"]
-    Clean --> PreviewC{"Preview diff?"}
-    PreviewC -- apply --> Cue["3 · Cue<br/>8 hot + memory · 8-bar snap"]
-    PreviewC -- discard --> Clean
-    Cue --> ReviewC{"Accept cues?"}
-    ReviewC -- edit --> Cue
-    ReviewC -- yes --> Seq["4 · Sequence<br/>constraints → Beam Search W=10"]
-    Seq --> Alt["Alternatives<br/>safer / bolder + explanations"]
-    Alt --> Export["5 · Export<br/>rekordbox XML · Serato crate · USB verify"]
+flowchart LR
+    Lib[("🗄 Library\nFolder · SQLite")]
 
-    classDef stage fill:#0B0D12,stroke:#00D9FF,stroke-width:1.5px,color:#E9EDF3;
-    classDef gate fill:#1A1D26,stroke:#F7B93E,stroke-width:1.5px,color:#E9EDF3,stroke-dasharray:5 3;
-    class Analyze,Clean,Cue,Seq,Export stage;
-    class ReviewA,PreviewC,ReviewC gate;
+    subgraph P1["  ① ANALYZE  "]
+        Analyze["BPM · Key · Beat Grid\nPhrases · Vocals · LUFS"]
+        ReviewA{{"Low confidence?"}}
+        FixA["Spot-check &\nCorrection Memory"]
+    end
+
+    subgraph P2["  ② CLEAN  "]
+        Clean["Fuzzy Tags · Aliases\nDedupe"]
+        PreviewC{{"Preview diff?"}}
+    end
+
+    subgraph P3["  ③ CUE  "]
+        Cue["8 Hot Cues · Memory\n8-bar Snap · AI Provenance"]
+        ReviewC{{"Accept cues?"}}
+    end
+
+    subgraph P4["  ④ SEQUENCE  "]
+        Seq["NL Constraints →\nBeam Search  W=10"]
+        Alt["Safer / Bolder\nAlternatives"]
+    end
+
+    subgraph P5["  ⑤ EXPORT  "]
+        Export["rekordbox XML\nSerato · USB Verify"]
+    end
+
+    Lib       --> Analyze
+    Analyze   --> ReviewA
+    ReviewA   -- "needs review" --> FixA
+    FixA      --> Clean
+    ReviewA   -- "confident"    --> Clean
+    Clean     --> PreviewC
+    PreviewC  -- "apply"        --> Cue
+    PreviewC  -- "discard"      --> Clean
+    Cue       --> ReviewC
+    ReviewC   -- "edit"         --> Cue
+    ReviewC   -- "accept"       --> Seq
+    Seq       --> Alt
+    Alt       --> Export
+
+    classDef stage  fill:#0D1117,stroke:#00D9FF,stroke-width:2px,color:#E9EDF3,rx:6
+    classDef gate   fill:#161B27,stroke:#F7B93E,stroke-width:2px,color:#F7B93E,stroke-dasharray:4 3
+    classDef db     fill:#0D1117,stroke:#00D9FF,stroke-width:2px,color:#E9EDF3
+    classDef sub    fill:#0B0D14,stroke:#1E2533,stroke-width:1px,color:#7C8DA6
+
+    class Analyze,Clean,Cue,Seq,Export,Alt,FixA stage
+    class ReviewA,PreviewC,ReviewC gate
+    class Lib db
+    class P1,P2,P3,P4,P5 sub
 ```
 
 **Two intelligences, one strict boundary.** A language model parses natural-language intent ("warm-up set peaking near 128 BPM with a hard key lock") and explains the resulting sequence in plain language. A deterministic Beam Search makes all ordering decisions from Camelot compatibility, tempo delta, and energy scores — reproducible, auditable, never hallucinated, and independent of LLM availability.
@@ -197,41 +229,54 @@ Privacy is not a feature — it is the structural foundation. Audio decoding, mo
 
 ```mermaid
 graph TB
-    subgraph Desktop["Desktop · Tauri v2 · offline-capable"]
+    subgraph Desktop["  DESKTOP  ·  Tauri v2  ·  fully offline  "]
         direction TB
-        UI["React 18 / TS UI<br/>Library · Waveform · Set Builder · Skills"]
-        IPC["IPC bridge<br/>typed commands + events<br/>contracts/*.json codegen"]
-        Core["Rust core<br/>scan · BLAKE3 · SQLite WAL<br/>skills + undo · exporters"]
-        Audio["Audio engine<br/>Symphonia decode<br/>ONNX Runtime · BPM/key/phrase"]
-        DB[("SQLite<br/>tracks · cues · sets<br/>aliases · skill_runs")]
-        UI <--> IPC <--> Core
+        UI["React 18 + TypeScript\nLibrary · Waveform · Set Builder · Skills"]
+        IPC["IPC Bridge\nTyped commands + events\ncontracts/*.json  codegen"]
+        Core["Rust Core\nscan · BLAKE3 · SQLite WAL\nskills + undo · exporters"]
+        Audio["Audio Engine\nSymphonia decode\nONNX Runtime · BPM / Key / Phrases"]
+        DB[("SQLite\ntracks · cues · sets\naliases · skill_runs")]
+
+        UI  <-->  IPC
+        IPC <-->  Core
         Core <--> Audio
         Core <--> DB
     end
 
-    subgraph Cloud["Cloud · optional · Fastify + PG16"]
-        API["API gateway<br/>auth · workspaces"]
-        LLM["Constraint parser<br/>NL → structured"]
-        Collab["B2B collab<br/>metadata only"]
+    subgraph Cloud["  CLOUD  ·  optional  ·  Fastify 5 + PG 16  "]
+        direction LR
+        API["API Gateway\nauth · workspaces"]
+        LLM["Constraint Parser\nNL → structured constraints"]
+        Collab["B2B Collaboration\nmetadata only · no audio"]
+        API --- LLM
+        API --- Collab
     end
 
-    subgraph Providers["External · post-MVP · metadata only"]
-        SP["Spotify / Deezer<br/>playlist export · PKCE"]
-        EN["MusicBrainz · Discogs<br/>enrichment · opt-in"]
+    subgraph Ext["  EXTERNAL  ·  post-MVP  ·  metadata only  "]
+        direction LR
+        SP["Spotify / Deezer\nPlaylist export · PKCE"]
+        EN["MusicBrainz · Discogs\nTag enrichment · opt-in"]
     end
 
-    IPC -.->|"HTTPS/WSS<br/>opt-in sync"| API
-    API --> LLM
-    API --> Collab
-    Core -.->|"PKCE · ISRC→fuzzy<br/>no audio"| SP
-    Core -.->|"preview→apply→undo<br/>no audio"| EN
+    IPC  -.->|"HTTPS / WSS  ·  opt-in sync"| API
+    Core -.->|"PKCE · ISRC → fuzzy  ·  no audio"| SP
+    Core -.->|"preview → apply → undo  ·  no audio"| EN
 
-    classDef desktop fill:#0B0D12,stroke:#00D9FF,stroke-width:1.5px,color:#E9EDF3;
-    classDef cloud fill:#11141c,stroke:#7C8DA6,stroke-width:1px,color:#E9EDF3,stroke-dasharray:5 3;
-    classDef ext fill:#11141c,stroke:#F7B93E,stroke-width:1px,color:#E9EDF3,stroke-dasharray:5 3;
-    class Desktop desktop;
-    class Cloud cloud;
-    class Providers ext;
+    classDef node    fill:#0D1117,stroke:#00D9FF,stroke-width:2px,color:#E9EDF3
+    classDef db      fill:#0D1117,stroke:#00D9FF,stroke-width:2px,color:#E9EDF3
+    classDef cnode   fill:#0D1117,stroke:#7C8DA6,stroke-width:1.5px,color:#CBD5E1
+    classDef enode   fill:#0D1117,stroke:#F7B93E,stroke-width:1.5px,color:#CBD5E1
+    classDef dsub    fill:#0B0D14,stroke:#00D9FF,stroke-width:1.5px,color:#7C8DA6
+    classDef csub    fill:#0B0D14,stroke:#7C8DA6,stroke-width:1px,color:#7C8DA6,stroke-dasharray:5 3
+    classDef esub    fill:#0B0D14,stroke:#F7B93E,stroke-width:1px,color:#7C8DA6,stroke-dasharray:5 3
+
+    class UI,IPC,Core,Audio node
+    class DB db
+    class API,LLM,Collab cnode
+    class SP,EN enode
+    class Desktop dsub
+    class Cloud csub
+    class Ext esub
 ```
 
 The desktop shell is a **Tauri v2** application: a Rust core handles all performance-critical work (scanning, fingerprinting, audio analysis, export), while a React + TypeScript frontend communicates through a fully typed IPC bridge. The bridge contracts are code-generated — contract drift fails CI immediately. Cloud connectivity is optional and strictly additive; the app works completely without it.
