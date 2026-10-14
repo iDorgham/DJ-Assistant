@@ -461,6 +461,7 @@ interface ProviderStatusResponse {
   connected: ProviderAccount[]; // non-revoked rows from streaming_accounts
   supportedStreaming: string[]; // ["spotify","deezer","apple_music","youtube_music","soundcloud","tidal"]
   supportedStores: string[];    // ["beatport","traxsource","juno_download","bandcamp","discogs"]
+  capabilities: Array<{ provider: string; liveMatch: boolean; isrcSearch: boolean; playlistWrite: boolean; needsAppId: boolean }>;
 }
 ```
 
