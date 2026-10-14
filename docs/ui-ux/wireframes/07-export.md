@@ -19,7 +19,7 @@ section can additionally publish the set to the DJ's own Spotify account as a re
 │  {2} Format                                                                                               │
 │      [x] Rekordbox XML            collection + cues + playlists                                           │
 │      [x] Serato crate             _Serato_/Subcrates/                                                     │
-│      [ ] CSV                      tracks + metadata                                                       │
+│      [x] CSV                      tracks + metadata                                                       │
 │      [ ] USB pack                 folder + playlists for performance media   {3}                          │
 ├───────────────────────────────────────────────────────────────────────────────────────────────────────────┤
 │  {4} Destination   [ D:\Exports\PeakHour        ]   [ Browse… ]                                           │
