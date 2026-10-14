@@ -57,6 +57,7 @@ pub fn classify_analysis_status(results: &AnalysisResults) -> &'static str {
     }
     match results.phrase_confidence {
         Some(c) if c < PHRASE_CONFIDENCE_REVIEW_THRESHOLD => "needs_review",
+        None => "needs_review",
         _ => "complete",
     }
 }
