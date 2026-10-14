@@ -112,7 +112,7 @@ def build() -> Image.Image:
     for x, y, h in zip(bar_xs, bar_ys, bar_hs):
         # Create a small gradient patch for each bar
         bar_tile = Image.new("RGBA", (int(bar_w), int(h)), (0, 0, 0, 0))
-        bar_tile.paste(bar_grad.crop((0, 0, int(bar_w), int(h))), (0, 0))
+        bar_tile.paste(bar_grad.crop((0, 0, 1, S)).resize((int(bar_w), int(h))), (0, 0))
         # Round the corners of the bar tile
         bar_mask = Image.new("L", (int(bar_w), int(h)), 0)
         ImageDraw.Draw(bar_mask).rounded_rectangle(
