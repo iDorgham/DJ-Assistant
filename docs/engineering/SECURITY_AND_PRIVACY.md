@@ -87,7 +87,7 @@ Publishes a built set (or any playlist) to the DJ's own Spotify account as a rea
 | Accidental public exposure of a playlist | Private by default; making a playlist public requires explicit opt-in |
 
 **Disconnect / revocation**
-- Disconnect removes stored tokens and revokes Spotify access, satisfying the existing GDPR **integration revocation** requirement (see [Canonical Documentation §13 GDPR Compliance](../product/CANONICAL_DOCUMENTATION.md)).
+- Disconnect removes locally stored tokens; it does not revoke the Spotify authorization grant.
 
 **Rate limits & errors**
 - `429` + `Retry-After` → exponential backoff; `401` → token refresh; surface `403`/`404` to the reviewer.
