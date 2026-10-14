@@ -85,7 +85,7 @@ Short definitions of product and technical terms used across Canonical, SDD, Arc
 | **Tag Health Score** | 0–100 completeness from a gap list (title/artist 25, album/isrc/artwork 10, genre/year 5, bpm/key 4, duration 2); averaged library-wide and shown per track. |
 | **Chart snapshot** | Versioned Top 100 / Hype data import (TD.3 Tier 1) — positions, names, ISRCs, tempo/key — filtered locally by ownership and taste. |
 | **Taste score** | 0–1 chart-entry fit vs a seed track (60% tempo / 40% key via the core similarity curves); absent without seed/entry data. |
-| **Enrichment** | Opt-in online filling of Tag Health gaps (MusicBrainz, iTunes, Deezer, Discogs, AcoustID) via preview → apply → undo; writes DB fields, never source files. |
+| **Enrichment** | Opt-in online filling of eligible Tag Health metadata gaps (MusicBrainz, iTunes, Deezer, Discogs) via preview → apply → undo; AcoustID awaits local Chromaprint support. Writes DB fields, never source files. |
 | **Store buy-link** | Tier-0 store integration: a per-track outbound search URL (Beatport, Traxsource, Juno Download, Bandcamp, Discogs). Metadata and links only — never audio. |
 | **Release radar** | Post-MVP digest of new releases from followed artists/labels (opt-in, cached, rate-limited); unofficial feeds are labelled as such. |
 | **Provider registry** | Closed `StreamingProvider` / `StoreProvider` enums plus the `provider` column in `streaming_*` tables, so new targets add matchers, never schema. |
