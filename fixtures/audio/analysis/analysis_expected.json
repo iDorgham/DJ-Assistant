@@ -1,29 +1,329 @@
 {
-  "description": "Golden analysis fixtures for T1.2.6. 16-beat stereo WAV files. Expected analysis_status only (BPM and key may be None in some environments). The pipeline classification + loudness + phrase_confidence are verified for each fixture.",
+  "description": "Golden analysis fixtures for TA.6. Full fixtures: 64-128 beats, all 24 Camelot keys. Short fixtures: 16 beats, kept in analysis/short/ for needs_review regression.",
   "tolerances": {
     "bpm": 2.0,
     "key": "exact"
   },
   "fixtures": {
-    "analysis/house-128.wav": {
+    "analysis/afro-1a-128.wav": {
+      "bpm": 128.0,
+      "key_classical": "Ab minor",
+      "key_camelot": "1A",
+      "analysis_status": "complete"
+    },
+    "analysis/deep-2a-122.wav": {
+      "bpm": 122.0,
+      "key_classical": "Eb minor",
+      "key_camelot": "2A",
+      "analysis_status": "complete"
+    },
+    "analysis/house-3a-124.wav": {
+      "bpm": 124.0,
+      "key_classical": "Bb minor",
+      "key_camelot": "3A",
+      "analysis_status": "complete"
+    },
+    "analysis/minimal-4a-126.wav": {
+      "bpm": 126.0,
+      "key_classical": "F minor",
+      "key_camelot": "4A",
+      "analysis_status": "complete"
+    },
+    "analysis/techno-5a-132.wav": {
+      "bpm": 132.0,
+      "key_classical": "C minor",
+      "key_camelot": "5A",
+      "analysis_status": "complete"
+    },
+    "analysis/house-6a-125.wav": {
+      "bpm": 125.0,
+      "key_classical": "G minor",
+      "key_camelot": "6A",
+      "analysis_status": "complete"
+    },
+    "analysis/melodic-7a-124.wav": {
+      "bpm": 124.0,
+      "key_classical": "D minor",
+      "key_camelot": "7A",
+      "analysis_status": "complete"
+    },
+    "analysis/house-8a-128.wav": {
+      "bpm": 128.0,
+      "key_classical": "A minor",
+      "key_camelot": "8A",
+      "analysis_status": "complete"
+    },
+    "analysis/techno-9a-135.wav": {
+      "bpm": 135.0,
+      "key_classical": "E minor",
+      "key_camelot": "9A",
+      "analysis_status": "complete"
+    },
+    "analysis/techno-10a-138.wav": {
+      "bpm": 138.0,
+      "key_classical": "B minor",
+      "key_camelot": "10A",
+      "analysis_status": "complete"
+    },
+    "analysis/dnb-11a-174.wav": {
+      "bpm": 174.0,
+      "key_classical": "F# minor",
+      "key_camelot": "11A",
+      "analysis_status": "complete"
+    },
+    "analysis/dark-12a-140.wav": {
+      "bpm": 140.0,
+      "key_classical": "Db minor",
+      "key_camelot": "12A",
+      "analysis_status": "complete"
+    },
+    "analysis/trance-1b-138.wav": {
+      "bpm": 138.0,
+      "key_classical": "B major",
+      "key_camelot": "1B",
+      "analysis_status": "complete"
+    },
+    "analysis/deep-2b-122.wav": {
+      "bpm": 122.0,
+      "key_classical": "F# major",
+      "key_camelot": "2B",
+      "analysis_status": "complete"
+    },
+    "analysis/afro-3b-124.wav": {
+      "bpm": 124.0,
+      "key_classical": "Db major",
+      "key_camelot": "3B",
+      "analysis_status": "complete"
+    },
+    "analysis/house-4b-126.wav": {
+      "bpm": 126.0,
+      "key_classical": "Ab major",
+      "key_camelot": "4B",
+      "analysis_status": "complete"
+    },
+    "analysis/melodic-5b-130.wav": {
+      "bpm": 130.0,
+      "key_classical": "Eb major",
+      "key_camelot": "5B",
+      "analysis_status": "complete"
+    },
+    "analysis/disco-6b-120.wav": {
+      "bpm": 120.0,
+      "key_classical": "Bb major",
+      "key_camelot": "6B",
+      "analysis_status": "complete"
+    },
+    "analysis/house-7b-125.wav": {
+      "bpm": 125.0,
+      "key_classical": "F major",
+      "key_camelot": "7B",
+      "analysis_status": "complete"
+    },
+    "analysis/house-8b-128.wav": {
+      "bpm": 128.0,
+      "key_classical": "C major",
+      "key_camelot": "8B",
+      "analysis_status": "complete"
+    },
+    "analysis/pop-9b-120.wav": {
+      "bpm": 120.0,
+      "key_classical": "G major",
+      "key_camelot": "9B",
+      "analysis_status": "complete"
+    },
+    "analysis/country-10b-118.wav": {
+      "bpm": 118.0,
+      "key_classical": "D major",
+      "key_camelot": "10B",
+      "analysis_status": "complete"
+    },
+    "analysis/rock-11b-130.wav": {
+      "bpm": 130.0,
+      "key_classical": "A major",
+      "key_camelot": "11B",
+      "analysis_status": "complete"
+    },
+    "analysis/trance-12b-138.wav": {
+      "bpm": 138.0,
+      "key_classical": "E major",
+      "key_camelot": "12B",
+      "analysis_status": "complete"
+    },
+    "analysis/techno-5a-136.wav": {
+      "bpm": 136.0,
+      "key_classical": "C minor",
+      "key_camelot": "5A",
+      "analysis_status": "complete"
+    },
+    "analysis/techno-9a-140.wav": {
+      "bpm": 140.0,
+      "key_classical": "E minor",
+      "key_camelot": "9A",
+      "analysis_status": "complete"
+    },
+    "analysis/house-8a-126.wav": {
+      "bpm": 126.0,
+      "key_classical": "A minor",
+      "key_camelot": "8A",
+      "analysis_status": "complete"
+    },
+    "analysis/house-8b-124.wav": {
+      "bpm": 124.0,
+      "key_classical": "C major",
+      "key_camelot": "8B",
+      "analysis_status": "complete"
+    },
+    "analysis/dnb-11a-170.wav": {
+      "bpm": 170.0,
+      "key_classical": "F# minor",
+      "key_camelot": "11A",
+      "analysis_status": "complete"
+    },
+    "analysis/dnb-9a-175.wav": {
+      "bpm": 175.0,
+      "key_classical": "E minor",
+      "key_camelot": "9A",
+      "analysis_status": "complete"
+    },
+    "analysis/melodic-7a-122.wav": {
+      "bpm": 122.0,
+      "key_classical": "D minor",
+      "key_camelot": "7A",
+      "analysis_status": "complete"
+    },
+    "analysis/melodic-5b-128.wav": {
+      "bpm": 128.0,
+      "key_classical": "Eb major",
+      "key_camelot": "5B",
+      "analysis_status": "complete"
+    },
+    "analysis/deep-6a-122.wav": {
+      "bpm": 122.0,
+      "key_classical": "G minor",
+      "key_camelot": "6A",
+      "analysis_status": "complete"
+    },
+    "analysis/deep-10b-118.wav": {
+      "bpm": 118.0,
+      "key_classical": "D major",
+      "key_camelot": "10B",
+      "analysis_status": "complete"
+    },
+    "analysis/techno-12a-142.wav": {
+      "bpm": 142.0,
+      "key_classical": "Db minor",
+      "key_camelot": "12A",
+      "analysis_status": "complete"
+    },
+    "analysis/hard-5a-145.wav": {
+      "bpm": 145.0,
+      "key_classical": "C minor",
+      "key_camelot": "5A",
+      "analysis_status": "complete"
+    },
+    "analysis/industrial-12a-150.wav": {
+      "bpm": 150.0,
+      "key_classical": "Db minor",
+      "key_camelot": "12A",
+      "analysis_status": "complete"
+    },
+    "analysis/peak-8a-132.wav": {
+      "bpm": 132.0,
+      "key_classical": "A minor",
+      "key_camelot": "8A",
+      "analysis_status": "complete"
+    },
+    "analysis/peak-8b-132.wav": {
+      "bpm": 132.0,
+      "key_classical": "C major",
+      "key_camelot": "8B",
+      "analysis_status": "complete"
+    },
+    "analysis/tech-house-6b-126.wav": {
+      "bpm": 126.0,
+      "key_classical": "Bb major",
+      "key_camelot": "6B",
+      "analysis_status": "complete"
+    },
+    "analysis/tech-house-7b-127.wav": {
+      "bpm": 127.0,
+      "key_classical": "F major",
+      "key_camelot": "7B",
+      "analysis_status": "complete"
+    },
+    "analysis/trance-1a-138.wav": {
+      "bpm": 138.0,
+      "key_classical": "Ab minor",
+      "key_camelot": "1A",
+      "analysis_status": "complete"
+    },
+    "analysis/prog-2a-130.wav": {
+      "bpm": 130.0,
+      "key_classical": "Eb minor",
+      "key_camelot": "2A",
+      "analysis_status": "complete"
+    },
+    "analysis/prog-3a-130.wav": {
+      "bpm": 130.0,
+      "key_classical": "Bb minor",
+      "key_camelot": "3A",
+      "analysis_status": "complete"
+    },
+    "analysis/afro-4a-124.wav": {
+      "bpm": 124.0,
+      "key_classical": "F minor",
+      "key_camelot": "4A",
+      "analysis_status": "complete"
+    },
+    "analysis/minimal-3b-120.wav": {
+      "bpm": 120.0,
+      "key_classical": "Db major",
+      "key_camelot": "3B",
+      "analysis_status": "complete"
+    },
+    "analysis/tribal-4b-125.wav": {
+      "bpm": 125.0,
+      "key_classical": "Ab major",
+      "key_camelot": "4B",
+      "analysis_status": "complete"
+    },
+    "analysis/slow-9b-105.wav": {
+      "bpm": 105.0,
+      "key_classical": "G major",
+      "key_camelot": "9B",
+      "analysis_status": "complete"
+    },
+    "analysis/slow-11b-100.wav": {
+      "bpm": 100.0,
+      "key_classical": "A major",
+      "key_camelot": "11B",
+      "analysis_status": "complete"
+    },
+    "analysis/fast-dnb-1a-180.wav": {
+      "bpm": 180.0,
+      "key_classical": "Ab minor",
+      "key_camelot": "1A",
+      "analysis_status": "complete"
+    },
+    "analysis/short/house-128.wav": {
       "analysis_status": "needs_review"
     },
-    "analysis/techno-140.wav": {
+    "analysis/short/techno-140.wav": {
       "analysis_status": "needs_review"
     },
-    "analysis/dnb-174.wav": {
+    "analysis/short/dnb-174.wav": {
       "analysis_status": "needs_review"
     },
-    "analysis/deep-120.wav": {
+    "analysis/short/deep-120.wav": {
       "analysis_status": "needs_review"
     },
-    "analysis/melodic-126.wav": {
+    "analysis/short/melodic-126.wav": {
       "analysis_status": "needs_review"
     },
-    "analysis/apostrophe-124.wav": {
+    "analysis/short/apostrophe-124.wav": {
       "analysis_status": "needs_review"
     },
-    "analysis/techno-138.wav": {
+    "analysis/short/techno-138.wav": {
       "analysis_status": "needs_review"
     }
   }

@@ -797,7 +797,7 @@ Representative recent work (2026-10-12 → 2026-10-13):
 - `feat(analysis): vocal presence/density (T1.1.6)` (PR #22)
 - `feat(analysis): loudness EBU R128 (T1.1.7)`
 - `feat(analysis): composite analysis_version (T1.1.8)`
-- `docs(readme): refresh in modern minimalist style`
+- `docs(readme): refreshed in modern minimalist style` — already completed; see CHANGELOG.md line 256
 - `docs(ui-ux): interface principles, design system, screens & flows, accessibility, and per-screen wireframes`
 - `docs(context): consolidated single-file project context`
 - Dependency migrations: Tailwind v3 → v4, Vite 6 → 8 (Rolldown), TypeScript 6.0, rusqlite 0.31 → 0.40.
@@ -953,7 +953,7 @@ items on 4–6 week cycles.
 ## 24. How to Keep This Document Useful
 
 - Treat it as a **snapshot**; the linked source documents remain authoritative.
-- Update it when the **phase status**, **implemented interfaces**, **data model**,
+- Update when **phase status**, **implemented interfaces**, **data model** change — currently: Phase 0 complete (P0.1-P0.8 pass), Phase 1 analysis engine fully shipped (T1.1.1-T1.1.8, T1.2.1-T1.2.6 all verified), Phase 2 library intelligence & tag cleanup in active development, Phase 3 set builder & export approaching exit criteria, Phase 4 polish & closed beta planned for Days 61-90,
   or **CI posture** changes materially — those are the sections most likely to
   drift.
 - Prefer editing the canonical document first, then reflecting the change here.
