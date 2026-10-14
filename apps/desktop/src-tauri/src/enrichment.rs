@@ -136,20 +136,22 @@ async fn fetch_image(client: &reqwest::Client, url: &str) -> Result<(Vec<u8>, St
     if !mime.starts_with("image/") {
         return Err(format!("artwork is not an image (got {mime})"));
     }
-    let bytes = response
-        .bytes()
+    let mut bytes = Vec::new();
+    let mut response = response;
+    while let Some(chunk) = response
+        .chunk()
         .await
-        .map_err(|e| format!("artwork download failed: {e}"))?;
-    if bytes.len() > MAX_IMAGE_BYTES {
-        return Err(format!(
-            "artwork too large ({} bytes, cap {MAX_IMAGE_BYTES})",
-            bytes.len()
-        ));
+        .map_err(|e| format!("artwork download failed: {e}"))?
+    {
+        if chunk.len() > MAX_IMAGE_BYTES - bytes.len() {
+            return Err(format!("artwork too large (cap {MAX_IMAGE_BYTES})"));
+        }
+        bytes.extend_from_slice(&chunk);
     }
     if bytes.is_empty() {
         return Err("artwork download was empty".to_string());
     }
-    Ok((bytes.to_vec(), mime))
+    Ok((bytes, mime))
 }
 
 fn artwork_dir(app: &AppHandle) -> std::path::PathBuf {
