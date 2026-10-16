@@ -1,8 +1,8 @@
 # DJ Assistant — Development Task List
 
-**Status:** Living document (Phase 1 in progress; Phase 0 accepted 2026-10-12)  
+**Status:** Living document (Phase 1 complete; Phases 2–4 not started; Phase 0 accepted 2026-10-12)  
 **Source:** Detailed Build Plan v1.0 + Canonical Spec v1.1 + AI-Native Build Plan + audit TA.1–TA.14  
-**Last Updated:** 2026-10-14
+**Last Updated:** 2026-10-16
 
 This is the actionable engineering task list. Check items off as they are completed. Keep this document updated as scope is refined.
 
@@ -23,16 +23,19 @@ This is the actionable engineering task list. Check items off as they are comple
 > [WINDOWS_NATIVE_BUILD_RUNBOOK.md](./WINDOWS_NATIVE_BUILD_RUNBOOK.md) §1.1 first —
 > the GNU toolchain and paths containing spaces both break the build.
 
-> **Phase 1 status (2026-10-12):** the analysis-engine foundation is in place as a
-> standalone, Tauri-free crate `crates/analysis` (`dj-assistant-analysis`): multi-format
-> decoding via **Symphonia** (MP3/WAV/FLAC/AIFF/M4A), DSP normalization (mono/stereo,
-> linear resampling, peak & RMS normalization), **ONNX Runtime** integration (`ort`
-> dynamic loading with platform-aware dylib discovery), SHA-256 model verification, and a
-> versioned `ModelRegistry`/`ModelSpec`. A committed 61-byte smoke-test ONNX graph is
-> loaded and executed by an inference test (skipped gracefully where no ONNX Runtime is
-> installed), and the model digest is pinned by a fixture-integrity test that runs
-> everywhere. Remaining Phase 1 work: per-track analysis jobs, the real BPM/key/structure
-> models, feature persistence, and the analysis progress UI.
+> **Phase 1 status (2026-10-16):** the analysis engine ships as a standalone, Tauri-free
+> crate `crates/analysis` (`dj-assistant-analysis`): multi-format decoding via
+> **Symphonia** (MP3/WAV/FLAC/AIFF/M4A), DSP normalization (mono/stereo, linear
+> resampling, peak & RMS normalization), **ONNX Runtime** integration (`ort` dynamic
+> loading with platform-aware dylib discovery), SHA-256 model verification, and a
+> versioned `ModelRegistry`/`ModelSpec` (a committed 61-byte smoke-test ONNX graph is
+> executed by an inference test and pinned by a fixture-integrity test). The deterministic
+> analyzers ship — BPM/beat grid, key (Camelot + classical), phrase segmentation, vocal
+> presence/density, EBU R128 loudness — plus the per-track queue, progress IPC, result
+> persistence, `needs_review` classification and a 50-track golden harness
+> (`crates/analysis/tests/golden.rs`, TA.6). Remaining Phase 1 gaps: wiring ONNX model
+> files into the analyzers (the seams exist), the optional spectral-brightness feature,
+> and the fixed-hardware p50 bench.
 
 **Guiding Principles (do not violate):**
 - Desktop-first, local-first — core value must work offline

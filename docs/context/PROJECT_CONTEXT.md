@@ -754,14 +754,14 @@ reconciled against the code as items land).
 - ✅ T1.1.7 — Loudness EBU R128 (integrated LUFS + true peak + LRA).
 - ✅ T1.1.8 — Model registry (`ModelRegistry`/`ModelSpec`) + composite `analysis_version()` aggregation + per-track DB stamping via the analysis pipeline (`persist_analysis_results`/`persist_analysis_failure`, `analyze_library` version check).
 
-**1.2 Pipeline & UI** (implemented in code; task-list reconciliation pending)
+**1.2 Pipeline & UI** (implemented in code; task list T1.2.1–T1.2.6 all checked)
 
 - ✅ Local analysis job queue (`analysis::run_analysis_queue` on a background thread).
 - ✅ Per-track + overall progress IPC + events (`analysis:progress` / `analysis:completed`).
 - ✅ Persist analysis results to SQLite (`persist_analysis_results` / `persist_analysis_failure`).
 - ✅ Re-analyze support when `analysis_version` changes (version-aware selection + `force`).
-- ⏳ Low-confidence / `needs_review` flagging — not yet.
-- ⏳ Golden fixture harness — synthetic corpus exists; per-analyzer golden outputs still expanding.
+- ✅ Low-confidence / `needs_review` flagging (`classify_analysis_status` in `crates/analysis/src/pipeline.rs`).
+- ✅ Golden fixture harness — 50 WAV fixtures + short fixtures under `fixtures/audio/analysis/`, verified by `crates/analysis/tests/golden.rs` (TA.6).
 
 The full-pipeline entry point is
 `dj_assistant_analysis::run_full_analysis(path)` → `AnalysisResults`, with
@@ -953,7 +953,7 @@ items on 4–6 week cycles.
 ## 24. How to Keep This Document Useful
 
 - Treat it as a **snapshot**; the linked source documents remain authoritative.
-- Update when **phase status**, **implemented interfaces**, **data model** change — currently: Phase 0 complete (P0.1-P0.8 pass), Phase 1 analysis engine fully shipped (T1.1.1-T1.1.8, T1.2.1-T1.2.6 all verified), Phase 2 library intelligence & tag cleanup in active development, Phase 3 set builder & export approaching exit criteria, Phase 4 polish & closed beta planned for Days 61-90,
+- Update when **phase status**, **implemented interfaces**, **data model** change — currently: Phase 0 complete (P0.1–P0.8 pass), Phase 1 analysis engine shipped (T1.1.1–T1.1.8, T1.2.1–T1.2.6 verified); Phases 2–4 (library intelligence & tag cleanup, set builder & export, skills/cloud/beta) **not started**. Live post-MVP foundations: TF.1–TF.6, TD.3, TE.1–TE.4, TM.1/TM.2a,
   or **CI posture** changes materially — those are the sections most likely to
   drift.
 - Prefer editing the canonical document first, then reflecting the change here.

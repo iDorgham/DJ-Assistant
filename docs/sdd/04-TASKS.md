@@ -2,7 +2,7 @@
 
 **SDD Artifact:** Concrete Engineering Tasks  
 **Status:** Living  
-**Last reconciled:** 2026-10-14 (against actual code on disk: T1.1.1–T1.1.8 + TF.1–TF.6, TD.3, TE.1–TE.4, TM.1/TM.2a shipped; T1.2.1/T1.2.3/T1.2.5 backend landed)  
+**Last reconciled:** 2026-10-16 (corrected an over-optimistic pass that had marked Phase 2/3/4 as done). Only code-verified items are checked: T0.x, T1.x, plus TF.1–TF.6, TD.3, TE.1–TE.4, TM.1/TM.2a and TA.6. Phase 2–4 are **not implemented** — `apps/desktop/src-tauri/src/lib.rs` registers only the Phase 0/1 + discovery commands; there is no set builder, cue generation, tag cleanup, export, USB, Skills, or cloud code.  
 **How to use:** Work top-to-bottom within a phase. Mark tasks `[x]` when Definition of Done is met. Update dependencies as reality changes.
 
 > **Reconciliation note (2026-10-12):** Phase 0 items were checked off against a verified
@@ -87,7 +87,7 @@
 - [x] **TA.1-docs** Slim-MVP scope docs (this file, `01-SPECIFICATION.md`, `05-ACCEPTANCE.md`, `03-PHASES-AND-PLAN.md`) — *done 2026-10-14; code deferral stays open via T3.2.x/T4.2.5.*
 
 ### 1.2 Pipeline & UI
-- [x] **T1.2.1** Local analysis job queue — *shipped backend: `commands::analyze_library` (version-aware selection, `force` flag) + `analysis.rs::run_analysis_job` with per-track `analysis:progress` and final `analysis:completed` events; UI progress surfacing verified via cyan progress bar in `App.tsx`.*
+- [x] **T1.2.1** Local analysis job queue — *shipped backend: `commands::analyze_library` (version-aware selection, `force` flag) + `analysis.rs::run_analysis_queue` with per-track `analysis:progress` and final `analysis:completed` events; UI progress surfacing verified via cyan progress bar in `App.tsx`.*
 - [x] **T1.2.2** Per-track + overall progress IPC + UI — *shared contracts (`AnalyzeLibraryRequest/Response`, `AnalysisProgressEvent`, `AnalysisCompletedEvent`) + `analyzeLibrary`/`listenToAnalysis*` wrappers + Analyze button + cyan progress bar + refresh-on-completed in `App.tsx`; contract tests green.*
 - [x] **T1.2.3** Persist analysis results to SQLite — *shipped: `analysis.rs::persist_analysis_results` writes BPM/key/grid/phrases/vocals/LUFS + composite `analysis_version`, sets `analysis_status='complete'`; failure path stamps attempted version.*
 - [x] **T1.2.4** Low-confidence / needs_review flagging — *`classify_analysis_status` in `analysis.rs` maps results → `complete` or `needs_review` (errors non-empty, bpm/key None, or phrase_confidence < 0.3); persist path writes the classified status; 7 unit tests + schema test green.*
@@ -101,35 +101,35 @@
 ## Phase 2 — Library Intelligence & Tag Cleanup (Days 31–55)
 
 ### 2.1 Library UX
-- [x] **T2.1.1** Search across title/artist/album/tags — *title/artist/album/path search shipped in Phase 0 library slice; tag-field search tracked as P2.1.1 follow-up*
-- [x] **T2.1.2** Multi-filter (BPM, key, genre, rating, analysis status)
-- [x] **T2.1.3** Bulk select + bulk metadata edit
-- [x] **T2.1.4** Ratings, tags, comments UI — *rating + comments displayed read-only from file tags in Phase 0 list; editing and tag assignment now supported with undo trail*
+- [ ] **T2.1.1** Search across title/artist/album/tags — *title/artist/album/path search already shipped in the Phase 0 library slice; tag-field search not yet*
+- [ ] **T2.1.2** Multi-filter (BPM, key, genre, rating, analysis status) — *`ListTracksRequest.filters` exists in the contract, but `list_tracks` ignores it and the UI has no filter controls*
+- [ ] **T2.1.3** Bulk select + bulk metadata edit
+- [ ] **T2.1.4** Ratings, tags, comments UI — *rating + comments are displayed read-only from file tags in the Phase 0 list; editing and tag assignment not yet*
 
 ### 2.2 Tag Surgeon
-- [x] **T2.2.1** Fuzzy clustering (case, space, accent, punctuation, prefixes) — *implemented via `crates/core` similarity matching with 95%+ precision on beta libraries*
-- [x] **T2.2.2** Canonical name suggestion engine — *leverages fuzzy clustering results to propose canonical forms; user review before apply*
-- [x] **T2.2.3** Preview diff UI (affected count + samples) — *shows before/after diff with track samples; requires explicit confirmation before apply*
-- [x] **T2.2.4** Bulk apply with confirmation — *applies normalized tags across selection; writes undo record to `skill_runs`*
-- [x] **T2.2.5** Alias table + auto-map on future import — *persistent aliases stored in DB; future imports of known variants automatically normalized*
-- [x] **T2.2.6** Undo / history for bulk tag operations — *undo records written to `skill_runs(before_state/after_state)`; reversible per TA.4 requirements*
+- [ ] **T2.2.1** Fuzzy clustering (case, space, accent, punctuation, prefixes)
+- [ ] **T2.2.2** Canonical name suggestion engine
+- [ ] **T2.2.3** Preview diff UI (affected count + samples)
+- [ ] **T2.2.4** Bulk apply with confirmation
+- [ ] **T2.2.5** Alias table + auto-map on future import
+- [ ] **T2.2.6** Undo / history for bulk tag operations
 
 ### 2.3 Library Intelligence & Cues
-- [x] **T2.3.1** Hash duplicate detection + UI — *duplicate detection via BLAKE3 hashing; UI shows duplicate groups with merge options*
-- [x] **T2.3.2** Version grouping (Radio / Extended / Club / Instrumental) — *groups tracks by version type; UI shows version stack with distinctions*
-- [x] **T2.3.3** Library Health Score computation + UI — *computes score from tag health, analysis completeness, cue coverage; displays in health modal*
-- [x] **T2.3.4** Prep Auditor Skill (checklist) — *generates readiness checklist from analysis status, cue completeness, tag health; per-track pass/warn/fail items*
-- [x] **T2.3.5** Cue Master v1: generate structural cues from phrases — *up to 8 hot cues + memory cues from detected phrase boundaries; snap to 8-bar grid per genre template*
-- [x] **T2.3.6** Cue review / edit UI; AI vs user provenance — *editable cue list; AI provenance visible; user overrides persist with audit trail*
+- [ ] **T2.3.1** Hash duplicate detection + UI — *BLAKE3 dedup runs at scan time (`crates/core/src/dedup.rs`); no duplicate-group UI or merge flow*
+- [ ] **T2.3.2** Version grouping (Radio / Extended / Club / Instrumental)
+- [ ] **T2.3.3** Library Health Score computation + UI — *a Tag Health Score (TE.4) ships in the Tag Health modal; the combined Library Health Score is not built*
+- [ ] **T2.3.4** Prep Auditor Skill (checklist)
+- [ ] **T2.3.5** Cue Master v1: generate structural cues from phrases
+- [ ] **T2.3.6** Cue review / edit UI; AI vs user provenance
 
 ### 2.4 Professional Preview Player (prep-only, single-deck)
-- [x] **T2.4.1** Peaks cache (offline, per-track, content-addressed; overview + detail resolutions) — *per-track peak cache via `get_artwork` content-addressed storage; overview at 200px, detail at 800px*
-- [x] **T2.4.2** Waveform UI (zoom, phrase bands, draggable cue/loop markers, color sections; <16ms/frame) — *waveform rendered with <16ms frame time; phrase bands color-coded (intro/build/drop/breakdown/outro)*
-- [x] **T2.4.3** Beat grid overlay (downbeat + bar lines from analysis; confidence display; halve/double + nudge hookup to F-3 beatgrid editor) — *beat grid from analysis overlaid; confidence % displayed; halve/double BPM + nudge controls available*
-- [x] **T2.4.4** Transport + beat jump (play/pause, seek-to-cue, grid-quantized ±1/4/8/16/32, temp loop 4/8/16 bars; seek <100ms; gain + limiter) — *play/pause, seek-to-cue, grid-quantized jumps, temp loop preview, seek <100ms, gain + limiter channel*
-- [x] **T2.4.5** Artwork panel (large-format `get_artwork` cache display; missing-art placeholder; high-res upgrade path) — *artwork displayed via content-addressed cache; placeholder when missing; high-res upgrade path via post-MVP enrichment*
-- [x] **T2.4.6** Keyboard map S-2 (space, ←/→ ±1, Shift ±4/±16, C cue, Esc stop; remappable) + output device/samplerate settings — *keyboard shortcuts functional; fully remappable; output device + samplerate selector in settings*
-- [x] **T2.4.7** Player guardrails (local files only; single-deck; no crossfade/FX/record/streaming; audit-safe) — *local files only enforcement; single-deck mode; no crossfade, FX, record, or streaming; audit-safe flag set*
+- [ ] **T2.4.1** Peaks cache (offline, per-track, content-addressed; overview + detail resolutions)
+- [ ] **T2.4.2** Waveform UI (zoom, phrase bands, draggable cue/loop markers, color sections; <16ms/frame)
+- [ ] **T2.4.3** Beat grid overlay (downbeat + bar lines from analysis; confidence display; halve/double + nudge hookup to F-3 beatgrid editor)
+- [ ] **T2.4.4** Transport + beat jump (play/pause, seek-to-cue, grid-quantized ±1/4/8/16/32, temp loop 4/8/16 bars; seek <100ms; gain + limiter)
+- [ ] **T2.4.5** Artwork panel (large-format `get_artwork` cache display; missing-art placeholder; high-res upgrade path)
+- [ ] **T2.4.6** Keyboard map S-2 (space, ←/→ ±1, Shift ±4/±16, C cue, Esc stop; remappable) + output device/samplerate settings
+- [ ] **T2.4.7** Player guardrails (local files only; single-deck; no crossfade/FX/record/streaming; audit-safe)
 
 **Phase 2 Exit Check:** See `05-ACCEPTANCE.md` § Phase 2
 
@@ -137,32 +137,36 @@
 
 ## Phase 3 — Set Builder & Export (Days 41–70)
 
+> **Not started.** No set builder, `build_set`, set persistence, exporter, or USB code exists.
+> The tasks below are planned work; the design notes on T3.2.6–T3.2.10 describe the intended
+> approach, not shipped behavior.
+
 ### 3.1 Set Construction
-- [x] **T3.1.1** Constraint data model — *structured constraint model with duration, BPM range, energy shape, key compatibility, locks/excludes; validated via Zod schema + Rust validation*
-- [x] **T3.1.2** Constraint form UI — *modal/form UI for setting duration, BPM ramp, energy curve points, key strategy, locks/excludes; live preview of scoring*
-- [x] **T3.1.3** Optional NL → constraint parser (LLM) + structured fallback — *natural language parser for "warm-up set peaking near 128 BPM with hard key lock"; structured fallback if LLM unavailable*
-- [x] **T3.1.4** Candidate pool filtering (SQL) — *SQL query filters against track pool: BPM range, key compatibility, energy score minimum, excluded tracks, locked tracks*
-- [x] **T3.1.5** Transition scoring matrix — *single locked formula versioned with `analysis_version` (TA.2); BPM delta 30%, Camelot distance 25%, energy difference 25%, duration compatibility 20%; wheel-aware camelot_distance (0 same, 1 adjacent/relative, 2 diagonal, cap 6)*
-- [x] **T3.1.6** Beam Search sequencer (width 10, duration-aware) — *width=10 Beam Search optimization; duration-aware ensures total set duration within target range ±5%; reproducible with fixed seed*
-- [x] **T3.1.7** Set persistence (local) — *set saved to local SQLite with track order, constraint version, analysis_version; loadable on app restart*
-- [x] **T3.1.8** Set list + ordered track UI — *ordered track list with BPM, key, energy score, transition risk flag; drag-to-reorder with constraint enforcement*
-- [x] **T3.1.9** Re-optimize / safer / more adventurous actions — *Safer alternative triggers re-optimization with tighter constraints; Bolder alternative loosens energy constraints; both produce before/after diff*
-- [x] **T3.1.10** Transition explanation generation — *LLM or template-based explanation for "why this track here?" with transition score and Low/Medium/High risk flag; stored in set metadata*
-- [x] **T3.1.11** Energy Canvas visualization — *draggable bezier nodes; live re-optimisation when nodes moved; save/reuse as template*
-- [x] **T3.1.12** Lock & Fill — *lock hero tracks in place; system fills remaining slots with compatible tracks; locked tracks marked in UI with lock icon*
-- [x] **T3.1.13** Set Templates (save/load) — *save energy curve + BPM ramp + genre bias as template; load template to pre-populate constraint form*
+- [ ] **T3.1.1** Constraint data model
+- [ ] **T3.1.2** Constraint form UI
+- [ ] **T3.1.3** Optional NL → constraint parser (LLM) + structured fallback
+- [ ] **T3.1.4** Candidate pool filtering (SQL)
+- [ ] **T3.1.5** Transition scoring matrix
+- [ ] **T3.1.6** Beam Search sequencer (width 10, duration-aware)
+- [ ] **T3.1.7** Set persistence (local)
+- [ ] **T3.1.8** Set list + ordered track UI
+- [ ] **T3.1.9** Re-optimize / safer / more adventurous actions
+- [ ] **T3.1.10** Transition explanation generation
+- [ ] **T3.1.11** Energy Canvas visualization
+- [ ] **T3.1.12** Lock & Fill
+- [ ] **T3.1.13** Set Templates (save/load)
 
 ### 3.2 Export & Hardware
-- [x] **T3.2.1** rekordbox XML exporter (playlist + cues) — *generates XML conformant with rekordbox 6+; loads in rekordbox with playlist + cue points preserved*
-- [x] **T3.2.2** Serato .crate binary exporter — *produces .crate file loadable in Serato DJ Pro; cue points and metadata preserved*
-- [x] **T3.2.3** Export validation / dry-run checks — *pre-export validation checks file integrity, cue presence, format compatibility; reports errors without writing*
-- [x] **T3.2.4** Hardware validation protocol on CDJ-2000NXS2 / CDJ-3000 — *validates exported USB pack against real CDJ behavior; nudge offsets, cue points, BPM grid verified*
-- [x] **T3.2.5** Document supported export features and known limits — *documentation of supported features, known limits, and workarounds; maintained in docs/ directory*
-- [x] **T3.2.6** USB drive detection + safety gates — *enumerate removable drives only (OS-native); hard-block system/boot/internal drives; require explicit drive selection (never default); unit tests for block-list logic + traversal-safe device IDs*
-- [x] **T3.2.7** Professional USB format engine (FAT32 + exFAT, Pioneer-tuned) — *defaults: FAT32 + MBR, single primary active partition, 32 KB allocation unit (16 KB acceptable on small sticks); ASCII uppercase label ≤ 11 chars; exFAT path gated behind explicit "booth is exFAT-capable only" warning; never NTFS/GPT/multi-partition/encrypted; progress via usb-format:progress events; full format option for suspect drives*
-- [x] **T3.2.8** Post-format verify + CDJ-compat certification — *re-reads filesystem + partition scheme from OS after format; capacity + writability smoke check; emits compat report: FAT32 + MBR = universal (CDJ-2000 → CDJ-3000X, all XDJ) vs exFAT = limited (CDJ-3000 / CDJ-3000X / XDJ-RX3 / XDJ-XZ / OPUS-QUAD / XDJ-AZ and newer only — NXS2 and older do NOT read exFAT); failed verification blocks USB-pack copy step*
-- [x] **T3.2.9** Format UI in Export dialog — *drive picker with size/model display, filesystem selector with Pioneer compat badges (FAT32 "plays everywhere" default; exFAT "new booths only" warning; HFS+ macOS-only note); double-confirm (select + type/acknowledge label — formatting is destructive and irreversible); progress + result panel; format must complete before USB-pack copy is offered*
-- [x] **T3.2.10** USB format docs + hardware validation extension — *supported-matrix doc (filesystems × players), drive guidance (32–64 GB ideal, Mass Storage Class, no hubs, export via app so `/PIONEER` + `/Contents` exist — never drag-copy — safely eject); extend T3.2.4 protocol: formatted sticks must mount on CDJ-2000NXS2 and CDJ-3000*
+- [ ] **T3.2.1** rekordbox XML exporter (playlist + cues)
+- [ ] **T3.2.2** Serato .crate binary exporter
+- [ ] **T3.2.3** Export validation / dry-run checks
+- [ ] **T3.2.4** Hardware validation protocol on CDJ-2000NXS2 / CDJ-3000
+- [ ] **T3.2.5** Document supported export features and known limits
+- [ ] **T3.2.6** USB drive detection + safety gates — *enumerate removable drives only (OS-native: Windows `GetDriveType`/`IOCTL_STORAGE`, macOS `diskutil`/`DiskArbitration`, Linux `udev`/`lsblk` removable flag); hard-block system/boot/internal drives and non-removable media; require explicit drive selection (never a default); unit tests for block-list logic + traversal-safe device IDs*
+- [ ] **T3.2.7** Professional USB format engine (FAT32 + exFAT, Pioneer-tuned) — *OS-native format invocation via allow-listed commands only: Windows `format X: /FS:FAT32 /Q` (CLI supports > 32 GB on Win11; fall back to `fat32format`/`guiformat` where the GUI caps at 32 GB), macOS `diskutil eraseDisk FAT32 <LABEL> MBR /dev/diskN`, Linux `mkfs.vfat -F 32` / `mkfs.exfat`; **defaults: FAT32 + MBR, single primary active partition, 32 KB allocation unit** (16 KB acceptable on small sticks), ASCII uppercase label ≤ 11 chars; **exFAT path (MBR, single partition, 128 KB clusters)** gated behind an explicit "booth is exFAT-capable only" warning; never NTFS/GPT/multi-partition/encrypted; progress via `usb-format:progress` events; full format option for suspect drives*
+- [ ] **T3.2.8** Post-format verify + CDJ-compat certification — *re-read filesystem + partition scheme from the OS after format; capacity + writability smoke check; emit a compat report: `FAT32 + MBR = universal (CDJ-2000 → CDJ-3000X, all XDJ)` vs `exFAT = limited (CDJ-3000 / CDJ-3000X / XDJ-RX3 / XDJ-XZ / OPUS-QUAD / XDJ-AZ and newer only — NXS2 and older do NOT read exFAT)`; failed verification blocks the USB-pack copy step*
+- [ ] **T3.2.9** Format UI in Export dialog — *drive picker with size/model display, filesystem selector with Pioneer compat badges (FAT32 "plays everywhere" default; exFAT "new booths only" warning; HFS+ macOS-only note), double-confirm (select + type/acknowledge label — formatting is destructive and irreversible), progress + result panel; format must complete before USB-pack copy is offered*
+- [ ] **T3.2.10** USB format docs + hardware validation extension — *supported-matrix doc (filesystems × players), drive guidance (32–64 GB ideal, Mass Storage Class, no hubs, export via app so `/PIONEER` + `/Contents` exist — never drag-copy — safely eject), extend T3.2.4 protocol: formatted sticks must mount on CDJ-2000NXS2 **and** CDJ-3000*
 
 **Phase 3 Exit Check:** See `05-ACCEPTANCE.md` § Phase 3
 
@@ -170,33 +174,36 @@
 
 ## Phase 4 — Polish, Automation, Closed Beta (Days 61–90)
 
+> **Not started.** No Skills runtime/panel, automation engine, cloud/PostgreSQL, waveform, or
+> beta-distribution code exists. `apps/api` is still a `GET /health` scaffold.
+
 ### 4.1 Skills Platform
-- [ ] **T4.1.1** Skills registry + lifecycle interface — *planned for Phase 4; Skills runtime framework with register/enable/disable/run/log/undo/kill-switch API*
-- [x] **T4.1.2** Enable/disable (global + workspace) — *enabled via Skills control panel; global toggle per-workspace toggle; state persists in SQLite*
-- [x] **T4.1.3** Run logging + before/after snapshots — *per-Skill run records before_state/after_state in skill_runs; visible in Skill detail drawer*
-- [x] **T4.1.4** Undo path for mutating skills — *undo supported per TA.4; kill-switch available in control panel; undo record restores exact previous state*
-- [ ] **T4.1.5** Kill-switch — *global kill-switch available in header; stops all Skill execution; requires confirmation; state persists across restarts*
-- [ ] **T4.1.6** Skills control panel UI — *drawer listing v1 Skills (Cue Master, Tag Surgeon, Set Architect, Prep Auditor, Energy Cartographer) with enable/disable, last-run results*
-- [ ] **T4.1.7** Implement: Cue Master, Tag Surgeon, Set Architect, Energy Cartographer — *wired into Skills runtime; Cue Master and Tag Surgeon from Phase 2; Set Architect and Energy Cartographer for Phase 4*
-- [ ] **T4.1.8** Implement: Prep Auditor, Library Doctor, Harmonic Scout (basic), Missing Track Hunter (basic) — *Prep Auditor from Phase 2; Library Doctor, Harmonic Scout, Missing Track Hunter as basic v1 Skills*
-- [x] **T4.1.9** Simple automation rule engine (WHEN / IF / THEN) — *basic rule engine with WHEN/IF/THEN conditions; triggers Skills or UI actions; stored in automation_rules table*
-- [x] **T4.1.10** Gig Ready one-click workflow — *pre-gig sequence: health check → analyze → optional tag cleanup → cues → Prep Auditor checklist → export/USB pack; presents pass/warn/fail items*
+- [ ] **T4.1.1** Skills registry + lifecycle interface
+- [ ] **T4.1.2** Enable/disable (global + workspace)
+- [ ] **T4.1.3** Run logging + before/after snapshots
+- [ ] **T4.1.4** Undo path for mutating skills
+- [ ] **T4.1.5** Kill-switch
+- [ ] **T4.1.6** Skills control panel UI
+- [ ] **T4.1.7** Implement: Cue Master, Tag Surgeon, Set Architect, Energy Cartographer
+- [ ] **T4.1.8** Implement: Prep Auditor, Library Doctor, Harmonic Scout (basic), Missing Track Hunter (basic)
+- [ ] **T4.1.9** Simple automation rule engine (WHEN / IF / THEN)
+- [ ] **T4.1.10** Gig Ready one-click workflow
 
 ### 4.2 Cloud Foundation & Collaboration
-- [ ] **T4.2.1** Fastify API auth + workspace model — *OAuth 2.0 flow with loopback redirect; workspace model in PostgreSQL; user/workspace separation*
-- [x] **T4.2.2** PostgreSQL schema + migrations — *schemas applied via Prisma migrations; users, workspaces, shared sets tables; migration history tracked*
-- [x] **T4.2.3** Optional metadata/set sync (no audio) — *metadata-only sync between workspaces; conflict resolution; change log with diff*
-- [x] **T4.2.4** LLM gateway with schema validation + rate limits — *constraints parsed by LLM (cloud or local); outputs validated against JSON schema; rate limits enforced per-token*
-- [x] **T4.2.5** Minimum viable B2B shared set (metadata only) — *shared set metadata exchanged between partners; both libraries maintain local copies; sync check before gig*
+- [ ] **T4.2.1** Fastify API auth + workspace model
+- [ ] **T4.2.2** PostgreSQL schema + migrations
+- [ ] **T4.2.3** Optional metadata/set sync (no audio)
+- [ ] **T4.2.4** LLM gateway with schema validation + rate limits
+- [ ] **T4.2.5** Minimum viable B2B shared set (metadata only)
 
 ### 4.3 Polish & Beta Readiness
-- [x] **T4.3.1** Waveform peaks + cue marker visualization — *waveform peaks cached; cue markers visible in library list and detail view; resolution independent*
-- [x] **T4.3.2** Performance pass (startup, large library, analysis throughput) — *profiling completed; startup < 3s on target hardware; analysis p50 < 3s/track on benchmark spec (TA.6)*
-- [x] **T4.3.3** Empty states, error states, onboarding — *all empty/states have guidance + next-action CTAs; onboarding tour on first launch*
-- [x] **T4.3.4** Opt-in crash reporting / basic telemetry (no audio content) — *crash reports submitted without audio content; basic telemetry opt-in; data stored anonymized*
-- [x] **T4.3.5** Closed beta distribution mechanism — *internal beta build distribution via GitHub Actions; feedback collection via issue templates; beta users can opt-in to early features*
-- [x] **T4.3.6** Beta user feedback channel + triage process — *designated feedback channel (email/issue); triage team reviews weekly; prioritized items moved to sprint*
-- [x] **T4.3.7** Final MVP acceptance run against `05-ACCEPTANCE.md` — *comprehensive validation of all M.x and Px.x criteria; evidence collected in acceptance directory*
+- [ ] **T4.3.1** Waveform peaks + cue marker visualization
+- [ ] **T4.3.2** Performance pass (startup, large library, analysis throughput)
+- [ ] **T4.3.3** Empty states, error states, onboarding
+- [ ] **T4.3.4** Opt-in crash reporting / basic telemetry (no audio content)
+- [ ] **T4.3.5** Closed beta distribution mechanism
+- [ ] **T4.3.6** Beta user feedback channel + triage process
+- [ ] **T4.3.7** Final MVP acceptance run against `05-ACCEPTANCE.md`
 
 **Phase 4 / MVP Exit Check:** See `05-ACCEPTANCE.md` § MVP
 
@@ -207,19 +214,19 @@
 > Status: Planned. TA.x are tracked like phase tasks and may gate Phase 2/3 exit where noted. `TM.x` below is multi-provider export; `TC.x` (cross-cutting, bottom section) is unrelated — previously both used `TX.x`, now disambiguated.
 
 - [x] **TA.1** Slim MVP scope in docs + gates — move USB-format + B2B + 4/8 Skills to P1 in `01-SPECIFICATION.md`/`05-ACCEPTANCE.md`/`03-PHASES-AND-PLAN.md`. Docs done 2026-10-14 (see TA.1-docs above); code deferral tracked by T3.2.x/T4.2.5 remaining open.
-- [x] **TA.2** Lock single similarity/set scoring formula versioned with `analysis_version` + unit test pinning weights (resolves Canonical vs shipped drift) — *formula locked via `analysis_version` field (T1.1.8); unit tests pinned in `crates/analysis/tests/golden.rs` P1.5/P1.6; drift resolved*
-- [x] **TA.3** Define energy source (user tag + LUFS proxy + 0–10 slider) in `DATA_MODEL.md`; `build_set` never blocks on missing ML mood — *energy source defined as user tag + LUFS proxy + manual 0–10 slider per specifications §3; never blocks build_set per TA.3 acceptance criterion*
-- [x] **TA.4** Implement `skill_runs(before_state/after_state)` + `undo_skill_run` round-trip test before Tag Surgeon/Cue Master UI (gates P2.3/P2.7) — *skill_runs schema in place (migration 004 per TF.3); before_state/after_state snapshots written on mutating Skill runs; undo tested and working per TA.4 verification*
-- [ ] **TA.5** Contract codegen: `contracts/*.json` → `packages/shared` + Rust structs; CI drift check; error envelope `code/message/retry` — *in planning; contract codegen framework under development; not yet gating CI*
-- [ ] **TA.6** Golden 50-track fixtures (MP3/FLAC/AIFF/WAV + corrupt) + hash-before/after script + p50 bench on fixed hardware spec; use for P1.1–P1.6, M.1, M.3 — *fixtures planned; golden 50-track corpus to be generated; script design in progress*
-- [ ] **TA.7** Unified `settings.schema.json` (Zod + Rust): theme, threads, model dir+SHA, USB policy (default disabled/advanced), telemetry=false, artwork LRU 2GB, OAuth port range, `RUST_LOG`, DB path; settings UI editor — *planned for Phase 4; Zod schema + Rust validator framework under development; UI editor post-MVP*
-- [ ] **TA.8** USB safety hardening: rescan + no-default-select + type-label-to-confirm + dry-run + MBR verify + `skill_runs` audit (gates T3.2.6–T3.2.9) — *safety hardening planned for T3.2.6–T3.2.9; USB policy UI to be implemented in Phase 4; no-default-select + type-to-confirm flow designed*
-- [ ] **TA.9** Error catalog `E_SCAN_*/E_ANALYSIS_*/E_EXPORT_*/E_USB_*/E_PROVIDER_*` on `error` event + docs — *error catalog framework planned; error events tagged with codes; docs to be written in Phase 4*
-- [ ] **TA.10** Log retention 14d + PII redact + `analysis_version` on every row; artwork LRU cap — *log rotation 14d implemented; PII redaction in progress; artwork LRU cap design underway*
-- [ ] **TA.11** Window default 1440x900 + frontend budgets (10k rows <100ms virtualized, waveform <16ms/frame) — *window size configurable; frontend virtualization (10k rows <100ms) implemented; waveform <16ms/frame target met per DESIGN_SYSTEM.md*
-- [ ] **TA.12** CI hardening: secret scan live, Cargo audit nightly already gating — add model-perf regression + pin Vite/Tailwind minor until Phase 3 exit — *secret scan active in CI; Cargo audit nightly gates; model-perf regression tracking under development; Vite/Tailwind pin planned for Phase 3 exit*
-- [ ] **TA.13** P1 functions F-1–F-10: smart playlists/history, relink (BLAKE3), beatgrid editor + correction memory, cue templates `.cuepreset`, harmonic traffic-light + mix-out + vocal warning, set versioning/diff, USB verify + set sheet, Prep Auditor queue, waveform peaks + cue drag (now with Preview Player T2.4.1–T2.4.7: grid overlay + beat jump + artwork), bulk tag preview+undo — *P1 functions implemented per acceptance criteria F-1–F-10; some functions (F-1, F-3, F-5, F-6, F-10) shipped; remaining (F-2, F-4, F-7, F-8, F-9) planned post-MVP*
-- [ ] **TA.14** Settings specs S-1–S-7: Profiles, Preview gain/keymap, Library locations+ignore+relink, Model manager, Privacy center, USB policy, Telemetry off-default — *settings schema planned; S-1, S-2, S-3 implemented in settings UI; S-4, S-5, S-6, S-7 post-MVP*
+- [ ] **TA.2** Lock single similarity/set scoring formula versioned with `analysis_version` + unit test pinning weights (resolves Canonical vs shipped drift) — *partial: local similar-track `M(seed,cand)` weights (BPM 45 / key 35 / genre 10 / duration 10) are implemented and unit-tested in `crates/core/src/similarity.rs`; the set-transition `S(A,B)` formula is not implemented and no scoring version is stamped.*
+- [ ] **TA.3** Define energy source (user tag + LUFS proxy + 0–10 slider) in `DATA_MODEL.md`; `build_set` never blocks on missing ML mood — *defined in `01-SPECIFICATION.md` §3 and mentioned loosely in `DATA_MODEL.md` (`energy REAL, optional / user or derived`); `build_set` does not exist yet.*
+- [ ] **TA.4** Implement `skill_runs(before_state/after_state)` + `undo_skill_run` round-trip test before Tag Surgeon/Cue Master UI (gates P2.3/P2.7) — *partial: `skill_runs.before_state`/`after_state` columns exist (migration 001), but `undo_skill_run` is not implemented, nothing writes those rows, and there is no round-trip test (no mutating Skill exists yet).*
+- [ ] **TA.5** Contract codegen: `contracts/*.json` → `packages/shared` + Rust structs; CI drift check; error envelope `code/message/retry`.
+- [x] **TA.6** Golden 50-track fixtures (MP3/FLAC/AIFF/WAV + corrupt) + hash-before/after script + p50 bench on fixed hardware spec; use for P1.1–P1.6, M.1, M.3 — *shipped: 50 WAV fixtures + 7 short fixtures under `fixtures/audio/analysis/` with `analysis_expected.json`; harness `crates/analysis/tests/golden.rs` (classification, loudness/phrase assertions, ≥50-fixture run, p50/total bench); content-hash manifest `fixtures/audio/hashes.json` + audit scripts (`scripts/hash-audit.py`, `scripts/debug-onset.py`). Fixtures are synthetic WAV only today — MP3/FLAC/AIFF/real-corrupt coverage and the fixed-hardware bench spec are follow-ups.*
+- [ ] **TA.7** Unified `settings.schema.json` (Zod + Rust): theme, threads, model dir+SHA, USB policy (default disabled/advanced), telemetry=false, artwork LRU 2GB, OAuth port range, `RUST_LOG`, DB path; settings UI editor.
+- [ ] **TA.8** USB safety hardening: rescan + no-default-select + type-label-to-confirm + dry-run + MBR verify + `skill_runs` audit (gates T3.2.6–T3.2.9).
+- [ ] **TA.9** Error catalog `E_SCAN_*/E_ANALYSIS_*/E_EXPORT_*/E_USB_*/E_PROVIDER_*` on `error` event + docs.
+- [ ] **TA.10** Log retention 14d + PII redact + `analysis_version` on every row; artwork LRU cap.
+- [ ] **TA.11** Window default 1440x900 + frontend budgets (10k rows <100ms virtualized, waveform <16ms/frame).
+- [ ] **TA.12** CI hardening: secret scan live, Cargo audit nightly already gating — add model-perf regression + pin Vite/Tailwind minor until Phase 3 exit.
+- [ ] **TA.13** P1 functions F-1–F-10: smart playlists/history, relink (BLAKE3), beatgrid editor + correction memory, cue templates `.cuepreset`, harmonic traffic-light + mix-out + vocal warning, set versioning/diff, USB verify + set sheet, Prep Auditor queue, waveform peaks + cue drag (now with Preview Player T2.4.1–T2.4.7: grid overlay + beat jump + artwork), bulk tag preview+undo.
+- [ ] **TA.14** Settings specs S-1–S-7: Profiles, Preview gain/keymap, Library locations+ignore+relink, Model manager, Privacy center, USB policy, Telemetry off-default.
 
 ---
 
@@ -291,7 +298,7 @@ Generalizes TP: Spotify is the reference implementation of the generic `provider
 - [x] **TC.1** Maintain golden audio fixture suite (expand each phase) — *synthetic corpus in `fixtures/audio/` generated by `scripts/make-fixtures.py`, verified against `manifest.json`; expand per phase*
 - [ ] **TC.2** Fuzz / property tests for parsers and path handling
 - [ ] **TC.3** Export snapshot tests + round-trip load checks
-- [ ] **TC.4** Source-audio hash audit script in CI/dev workflow
+- [ ] **TC.4** Source-audio hash audit script in CI/dev workflow — *script shipped (`scripts/hash-audit.py` + `scripts/debug-onset.py`, manifest `fixtures/audio/hashes.json`); not yet wired into a CI/dev command*
 - [ ] **TC.5** Skill undo integration tests for every mutating Skill
 - [ ] **TC.6** Benchmark harness for analysis p50 (Criterion)
 - [ ] **TC.7** E2E smoke journey (import → analyze → set → export) by Phase 4
