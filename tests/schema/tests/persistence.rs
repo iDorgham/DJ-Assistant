@@ -53,7 +53,7 @@ const FILTER_TRACKS_SQL: &str = "SELECT id, title FROM tracks \
      WHERE bpm >= ?1 AND bpm <= ?2 \
        AND UPPER(key_camelot) IN (?3) \
        AND LOWER(analysis_status) IN (?4) \
-       AND LOWER(genre) IN (?5) \
+       AND LOWER(TRIM(genre)) IN (?5) \
        AND user_rating >= ?6 \
      ORDER BY bpm IS NULL, bpm ASC, id ASC LIMIT ?7 OFFSET ?8";
 
@@ -62,7 +62,7 @@ const COUNT_FILTER_SQL: &str = "SELECT COUNT(*) FROM tracks \
      WHERE bpm >= ?1 AND bpm <= ?2 \
        AND UPPER(key_camelot) IN (?3) \
        AND LOWER(analysis_status) IN (?4) \
-       AND LOWER(genre) IN (?5) \
+       AND LOWER(TRIM(genre)) IN (?5) \
        AND user_rating >= ?6";
 
 /// Mirrors the builder's `{sortBy: "bpm", sortDir: "asc"}` SELECT: unknown BPMs
@@ -74,7 +74,7 @@ const SORT_BPM_SQL: &str = "SELECT id, title FROM tracks \
 /// literal `%`, `_` or `\` behaves the same here as in the app.
 fn like_pattern(term: &str) -> String {
     let escaped = term
-        .to_lowercase()
+        .to_ascii_lowercase()
         .replace('\\', "\\\\")
         .replace('%', "\\%")
         .replace('_', "\\_");

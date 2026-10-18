@@ -951,6 +951,10 @@ export default function App() {
   const filteredTracks = useMemo(() => filterTracks(tracks, searchQuery), [tracks, searchQuery]);
   const filterCount = activeFilterCount(filters);
   const filterSummary = describeFilters(filters);
+  // True when the (server-side) page behind `filteredTracks` is narrowed either by
+  // the filter panel or by the live search box; used to tell "no tracks" apart
+  // from "no matches for the current query".
+  const pageIsFiltered = filterCount > 0 || searchQuery.trim().length > 0;
 
   return (
     <div className="relative flex flex-col h-screen bg-[#0f1117] text-slate-100 font-sans">
@@ -1157,19 +1161,38 @@ export default function App() {
           {filteredTracks.length === 0 ? (
             <div className="h-full flex flex-col items-center justify-center text-slate-500 space-y-3 p-8">
               <div className="h-16 w-16 rounded-2xl bg-[#181b26] border border-[#262c3e] flex items-center justify-center">
-                <Music className="w-8 h-8 text-slate-600" />
+                {pageIsFiltered ? (
+                  <Search className="w-8 h-8 text-slate-600" />
+                ) : (
+                  <Music className="w-8 h-8 text-slate-600" />
+                )}
               </div>
               <div className="text-center">
-                <p className="text-sm font-semibold text-slate-300">No tracks in library</p>
+                <p className="text-sm font-semibold text-slate-300">
+                  {pageIsFiltered ? "No tracks match" : "No tracks in library"}
+                </p>
                 <p className="text-xs text-slate-500 mt-1 max-w-sm">
-                  Click "Scan Music Folder" above to import your local audio files (.mp3, .flac,
-                  .wav, .aiff).
+                  {pageIsFiltered
+                    ? "Nothing matches the current search and filters. Clear them to see the whole library."
+                    : 'Click "Scan Music Folder" above to import your local audio files (.mp3, .flac, .wav, .aiff).'}
                 </p>
               </div>
-              {currentFolder && (
-                <div className="text-xs bg-[#161924] border border-[#262a3a] px-3 py-1 rounded-sm text-slate-400 font-mono">
-                  Current folder: {currentFolder}
-                </div>
+              {pageIsFiltered ? (
+                <button
+                  onClick={() => {
+                    setSearchQuery("");
+                    resetFilters();
+                  }}
+                  className="text-xs px-3 py-1.5 rounded-md bg-[#1d2232] border border-[#2a3042] text-slate-300 hover:bg-[#252b3d] transition"
+                >
+                  Clear search &amp; filters
+                </button>
+              ) : (
+                currentFolder && (
+                  <div className="text-xs bg-[#161924] border border-[#262a3a] px-3 py-1 rounded-sm text-slate-400 font-mono">
+                    Current folder: {currentFolder}
+                  </div>
+                )
               )}
             </div>
           ) : (

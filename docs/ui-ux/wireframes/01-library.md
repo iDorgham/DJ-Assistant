@@ -14,7 +14,9 @@ shipped screen so far.
 ┌────────────────────────────────────────────────────────────────────────────────────────────────────────────────┐
 │  ◉ DJ Assistant   [ Phase 0 Foundation ]                          [ Scan Music Folder ]  [ ⟳ ]                 │
 ├────────────────────────────────────────────────────────────────────────────────────────────────────────────────┤
-│  {1} [ search title, artist, album, path… ]  [✚ Tag Health] [Charts]  94 tracks · ⚡ 6 streaming · 5 stores · 0 connected │
+│  {1} [ search title, artist, album, path… ]  [Filters 2] [✚ Tag Health] [Charts]  94 tracks · ⚡ 6 streaming · 5 stores · 0 connected │
+├────────────────────────────────────────────────────────────────────────────────────────────────────────────────┤
+│  {8} ⌗ Tempo 120–130 BPM   ⌗ Key 8A, 8B   clear all                                                             │
 ├────────────────────────────────────────────────────────────────────────────────────────────────────────────────┤
 │  {2} #   ART   TITLE              ARTIST         ALBUM      BPM   KEY   RATING  TIME   FMT    STATUS           │
 │────────────────────────────────────────────────────────────────────────────────────────────────────────────────│
@@ -97,6 +99,7 @@ shipped screen so far.
 | {5} | Empty-state icon | Decorative; the headline carries the meaning |
 | {6} | Current-folder chip | Shown only after a folder has been chosen this session |
 | {7} | Inspector drawer | Overlay panel (see [wireframe 12](./12-discovery-enrichment.md)): identity + gap chips + similar tracks + buy-links; never replaces the table |
+| {8} | Active filter chips | One chip per active filter group (`Tempo 120–130 BPM`, `Key 8A, 8B`, …) with a `clear all` action; the `Filters` button shows the active-group count badge |
 
 ### Column semantics
 
