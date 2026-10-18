@@ -3,6 +3,7 @@
 use std::path::{Path, PathBuf};
 use std::sync::OnceLock;
 
+use ort::environment::Environment;
 use ort::session::Session;
 use ort::value::Tensor;
 
@@ -10,7 +11,7 @@ use crate::checksum::{verify_checksum, verify_file_checksum};
 use crate::error::OnnxError;
 use crate::registry::{resolve_model_path, ModelSpec};
 
-static ONNX_INITIALIZED: OnceLock<Result<(), String>> = OnceLock::new();
+static ONNX_ENVIRONMENT: OnceLock<Result<Environment, String>> = OnceLock::new();
 
 /// Searches for the ONNX Runtime dynamic library (`.dll`, `.so`, or `.dylib`) on the system.
 ///
@@ -108,20 +109,28 @@ pub fn find_onnxruntime_dylib() -> Option<PathBuf> {
 /// Initializes the ONNX Runtime environment dynamically.
 /// Safe to call multiple times; will only initialize once per process.
 pub fn init_onnx_runtime() -> Result<(), OnnxError> {
-    let res = ONNX_INITIALIZED.get_or_init(|| {
+    onnx_environment().map(|_| ())
+}
+
+/// Returns the process-wide ONNX Runtime environment, creating it on first use.
+///
+/// `ort` 2.0.0-rc.14 replaced the global `commit()` builder with an explicit
+/// [`Environment`] handle that every [`Session`] is now created from, so the
+/// initialized environment is cached here and reused by all loaders.
+fn onnx_environment() -> Result<&'static Environment, OnnxError> {
+    let res = ONNX_ENVIRONMENT.get_or_init(|| {
         let dylib_path = find_onnxruntime_dylib().ok_or_else(|| {
             "Could not locate onnxruntime library. Please set ORT_DYLIB_PATH or ensure ONNX Runtime is installed.".to_string()
         })?;
 
         ort::init_from(&dylib_path)
             .map_err(|e| format!("Failed to init ONNX Runtime from {}: {}", dylib_path.display(), e))?
-            .commit();
-
-        Ok(())
+            .build()
+            .map_err(|e| format!("Failed to build ONNX Runtime environment: {e}"))
     });
 
     match res {
-        Ok(()) => Ok(()),
+        Ok(environment) => Ok(environment),
         Err(err) => Err(OnnxError::DylibNotFound(err.clone())),
     }
 }
@@ -135,9 +144,7 @@ pub fn load_session_from_bytes(
         verify_checksum(bytes, expected)?;
     }
 
-    init_onnx_runtime()?;
-
-    Session::builder()
+    Session::builder(onnx_environment()?)
         .map_err(|e| OnnxError::InitFailed(e.to_string()))?
         .commit_from_memory(bytes)
         .map_err(|e| OnnxError::ModelBytesLoadFailed(e.to_string()))
@@ -154,9 +161,7 @@ pub fn load_session_from_file<P: AsRef<Path>>(
         verify_file_checksum(path_ref, expected)?;
     }
 
-    init_onnx_runtime()?;
-
-    Session::builder()
+    Session::builder(onnx_environment()?)
         .map_err(|e| OnnxError::InitFailed(e.to_string()))?
         .commit_from_file(path_ref)
         .map_err(|e| OnnxError::ModelLoadFailed {
