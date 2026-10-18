@@ -12,19 +12,22 @@ concurrency:
   group: pr-ci-${{ github.workflow }}-${{ github.event.pull_request.number }}
   cancel-in-progress: true
 
+# All actions are pinned to full-length commit SHAs because the repository
+# enforces "Require actions to be pinned to a full-length commit SHA".
+# Keep the trailing version comments in sync so Dependabot can bump them.
 jobs:
   js-lint-test:
     name: JS/TS Lint, Typecheck, Test
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v7
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Setup pnpm
-        uses: pnpm/action-setup@v6
+        uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
 
       - name: Setup Node
-        uses: actions/setup-node@v7
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: 22
           cache: pnpm
@@ -50,8 +53,8 @@ jobs:
       rust: ${{ steps.filter.outputs.rust }}
       tauri: ${{ steps.filter.outputs.tauri }}
     steps:
-      - uses: actions/checkout@v7
-      - uses: dorny/paths-filter@v3
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: dorny/paths-filter@0e4a8c6effa4802afeda77dc8d303f8176d7dfad # v3.0.2
         id: filter
         with:
           filters: |
@@ -78,10 +81,10 @@ jobs:
     if: needs.changes.outputs.rust == 'true'
     steps:
       - name: Checkout
-        uses: actions/checkout@v7
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Rust toolchain
-        uses: dtolnay/rust-toolchain@stable
+        uses: dtolnay/rust-toolchain@b725eda525362e7cf34af9a7243cac1e3f01a7ec # stable
         with:
           components: rustfmt, clippy
 
@@ -92,7 +95,7 @@ jobs:
             libxdo-dev libssl-dev librsvg2-dev patchelf
 
       - name: Cache cargo
-        uses: actions/cache@v6
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: |
             ~/.cargo/registry
