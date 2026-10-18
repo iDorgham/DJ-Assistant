@@ -625,6 +625,47 @@ mod tests {
         assert!(PHRASE_PIPELINE_VERSION.contains('.'));
     }
 
+    /// Regression: snapping could push the last boundary onto the final bar, which
+    /// produced a zero-length trailing segment and an out-of-bounds `bar_times[n_bars]`
+    /// (a 4-bar track panicked with "index out of bounds: the len is 4 but the index is 4").
+    #[test]
+    fn snap_boundaries_stay_strictly_inside_the_bar_range() {
+        let allowed = &PhraseOptions::default().allowed_lengths_bars;
+
+        // Two candidates that each snap to 4 bars: the second would land on bar 8 of
+        // an 8-bar track.
+        let out = snap_boundaries(&[4, 8], 8, allowed, 2);
+        assert_eq!(
+            out,
+            vec![4],
+            "the boundary at the final bar must be dropped"
+        );
+
+        for total_bars in 4..=16 {
+            let out = snap_boundaries(&[1, 2, 4, 8, 16, 32], total_bars, allowed, 2);
+            assert!(
+                out.iter().all(|&b| b < total_bars),
+                "boundaries must stay inside 0..{total_bars}, got {out:?}"
+            );
+        }
+    }
+
+    /// End-to-end companion to [`snap_boundaries_stay_strictly_inside_the_bar_range`]:
+    /// the 16-beat fixtures are only 4 bars long, so a boundary snapping to the last
+    /// bar used to panic deep inside `detect_phrases`.
+    #[test]
+    fn four_bar_fixture_segments_without_indexing_past_the_last_bar() {
+        let audio = fixture_audio("analysis/house-128.wav");
+        let grid = detect_beat_grid(&audio, None).expect("beat grid");
+        let map = detect_phrases(&audio, Some(&grid), None).expect("phrases");
+
+        assert!(!map.phrases.is_empty(), "a 4-bar track must still segment");
+        for p in &map.phrases {
+            assert!(p.start_seconds < p.end_seconds);
+            assert!(p.start_bar < 4, "start_bar must index a real bar");
+        }
+    }
+
     /// One section of the synthesized structure track: `bars` bars at `amp`
     /// amplitude (optionally ramping linearly to `ramp_to`), playing `chord`.
     struct SectionSpec {
