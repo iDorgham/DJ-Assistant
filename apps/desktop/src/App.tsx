@@ -549,11 +549,13 @@ export default function App() {
   const applyFilters = () => {
     const normalized = normalizeFilters(draftFilters);
     if (
-      normalized?.bpmMin != null &&
-      normalized.bpmMax != null &&
-      normalized.bpmMin > normalized.bpmMax
+      (normalized?.bpmMin != null && normalized.bpmMin < 0) ||
+      (normalized?.bpmMax != null && normalized.bpmMax < 0) ||
+      (normalized?.bpmMin != null &&
+        normalized.bpmMax != null &&
+        normalized.bpmMin > normalized.bpmMax)
     ) {
-      setFilterError("Minimum BPM must not exceed maximum BPM.");
+      setFilterError("BPM bounds must be non-negative and minimum must not exceed maximum.");
       return;
     }
     setFilterError(null);
