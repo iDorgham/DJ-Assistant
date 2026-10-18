@@ -15,6 +15,8 @@
 //!   - phrase_confidence is present and in 0..=1
 //!   - BPM within ±2.0 of expected (when both expected and result are Some)
 //!   - key_camelot exact match (when both expected and result are Some)
+//!   - key_classical enharmonic match (manifest spells flats, the analyzer
+//!     emits sharps, so `Db minor` and `C# minor` are the same key)
 //!   - At least 50 fixtures present and exercised in golden_all_fixtures_run
 //!   - p50 < 3s per track (P1.5) and total < 300s (P1.6) in golden_fixture_benchmark
 
@@ -44,6 +46,37 @@ struct Expected {
 #[derive(Debug, Deserialize)]
 struct GoldenManifest {
     fixtures: HashMap<String, Expected>,
+}
+
+/// Pitch class (0 = C) for a key root, folding enharmonic spellings
+/// (`C#` ≡ `Db`). The golden manifest spells roots with flats while the
+/// analyzer emits sharps, so a raw string comparison would report false
+/// positives for eleven of the twenty-four keys.
+fn pitch_class(root: &str) -> Option<u8> {
+    const SHARPS: [&str; 12] = [
+        "C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B",
+    ];
+    const FLATS: [&str; 12] = [
+        "C", "Db", "D", "Eb", "E", "F", "Gb", "G", "Ab", "A", "Bb", "B",
+    ];
+    (0..12)
+        .find(|&i| SHARPS[i].eq_ignore_ascii_case(root) || FLATS[i].eq_ignore_ascii_case(root))
+        .map(|i| i as u8)
+}
+
+/// Parses a classical key name (`"A minor"`, `"Db major"`) into an enharmonic
+/// pitch class plus its mode. Returns `None` for anything unrecognised, so a
+/// malformed manifest entry is reported rather than silently skipped.
+fn parse_classical_key(name: &str) -> Option<(u8, bool)> {
+    let mut parts = name.split_whitespace();
+    let root = parts.next()?;
+    let mode = parts.next()?.to_ascii_lowercase();
+    let is_minor = match mode.as_str() {
+        "minor" | "min" => true,
+        "major" | "maj" => false,
+        _ => return None,
+    };
+    Some((pitch_class(root)?, is_minor))
 }
 
 fn manifest_path() -> PathBuf {
@@ -143,6 +176,35 @@ fn run_fixture(rel: &str, expected: &Expected) -> AnalysisResults {
         if actual_key != expected_key {
             println!("WARN {label}: key_camelot expected {expected_key:?}, got {actual_key:?}");
         }
+    }
+
+    // Classical key check: enharmonic comparison, because the manifest uses
+    // flat spellings (`Db minor`) and the analyzer emits sharps (`C# minor`).
+    if let (Some(ref expected_key), Some(ref actual_key)) =
+        (&expected.key_classical, &results.key_classical)
+    {
+        match (
+            parse_classical_key(expected_key),
+            parse_classical_key(actual_key),
+        ) {
+            (Some(expected_key), Some(actual_key)) => {
+                if expected_key != actual_key {
+                    println!(
+                        "WARN {label}: key_classical expected {:?}, got {:?}",
+                        expected.key_classical, results.key_classical
+                    );
+                }
+            }
+            _ => println!(
+                "WARN {label}: unparsable key_classical comparison {:?} vs {:?}",
+                expected.key_classical, results.key_classical
+            ),
+        }
+    } else if expected.key_classical.is_some() && results.key_classical.is_none() {
+        println!(
+            "WARN {label}: manifest expects key_classical {:?} but analysis produced none",
+            expected.key_classical
+        );
     }
 
     results
@@ -289,10 +351,14 @@ fn golden_fixture_benchmark() {
     timings.sort_by(|a, b| b.1.partial_cmp(&a.1).unwrap());
 
     let total: f64 = timings.iter().map(|(_, t)| t).sum();
-    let p50 = if timings.len() % 2 == 0 {
-        (timings[timings.len() / 2 - 1].1 + timings[timings.len() / 2].1) / 2.0
+    // Median (p50) of the per-track times. `% 2` / `is_multiple_of` are avoided
+    // on purpose: clippy's suggested helper needs Rust 1.87+, while the
+    // documented MSRV is 1.82, so parity is taken from the low bit instead.
+    let mid = timings.len() / 2;
+    let p50 = if timings.len() & 1 == 0 {
+        (timings[mid - 1].1 + timings[mid].1) / 2.0
     } else {
-        timings[timings.len() / 2].1
+        timings[mid].1
     };
 
     println!("\n=== Golden fixture benchmark ===");
@@ -317,5 +383,58 @@ fn golden_fixture_benchmark() {
     assert!(
         total < 600.0,
         "total wall time {total:.3}s exceeds debug ceiling"
+    );
+}
+
+// --------------------------------------------------------------------------------------
+// Classical-key comparison helpers
+// --------------------------------------------------------------------------------------
+
+#[test]
+fn classical_key_parsing_folds_enharmonic_spellings() {
+    // The manifest spells roots with flats; the analyzer emits sharps.
+    assert_eq!(parse_classical_key("Db minor"), Some((1, true)));
+    assert_eq!(parse_classical_key("C# minor"), Some((1, true)));
+    assert_eq!(parse_classical_key("Eb major"), Some((3, false)));
+    assert_eq!(parse_classical_key("D# major"), Some((3, false)));
+    assert_eq!(parse_classical_key("Ab minor"), Some((8, true)));
+    assert_eq!(parse_classical_key("G# minor"), Some((8, true)));
+    assert_eq!(parse_classical_key("Bb major"), Some((10, false)));
+    assert_eq!(parse_classical_key("A# major"), Some((10, false)));
+    // Unaffected spellings still round-trip.
+    assert_eq!(parse_classical_key("A minor"), Some((9, true)));
+    assert_eq!(parse_classical_key("C major"), Some((0, false)));
+    assert_eq!(parse_classical_key("F# minor"), Some((6, true)));
+}
+
+#[test]
+fn classical_key_parsing_accepts_common_abbreviations_and_rejects_junk() {
+    assert_eq!(parse_classical_key("a MIN"), Some((9, true)));
+    assert_eq!(parse_classical_key("C Maj"), Some((0, false)));
+    assert_eq!(parse_classical_key(""), None);
+    assert_eq!(parse_classical_key("C"), None, "mode is required");
+    assert_eq!(parse_classical_key("H minor"), None, "unknown root");
+    assert_eq!(parse_classical_key("C dorian"), None, "unknown mode");
+    assert_eq!(parse_classical_key("C minor extra"), Some((0, true)));
+}
+
+#[test]
+fn manifest_classical_keys_are_all_parseable() {
+    // Guards the fixture data itself: every `key_classical` the harness reads
+    // must parse, otherwise run_fixture can only emit an unparsable WARN.
+    let manifest = load_manifest();
+    let mut checked = 0;
+    for (rel, expected) in &manifest.fixtures {
+        if let Some(ref name) = expected.key_classical {
+            assert!(
+                parse_classical_key(name).is_some(),
+                "{rel}: unparsable key_classical {name:?}"
+            );
+            checked += 1;
+        }
+    }
+    assert!(
+        checked >= 50,
+        "expected the full-corpus fixtures to carry key_classical; found {checked}"
     );
 }

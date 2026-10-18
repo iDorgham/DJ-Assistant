@@ -272,6 +272,12 @@ project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   `analysis_expected.json`, not by `fixtures/audio/manifest.json`. The discovery assertion
   now scopes itself to the tag corpus and documents the exclusion, so the corpus is
   consistent again (the analysis fixtures keep their own harness).
+- **Golden fixture harness failed `clippy -D warnings`** — `crates/analysis/tests/golden.rs`
+  carried an unread `key_classical` expectation field and a `len() % 2` median. The manifest's
+  classical keys are now actually verified with an enharmonic comparison (`Db minor` ≡
+  `C# minor`, since the manifest spells flats and the analyzer emits sharps), the median uses
+  an MSRV-1.82-compatible parity check, and three helper tests guard the comparison plus the
+  fixture data.
 - **`tauri-build` failed with `icons/icon.ico not found`** — the bundle icons referenced by
   `tauri.conf.json` did not exist, so no build ever completed.
 - **`windres: preprocessing failed`** when the repository path contains a space (the
