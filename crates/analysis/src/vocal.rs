@@ -655,11 +655,9 @@ mod tests {
 
     #[test]
     fn real_flac_fixture_runs_end_to_end() {
-        // The library-scanner fixture is 42 ms — shorter than one default
-        // frame — so it pins BOTH contracts on real bytes: sub-frame audio
-        // degrades to an empty curve, and frame-size-scaled options run the
-        // full decode -> mid/side -> STFT -> gate -> smoothing path.
-        // (Golden vocal fixtures with real musical length arrive with T1.2.6.)
+        // The library-scanner fixture is 1.714 s of real music, so it pins the
+        // full decode -> mid/side -> STFT -> gate -> smoothing path on real
+        // bytes; the synthetic clip below pins sub-frame degradation.
         let path = std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR"))
             .parent()
             .unwrap()

@@ -64,7 +64,7 @@ def record_mode() -> int:
         json.dumps(payload, indent=2, ensure_ascii=False) + "\n",
         encoding="utf-8",
     )
-    print(f"\nRecorded {len(file_hashes)} file(s) → {HASHES_FILE}")
+    print(f"\nRecorded {len(file_hashes)} file(s) -> {HASHES_FILE}")
     return 0
 
 
@@ -107,7 +107,7 @@ def verify_mode() -> int:
     for path in current_files:
         rel = path.relative_to(FIXTURES_ROOT).as_posix()
         if rel not in recorded:
-            print(f"WARN {rel}  (new untracked file — run --record to add)")
+            print(f"WARN {rel}  (new untracked file -- run --record to add)")
             new_untracked += 1
 
     total_ok = len(recorded) - mismatches - missing

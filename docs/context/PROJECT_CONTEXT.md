@@ -953,9 +953,13 @@ items on 4–6 week cycles.
 ## 24. How to Keep This Document Useful
 
 - Treat it as a **snapshot**; the linked source documents remain authoritative.
-- Update when **phase status**, **implemented interfaces**, **data model** change — currently: Phase 0 complete (P0.1–P0.8 pass), Phase 1 analysis engine shipped (T1.1.1–T1.1.8, T1.2.1–T1.2.6 verified); Phases 2–4 (library intelligence & tag cleanup, set builder & export, skills/cloud/beta) **not started**. Live post-MVP foundations: TF.1–TF.6, TD.3, TE.1–TE.4, TM.1/TM.2a,
+- Update it when the **phase status**, **implemented interfaces**, **data model**,
   or **CI posture** changes materially — those are the sections most likely to
   drift.
+- Current status snapshot: **Phase 0 complete** (P0.1–P0.8 pass); **Phase 1 in
+  progress** (analysis engine tasks T1.1.1–T1.1.8 and T1.2.1–T1.2.6 shipped; the
+  P1.x exit criteria are still being verified); **Phases 2–4 not started**. Live
+  post-MVP foundations: TF.1–TF.6, TD.3, TE.1–TE.4, TM.1/TM.2a.
 - Prefer editing the canonical document first, then reflecting the change here.
 
 ---
