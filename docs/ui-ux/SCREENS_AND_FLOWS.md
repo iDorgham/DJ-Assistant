@@ -89,13 +89,18 @@ The home base. One dense, scrollable table of the imported library with live sea
   refresh icon button.
 - **Progress strip:** shown only while scanning; current path, `scanned / total`, fill bar.
   Total unknown → shows `?`.
-- **Toolbar:** search input (filters client-side over title/artist/album/path); **Tag Health**
-  button (opens the library-wide gap modal); live track count; provider summary
+- **Toolbar:** search input (filters client-side over the loaded page, instant); **Filters**
+  dropdown (tempo range, Camelot keys, analysis status, genres, minimum rating — applied
+  server-side in SQL on Apply, with a count badge and active-filter chips below the toolbar);
+  **Tag Health** button (opens the library-wide gap modal); live track count
+  (`shown` or `shown of total` when narrowed); provider summary
   (`N streaming · M stores · K connected`, tooltip lists the registries); "Local-first &
   Non-destructive" badge.
 - **Table:** columns `# · Art · Title · Artist · Album · BPM · Key · Rating · Duration ·
   Format · Comments · Fingerprint · Status`. Sticky header, hover highlight, mono numerics.
-  Rows are clickable → opens the track inspector drawer; the selected row is tinted.
+  Sortable headers (`#` import order, Title, Artist, BPM, Key, Duration) refetch in the
+  chosen order; unknown BPM/key values sort last. Rows are clickable → opens the track
+  inspector drawer; the selected row is tinted.
 - **Inspector drawer (right, overlay):** selected track identity + gap chips + **Similar
   tracks** (score % + reason chips, click a result to inspect it) + **Find to buy**
   (per-store copy-link rows). `✕` / `Esc` closes and returns focus to the row.
@@ -117,6 +122,12 @@ The home base. One dense, scrollable table of the imported library with live sea
 
 - Click **Scan Music Folder** → native folder picker → recursive scan → live rows → summary.
 - Type in **search** → instant client-side filter (no refetch).
+- Click **Filters** → dropdown over tempo range, Camelot keys, analysis status, genre and
+  minimum rating; **Apply filters** refetches the page from SQLite (draft state, so several
+  filters cost one query), **Reset all** clears filters and restores newest-first order.
+  Active filters appear as chips under the toolbar with a one-click clear.
+- Click a **sortable header** (Title/Artist/BPM/Key/Duration/`#`) → toggles asc/desc for that
+  column and refetches; a second click reverses it.
 - Click **refresh** → reload the list (spinner while loading).
 - Click a **row** → inspector drawer (similar tracks, gap chips, buy-links); click again
   or `Esc` to close; clicking a similar result inspects that track.
