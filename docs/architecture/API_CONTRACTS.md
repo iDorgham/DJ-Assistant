@@ -47,7 +47,7 @@ interface ListTracksRequest {
     keyCamelot?: string[];        // Camelot codes, matched case-insensitively
     analysisStatus?: Array<'pending' | 'complete' | 'failed' | 'needs_review'>;
     genre?: string[];             // matched case-insensitively
-    ratingMin?: number;           // inclusive 0-5 star floor
+    ratingMin?: number;           // inclusive integer 0-5 star floor
   };
   limit?: number;                 // default 200, clamped to 0..=1000
   offset?: number;
@@ -72,8 +72,9 @@ page. Semantics:
   `0..=5` are rejected with a descriptive error instead of silently returning nothing.
 - Every user value is a **bound parameter**; only allow-listed column names and sort
   directions are interpolated (see `crates/core/src/library_query.rs`).
-- Unknown `sortBy`/`sortDir` values fall back to the default (`imported_at` desc);
-  nullable columns sort NULLs last, and `id` is the stable pagination tiebreaker.
+- Unknown `sortBy` values fall back to the default (`imported_at` desc); unknown
+  `sortDir` values use the selected sort key's default direction. Nullable columns
+  sort NULLs last, and `id` is the stable pagination tiebreaker.
 
 #### `list_genres` (shipped — T2.1.2)
 Distinct non-empty genre tags with track counts, used to populate the library filter

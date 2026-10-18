@@ -90,15 +90,20 @@ impl TrackFilters {
     }
 
     fn normalized_keys(&self) -> Vec<String> {
-        normalize_list(&self.key_camelot, str::to_uppercase)
+        // SQLite's `UPPER()` is ASCII-only too; Camelot codes are ASCII, so this
+        // matches the column case-folding exactly.
+        normalize_list(&self.key_camelot, str::to_ascii_uppercase)
     }
 
     fn normalized_statuses(&self) -> Vec<String> {
-        normalize_list(&self.analysis_status, str::to_lowercase)
+        // `LOWER()` in the bundled SQLite only folds ASCII, so fold the bound
+        // values the same way; a Unicode fold here would never match the column.
+        normalize_list(&self.analysis_status, str::to_ascii_lowercase)
     }
 
     fn normalized_genres(&self) -> Vec<String> {
-        normalize_list(&self.genre, str::to_lowercase)
+        // See `normalized_statuses`: keep this ASCII-only to mirror SQLite.
+        normalize_list(&self.genre, str::to_ascii_lowercase)
     }
 }
 
@@ -235,16 +240,20 @@ impl TrackQuery {
         })
     }
 
-    /// Trimmed, lowercased `LIKE` pattern, or `None` for a blank query. `%` and
-    /// `_` are matched literally so a user typing them does not change the
-    /// search semantics.
+    /// Trimmed, ASCII-lowercased `LIKE` pattern, or `None` for a blank query.
+    /// `%` and `_` are matched literally so a user typing them does not change
+    /// the search semantics.
+    ///
+    /// The fold is ASCII-only on purpose: the pattern is compared against
+    /// `LOWER(column)`, and SQLite's built-in `LOWER()` does not fold non-ASCII
+    /// characters, so a Unicode fold here could never match the column.
     fn search_pattern(&self) -> Option<String> {
         let query = self
             .query
             .as_deref()
             .unwrap_or_default()
             .trim()
-            .to_lowercase();
+            .to_ascii_lowercase();
         if query.is_empty() {
             return None;
         }
@@ -441,7 +450,7 @@ mod tests {
         assert_eq!(
             built.count_sql,
             "SELECT COUNT(*) FROM tracks WHERE bpm >= ?1 AND UPPER(key_camelot) IN (?2, ?3) \
-             AND LOWER(analysis_status) IN (?4, ?5) AND LOWER(genre) IN (?6, ?7) \
+             AND LOWER(analysis_status) IN (?4, ?5) AND LOWER(TRIM(genre)) IN (?6, ?7) \
              AND user_rating >= ?8"
         );
         assert_eq!(
@@ -476,7 +485,7 @@ mod tests {
             built.count_sql,
             "SELECT COUNT(*) FROM tracks WHERE (LOWER(title) LIKE ?1 ESCAPE '\\' \
              OR LOWER(artist) LIKE ?1 ESCAPE '\\' OR LOWER(album) LIKE ?1 ESCAPE '\\' \
-             OR LOWER(file_path) LIKE ?1 ESCAPE '\\') AND bpm <= ?2 AND LOWER(genre) IN (?3)"
+             OR LOWER(file_path) LIKE ?1 ESCAPE '\\') AND bpm <= ?2 AND LOWER(TRIM(genre)) IN (?3)"
         );
         assert!(built
             .select_sql
@@ -564,7 +573,33 @@ mod tests {
             ..Default::default()
         });
         assert!(!built.count_sql.contains("1=1"));
-        assert_eq!(built.params[0], QueryParam::Text(injected.to_lowercase()));
+        assert_eq!(
+            built.params[0],
+            QueryParam::Text(injected.to_ascii_lowercase())
+        );
+    }
+
+    #[test]
+    fn non_ascii_values_are_folded_the_same_way_as_sqlite_lower() {
+        // SQLite's built-in `LOWER()` only folds ASCII, so the bound values must
+        // be folded the same way or a non-ASCII genre such as `Électro` would
+        // never match the column that produced it.
+        let built = build(TrackQuery {
+            query: Some("Électro".into()),
+            filters: TrackFilters {
+                genre: vec!["Électro".into()],
+                ..Default::default()
+            },
+            ..Default::default()
+        });
+        assert_eq!(built.params[0], QueryParam::Text("%Électro%".into()));
+        assert!(
+            built
+                .params
+                .iter()
+                .any(|param| param == &QueryParam::Text("Électro".into())),
+            "non-ASCII case is preserved so it equals SQLite's LOWER(column)"
+        );
     }
 
     #[test]
