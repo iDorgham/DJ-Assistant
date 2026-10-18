@@ -42,13 +42,14 @@ interface ListTracksRequest {
   workspaceId?: string;
   query?: string;
   filters?: {
-    bpmMin?: number;
-    bpmMax?: number;
-    keyCamelot?: string[];
+    bpmMin?: number;              // inclusive
+    bpmMax?: number;              // inclusive
+    keyCamelot?: string[];        // Camelot codes, matched case-insensitively
     analysisStatus?: Array<'pending' | 'complete' | 'failed' | 'needs_review'>;
-    genre?: string[];
+    genre?: string[];             // matched case-insensitively
+    ratingMin?: number;           // inclusive 0-5 star floor
   };
-  limit?: number;
+  limit?: number;                 // default 200, clamped to 0..=1000
   offset?: number;
   sortBy?: 'title' | 'artist' | 'bpm' | 'key' | 'duration' | 'imported_at';
   sortDir?: 'asc' | 'desc';
@@ -59,6 +60,35 @@ interface ListTracksResponse {
   total: number;
 }
 ```
+
+Filters and sorting are applied **server-side in SQL** (T2.1.2), so `total` is the
+count of rows that actually match — it stays correct for libraries larger than one
+page. Semantics:
+
+- Filter groups combine with `AND`; list values are `IN` lists compared
+  case-insensitively (`key_camelot` upper-cased, `genre`/`analysis_status` lower-cased).
+- Blank strings/empty lists are ignored, so `{ filters: {} }` is the same as omitting
+  `filters`. `bpmMin > bpmMax`, negative/non-finite BPM bounds and `ratingMin` outside
+  `0..=5` are rejected with a descriptive error instead of silently returning nothing.
+- Every user value is a **bound parameter**; only allow-listed column names and sort
+  directions are interpolated (see `crates/core/src/library_query.rs`).
+- Unknown `sortBy`/`sortDir` values fall back to the default (`imported_at` desc);
+  nullable columns sort NULLs last, and `id` is the stable pagination tiebreaker.
+
+#### `list_genres` (shipped — T2.1.2)
+Distinct non-empty genre tags with track counts, used to populate the library filter
+panel. Local read only.
+```ts
+interface GenreCount {
+  genre: string;
+  count: number;
+}
+interface ListGenresResponse {
+  genres: GenreCount[];
+}
+```
+Case variants collapse into one entry (the filter itself is case-insensitive), ordered
+by count descending then name.
 
 #### `get_track`
 ```ts

@@ -80,25 +80,52 @@ export interface ScanCompletedEvent {
   durationMs: number;
 }
 
+/**
+ * Structured library filters (T2.1.2). All fields are optional and combine
+ * with AND; list values match case-insensitively. An empty filter object is
+ * the same as omitting `filters` entirely.
+ */
+export interface ListTracksFilters {
+  /** Inclusive lower BPM bound. */
+  bpmMin?: number;
+  /** Inclusive upper BPM bound. */
+  bpmMax?: number;
+  /** Camelot codes, e.g. `["8A", "9A"]`. */
+  keyCamelot?: string[];
+  analysisStatus?: AnalysisStatus[];
+  genre?: string[];
+  /** Inclusive minimum star rating (0–5). */
+  ratingMin?: number;
+}
+
+/** Sort keys accepted by `list_tracks` (mirrors `SORT_KEYS` in Rust). */
+export type ListTracksSortBy = "title" | "artist" | "bpm" | "key" | "duration" | "imported_at";
+
+export type SortDirection = "asc" | "desc";
+
 export interface ListTracksRequest {
   workspaceId?: string;
   query?: string;
-  filters?: {
-    bpmMin?: number;
-    bpmMax?: number;
-    keyCamelot?: string[];
-    analysisStatus?: AnalysisStatus[];
-    genre?: string[];
-  };
+  filters?: ListTracksFilters;
   limit?: number;
   offset?: number;
-  sortBy?: "title" | "artist" | "bpm" | "key" | "duration" | "imported_at";
-  sortDir?: "asc" | "desc";
+  sortBy?: ListTracksSortBy;
+  sortDir?: SortDirection;
 }
 
 export interface ListTracksResponse {
   tracks: TrackSummary[];
   total: number;
+}
+
+/** One distinct genre in the library plus how many tracks carry it. */
+export interface GenreCount {
+  genre: string;
+  count: number;
+}
+
+export interface ListGenresResponse {
+  genres: GenreCount[];
 }
 
 export interface GetTrackRequest {

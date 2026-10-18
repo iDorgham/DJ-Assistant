@@ -4,14 +4,20 @@ import { test } from "node:test";
 import type { TrackSummary } from "@dj-assistant/shared";
 
 import {
+  activeFilterCount,
+  defaultSortDirection,
+  describeFilters,
   filterTracks,
   formatBpm,
   formatDuration,
   formatKey,
   formatRating,
+  hasFilterValue,
   matchesQuery,
+  normalizeFilters,
   scanPercent,
   shortHash,
+  toggleFilterValue,
   truncateComment,
 } from "./library.ts";
 
@@ -138,4 +144,79 @@ test("filterTracks returns the original list for a blank query", () => {
     ["2"]
   );
   assert.deepEqual(filterTracks(tracks, "zzz"), []);
+});
+
+test("normalizeFilters drops empty values and canonicalizes keys", () => {
+  assert.equal(normalizeFilters(undefined), undefined);
+  assert.equal(normalizeFilters({}), undefined);
+
+  const normalized = normalizeFilters({
+    bpmMin: 120,
+    bpmMax: 130,
+    keyCamelot: [" 8a ", "8A", "", "9b"],
+    analysisStatus: ["complete"],
+    genre: [" Techno ", "techno", "House"],
+    ratingMin: 3,
+  });
+  assert.deepEqual(normalized, {
+    bpmMin: 120,
+    bpmMax: 130,
+    keyCamelot: ["8A", "9B"],
+    analysisStatus: ["complete"],
+    genre: ["Techno", "House"],
+    ratingMin: 3,
+  });
+
+  assert.equal(
+    normalizeFilters({ keyCamelot: ["  "], genre: [] }),
+    undefined,
+    "blank lists are not an active filter"
+  );
+});
+
+test("normalizeFilters ignores non-finite numeric bounds", () => {
+  assert.deepEqual(normalizeFilters({ bpmMin: Number.NaN, bpmMax: 140 }), { bpmMax: 140 });
+  assert.equal(normalizeFilters({ bpmMin: Number.POSITIVE_INFINITY }), undefined);
+});
+
+test("activeFilterCount counts groups, not individual values", () => {
+  assert.equal(activeFilterCount(undefined), 0);
+  assert.equal(activeFilterCount({}), 0);
+  assert.equal(activeFilterCount({ keyCamelot: ["8A", "9A"] }), 1);
+  assert.equal(activeFilterCount({ keyCamelot: ["8A"], genre: ["Techno"], ratingMin: 0 }), 3);
+  assert.equal(activeFilterCount({ bpmMin: 120, bpmMax: 130 }), 1, "range is one group");
+});
+
+test("describeFilters summarizes active filters for the toolbar", () => {
+  assert.deepEqual(describeFilters(undefined), []);
+  assert.deepEqual(describeFilters({}), []);
+  assert.deepEqual(describeFilters({ bpmMin: 120, bpmMax: 130 }), ["BPM 120–130"]);
+  assert.deepEqual(describeFilters({ bpmMin: 120 }), ["BPM ≥ 120"]);
+  assert.deepEqual(describeFilters({ bpmMax: 130 }), ["BPM ≤ 130"]);
+  assert.deepEqual(describeFilters({ keyCamelot: ["8A", "9A"] }), ["Key 8A, 9A"]);
+  assert.deepEqual(describeFilters({ analysisStatus: ["complete", "needs_review"] }), [
+    "Status Analyzed, Needs review",
+  ]);
+  assert.deepEqual(describeFilters({ genre: ["Techno"] }), ["Genre Techno"]);
+  assert.deepEqual(describeFilters({ ratingMin: 4 }), ["Rating ≥ 4★"]);
+});
+
+test("toggleFilterValue adds and removes case-insensitively", () => {
+  assert.deepEqual(toggleFilterValue(undefined, "8A"), ["8A"]);
+  assert.deepEqual(toggleFilterValue(["8A"], "9A"), ["8A", "9A"]);
+  assert.deepEqual(toggleFilterValue(["8A", "9a"], "9A"), ["8A"], "removal ignores casing");
+  assert.deepEqual(toggleFilterValue(["  "], "House"), ["House"], "blanks are dropped");
+});
+
+test("hasFilterValue matches case-insensitively and tolerates blanks", () => {
+  assert.equal(hasFilterValue(["8a"], "8A"), true);
+  assert.equal(hasFilterValue(["8A"], "9A"), false);
+  assert.equal(hasFilterValue(undefined, "8A"), false);
+});
+
+test("defaultSortDirection puts newest imports first and everything else A-Z", () => {
+  assert.equal(defaultSortDirection("imported_at"), "desc");
+  for (const key of ["title", "artist", "bpm", "key", "duration"] as const) {
+    assert.equal(defaultSortDirection(key), "asc");
+  }
 });

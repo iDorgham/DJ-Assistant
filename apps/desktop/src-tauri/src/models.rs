@@ -1,5 +1,7 @@
 use serde::{Deserialize, Serialize};
 
+use dj_assistant_core::library_query::TrackFilters;
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct TrackSummary {
@@ -96,10 +98,41 @@ pub struct ScanCompletedEvent {
 pub struct ListTracksRequest {
     pub workspace_id: Option<String>,
     pub query: Option<String>,
+    /// Structured narrowing (BPM range, keys, statuses, genres, rating).
+    /// `None` and an all-empty filter set are equivalent (no narrowing).
+    #[serde(default)]
+    pub filters: Option<TrackFilters>,
     pub limit: Option<i64>,
     pub offset: Option<i64>,
     pub sort_by: Option<String>,
     pub sort_dir: Option<String>,
+}
+
+impl ListTracksRequest {
+    /// Converts the IPC payload into the Tauri-free query description used by
+    /// [`dj_assistant_core::library_query::TrackQuery::build`].
+    pub fn into_query(self) -> dj_assistant_core::library_query::TrackQuery {
+        dj_assistant_core::library_query::TrackQuery {
+            query: self.query,
+            filters: self.filters.unwrap_or_default(),
+            sort_by: self.sort_by,
+            sort_dir: self.sort_dir,
+        }
+    }
+}
+
+/// One distinct genre in the library plus how many tracks carry it.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct GenreCount {
+    pub genre: String,
+    pub count: usize,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ListGenresResponse {
+    pub genres: Vec<GenreCount>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

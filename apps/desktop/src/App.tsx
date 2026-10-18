@@ -14,11 +14,16 @@ import type {
   EnrichmentProviderKind,
   ProviderTrackMatch,
   ChartListResponse,
+  GenreCount,
+  ListTracksFilters,
+  ListTracksSortBy,
+  SortDirection,
 } from "@dj-assistant/shared";
 import {
   openFolderDialog,
   scanFolder,
   listTracks,
+  listGenres,
   getArtwork,
   analyzeLibrary,
   listenToAnalysisProgress,
@@ -40,7 +45,6 @@ import {
 import {
   FolderOpen,
   Music,
-  Clock,
   Search,
   RefreshCw,
   HardDrive,
@@ -57,8 +61,17 @@ import {
   Undo2,
   BarChart3,
   X,
+  SlidersHorizontal,
+  ArrowDown,
+  ArrowUp,
+  ArrowUpDown,
 } from "lucide-react";
 import {
+  ANALYSIS_STATUS_OPTIONS,
+  CAMELOT_KEYS,
+  activeFilterCount,
+  defaultSortDirection,
+  describeFilters,
   filterTracks,
   formatBpm,
   formatDuration,
@@ -66,8 +79,11 @@ import {
   formatRating,
   formatScore,
   formatMissingField,
+  hasFilterValue,
+  normalizeFilters,
   scanPercent,
   shortHash,
+  toggleFilterValue,
   truncateComment,
 } from "./lib/library";
 
@@ -134,10 +150,305 @@ function ArtworkThumb({
   );
 }
 
+/**
+ * Column header that sorts the library server-side (T2.1.2). The active column
+ * shows an up/down arrow; inactive ones a muted double arrow.
+ */
+function SortHeader({
+  label,
+  sortKey,
+  sortBy,
+  sortDir,
+  onSort,
+  className = "",
+  align = "text-left",
+  title,
+}: {
+  label: string;
+  sortKey: ListTracksSortBy;
+  sortBy?: ListTracksSortBy;
+  sortDir: SortDirection;
+  onSort: (key: ListTracksSortBy) => void;
+  className?: string;
+  align?: string;
+  title?: string;
+}) {
+  const active = sortBy === sortKey;
+  const Icon = active ? (sortDir === "asc" ? ArrowUp : ArrowDown) : ArrowUpDown;
+  const ariaSort = active ? (sortDir === "asc" ? "ascending" : "descending") : "none";
+
+  return (
+    <th className={`py-2.5 px-4 ${className}`} aria-sort={ariaSort}>
+      <button
+        type="button"
+        onClick={() => onSort(sortKey)}
+        title={title ?? `Sort by ${label.toLowerCase()}`}
+        className={`inline-flex items-center gap-1 uppercase tracking-wider text-[10px] font-semibold transition ${
+          active ? "text-blue-400" : "text-slate-400 hover:text-slate-200"
+        } ${align === "text-center" ? "justify-center w-full" : ""}`}
+      >
+        <span>{label}</span>
+        <Icon className={`w-3 h-3 ${active ? "text-blue-400" : "text-slate-600"}`} />
+      </button>
+    </th>
+  );
+}
+
+/**
+ * Dropdown filter panel (T2.1.2). Edits a draft that only reaches the library
+ * query when Apply is clicked, so users can set several filters without a
+ * refetch per keystroke. Every filter is applied server-side in SQL.
+ */
+function LibraryFilterPanel({
+  draft,
+  genres,
+  error,
+  onChange,
+  onApply,
+  onReset,
+  onClose,
+}: {
+  draft: ListTracksFilters;
+  genres: GenreCount[];
+  error: string | null;
+  onChange: (next: ListTracksFilters) => void;
+  onApply: () => void;
+  onReset: () => void;
+  onClose: () => void;
+}) {
+  const numberOrUndefined = (raw: string) => (raw.trim() === "" ? undefined : Number(raw));
+
+  return (
+    <div
+      role="dialog"
+      aria-label="Library filters"
+      className="absolute right-5 top-11 z-40 w-[430px] rounded-lg border border-[#2a2f42] bg-[#141721] shadow-2xl shadow-black/60"
+    >
+      <div className="flex items-center justify-between border-b border-[#222738] px-4 py-2.5">
+        <div className="flex items-center gap-1.5 text-xs font-semibold text-slate-200">
+          <SlidersHorizontal className="h-3.5 w-3.5 text-blue-400" />
+          <span>Library filters</span>
+        </div>
+        <button
+          type="button"
+          onClick={onClose}
+          className="rounded-sm p-1 text-slate-500 transition hover:bg-[#1e2230] hover:text-slate-200"
+          title="Close filters"
+        >
+          <X className="h-3.5 w-3.5" />
+        </button>
+      </div>
+
+      <div className="max-h-[62vh] space-y-4 overflow-y-auto px-4 py-3">
+        {/* BPM range */}
+        <div>
+          <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-wider text-slate-500">
+            Tempo (BPM)
+          </p>
+          <div className="flex items-center gap-2">
+            <input
+              type="number"
+              min={0}
+              max={400}
+              step={1}
+              value={draft.bpmMin ?? ""}
+              onChange={(e) => onChange({ ...draft, bpmMin: numberOrUndefined(e.target.value) })}
+              placeholder="Min"
+              className="w-full rounded-md border border-[#2a2f42] bg-[#1a1e2b] px-2.5 py-1.5 text-xs text-slate-200 placeholder:text-slate-600 focus:border-blue-500 focus:outline-hidden"
+            />
+            <span className="text-xs text-slate-600">to</span>
+            <input
+              type="number"
+              min={0}
+              max={400}
+              step={1}
+              value={draft.bpmMax ?? ""}
+              onChange={(e) => onChange({ ...draft, bpmMax: numberOrUndefined(e.target.value) })}
+              placeholder="Max"
+              className="w-full rounded-md border border-[#2a2f42] bg-[#1a1e2b] px-2.5 py-1.5 text-xs text-slate-200 placeholder:text-slate-600 focus:border-blue-500 focus:outline-hidden"
+            />
+          </div>
+        </div>
+
+        {/* Camelot keys */}
+        <div>
+          <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-wider text-slate-500">
+            Key (Camelot)
+          </p>
+          <div className="grid grid-cols-6 gap-1">
+            {CAMELOT_KEYS.map((key) => {
+              const selected = hasFilterValue(draft.keyCamelot, key);
+              return (
+                <button
+                  key={key}
+                  type="button"
+                  onClick={() =>
+                    onChange({
+                      ...draft,
+                      keyCamelot: toggleFilterValue(draft.keyCamelot, key),
+                    })
+                  }
+                  className={`rounded-sm border px-1 py-1 font-mono text-[11px] transition ${
+                    selected
+                      ? "border-blue-500 bg-blue-500/15 text-blue-300"
+                      : "border-[#2a2f42] bg-[#1a1e2b] text-slate-400 hover:border-[#3a4054] hover:text-slate-200"
+                  }`}
+                  title={
+                    key.endsWith("A")
+                      ? `${key} — minor / inner ring`
+                      : `${key} — major / outer ring`
+                  }
+                >
+                  {key}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Analysis status */}
+        <div>
+          <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-wider text-slate-500">
+            Analysis status
+          </p>
+          <div className="grid grid-cols-2 gap-1.5">
+            {ANALYSIS_STATUS_OPTIONS.map((option) => {
+              const checked = hasFilterValue(draft.analysisStatus, option.value);
+              return (
+                <label
+                  key={option.value}
+                  className="flex cursor-pointer items-center gap-1.5 rounded-sm border border-[#2a2f42] bg-[#1a1e2b] px-2 py-1.5 text-[11px] text-slate-300 transition hover:border-[#3a4054]"
+                >
+                  <input
+                    type="checkbox"
+                    checked={checked}
+                    onChange={() =>
+                      onChange({
+                        ...draft,
+                        analysisStatus: toggleFilterValue(
+                          draft.analysisStatus,
+                          option.value
+                        ) as ListTracksFilters["analysisStatus"],
+                      })
+                    }
+                    className="accent-blue-500"
+                  />
+                  {option.label}
+                </label>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Genre */}
+        <div>
+          <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-wider text-slate-500">
+            Genre
+          </p>
+          {genres.length === 0 ? (
+            <p className="text-[11px] text-slate-600">
+              No genre tags in the library yet — scan a folder or clean tags first.
+            </p>
+          ) : (
+            <div className="grid max-h-36 grid-cols-2 gap-1.5 overflow-y-auto pr-1">
+              {genres.map((entry) => {
+                const checked = hasFilterValue(draft.genre, entry.genre);
+                return (
+                  <label
+                    key={entry.genre}
+                    className="flex cursor-pointer items-center gap-1.5 rounded-sm border border-[#2a2f42] bg-[#1a1e2b] px-2 py-1.5 text-[11px] text-slate-300 transition hover:border-[#3a4054]"
+                  >
+                    <input
+                      type="checkbox"
+                      checked={checked}
+                      onChange={() =>
+                        onChange({ ...draft, genre: toggleFilterValue(draft.genre, entry.genre) })
+                      }
+                      className="accent-blue-500"
+                    />
+                    <span className="min-w-0 flex-1 truncate" title={entry.genre}>
+                      {entry.genre}
+                    </span>
+                    <span className="font-mono text-[10px] text-slate-600">{entry.count}</span>
+                  </label>
+                );
+              })}
+            </div>
+          )}
+        </div>
+
+        {/* Rating */}
+        <div>
+          <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-wider text-slate-500">
+            Minimum rating
+          </p>
+          <select
+            value={draft.ratingMin ?? ""}
+            onChange={(e) =>
+              onChange({
+                ...draft,
+                ratingMin: e.target.value === "" ? undefined : Number(e.target.value),
+              })
+            }
+            className="w-full rounded-md border border-[#2a2f42] bg-[#1a1e2b] px-2.5 py-1.5 text-xs text-slate-200 focus:border-blue-500 focus:outline-hidden"
+          >
+            <option value="">Any rating</option>
+            {[1, 2, 3, 4, 5].map((rating) => (
+              <option key={rating} value={rating}>
+                {rating}★ and up
+              </option>
+            ))}
+          </select>
+        </div>
+
+        {error && (
+          <p className="rounded-sm border border-red-500/30 bg-red-500/10 px-2 py-1.5 text-[11px] text-red-300">
+            {error}
+          </p>
+        )}
+
+        <p className="text-[10px] leading-relaxed text-slate-600">
+          Filters run locally against SQLite. Source files are never modified.
+        </p>
+      </div>
+
+      <div className="flex items-center justify-between border-t border-[#222738] px-4 py-2.5">
+        <button
+          type="button"
+          onClick={onReset}
+          className="rounded-md border border-[#2a2f42] bg-[#1e2230] px-2.5 py-1.5 text-xs text-slate-300 transition hover:bg-[#252b3d]"
+        >
+          Reset all
+        </button>
+        <button
+          type="button"
+          onClick={onApply}
+          className="flex items-center gap-1.5 rounded-md bg-blue-600 px-3 py-1.5 text-xs font-medium text-white shadow-sm shadow-blue-600/30 transition hover:bg-blue-500"
+        >
+          <Check className="h-3.5 w-3.5" />
+          Apply filters
+        </button>
+      </div>
+    </div>
+  );
+}
+
 export default function App() {
   const [tracks, setTracks] = useState<TrackSummary[]>([]);
   const [loading, setLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const [libraryTotal, setLibraryTotal] = useState(0);
+
+  // Library filters + sorting (T2.1.2). Applied server-side in SQL so the view
+  // stays correct past the 200-row page instead of filtering a partial window.
+  const [filters, setFilters] = useState<ListTracksFilters>({});
+  const [draftFilters, setDraftFilters] = useState<ListTracksFilters>({});
+  const [filtersOpen, setFiltersOpen] = useState(false);
+  const [filterError, setFilterError] = useState<string | null>(null);
+  const [genres, setGenres] = useState<GenreCount[]>([]);
+  const [sortBy, setSortBy] = useState<ListTracksSortBy | undefined>(undefined);
+  const [sortDir, setSortDir] = useState<SortDirection>("asc");
+  const [reloadToken, setReloadToken] = useState(0);
   const [currentFolder, setCurrentFolder] = useState<string | null>(null);
   const [scanning, setScanning] = useState(false);
   const [progress, setProgress] = useState<ScanProgressEvent | null>(null);
@@ -180,28 +491,93 @@ export default function App() {
   const [chartError, setChartError] = useState<string | null>(null);
   const [matchToSelected, setMatchToSelected] = useState(true);
 
-  // Load tracks
-  const refreshLibrary = async () => {
+  // Load tracks — re-runs whenever the applied filters or sort order change, or
+  // when something bumps `reloadToken` (refresh button, scan/analysis finish).
+  // The search box filters this server-filtered page client-side, so typing
+  // stays instant and never adds IPC churn.
+  useEffect(() => {
+    let cancelled = false;
     setLoading(true);
-    try {
-      const res = await listTracks({ query: searchQuery });
-      setTracks(res.tracks);
-      setStatusMessage(`Library loaded: ${res.total} tracks`);
-    } catch (err) {
-      console.error("Failed to load library tracks:", err);
-      setStatusMessage("Error loading tracks");
-    } finally {
-      setLoading(false);
-    }
+    listTracks({
+      filters: normalizeFilters(filters),
+      sortBy,
+      sortDir: sortBy ? sortDir : undefined,
+      limit: 200,
+    })
+      .then((res) => {
+        if (cancelled) return;
+        setTracks(res.tracks);
+        setLibraryTotal(res.total);
+        setStatusMessage(`Library loaded: ${res.total} track${res.total === 1 ? "" : "s"}`);
+      })
+      .catch((err) => {
+        if (cancelled) return;
+        console.error("Failed to load library tracks:", err);
+        setStatusMessage("Error loading tracks");
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+    // Only the applied view state drives the fetch; the loader helpers are pure.
+  }, [filters, sortBy, sortDir, reloadToken]);
+
+  // Genre options for the filter panel, reloaded with the library so a scan
+  // that introduced new genres surfaces them immediately.
+  useEffect(() => {
+    let cancelled = false;
+    listGenres()
+      .then((res) => {
+        if (!cancelled) setGenres(res.genres);
+      })
+      .catch((err) => console.error("Failed to load genres:", err));
+    return () => {
+      cancelled = true;
+    };
+  }, [reloadToken]);
+
+  const refreshLibrary = () => setReloadToken((token) => token + 1);
+
+  const openFilters = () => {
+    setDraftFilters(filters);
+    setFilterError(null);
+    setFiltersOpen(true);
   };
 
-  useEffect(() => {
-    refreshLibrary();
-    // Mount-only by design: the loader closes over the initial query, and the
-    // search box filters client-side, so refetching on every query change
-    // would add IPC churn for no gain.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  const applyFilters = () => {
+    const normalized = normalizeFilters(draftFilters);
+    if (
+      normalized?.bpmMin != null &&
+      normalized.bpmMax != null &&
+      normalized.bpmMin > normalized.bpmMax
+    ) {
+      setFilterError("Minimum BPM must not exceed maximum BPM.");
+      return;
+    }
+    setFilterError(null);
+    setFilters(normalized ?? {});
+    setFiltersOpen(false);
+  };
+
+  const resetFilters = () => {
+    setDraftFilters({});
+    setFilters({});
+    setFilterError(null);
+    setFiltersOpen(false);
+    setSortBy(undefined);
+    setSortDir("asc");
+  };
+
+  const toggleSort = (key: ListTracksSortBy) => {
+    if (sortBy === key) {
+      setSortDir((current) => (current === "asc" ? "desc" : "asc"));
+    } else {
+      setSortBy(key);
+      setSortDir(defaultSortDirection(key));
+    }
+  };
 
   // Provider registry: supported streaming targets + buy-link stores, and any
   // connected accounts. Empty `connected` until the first OAuth flow lands.
@@ -513,19 +889,19 @@ export default function App() {
       if (unlistenAnalysisProgress) unlistenAnalysisProgress();
       if (unlistenAnalysisCompleted) unlistenAnalysisCompleted();
     };
-    // Listeners are registered once; the completion handlers call the loader
-    // captured at mount, which is enough to reload the library after a scan or
-    // analysis run.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // Listeners are registered once; completion handlers bump `reloadToken`
+    // through `refreshLibrary`, which reloads with the *current* view state.
   }, []);
 
-  // Esc closes the inspector drawer and the Tag Health modal.
+  // Esc closes the inspector drawer, the Tag Health/Charts modals and the
+  // filter dropdown.
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
         setSelectedTrack(null);
         setHealthOpen(false);
         setChartsOpen(false);
+        setFiltersOpen(false);
       }
     };
     window.addEventListener("keydown", onKey);
@@ -571,6 +947,8 @@ export default function App() {
   };
 
   const filteredTracks = useMemo(() => filterTracks(tracks, searchQuery), [tracks, searchQuery]);
+  const filterCount = activeFilterCount(filters);
+  const filterSummary = describeFilters(filters);
 
   return (
     <div className="relative flex flex-col h-screen bg-[#0f1117] text-slate-100 font-sans">
@@ -671,7 +1049,7 @@ export default function App() {
         )}
 
         {/* Toolbar */}
-        <div className="h-12 border-b border-[#222738] bg-[#12151e] px-5 flex items-center justify-between">
+        <div className="relative h-12 border-b border-[#222738] bg-[#12151e] px-5 flex items-center justify-between">
           <div className="relative w-80">
             <Search className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
             <input
@@ -684,6 +1062,18 @@ export default function App() {
           </div>
 
           <div className="flex items-center space-x-4 text-xs text-slate-400">
+            <button
+              onClick={filtersOpen ? () => setFiltersOpen(false) : openFilters}
+              className={`flex items-center space-x-1.5 px-2.5 py-1.5 rounded-md border transition ${
+                filterCount > 0
+                  ? "bg-blue-500/10 border-blue-500/40 text-blue-300 hover:bg-blue-500/15"
+                  : "bg-[#1e2230] border-[#2a2f42] text-slate-300 hover:bg-[#252b3d]"
+              }`}
+              title="Filter by tempo, key, genre, rating and analysis status"
+            >
+              <SlidersHorizontal className="w-3.5 h-3.5" />
+              <span>Filters{filterCount > 0 ? ` (${filterCount})` : ""}</span>
+            </button>
             <button
               onClick={openTagHealth}
               className="flex items-center space-x-1.5 px-2.5 py-1.5 rounded-md bg-[#1e2230] hover:bg-[#252b3d] text-slate-300 border border-[#2a2f42] transition"
@@ -714,14 +1104,51 @@ export default function App() {
             )}
             <span className="flex items-center space-x-1">
               <HardDrive className="w-3.5 h-3.5 text-slate-500" />
-              <span>{filteredTracks.length} tracks</span>
+              <span>
+                {filteredTracks.length}
+                {libraryTotal !== filteredTracks.length ? ` of ${libraryTotal}` : ""} tracks
+              </span>
             </span>
             <span className="flex items-center space-x-1">
               <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
               <span>Local-first & Non-destructive</span>
             </span>
           </div>
+
+          {filtersOpen && (
+            <LibraryFilterPanel
+              draft={draftFilters}
+              genres={genres}
+              error={filterError}
+              onChange={setDraftFilters}
+              onApply={applyFilters}
+              onReset={resetFilters}
+              onClose={() => setFiltersOpen(false)}
+            />
+          )}
         </div>
+
+        {/* Active filter summary — one chip per filter group, with a clear action. */}
+        {filterSummary.length > 0 && (
+          <div className="flex flex-wrap items-center gap-2 border-b border-[#222738] bg-[#12151e] px-5 py-1.5 text-[11px] text-slate-400">
+            <SlidersHorizontal className="w-3 h-3 text-blue-400" />
+            {filterSummary.map((part) => (
+              <span
+                key={part}
+                className="px-2 py-0.5 rounded-sm bg-blue-500/10 text-blue-300 border border-blue-500/20 font-mono"
+              >
+                {part}
+              </span>
+            ))}
+            <button
+              onClick={resetFilters}
+              className="ml-1 text-slate-500 hover:text-slate-300 underline decoration-dotted"
+              title="Clear every filter and restore the newest-first order"
+            >
+              clear all
+            </button>
+          </div>
+        )}
 
         {/* Track List Table */}
         <div className="flex-1 overflow-auto">
@@ -747,17 +1174,61 @@ export default function App() {
             <table className="w-full min-w-[1200px] text-left border-collapse text-xs">
               <thead>
                 <tr className="border-b border-[#222738] bg-[#141722] text-slate-400 uppercase tracking-wider text-[10px] font-semibold sticky top-0 z-10">
-                  <th className="py-2.5 px-4 w-12 text-center">#</th>
+                  <SortHeader
+                    label="#"
+                    sortKey="imported_at"
+                    sortBy={sortBy}
+                    sortDir={sortDir}
+                    onSort={toggleSort}
+                    className="w-12 text-center"
+                    align="text-center"
+                    title="Sort by import order (newest first by default)"
+                  />
                   <th className="py-2.5 px-2 w-14 text-center">Art</th>
-                  <th className="py-2.5 px-4">Title</th>
-                  <th className="py-2.5 px-4">Artist</th>
+                  <SortHeader
+                    label="Title"
+                    sortKey="title"
+                    sortBy={sortBy}
+                    sortDir={sortDir}
+                    onSort={toggleSort}
+                  />
+                  <SortHeader
+                    label="Artist"
+                    sortKey="artist"
+                    sortBy={sortBy}
+                    sortDir={sortDir}
+                    onSort={toggleSort}
+                  />
                   <th className="py-2.5 px-4">Album</th>
-                  <th className="py-2.5 px-4 w-16 text-center">BPM</th>
-                  <th className="py-2.5 px-4 w-16 text-center">Key</th>
+                  <SortHeader
+                    label="BPM"
+                    sortKey="bpm"
+                    sortBy={sortBy}
+                    sortDir={sortDir}
+                    onSort={toggleSort}
+                    className="w-16 text-center"
+                    align="text-center"
+                  />
+                  <SortHeader
+                    label="Key"
+                    sortKey="key"
+                    sortBy={sortBy}
+                    sortDir={sortDir}
+                    onSort={toggleSort}
+                    className="w-16 text-center"
+                    align="text-center"
+                  />
                   <th className="py-2.5 px-4 w-24 text-center">Rating</th>
-                  <th className="py-2.5 px-4 w-20 text-center">
-                    <Clock className="w-3.5 h-3.5 inline text-slate-500" />
-                  </th>
+                  <SortHeader
+                    label="Time"
+                    sortKey="duration"
+                    sortBy={sortBy}
+                    sortDir={sortDir}
+                    onSort={toggleSort}
+                    className="w-20 text-center"
+                    align="text-center"
+                    title="Sort by duration"
+                  />
                   <th className="py-2.5 px-4 w-20 text-center">Format</th>
                   <th className="py-2.5 px-4">Comments</th>
                   <th className="py-2.5 px-4 w-28 text-center">Fingerprint</th>
