@@ -113,7 +113,7 @@ def verify_mode() -> int:
     total_ok = len(recorded) - mismatches - missing
     print()
 
-    if mismatches == 0 and missing == 0:
+    if mismatches == 0 and missing == 0 and new_untracked == 0:
         print(f"All {total_ok} files OK")
         if new_untracked:
             print(
