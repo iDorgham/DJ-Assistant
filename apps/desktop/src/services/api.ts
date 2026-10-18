@@ -3,6 +3,7 @@ import type {
   ScanFolderResponse,
   ListTracksRequest,
   ListTracksResponse,
+  ListGenresResponse,
   GetTrackRequest,
   GetTrackResponse,
   GetArtworkRequest,
@@ -56,6 +57,18 @@ export async function listTracks(req: ListTracksRequest = {}): Promise<ListTrack
   }
   const { invoke } = await import("@tauri-apps/api/core");
   return invoke<ListTracksResponse>("list_tracks", { request: req });
+}
+
+/**
+ * Distinct non-empty genres with track counts, for the library filter UI.
+ * Local read only — no network access.
+ */
+export async function listGenres(): Promise<ListGenresResponse> {
+  if (!isTauri) {
+    return { genres: [] };
+  }
+  const { invoke } = await import("@tauri-apps/api/core");
+  return invoke<ListGenresResponse>("list_genres");
 }
 
 export async function getTrack(req: GetTrackRequest): Promise<GetTrackResponse> {

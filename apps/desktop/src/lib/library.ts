@@ -5,7 +5,171 @@
  * `node --test` without a DOM or a Tauri runtime.
  */
 
-import type { TrackSummary } from "@dj-assistant/shared";
+import type {
+  AnalysisStatus,
+  ListTracksFilters,
+  ListTracksSortBy,
+  SortDirection,
+  TrackSummary,
+} from "@dj-assistant/shared";
+
+/** The 24 Camelot keys, in wheel order (mixed in, then out). */
+export const CAMELOT_KEYS = [
+  "1A",
+  "2A",
+  "3A",
+  "4A",
+  "5A",
+  "6A",
+  "7A",
+  "8A",
+  "9A",
+  "10A",
+  "11A",
+  "12A",
+  "1B",
+  "2B",
+  "3B",
+  "4B",
+  "5B",
+  "6B",
+  "7B",
+  "8B",
+  "9B",
+  "10B",
+  "11B",
+  "12B",
+] as const;
+
+/** Analysis statuses offered by the filter panel, with display labels. */
+export const ANALYSIS_STATUS_OPTIONS: Array<{ value: AnalysisStatus; label: string }> = [
+  { value: "complete", label: "Analyzed" },
+  { value: "needs_review", label: "Needs review" },
+  { value: "pending", label: "Not analyzed" },
+  { value: "failed", label: "Failed" },
+];
+
+/** Sort options offered by the column headers, with display labels. */
+export const SORT_OPTIONS: Array<{ value: ListTracksSortBy; label: string }> = [
+  { value: "title", label: "Title" },
+  { value: "artist", label: "Artist" },
+  { value: "bpm", label: "BPM" },
+  { value: "key", label: "Key" },
+  { value: "duration", label: "Duration" },
+  { value: "imported_at", label: "Imported" },
+];
+
+/** Trims, drops blanks and de-duplicates case-insensitively, keeping first casing. */
+function normalizeStringList(values: string[] | undefined): string[] {
+  const seen = new Set<string>();
+  const out: string[] = [];
+  for (const value of values ?? []) {
+    const trimmed = value.trim();
+    if (!trimmed) continue;
+    const key = trimmed.toLowerCase();
+    if (seen.has(key)) continue;
+    seen.add(key);
+    out.push(trimmed);
+  }
+  return out;
+}
+
+/**
+ * Cleans a filter draft for the IPC boundary: blank lists become absent, keys
+ * are upper-cased (`8a` → `8A`) and genres/statuses keep their casing (the
+ * backend compares case-insensitively). Returns `undefined` when no filter is
+ * active, so callers can omit the field entirely.
+ */
+export function normalizeFilters(
+  filters: ListTracksFilters | undefined
+): ListTracksFilters | undefined {
+  if (!filters) return undefined;
+  const normalized: ListTracksFilters = {};
+
+  if (filters.bpmMin != null && Number.isFinite(filters.bpmMin)) {
+    normalized.bpmMin = filters.bpmMin;
+  }
+  if (filters.bpmMax != null && Number.isFinite(filters.bpmMax)) {
+    normalized.bpmMax = filters.bpmMax;
+  }
+
+  const keys = normalizeStringList(filters.keyCamelot).map((key) => key.toUpperCase());
+  if (keys.length > 0) normalized.keyCamelot = keys;
+
+  const statuses = normalizeStringList(filters.analysisStatus) as AnalysisStatus[];
+  if (statuses.length > 0) normalized.analysisStatus = statuses;
+
+  const genres = normalizeStringList(filters.genre);
+  if (genres.length > 0) normalized.genre = genres;
+
+  if (filters.ratingMin != null && Number.isFinite(filters.ratingMin)) {
+    normalized.ratingMin = filters.ratingMin;
+  }
+
+  return Object.keys(normalized).length > 0 ? normalized : undefined;
+}
+
+/** Number of active filter groups (matches `TrackFilters::active_count` in Rust). */
+export function activeFilterCount(filters: ListTracksFilters | undefined): number {
+  if (!filters) return 0;
+  return [
+    filters.bpmMin != null || filters.bpmMax != null,
+    normalizeStringList(filters.keyCamelot).length > 0,
+    normalizeStringList(filters.analysisStatus).length > 0,
+    normalizeStringList(filters.genre).length > 0,
+    filters.ratingMin != null,
+  ].filter(Boolean).length;
+}
+
+/** Human-readable summary lines for the active filters, shown under the toolbar. */
+export function describeFilters(filters: ListTracksFilters | undefined): string[] {
+  if (!filters) return [];
+  const parts: string[] = [];
+
+  const { bpmMin, bpmMax } = filters;
+  if (bpmMin != null && bpmMax != null) {
+    parts.push(`BPM ${formatBpm(bpmMin)}–${formatBpm(bpmMax)}`);
+  } else if (bpmMin != null) {
+    parts.push(`BPM ≥ ${formatBpm(bpmMin)}`);
+  } else if (bpmMax != null) {
+    parts.push(`BPM ≤ ${formatBpm(bpmMax)}`);
+  }
+
+  const keys = normalizeStringList(filters.keyCamelot);
+  if (keys.length > 0) parts.push(`Key ${keys.join(", ")}`);
+
+  const statuses = normalizeStringList(filters.analysisStatus);
+  if (statuses.length > 0) {
+    const labels = statuses.map(
+      (status) => ANALYSIS_STATUS_OPTIONS.find((option) => option.value === status)?.label ?? status
+    );
+    parts.push(`Status ${labels.join(", ")}`);
+  }
+
+  const genres = normalizeStringList(filters.genre);
+  if (genres.length > 0) parts.push(`Genre ${genres.join(", ")}`);
+
+  if (filters.ratingMin != null) parts.push(`Rating ≥ ${filters.ratingMin}★`);
+
+  return parts;
+}
+
+/** Adds `value` to a filter list, or removes it when already selected. */
+export function toggleFilterValue(values: string[] | undefined, value: string): string[] {
+  const current = normalizeStringList(values);
+  const without = current.filter((entry) => entry.toLowerCase() !== value.toLowerCase());
+  return without.length === current.length ? [...current, value] : without;
+}
+
+/** True when `value` is selected in a filter list (case-insensitive). */
+export function hasFilterValue(values: string[] | undefined, value: string): boolean {
+  return normalizeStringList(values).some((entry) => entry.toLowerCase() === value.toLowerCase());
+}
+
+/** Default direction for a freshly selected sort column. */
+export function defaultSortDirection(sortBy: ListTracksSortBy): SortDirection {
+  return sortBy === "imported_at" ? "desc" : "asc";
+}
 
 /** Formats a millisecond duration as `m:ss`, or `--:--` when unknown/invalid. */
 export function formatDuration(ms: number): string {

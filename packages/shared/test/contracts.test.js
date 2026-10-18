@@ -452,3 +452,48 @@ test("chart snapshot import/list payloads use camelCase keys", () => {
     "total",
   ]);
 });
+
+test("list tracks request uses camelCase filter and sort keys", () => {
+  // T2.1.2: filters run server-side, so a snake_case drift here silently
+  // disables filtering (serde drops unknown fields instead of failing).
+  const request = {
+    query: "deep",
+    filters: {
+      bpmMin: 120,
+      bpmMax: 130,
+      keyCamelot: ["8A", "9A"],
+      analysisStatus: ["complete"],
+      genre: ["Techno"],
+      ratingMin: 3,
+    },
+    sortBy: "bpm",
+    sortDir: "desc",
+    limit: 200,
+    offset: 0,
+  };
+  assert.deepEqual(Object.keys(request.filters).sort(), [
+    "analysisStatus",
+    "bpmMax",
+    "bpmMin",
+    "genre",
+    "keyCamelot",
+    "ratingMin",
+  ]);
+  for (const snake of ["bpm_min", "bpm_max", "key_camelot", "analysis_status", "rating_min"]) {
+    assert.equal(snake in request.filters, false, `${snake} would be ignored by serde`);
+  }
+  assert.deepEqual(Object.keys(request).sort(), [
+    "filters",
+    "limit",
+    "offset",
+    "query",
+    "sortBy",
+    "sortDir",
+  ]);
+});
+
+test("list genres response carries genre/count pairs", () => {
+  const response = { genres: [{ genre: "Techno", count: 12 }] };
+  assert.deepEqual(Object.keys(response), ["genres"]);
+  assert.deepEqual(Object.keys(response.genres[0]).sort(), ["count", "genre"]);
+});

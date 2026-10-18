@@ -19,23 +19,67 @@ use rusqlite::{params, Connection};
 
 use dj_assistant_schema_tests::open_migrated_at;
 
-/// Mirrors `list_tracks`'s non-search SELECT + ORDER BY in commands.rs.
+/// Mirrors `list_tracks`'s unfiltered SELECT built by
+/// `crates/core/src/library_query.rs`: newest first, with `id` as the stable
+/// tiebreaker and LIMIT/OFFSET bound as parameters.
 const LIST_TRACKS_SQL: &str =
     "SELECT id, file_path, file_hash, title, artist, album, genre, bpm, key_camelot, key_classical, \
      duration_ms, format, analysis_status, user_rating, comments, artwork_hash, created_at, updated_at \
-     FROM tracks ORDER BY created_at DESC LIMIT ?1 OFFSET ?2";
+     FROM tracks ORDER BY created_at DESC, id ASC LIMIT ?1 OFFSET ?2";
 
-/// Mirrors `list_tracks`'s search SELECT (note the four repeated `?1` binds).
+/// Mirrors the search SELECT (four repeated `?1` binds plus `ESCAPE` so `%`/`_`
+/// in the search box match literally).
 const SEARCH_TRACKS_SQL: &str = "SELECT id, file_path, file_hash, title, artist, album, genre, bpm, key_camelot, key_classical, \
      duration_ms, format, analysis_status, user_rating, comments, artwork_hash, created_at, updated_at \
      FROM tracks \
-     WHERE (LOWER(title) LIKE ?1 OR LOWER(artist) LIKE ?1 OR LOWER(album) LIKE ?1 OR LOWER(file_path) LIKE ?1) \
-     ORDER BY created_at DESC LIMIT ?2 OFFSET ?3";
+     WHERE (LOWER(title) LIKE ?1 ESCAPE '\\' \
+        OR LOWER(artist) LIKE ?1 ESCAPE '\\' \
+        OR LOWER(album) LIKE ?1 ESCAPE '\\' \
+        OR LOWER(file_path) LIKE ?1 ESCAPE '\\') \
+     ORDER BY created_at DESC, id ASC LIMIT ?2 OFFSET ?3";
 
-/// Mirrors `list_tracks`'s count queries.
+/// Mirrors the count queries emitted by the query builder.
 const COUNT_ALL_SQL: &str = "SELECT COUNT(*) FROM tracks";
 const COUNT_SEARCH_SQL: &str = "SELECT COUNT(*) FROM tracks \
-     WHERE (LOWER(title) LIKE ?1 OR LOWER(artist) LIKE ?1 OR LOWER(album) LIKE ?1 OR LOWER(file_path) LIKE ?1)";
+     WHERE (LOWER(title) LIKE ?1 ESCAPE '\\' \
+        OR LOWER(artist) LIKE ?1 ESCAPE '\\' \
+        OR LOWER(album) LIKE ?1 ESCAPE '\\' \
+        OR LOWER(file_path) LIKE ?1 ESCAPE '\\')";
+
+/// Mirrors the builder's filtered SELECT for
+/// `{bpmMin: 120, bpmMax: 130, keyCamelot: ["8a"], analysisStatus: ["complete"],
+/// genre: ["techno"], ratingMin: 3, sortBy: "bpm", sortDir: "asc"}`.
+const FILTER_TRACKS_SQL: &str = "SELECT id, title FROM tracks \
+     WHERE bpm >= ?1 AND bpm <= ?2 \
+       AND UPPER(key_camelot) IN (?3) \
+       AND LOWER(analysis_status) IN (?4) \
+       AND LOWER(genre) IN (?5) \
+       AND user_rating >= ?6 \
+     ORDER BY bpm IS NULL, bpm ASC, id ASC LIMIT ?7 OFFSET ?8";
+
+/// Count half of the same filtered query (no LIMIT/OFFSET placeholders).
+const COUNT_FILTER_SQL: &str = "SELECT COUNT(*) FROM tracks \
+     WHERE bpm >= ?1 AND bpm <= ?2 \
+       AND UPPER(key_camelot) IN (?3) \
+       AND LOWER(analysis_status) IN (?4) \
+       AND LOWER(genre) IN (?5) \
+       AND user_rating >= ?6";
+
+/// Mirrors the builder's `{sortBy: "bpm", sortDir: "asc"}` SELECT: unknown BPMs
+/// sort last in both directions.
+const SORT_BPM_SQL: &str = "SELECT id, title FROM tracks \
+     ORDER BY bpm IS NULL, bpm ASC, id ASC LIMIT ?1 OFFSET ?2";
+
+/// Escapes `LIKE` wildcards the way the query builder does, so a search for a
+/// literal `%`, `_` or `\` behaves the same here as in the app.
+fn like_pattern(term: &str) -> String {
+    let escaped = term
+        .to_lowercase()
+        .replace('\\', "\\\\")
+        .replace('%', "\\%")
+        .replace('_', "\\_");
+    format!("%{escaped}%")
+}
 
 /// The 18 columns `map_track_summary` reads, in order.
 #[derive(Debug, PartialEq)]
@@ -312,7 +356,7 @@ fn search_matches_title_artist_album_and_path_case_insensitively() {
     );
 
     let search = |term: &str| -> Vec<String> {
-        let like = format!("%{}%", term.to_lowercase());
+        let like = like_pattern(term);
         conn.prepare(SEARCH_TRACKS_SQL)
             .unwrap()
             .query_map(params![like, 200i64, 0i64], |r| r.get::<_, String>(3))
@@ -343,7 +387,7 @@ fn search_matches_title_artist_album_and_path_case_insensitively() {
 
     // The count query must agree with the row query, or the UI total lies.
     for term in ["midnight", "anhalt", "house", "nonexistent-xyz"] {
-        let like = format!("%{}%", term.to_lowercase());
+        let like = like_pattern(term);
         let total: i64 = conn
             .query_row(COUNT_SEARCH_SQL, params![like], |r| r.get(0))
             .unwrap();
@@ -545,5 +589,195 @@ fn concurrent_second_connection_sees_committed_tracks() {
 
     drop(reader);
     drop(writer);
+    let _ = std::fs::remove_file(&db_path);
+}
+
+/// Inserts a track with analysis/tag values populated, for filter tests.
+#[allow(clippy::too_many_arguments)]
+fn insert_filterable_track(
+    conn: &Connection,
+    id: &str,
+    genre: &str,
+    bpm: Option<f64>,
+    key_camelot: Option<&str>,
+    analysis_status: &str,
+    user_rating: Option<i64>,
+) {
+    conn.execute(
+        "INSERT INTO tracks (
+            id, workspace_id, file_path, file_hash, file_size, duration_ms, format,
+            title, artist, album, genre, year, bpm, key_camelot, key_classical,
+            analysis_status, user_rating, created_at, updated_at
+        ) VALUES (?1, 'default', ?2, ?3, 1024, 180000, 'flac', ?1, 'Artist', NULL, ?4, 2024,
+                  ?5, ?6, NULL, ?7, ?8, '2026-01-01T00:00:00Z', '2026-01-01T00:00:00Z')",
+        params![
+            id,
+            format!("D:\\Music\\{id}.flac"),
+            format!("hash-{id}"),
+            genre,
+            bpm,
+            key_camelot,
+            analysis_status,
+            user_rating,
+        ],
+    )
+    .expect("filterable track insert must succeed");
+}
+
+#[test]
+fn filtered_list_query_narrows_on_bpm_key_status_genre_and_rating() {
+    // T2.1.2: the library filter panel. This mirrors the exact SQL emitted by
+    // `crates/core/src/library_query.rs` for the representative filter set on
+    // FILTER_TRACKS_SQL, so a schema/query drift fails here.
+    let db_path = temp_db("filters.db");
+    let conn = open_migrated_at(&db_path);
+
+    //                      id    genre     bpm    key     status       rating
+    insert_filterable_track(
+        &conn,
+        "t1",
+        "Techno",
+        Some(124.0),
+        Some("8A"),
+        "complete",
+        Some(4),
+    ); // match
+    insert_filterable_track(
+        &conn,
+        "t2",
+        "Techno",
+        Some(140.0),
+        Some("8A"),
+        "complete",
+        Some(4),
+    ); // bpm high
+    insert_filterable_track(
+        &conn,
+        "t3",
+        "House",
+        Some(124.0),
+        Some("8A"),
+        "complete",
+        Some(4),
+    ); // genre
+    insert_filterable_track(
+        &conn,
+        "t4",
+        "Techno",
+        Some(124.0),
+        Some("8A"),
+        "pending",
+        Some(4),
+    ); // status
+    insert_filterable_track(
+        &conn,
+        "t5",
+        "Techno",
+        Some(124.0),
+        Some("9A"),
+        "complete",
+        Some(4),
+    ); // key
+    insert_filterable_track(
+        &conn,
+        "t6",
+        "Techno",
+        Some(124.0),
+        Some("8A"),
+        "complete",
+        Some(1),
+    ); // rating
+    insert_filterable_track(
+        &conn,
+        "t7",
+        "Techno",
+        Some(120.0),
+        Some("8A"),
+        "complete",
+        Some(3),
+    ); // match (bounds)
+    insert_filterable_track(&conn, "t8", "Techno", None, Some("8A"), "complete", Some(3)); // no bpm
+
+    let ids: Vec<String> = conn
+        .prepare(FILTER_TRACKS_SQL)
+        .unwrap()
+        .query_map(
+            params![120.0f64, 130.0f64, "8A", "complete", "techno", 3i64, 200i64, 0i64],
+            |r| r.get(0),
+        )
+        .unwrap()
+        .map(Result::unwrap)
+        .collect();
+    assert_eq!(
+        ids,
+        vec!["t7".to_string(), "t1".to_string()],
+        "only in-range, matching tracks survive; ASC BPM puts 120 before 124"
+    );
+
+    let total: i64 = conn
+        .query_row(
+            COUNT_FILTER_SQL,
+            params![120.0f64, 130.0f64, "8A", "complete", "techno", 3i64],
+            |r| r.get(0),
+        )
+        .unwrap();
+    assert_eq!(total as usize, ids.len(), "count/rows must agree");
+
+    // Unfiltered BPM ordering: NULLs last, ascending otherwise.
+    let bpm_sorted_ids: Vec<String> = conn
+        .prepare(SORT_BPM_SQL)
+        .unwrap()
+        .query_map(params![200i64, 0i64], |r| r.get(0))
+        .unwrap()
+        .map(Result::unwrap)
+        .collect();
+    assert_eq!(
+        bpm_sorted_ids.last().map(String::as_str),
+        Some("t8"),
+        "a NULL bpm sorts last, so unanalyzed tracks never lead the list"
+    );
+
+    let _ = std::fs::remove_file(&db_path);
+}
+
+#[test]
+fn filtered_query_survives_case_variant_tags() {
+    // The scanner stores whatever the file tags say ("TECHNO", "Techno"), while
+    // the filter panel sends a single canonical option. Lower/upper-casing in
+    // SQL must collapse them.
+    let db_path = temp_db("filter-case.db");
+    let conn = open_migrated_at(&db_path);
+
+    insert_filterable_track(
+        &conn,
+        "a",
+        "TECHNO",
+        Some(128.0),
+        Some("8A"),
+        "COMPLETE",
+        Some(5),
+    );
+    insert_filterable_track(
+        &conn,
+        "b",
+        "techno",
+        Some(126.0),
+        Some("8a"),
+        "complete",
+        Some(3),
+    );
+
+    let ids: Vec<String> = conn
+        .prepare(FILTER_TRACKS_SQL)
+        .unwrap()
+        .query_map(
+            params![120.0f64, 130.0f64, "8A", "complete", "techno", 3i64, 200i64, 0i64],
+            |r| r.get(0),
+        )
+        .unwrap()
+        .map(Result::unwrap)
+        .collect();
+    assert_eq!(ids, vec!["b".to_string(), "a".to_string()]);
+
     let _ = std::fs::remove_file(&db_path);
 }

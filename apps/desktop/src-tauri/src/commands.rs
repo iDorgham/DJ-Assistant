@@ -2,17 +2,24 @@ use std::sync::{Arc, Mutex};
 use tauri::{AppHandle, Manager, State};
 use uuid::Uuid;
 
+use dj_assistant_core::library_query::QueryParam;
+
 use crate::db::Database;
 use crate::models::{
     AnalyzeLibraryRequest, AnalyzeLibraryResponse, CuePoint, FindSimilarTracksRequest,
-    FindSimilarTracksResponse, GetArtworkRequest, GetTrackRequest, GetTrackResponse,
-    ListTracksRequest, ListTracksResponse, ProviderAccount, ProviderCapability,
+    FindSimilarTracksResponse, GenreCount, GetArtworkRequest, GetTrackRequest, GetTrackResponse,
+    ListGenresResponse, ListTracksRequest, ListTracksResponse, ProviderAccount, ProviderCapability,
     ProviderStatusResponse, ScanFolderRequest, ScanFolderResponse, SimilarTrackResult, StoreLink,
     StoreLinksRequest, StoreLinksResponse, TagHealthRequest, TagHealthResponse, TagHealthTotals,
     TrackDetail, TrackGaps, TrackSummary,
 };
 use crate::scanner::run_scan;
 use crate::security::validate_and_canonicalize_dir;
+
+/// Upper bound for a single `list_tracks` page. The library UI paginates in
+/// 200-row windows; a larger cap would let a stray request materialize the
+/// whole library in memory.
+const MAX_LIST_LIMIT: i64 = 1000;
 
 /// Summary columns shared by `list_tracks` and `get_track`, in `TrackSummary` order.
 const TRACK_SUMMARY_COLUMNS: &str = "id, file_path, file_hash, title, artist, album, genre, bpm, \
@@ -61,71 +68,92 @@ pub async fn list_tracks(
     let db_guard = db.lock().map_err(|e| e.to_string())?;
     let conn = db_guard.conn();
 
-    let query_param = request.query.unwrap_or_default().trim().to_lowercase();
-    let limit = request.limit.unwrap_or(200);
-    let offset = request.offset.unwrap_or(0);
+    // `limit`/`offset` are clamped rather than trusted: the IPC surface is a
+    // public boundary and a negative LIMIT would mean "no limit" in SQLite.
+    let limit = request.limit.unwrap_or(200).clamp(0, MAX_LIST_LIMIT);
+    let offset = request.offset.unwrap_or(0).max(0);
 
-    let has_query = !query_param.is_empty();
-    let search_like = format!("%{}%", query_param);
+    let built = request
+        .into_query()
+        .build(TRACK_SUMMARY_COLUMNS, limit, offset)
+        .map_err(|err| err.to_string())?;
 
-    let count_sql = if has_query {
-        "SELECT COUNT(*) FROM tracks WHERE (LOWER(title) LIKE ?1 OR LOWER(artist) LIKE ?1 OR LOWER(album) LIKE ?1 OR LOWER(file_path) LIKE ?1)"
-    } else {
-        "SELECT COUNT(*) FROM tracks"
-    };
+    // Parameter order is filters…, then LIMIT, then OFFSET, so the count query
+    // binds the prefix and the list query binds everything.
+    let params: Vec<rusqlite::types::Value> = built.params.iter().map(to_sql_value).collect();
+    let count_params = &params[..params.len().saturating_sub(2)];
 
     // rusqlite 0.40 removed the `usize` `FromSql` impl, so COUNT(*) (SQLite's
     // native i64) is read as `i64` and narrowed for the response payload.
-    let total_rows: i64 = if has_query {
-        let mut count_stmt = conn.prepare(count_sql).map_err(|e| e.to_string())?;
-        count_stmt
-            .query_row([&search_like], |row| row.get(0))
-            .map_err(|e| e.to_string())?
-    } else {
-        let mut count_stmt = conn.prepare(count_sql).map_err(|e| e.to_string())?;
-        count_stmt
-            .query_row([], |row| row.get(0))
-            .map_err(|e| e.to_string())?
-    };
-
-    let total = total_rows as usize;
-
-    let select_sql = if has_query {
-        format!(
-            "SELECT {TRACK_SUMMARY_COLUMNS}
-         FROM tracks
-         WHERE (LOWER(title) LIKE ?1 OR LOWER(artist) LIKE ?1 OR LOWER(album) LIKE ?1 OR LOWER(file_path) LIKE ?1)
-         ORDER BY created_at DESC
-         LIMIT ?2 OFFSET ?3"
+    let total: i64 = conn
+        .query_row(
+            &built.count_sql,
+            rusqlite::params_from_iter(count_params.iter()),
+            |row| row.get(0),
         )
-    } else {
-        format!(
-            "SELECT {TRACK_SUMMARY_COLUMNS}
-         FROM tracks
-         ORDER BY created_at DESC
-         LIMIT ?1 OFFSET ?2"
-        )
-    };
+        .map_err(|e| e.to_string())?;
 
-    let mut stmt = conn.prepare(&select_sql).map_err(|e| e.to_string())?;
-
-    let rows_iter = if has_query {
-        stmt.query_map(
-            rusqlite::params![search_like, limit, offset],
-            map_track_summary,
-        )
-        .map_err(|e| e.to_string())?
-    } else {
-        stmt.query_map(rusqlite::params![limit, offset], map_track_summary)
-            .map_err(|e| e.to_string())?
-    };
+    let mut stmt = conn.prepare(&built.select_sql).map_err(|e| e.to_string())?;
+    let rows_iter = stmt
+        .query_map(rusqlite::params_from_iter(params.iter()), map_track_summary)
+        .map_err(|e| e.to_string())?;
 
     let mut tracks = Vec::new();
     for track in rows_iter.flatten() {
         tracks.push(track);
     }
 
-    Ok(ListTracksResponse { tracks, total })
+    Ok(ListTracksResponse {
+        tracks,
+        total: total as usize,
+    })
+}
+
+/// Maps a core query parameter onto the `rusqlite` value type.
+fn to_sql_value(param: &QueryParam) -> rusqlite::types::Value {
+    match param {
+        QueryParam::Text(value) => rusqlite::types::Value::Text(value.clone()),
+        QueryParam::Int(value) => rusqlite::types::Value::Integer(*value),
+        QueryParam::Real(value) => rusqlite::types::Value::Real(*value),
+    }
+}
+
+/// Distinct non-empty genres with their track counts, for the library filter
+/// UI. Case variants collapse into one entry (the filter itself is
+/// case-insensitive), ordered by popularity then alphabetically so the most
+/// useful options come first.
+#[tauri::command]
+pub async fn list_genres(
+    db: State<'_, Arc<Mutex<Database>>>,
+) -> Result<ListGenresResponse, String> {
+    let db_guard = db.lock().map_err(|e| e.to_string())?;
+    let conn = db_guard.conn();
+
+    let mut stmt = conn
+        .prepare(
+            "SELECT MIN(TRIM(genre)), COUNT(*)
+             FROM tracks
+             WHERE genre IS NOT NULL AND TRIM(genre) <> ''
+             GROUP BY LOWER(TRIM(genre))
+             ORDER BY COUNT(*) DESC, LOWER(TRIM(genre)) ASC",
+        )
+        .map_err(|e| e.to_string())?;
+
+    let rows = stmt
+        .query_map([], |row| {
+            Ok(GenreCount {
+                genre: row.get(0)?,
+                count: row.get::<_, i64>(1)? as usize,
+            })
+        })
+        .map_err(|e| e.to_string())?;
+
+    let mut genres = Vec::new();
+    for genre in rows.flatten() {
+        genres.push(genre);
+    }
+
+    Ok(ListGenresResponse { genres })
 }
 
 fn map_track_summary_at(row: &rusqlite::Row, base: usize) -> rusqlite::Result<TrackSummary> {
