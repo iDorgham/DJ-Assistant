@@ -203,7 +203,7 @@ impl TrackQuery {
         push_in_condition(
             &mut conditions,
             &mut params,
-            "LOWER(genre) IN",
+            "LOWER(TRIM(genre)) IN",
             self.filters.normalized_genres(),
         );
 
