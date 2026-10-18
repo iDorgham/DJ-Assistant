@@ -115,10 +115,6 @@ def verify_mode() -> int:
 
     if mismatches == 0 and missing == 0 and new_untracked == 0:
         print(f"All {total_ok} files OK")
-        if new_untracked:
-            print(
-                f"  ({new_untracked} new untracked file(s) — run --record to include them)"
-            )
         return 0
     else:
         print(
