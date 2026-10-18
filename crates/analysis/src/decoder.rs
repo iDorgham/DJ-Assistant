@@ -178,6 +178,9 @@ fn decode_from_source(
 
         match decoder.decode(&packet) {
             Ok(decoded) => {
+                // Grow the buffer by this packet's sample count first, then copy into
+                // the fresh tail: every decoded packet must accumulate, not just the
+                // last one (Symphonia's copy helpers resize their destination).
                 let n_samples = channels.max(1) * decoded.frames();
                 let start = all_samples.len();
                 all_samples.resize(start + n_samples, 0.0);
@@ -268,6 +271,32 @@ mod tests {
 
         assert!(decoded.sample_rate > 0);
         assert!(!decoded.samples.is_empty());
+    }
+
+    /// Regression: the decode loop used to hand each packet the whole accumulated
+    /// buffer, and Symphonia resizes that destination to the packet's sample count,
+    /// so only the final packet survived (e.g. `no-tags.wav` decoded to its
+    /// 126-frame tail). Every decoded fixture must come back whole.
+    #[test]
+    fn decodes_every_packet_not_just_the_last() {
+        // 0.5 s of 44.1 kHz stereo PCM16 = 22 050 frames.
+        let wav = decode_audio_file(get_fixture("wav/no-tags.wav")).expect("Should decode wav");
+        assert!(
+            wav.total_frames() > 21_000,
+            "wav decoded to {} frames ({:.3}s), expected ~22 050",
+            wav.total_frames(),
+            wav.duration_seconds
+        );
+
+        // 1.714286 s of 44.1 kHz stereo FLAC = 75 600 frames.
+        let flac = decode_audio_file(get_fixture("flac/tagged-techno-140.flac"))
+            .expect("Should decode flac");
+        assert!(
+            flac.total_frames() > 70_000,
+            "flac decoded to {} frames ({:.3}s), expected ~75 600",
+            flac.total_frames(),
+            flac.duration_seconds
+        );
     }
 
     #[test]
