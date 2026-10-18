@@ -8,11 +8,26 @@ use sha2::{Digest, Sha256};
 
 use crate::error::ChecksumError;
 
+/// Formats raw digest bytes as a lowercase hexadecimal string.
+///
+/// `sha2` 0.11 returns a `hybrid_array::Array` from `finalize()`, which does not
+/// implement `LowerHex`, so the digest is encoded explicitly here.
+fn to_lower_hex(bytes: &[u8]) -> String {
+    use std::fmt::Write as _;
+
+    let mut out = String::with_capacity(bytes.len() * 2);
+    for byte in bytes {
+        // Writing into a `String` cannot fail.
+        let _ = write!(out, "{byte:02x}");
+    }
+    out
+}
+
 /// Computes the lowercase hexadecimal SHA-256 digest of the given bytes.
 pub fn compute_sha256(data: &[u8]) -> String {
     let mut hasher = Sha256::new();
     hasher.update(data);
-    format!("{:x}", hasher.finalize())
+    to_lower_hex(&hasher.finalize())
 }
 
 /// Verifies that the in-memory bytes match the expected SHA-256 checksum (case-insensitive).
@@ -54,7 +69,7 @@ pub fn verify_file_checksum<P: AsRef<Path>>(
         hasher.update(&buffer[..bytes_read]);
     }
 
-    let actual = format!("{:x}", hasher.finalize());
+    let actual = to_lower_hex(&hasher.finalize());
     let expected = expected_sha256.trim().to_lowercase();
 
     if actual == expected {
