@@ -2,7 +2,7 @@
 
 **SDD Artifact:** Concrete Engineering Tasks  
 **Status:** Living  
-**Last reconciled:** 2026-10-16 (corrected an over-optimistic pass that had marked Phase 2/3/4 as done). Only code-verified items are checked: T0.x, T1.x, plus TF.1–TF.6, TD.3, TE.1–TE.4, TM.1/TM.2a and TA.6. Phase 2–4 are **not implemented** — `apps/desktop/src-tauri/src/lib.rs` registers only the Phase 0/1 + discovery commands; there is no set builder, cue generation, tag cleanup, export, USB, Skills, or cloud code.  
+**Last reconciled:** 2026-10-18 (Phase 2 started: T2.1.2 library multi-filter + sorting implementation shipped; manual running-window QA still pending. The 2026-10-16 reconciliation that corrected an over-optimistic pass, and the 2026-10-14 audit of T1.x / TF.x / TD.3 / TE.x / TM.x, remain current; Phase 2–4 beyond T2.1.2 and Phase 3–4 are **not implemented**.)  
 **How to use:** Work top-to-bottom within a phase. Mark tasks `[x]` when Definition of Done is met. Update dependencies as reality changes.
 
 > **Reconciliation note (2026-10-12):** Phase 0 items were checked off against a verified
@@ -102,7 +102,7 @@
 
 ### 2.1 Library UX
 - [ ] **T2.1.1** Search across title/artist/album/tags — *title/artist/album/path search already shipped in the Phase 0 library slice; tag-field search not yet*
-- [ ] **T2.1.2** Multi-filter (BPM, key, genre, rating, analysis status) — *`ListTracksRequest.filters` exists in the contract, but `list_tracks` ignores it and the UI has no filter controls*
+- [x] **T2.1.2** Multi-filter (BPM, key, genre, rating, analysis status) — *shipped server-side: `crates/core/src/library_query.rs` builds the whole list query (free-text search with `ESCAPE`, BPM range, Camelot key/status/genre `IN` lists, rating floor, allow-listed sort with NULLs last and an `id` pagination tiebreaker; every value is a bound parameter, invalid ranges rejected — 17 unit tests). `list_tracks` now honours `filters`/`sortBy`/`sortDir` and reports a matching `total`; new `list_genres` supplies real genre options. UI: Filters dropdown (tempo range, 24 Camelot keys, the four analysis statuses, genre list with counts, minimum rating) with draft → Apply/Reset, active-filter chips, and sortable column headers. Covered by `tests/schema/tests/persistence.rs` (mirrored filtered SQL against the migrated schema + count/rows agreement) and 7 new TS helper tests.*
 - [ ] **T2.1.3** Bulk select + bulk metadata edit
 - [ ] **T2.1.4** Ratings, tags, comments UI — *rating + comments are displayed read-only from file tags in the Phase 0 list; editing and tag assignment not yet*
 

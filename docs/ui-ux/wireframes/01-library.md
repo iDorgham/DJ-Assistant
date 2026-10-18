@@ -90,7 +90,7 @@ shipped screen so far.
 
 | # | Element | Behaviour |
 |---|---------|-----------|
-| {1} | Search input + Tag Health + Charts | Search filters the table live across title, artist, album, and path; no refetch. **Tag Health** opens the gap/enrichment modal and **Charts** the snapshot modal (see [wireframe 12](./12-discovery-enrichment.md)); provider summary shows registry counts with a full-list tooltip |
+| {1} | Search input + Filters + Tag Health + Charts | Search filters the table live across title, artist, album, and path; no refetch. **Filters** opens the structured filter dropdown (tempo range, Camelot keys, analysis status, genre, minimum rating — applied server-side in SQL on Apply, with a count badge and summary chips); **Tag Health** opens the gap/enrichment modal and **Charts** the snapshot modal (see [wireframe 12](./12-discovery-enrichment.md)); provider summary shows registry counts with a full-list tooltip |
 | {2} | Track table | Dense, sticky header, hover highlight; mono numerics; one row per track; **row click opens the inspector drawer** (selected row tinted and marked `=`; click again or `Esc` closes) |
 | {3} | Status message | Reports the last action result (loaded / scan summary / error); middle shows provider status |
 | {4} | Scan progress | Current path + `scanned / total`; bar is determinate when total is known |
@@ -134,6 +134,12 @@ shipped screen so far.
 
 - **Scan Music Folder** → native picker → recursive scan → live rows → completion summary.
 - **Search** → instant client-side filter as you type.
+- **Filters** → dropdown for tempo range, Camelot keys, analysis status, genre and minimum
+  rating; **Apply filters** refetches from SQLite (draft state ⇒ one query for many filters),
+  **Reset all** clears filters and restores newest-first order; active filters render as
+  chips under the toolbar with a one-click clear.
+- **Sortable headers** (Title/Artist/BPM/Key/Time/`#`) → toggle asc/desc and refetch; unknown
+  BPM/key values stay last.
 - **Refresh (⟳)** → reload the list (icon spins while loading).
 - **Row click** → opens the inspector drawer ([wireframe 12](./12-discovery-enrichment.md)):
   similar tracks, gap chips, buy-links. Click again / `✕` / `Esc` closes.

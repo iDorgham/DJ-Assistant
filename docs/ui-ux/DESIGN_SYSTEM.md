@@ -181,7 +181,9 @@ Each entry lists purpose, anatomy, states, and where it lives in code today.
 ### 7.3 Search input
 - **Anatomy:** leading `Search` icon, `pl-9`, placeholder, `rounded-md`, bordered.
 - **States:** rest, focus (`focus:border-blue-500`), populated.
-- **Behaviour:** filters client-side across title, artist, album, path (Phase 0).
+- **Behaviour:** filters client-side across title, artist, album, path (Phase 0). Structured
+  filters (tempo, key, status, genre, rating) are a separate dropdown that applies
+  server-side in SQL (Phase 2 · T2.1.2); draft state + explicit Apply keeps it to one query.
 
 ### 7.4 Progress bar (scan / analysis)
 - **Anatomy:** label line (current item + counts) above a track with a fill bar.

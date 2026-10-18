@@ -415,7 +415,8 @@ Wired in `apps/desktop/src-tauri/src/lib.rs`:
 | Command | Purpose |
 |---------|---------|
 | `scan_folder` | Canonicalize path, run recursive scan, cache artwork, emit progress events |
-| `list_tracks` | Searchable, paginated track list (title/artist/album/path search) |
+| `list_tracks` | Server-side search + filters (BPM/key/status/genre/rating), sort and pagination; returns the matching `total` |
+| `list_genres` | Distinct non-empty genre tags with track counts (filter-panel options) |
 | `get_track` | Full track detail incl. cue points |
 | `get_artwork` | Serve cached cover art as a `data:` URL (or `null`) |
 | `analyze_library` | Queue local analysis for all/selected tracks (version-aware skip, `force` supported) |
@@ -768,14 +769,26 @@ The full-pipeline entry point is
 per-analyzer graceful degradation (a single detector failure does not void the
 rest).
 
-### 17.3 Phases 2–4 — core planned; discovery/enrichment early slices live
+### 17.3 Phase 2 — Library Intelligence — 🚧 STARTED (library query slice shipped)
 
-Library intelligence/tag cleanup, set builder/export, and the skills/cloud/beta
-phases are planned but not begun as full phases. Live today inside the library
-screen (non-gating, post-MVP scope): local similar-track scoring + inspector
-(TF.1/TF.4), Tag Health modal (TF.4/TE.3–TE.4), provider status + store links
-(TF.2/TF.4), opt-in enrichment preview → apply → undo (TE.1–TE.3), Deezer live
-match (TM.2a), chart snapshots + Charts modal (TD.3).
+Tag cleanup, duplicates/versions, health score, cues and waveform work are still
+planned. The first Phase 2 slice landed on top of the Phase 0/1 foundations:
+
+- ✅ **T2.1.2 Library multi-filter + sorting** — `crates/core/src/library_query.rs`
+  builds the complete `list_tracks` statement (server-side, parameterized):
+  free-text search with `ESCAPE`, BPM range, Camelot key / analysis-status / genre
+  `IN` lists, rating floor, and an allow-listed sort with NULLs-last plus an `id`
+  pagination tiebreaker. `list_tracks` honours `filters`/`sortBy`/`sortDir` and
+  reports a matching `total`; new `list_genres` powers the genre options.
+  UI: Filters dropdown (tempo range, 24 Camelot keys, four analysis statuses,
+  genre counts, minimum rating) with draft → Apply/Reset, active-filter chips, and
+  sortable column headers. The search box stays client-side over the
+  server-filtered page, so typing remains instant.
+
+Live today inside the library screen (non-gating, post-MVP scope): local
+similar-track scoring + inspector (TF.1/TF.4), Tag Health modal (TF.4/TE.3–TE.4),
+provider status + store links (TF.2/TF.4), opt-in enrichment preview → apply → undo
+(TE.1–TE.3), Deezer live match (TM.2a), chart snapshots + Charts modal (TD.3).
 
 ### 17.4 Test and quality status
 
@@ -958,8 +971,11 @@ items on 4–6 week cycles.
   drift.
 - Current status snapshot: **Phase 0 complete** (P0.1–P0.8 pass); **Phase 1 in
   progress** (analysis engine tasks T1.1.1–T1.1.8 and T1.2.1–T1.2.6 shipped; the
-  P1.x exit criteria are still being verified); **Phases 2–4 not started**. Live
-  post-MVP foundations: TF.1–TF.6, TD.3, TE.1–TE.4, TM.1/TM.2a.
+  P1.x exit criteria are still being verified); **Phase 2 started** with the library
+  multi-filter/sorting slice (T2.1.2 implemented; manual running-window QA still
+  pending) — tag cleanup, duplicates/versions, health score, cues and waveform work
+  remain; **Phases 3–4 not started**. Live post-MVP foundations: TF.1–TF.6, TD.3,
+  TE.1–TE.4, TM.1/TM.2a.
 - Prefer editing the canonical document first, then reflecting the change here.
 
 ---
