@@ -3,6 +3,10 @@
 **Status:** Living — 2026-10-14
 **Companions:** [UX Principles](./UX_PRINCIPLES.md) · [Design System](./DESIGN_SYSTEM.md) · [Screens & Flows](./SCREENS_AND_FLOWS.md)
 
+> **Superseded (2026-10-19):** current accessibility and keyboard rules live in
+> [`docs/ui/10-ACCESSIBILITY-AND-KEYBOARD.md`](../ui/10-ACCESSIBILITY-AND-KEYBOARD.md).
+> This document is kept as a historical reference for the Phase 0 UI.
+
 Accessibility is part of "the DJ is in control": if a control cannot be reached, read, or
 understood, the control is not real. This document states the target, records what the
 Phase 0 UI already does, and lists what still needs work.

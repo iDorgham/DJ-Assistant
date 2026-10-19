@@ -3,6 +3,10 @@
 **Status:** Living — 2026-10-14
 **Companions:** [UX Principles](../UX_PRINCIPLES.md) · [Design System](../DESIGN_SYSTEM.md) · [Screens & Flows](../SCREENS_AND_FLOWS.md)
 
+> **Superseded (2026-10-19):** current screen specs live in
+> [`docs/ui/`](../../ui/README.md). These wireframes are kept as a historical reference
+> for the Phase 0 UI.
+
 Low-fidelity structural wireframes for every screen. They show **layout, hierarchy,
 states, and interaction affordances** — not final pixels. Visual tokens live in
 [DESIGN_SYSTEM.md](../DESIGN_SYSTEM.md); behaviour and flows live in

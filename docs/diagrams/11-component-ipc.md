@@ -5,7 +5,9 @@ Major desktop components and how they communicate.
 ```mermaid
 flowchart TB
     subgraph React["React UI Layer"]
+        SHELL[App Shell<br/>header • collapsible nav • options bar]
         LIB[Library Browser]
+        PLAYER[Player Dock<br/>Hidden · Mini · Full]
         WAVE[Waveform Canvas]
         ENERGY[Energy Canvas]
         SETUI[Set Builder UI]

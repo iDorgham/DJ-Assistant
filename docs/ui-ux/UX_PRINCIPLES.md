@@ -4,6 +4,9 @@
 **Companions:** [Design System](./DESIGN_SYSTEM.md) · [Screens & Flows](./SCREENS_AND_FLOWS.md) · [Accessibility](./ACCESSIBILITY.md)
 **Source of truth:** [Canonical Documentation](../product/CANONICAL_DOCUMENTATION.md) §2, §7, §8
 
+> **Superseded (2026-10-19):** current UI/UX specs live in [`docs/ui/`](../ui/README.md).
+> This document is kept as a historical reference for the Phase 0 UI.
+
 This document explains **who we design for, what job the interface does, and the rules
 every screen must follow.** It is the "why" behind the visual system in
 [DESIGN_SYSTEM.md](./DESIGN_SYSTEM.md).

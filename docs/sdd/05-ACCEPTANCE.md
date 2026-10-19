@@ -72,6 +72,7 @@ These apply to every phase and to MVP:
 | P2.10 | Beat jump ±1/4/8/16/32 is grid-quantized; seek <100ms; temp loop 4/8/16 previews cleanly | Manual + timed check |
 | P2.11 | Grid overlay matches analysis (halve/double + nudge persist via F-3); low-confidence grids flagged | Manual + fixture |
 | P2.12 | Player guardrails hold: single-deck only, no crossfade/FX/record, no network/streaming source | Manual + code review |
+| P2.13 | App shell routes Library/Preparation/Auto Performance via the header and Ctrl/Cmd+1–3; left nav collapses; theme cycles dark/light/system; player dock switches Hidden/Mini/Full; view, nav, theme, and player mode persist across reload | Manual test script |
 
 **Phase 2 is accepted only when all P2.x criteria pass.**
 

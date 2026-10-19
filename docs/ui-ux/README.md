@@ -4,10 +4,10 @@
 **Audience:** Frontend engineers, product, design, and AI agents building the desktop UI
 **Scope:** The visual language, interaction model, screens, and accessibility rules for the Tauri desktop app
 
-> This folder is the home for interface design. Product and technical truth lives in the
-> [Canonical Documentation](../product/CANONICAL_DOCUMENTATION.md); the workstation layout
-> there (§7) is the origin of the screen specs here. When the two disagree, the Canonical
-> Documentation wins and this folder is corrected.
+> **Superseded (2026-10-19):** Current UI/UX specs live in [`docs/ui/`](../ui/README.md) —
+> [design system](../ui/01-DESIGN-SYSTEM.md), [shell & navigation](../ui/02-SHELL-AND-NAVIGATION.md),
+> and the per-view screen specs. This folder is kept as a historical reference for the
+> Phase 0 UI; where it conflicts with `docs/ui/`, `docs/ui/` wins.
 
 ---
 
@@ -23,7 +23,10 @@
 
 ---
 
-## Where the UI is today
+## Where the UI was (2026-10-14 snapshot)
+
+> Historical: this table predates the T2.1.0 app shell. See
+> [`docs/ui/`](../ui/README.md) for the current shell, screens, and player.
 
 The desktop app is a **dark-first Tauri v2 shell**. The only screen shipped so far is the
 **Phase 0 Library** view: scan a folder, watch live progress, and browse a dense track

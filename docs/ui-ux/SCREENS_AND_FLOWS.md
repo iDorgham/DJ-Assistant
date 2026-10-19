@@ -4,6 +4,12 @@
 **Companions:** [UX Principles](./UX_PRINCIPLES.md) · [Design System](./DESIGN_SYSTEM.md) · [Accessibility](./ACCESSIBILITY.md)
 **Source of truth:** [Canonical Documentation](../product/CANONICAL_DOCUMENTATION.md) §7 (Workstation Interface Specifications)
 
+> **Superseded (2026-10-19):** current screen specs live in [`docs/ui/`](../ui/README.md) —
+> [shell](../ui/02-SHELL-AND-NAVIGATION.md), [library](../ui/03-LIBRARY-VIEW.md),
+> [preparation](../ui/04-PREPARATION-VIEW.md), [auto performance](../ui/05-AUTO-PERFORMANCE-VIEW.md),
+> [player](../ui/06-PLAYER.md). This document is kept as a historical reference for the
+> Phase 0 UI.
+
 This document inventories every screen, shows its layout, and traces the end-to-end user
 flows. **Phase 0 screens are implemented**; later screens are specifications from the
 canonical workstation design and are marked with their phase.

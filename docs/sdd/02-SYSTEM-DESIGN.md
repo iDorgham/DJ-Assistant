@@ -22,6 +22,7 @@
 ┌─────────────────────────────────────────────────────────────┐
 │                    TAURI v2 DESKTOP APP                     │
 │  React + TypeScript UI  ←──IPC──→  Rust Core Backend        │
+│  • App Shell (nav · options bar · player dock)              │
 │  • Library Browser                                           │
 │  • Waveform / Energy Canvas                                  │
 │  • Set Builder UI                                            │

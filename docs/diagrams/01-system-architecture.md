@@ -5,7 +5,7 @@ High-level view of the Tauri desktop companion and optional cloud control plane.
 ```mermaid
 flowchart TB
     subgraph Desktop["TAURI v2 DESKTOP COMPANION"]
-        UI["UI Layer<br/>React + TypeScript<br/>Waveform • Energy Canvas • Skills Panel • Set Builder"]
+        UI["UI Layer<br/>React + TypeScript<br/>App Shell • Library • Player Dock • Waveform • Energy Canvas • Skills Panel • Set Builder"]
         IPC[["IPC (JSON)"]]
         Rust["Rust Core Backend<br/>Watch Folders • SQLite • Rule Engine<br/>BLAKE3 • Metadata • Export"]
         Audio["Native Audio Engine<br/>Symphonia • ONNX Runtime<br/>BPM • Key • Phrases • Vocals • Loudness"]

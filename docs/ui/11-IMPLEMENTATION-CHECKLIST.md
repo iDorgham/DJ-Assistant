@@ -4,24 +4,29 @@
 
 Use this as the UI build order and acceptance gate.
 
+**Status (2026-10-19):** Phase A foundations, Phase B shell, and the Phase D dock
+shell are implemented on `feat/T2.1.0-shell-ui` (pending merge). Player playback,
+waveform, and cue/grid controls remain T2.4; unchecked boxes are either not yet
+implemented or belong to later phases.
+
 ---
 
 ## Phase A — Foundations
 
-- [ ] Design tokens (color L0–L3, text, accent, space, radius, type)  
-- [ ] ThemeProvider dark/light  
+- [x] Design tokens (color L0–L3, text, accent, space, radius, type)  
+- [x] ThemeProvider dark/light (hook-based theme resolution + `data-theme`; system mode included)  
 - [ ] DensityProvider compact/comfortable  
-- [ ] Lucide icon setup  
-- [ ] Inter + mono font loading  
-- [ ] Motion helpers + reduced-motion  
+- [x] Lucide icon setup  
+- [ ] Inter + mono font loading (stacks declared; no webfont bundled yet)  
+- [ ] Motion helpers + reduced-motion (global reduced-motion rule only)  
 
 ## Phase B — Shell
 
-- [ ] AppShell layout slots  
+- [x] AppShell layout slots  
 - [ ] Menu bar (all sections)  
-- [ ] Header + view switcher  
-- [ ] Options bar (three contexts)  
-- [ ] LeftNav expand/collapse + icons  
+- [x] Header + view switcher  
+- [x] Options bar (three contexts)  
+- [x] LeftNav expand/collapse + icons  
 - [ ] Splitters + persistence  
 - [ ] Workspaces (Library / Prepare / Validate / save)  
 - [ ] Command palette  
@@ -30,15 +35,15 @@ Use this as the UI build order and acceptance gate.
 
 - [ ] TrackTable virtualized  
 - [ ] ColumnPicker show/hide/reorder/resize  
-- [ ] SearchField  
-- [ ] FilterBar + chips + Compatible only  
+- [x] SearchField  
+- [x] FilterBar + chips (Compatible-only toggle not yet)  
 - [ ] KeyPill harmonic coloring  
 - [ ] BulkActionBar + Undo toast  
-- [ ] Empty states  
+- [x] Empty states  
 
 ## Phase D — Player
 
-- [ ] PlayerDock Mini / Full / Hidden  
+- [x] PlayerDock Mini / Full / Hidden (layout + mode switching; transport, waveform, cues, and grid are T2.4)  
 - [ ] WaveformDetailed + WaveformOverview  
 - [ ] Playhead seek/scrub  
 - [ ] Transport Play↔Pause, Cue, Stop  

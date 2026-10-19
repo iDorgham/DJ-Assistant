@@ -96,6 +96,7 @@ Phases intentionally overlap once foundations exist.
 **Goal:** Professional library experience + Smart Tag Cleanup that works on real messy libraries.
 
 ### Major Deliverables
+- App shell: three routed views (Library / Preparation / Auto Performance), collapsible left nav, per-view options bar, dark/light/system theming, player dock slot (T2.1.0)
 - Full library browser (search, filter, bulk actions)
 - Tag Surgeon (fuzzy clustering, canonicalization, aliases, preview, undo)
 - Duplicate + version detection

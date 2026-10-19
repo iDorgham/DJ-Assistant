@@ -17,6 +17,7 @@ flowchart TB
         direction TB
 
         subgraph UI["React + TypeScript UI"]
+            SHELL[App Shell<br/>header • nav • options bar • player dock]
             LIB[Library Browser]
             WAVE[Waveform + Energy Canvas]
             SETUI[Set Builder]
