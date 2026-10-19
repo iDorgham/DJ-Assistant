@@ -1,6 +1,6 @@
 # DJ Assistant — Accessibility
 
-**Status:** Living — 2026-10-14
+**Status:** Superseded — historical (2026-10-14)
 **Companions:** [UX Principles](./UX_PRINCIPLES.md) · [Design System](./DESIGN_SYSTEM.md) · [Screens & Flows](./SCREENS_AND_FLOWS.md)
 
 > **Superseded (2026-10-19):** current accessibility and keyboard rules live in

@@ -116,6 +116,7 @@ Earlier set — [`ui-ux/`](./ui-ux/):
 | [SCREENS_AND_FLOWS.md](./ui-ux/SCREENS_AND_FLOWS.md) | Screen inventory, wireframes, and end-to-end flows per phase |
 | [wireframes/](./ui-ux/wireframes/README.md) | Low-fidelity structural wireframes for every screen (00–12) |
 | [ACCESSIBILITY.md](./ui-ux/ACCESSIBILITY.md) | WCAG targets, contrast findings, keyboard model, motion, test checklist |
+| [PLAYER_AND_LAYOUT_SPEC_2026-10-19.md](./ui-ux/PLAYER_AND_LAYOUT_SPEC_2026-10-19.md) | Historical v1.7 app shell / player / layout proposal |
 
 ## Decisions — [`ADR/`](./ADR/)
 
