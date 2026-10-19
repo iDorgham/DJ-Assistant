@@ -41,3 +41,6 @@ pnpm-debug.log*
 
 # uv-managed Python environments (hash-named install dirs)
 b5bf2e54cb654f7b/
+
+# brainstorming visual companion session artifacts
+.superpowers/
