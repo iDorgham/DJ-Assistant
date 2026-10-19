@@ -10,6 +10,7 @@ flowchart TB
         A3[BLAKE3 + Dedup]
         A4[SQLite Schema]
         A5[Metadata Extraction]
+        A6[App Shell + Theming]
     end
 
     subgraph WS2["WS2 — Audio Analysis Engine"]

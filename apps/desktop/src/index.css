@@ -1,25 +1,108 @@
 @import "tailwindcss";
 
-/* Design tokens, previously `theme.extend.colors` in tailwind.config.js.
-   Tailwind v4 exposes them as `--color-*` theme variables (e.g. `bg-dj-card`). */
+/* Semantic tokens from docs/ui/01-DESIGN-SYSTEM.md. Utilities resolve through
+   CSS variables so [data-theme="light"] swaps the entire palette. */
 @theme {
-  --color-dj-bg: #0f1117;
-  --color-dj-surface: #181b24;
-  --color-dj-card: #1e2230;
-  --color-dj-border: #2a2f42;
-  --color-dj-accent: #3b82f6;
-  --color-dj-neon: #06b6d4;
-  --color-dj-text: #f1f5f9;
-  --color-dj-muted: #94a3b8;
+  --color-dj-bg: var(--surface-0);
+  --color-dj-panel: var(--surface-1);
+  --color-dj-elevated: var(--surface-2);
+  --color-dj-overlay: var(--surface-3);
+  --color-dj-hover: var(--surface-hover);
+  --color-dj-active: var(--surface-active);
+  --color-dj-border: var(--border-subtle);
+  --color-dj-border-strong: var(--border-strong);
+  --color-dj-text: var(--text-primary);
+  --color-dj-text-secondary: var(--text-secondary);
+  --color-dj-text-muted: var(--text-muted);
+  --color-dj-inverse: var(--text-inverse);
+  --color-dj-on-accent: var(--text-on-accent);
+  --color-dj-accent: var(--accent);
+  --color-dj-accent-strong: var(--accent-strong);
+  --color-dj-success: var(--success);
+  --color-dj-warning: var(--warning);
+  --color-dj-danger: var(--danger);
+
+  --font-sans: "Inter", "Segoe UI", system-ui, -apple-system, sans-serif;
+  --font-mono: "IBM Plex Mono", "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
 }
 
-:root {
+:root,
+[data-theme="dark"] {
   color-scheme: dark;
+  --surface-0: #0e0f12;
+  --surface-1: #16181d;
+  --surface-2: #1c1f26;
+  --surface-3: #22262f;
+  --surface-hover: #242a36;
+  --surface-active: #2a3140;
+  --border-subtle: #2a2f3a;
+  --border-strong: #3a4356;
+  --text-primary: #e8eaed;
+  --text-secondary: #9aa3b2;
+  --text-muted: #8a92a0;
+  --text-inverse: #0e0f12;
+  --text-on-accent: #0e0f12;
+  --accent: #2dd4bf;
+  --accent-strong: #14b8a6;
+  --success: #22c55e;
+  --warning: #f59e0b;
+  --danger: #ef4444;
+}
+
+[data-theme="light"] {
+  color-scheme: light;
+  --surface-0: #f0f1f3;
+  --surface-1: #ffffff;
+  --surface-2: #ffffff;
+  --surface-3: #ffffff;
+  --surface-hover: #eef0f4;
+  --surface-active: #e8ebf0;
+  --border-subtle: #e4e6eb;
+  --border-strong: #c5cad3;
+  --text-primary: #111827;
+  --text-secondary: #4b5563;
+  --text-muted: #5f6672;
+  --text-inverse: #ffffff;
+  --text-on-accent: #ffffff;
+  --accent: #0f766e;
+  --accent-strong: #115e59;
+  --success: #16a34a;
+  --warning: #d97706;
+  --danger: #dc2626;
+}
+
+html,
+body,
+#root {
+  height: 100%;
 }
 
 body {
   margin: 0;
   min-height: 100vh;
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  background: var(--surface-0);
+  color: var(--text-primary);
+  font-family:
+    "Inter",
+    "Segoe UI",
+    system-ui,
+    -apple-system,
+    sans-serif;
+  font-size: 13px;
+  line-height: 1.35;
   user-select: none;
+}
+
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
 }

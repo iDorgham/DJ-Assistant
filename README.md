@@ -358,11 +358,11 @@ The monorepo contains three Node.js packages and two Rust crates:
 
 ## 🗺 Roadmap & Status
 
-**Phase 0 — Foundation is complete. Phase 1 — Analysis is in progress.** The slim MVP scope is Import → Analyze → Cue → Export; USB formatting, B2B collaboration, and advanced Skills land in Phase 1 (`TA.1–TA.14` tracked in [Tasks](./docs/sdd/04-TASKS.md)).
+**Phase 0 — Foundation is complete. Phase 1 — Analysis is implemented (exit verification pending). Phase 2 — Library Intelligence is in progress.** The slim MVP scope is Import → Analyze → Cue → Export; USB formatting, B2B collaboration, and advanced Skills land in Phase 1 (`TA.1–TA.14` tracked in [Tasks](./docs/sdd/04-TASKS.md)).
 
 - [x] **Phase 0 · Foundation** — folder picker → recursive scan → BLAKE3 fingerprinting → hash deduplication → tag extraction → local SQLite → fully searchable library with live progress UI.
-- [ ] **Phase 1 · Analysis** *(in progress)* — local ONNX pipeline: BPM, key, beat grid, phrase segmentation, vocal presence, EBU R128 loudness, composite `analysis_version`. Golden 50-track fixtures and a fixed benchmark spec (TA.6).
-- [ ] **Phase 2 · Library Intelligence** — track inspector, beatgrid editor, cue point templates, tag cleanup (preview → apply → undo + persistent aliases), library health score.
+- [ ] **Phase 1 · Analysis** *(implemented; P1.x exit verification pending)* — local ONNX pipeline: BPM, key, beat grid, phrase segmentation, vocal presence, EBU R128 loudness, composite `analysis_version`. Golden 50-track fixtures and a fixed benchmark spec (TA.6).
+- [ ] **Phase 2 · Library Intelligence** *(in progress — app shell + library filters)* — track inspector, beatgrid editor, cue point templates, tag cleanup (preview → apply → undo + persistent aliases), library health score.
 - [ ] **Phase 3 · Set Builder & Export** — locked scoring formula (TA.2), energy tag + LUFS + slider (TA.3), traffic-light mix-out indicators, set versioning/diff, rekordbox / Serato / USB verify + printed set sheet, CDJ validation.
 - [ ] **Phase 4 · Skills, Cloud & B2B** — skills panel + `skill_runs` undo (TA.4), Gig Ready flow, real-time B2B collaboration, contract codegen + settings schema validation (TA.5/TA.7), public beta.
 - [ ] **Post-MVP · Discovery, Enrichment & Streaming Export** — opt-in external similarity search, tag/artwork lookup (preview → apply → undo), Beatport release radar, multi-provider export (Spotify reference playlist, Deezer). Metadata only; no audio download, in-app streaming, or storage.

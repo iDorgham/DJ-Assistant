@@ -1,7 +1,7 @@
 # DJ Assistant — UI/UX Documentation
 
 **Version:** 1.0  
-**Status:** Approved for design & implementation  
+**Status:** Approved for design & implementation · App shell implemented (T2.1.0, pending merge)  
 **Date:** 2026-10-19  
 **Source of truth:** This folder. Earlier UI docs live in [`../ui-ux/`](../ui-ux/); where they overlap, this folder is newer.
 

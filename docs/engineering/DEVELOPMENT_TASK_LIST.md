@@ -1,8 +1,8 @@
 # DJ Assistant — Development Task List
 
-**Status:** Living document (Phase 1 complete; Phases 2–4 not started; Phase 0 accepted 2026-10-12)  
+**Status:** Living document (Phase 1 complete; Phase 2 in progress; Phase 0 accepted 2026-10-12)  
 **Source:** Detailed Build Plan v1.0 + Canonical Spec v1.1 + AI-Native Build Plan + audit TA.1–TA.14  
-**Last Updated:** 2026-10-16
+**Last Updated:** 2026-10-19
 
 This is the actionable engineering task list. Check items off as they are completed. Keep this document updated as scope is refined.
 
@@ -36,6 +36,13 @@ This is the actionable engineering task list. Check items off as they are comple
 > (`crates/analysis/tests/golden.rs`, TA.6). Remaining Phase 1 gaps: wiring ONNX model
 > files into the analyzers (the seams exist), the optional spectral-brightness feature,
 > and the fixed-hardware p50 bench.
+
+> **Phase 2 status (2026-10-19):** the T2.1.0 app shell is implemented on
+> `feat/T2.1.0-shell-ui` per [`docs/ui/`](../ui/README.md) — three routed views,
+> collapsible nav, per-view options bar, dark/light/system theming, persisted UI
+> state and a Hidden/Mini/Full player dock (layout only; playback is T2.4). The
+> T2.1.2 multi-filter slice (backend query + filter UI) is also implemented on the
+> same branch. Nothing in Phase 2 is merged or accepted yet.
 
 **Guiding Principles (do not violate):**
 - Desktop-first, local-first — core value must work offline
@@ -119,7 +126,8 @@ This is the actionable engineering task list. Check items off as they are comple
 **Goal:** Professional library UX + Smart Tag Cleanup that actually fixes messy DJ libraries.
 
 ### Library UX (WS3)
-- [ ] Full library browser: search, multi-filter (BPM, key, genre, rating, analysis status)
+- [x] App shell per `docs/ui/`: three views (Library / Preparation / Auto Performance), collapsible nav, options bar, theme cycle, player dock (T2.1.0 — implemented on `feat/T2.1.0-shell-ui`, pending merge)
+- [ ] Full library browser: search, multi-filter (BPM, key, genre, rating, analysis status) — *search + filters implemented, pending merge; saved views outstanding*
 - [ ] Bulk select + bulk edit
 - [ ] User ratings, tags, comments
 - [ ] Sort options and saved views (nice-to-have)

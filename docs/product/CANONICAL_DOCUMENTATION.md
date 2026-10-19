@@ -759,6 +759,29 @@ export interface GenerateSetResponse {
 
 ## 7. Workstation Interface Specifications
 
+**Interface authority:** [`docs/ui/`](../ui/README.md) is the current UI/UX
+specification (design system, app shell, screens, interactions). This section
+keeps the product-level *target* workstation — the set-building surface — and
+does not override the screen-level specs in `docs/ui/`.
+
+The **T2.1.0 app shell** (implemented on `feat/T2.1.0-shell-ui`, pending merge) is
+a three-view desktop workspace:
+
+- **Header** — brand mark, view switcher (Library / Preparation / Auto
+  Performance, Ctrl/Cmd+1–3), quiet status, theme cycle (dark/light/system),
+  hover volume, player show/hide.
+- **Left nav** — collapsible (220 / 48 px); Library and Sets are live, planned
+  destinations are disabled and marked "Soon".
+- **Options bar** — view-scoped actions (library search, filters, scan,
+  analyze, refresh, tag health, charts).
+- **Player dock** — one slot with Hidden / Mini (80 px) / Full (236 px) modes;
+  layout and controls are present, playback lands with T2.4.
+- **Preparation / Auto Performance** — routed placeholder screens until Phase 3.
+
+The workstation diagram below is the **target Preparation / Auto Performance
+workspace** (energy curve, dual-waveform transitions, alternatives, Skills,
+Gig Ready), scheduled across Phase 3–4.
+
 ```
 ┌─────────────────────────────────────────────────────────────────────────────┐
 │ DJ ASSISTANT WORKSTATION                    [GIG READY] [EXPORT] [SKILLS]   │
@@ -841,6 +864,7 @@ To protect user media libraries, all operations adhere to strict system boundari
 | Feature                                             | Priority |
 | --------------------------------------------------- | -------- |
 | Desktop app (Tauri v2)                              | P0       |
+| App shell (three views, collapsible nav, player dock) | P0     |
 | Track import (folder scan, metadata)                | P0       |
 | Local audio analysis (BPM, key, beat grid, phrases) | P0       |
 | Track library (browse, search, filter)              | P0       |
@@ -851,7 +875,7 @@ To protect user media libraries, all operations adhere to strict system boundari
 | Smart Tag Cleanup (artist/producer normalization)   | P1       |
 | Track embeddings (CLAP)                             | P1       |
 | Natural language search                             | P1       |
-| Mini player (waveform preview)                      | P1       |
+| Preview player (dock Hidden/Mini/Full, waveform preview) | P1  |
 | Prep Auditor Skill + Gig Ready workflow             | P1       |
 | Set Templates + Lock & Fill                         | P1       |
 | Collaborative / B2B shared sets                     | P2       |

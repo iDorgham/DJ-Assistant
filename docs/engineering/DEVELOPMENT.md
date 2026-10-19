@@ -52,6 +52,8 @@ dj-assistant/
 │   ├── devops/                  #   CI/CD plans + workflow templates
 │   ├── sdd/                     #   spec → design → plan → tasks → acceptance
 │   ├── diagrams/                #   Mermaid diagrams
+│   ├── ui/                      #   current UI/UX spec (design system, shell, screens)
+│   ├── ui-ux/                   #   historical UI/UX set (superseded by ui/)
 │   ├── ADR/                     #   architecture decision records
 │   └── evidence/                #   acceptance evidence
 ├── scripts/                     # Dev scripts (setup, model download, etc.)

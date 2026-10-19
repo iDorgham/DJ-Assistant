@@ -3,9 +3,11 @@
 Source SVG artwork for DJ Assistant. Files here are **sources**: rasterise or
 inline them as needed; do not hand-edit exported PNGs.
 
-The visual language is defined in [`docs/ui-ux/DESIGN_SYSTEM.md`](../docs/ui-ux/DESIGN_SYSTEM.md).
+The visual language is defined in [`docs/ui/01-DESIGN-SYSTEM.md`](../docs/ui/01-DESIGN-SYSTEM.md).
 When you change a colour or shape here, check that document so the code, docs,
-and artwork do not drift.
+and artwork do not drift. The values below are the fixed colours baked into these
+SVG sources; the app's semantic UI tokens (and their light-theme variants) live in
+the design system and `apps/desktop/src/index.css`.
 
 ## Palette
 
@@ -16,7 +18,7 @@ and artwork do not drift.
 | Tile sheen | `#FFFFFF` @ 8% | Top-edge highlight for depth |
 | EQ top / bottom | `#5CE1FF` → `#0090FF` | Equaliser bars (signature mark) |
 | Brand gradient | `#2563EB` → `#22D3EE` | In-app tile (blue-600 → cyan-400) |
-| Canvas | `#0F1117` | App background |
+| Canvas | `#0F1117` | Banner / social-card background |
 | Text primary | `#F1F5F9` | Wordmark on dark |
 | Text muted | `#94A3B8` | Taglines, secondary copy |
 | Text dim | `#64748B` | Captions, footer copy |
@@ -48,8 +50,9 @@ and artwork do not drift.
   resolves to black — set an explicit `fill` on the root `<svg>` if you need another
   colour.
 - **Iconography inside the product** comes from
-  [`lucide-react`](../docs/ui-ux/DESIGN_SYSTEM.md) §5, not from this folder. Only
-  brand artwork lives here.
+  [`lucide-react`](../docs/ui/01-DESIGN-SYSTEM.md) (design system §7, with the
+  per-component assignments in [`docs/ui/09-COMPONENTS.md`](../docs/ui/09-COMPONENTS.md)),
+  not from this folder. Only brand artwork lives here.
 - **Rasterising:** `scripts/make_icon.py` generates `app-icon.png`, which
   `tauri icon` expands into the platform icon set. It mirrors `logo.svg`; when you
   change that icon, update the script and re-run `python scripts/make_icon.py`
@@ -69,5 +72,6 @@ favicon changes.
 
 ## Previews
 
-Open any file directly in a browser, or open
-[`docs/ui-ux/`](../docs/ui-ux/) for the wireframes these assets sit alongside.
+Open any file directly in a browser, or open [`docs/ui/`](../docs/ui/) for the
+current screen specs these assets sit alongside. The earlier wireframes remain in
+[`docs/ui-ux/wireframes/`](../docs/ui-ux/wireframes/) for history.

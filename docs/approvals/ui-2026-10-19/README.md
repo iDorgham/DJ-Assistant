@@ -90,6 +90,8 @@ for TE.3 sign-off.
 ### F5 — Header badge is stale · P3
 The app header still shows **"Phase 0 Foundation"** while the project is in Phase 2
 (T2.1.2 shipped). Cosmetic but user-visible.
+**Resolved (2026-10-19, T2.1.0 shell):** the badge was removed; the header now shows a
+quiet status readout and the view switcher instead of a phase label.
 
 ### F6 — Dev-only React warning for table rows · P3
 Console error on every render: `In HTML, whitespace text nodes cannot be a child of <tr>`

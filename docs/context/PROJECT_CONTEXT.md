@@ -1,7 +1,7 @@
 # DJ Assistant — Project Context
 
 **Document type:** Consolidated application, plan, and progress reference
-**Status:** Living — snapshot as of 2026-10-14 (audit TA.1–TA.14 integrated)
+**Status:** Living — snapshot as of 2026-10-19 (audit TA.1–TA.14 integrated; T2.1.0 shell + T2.1.2 filters reflected)
 **Audience:** Engineers, product, AI agents, and anyone who needs the full picture in one place
 **Source of truth:** [`docs/product/CANONICAL_DOCUMENTATION.md`](../product/CANONICAL_DOCUMENTATION.md) (product + technical) and [`docs/sdd/`](../sdd/README.md) (plan, tasks, acceptance). Audit findings live in [`docs/audit/`](../audit/README.md) and are tracked as `TA.x` tasks in [`docs/sdd/04-TASKS.md`](../sdd/04-TASKS.md).
 
@@ -476,32 +476,42 @@ Hardware validation on Pioneer **CDJ-2000NXS2 / CDJ-3000** is a phase exit gate 
 ### 11.6 Desktop UI surface
 
 The desktop UI is a **dark-first Tauri v2 shell** (React + TypeScript + Tailwind
-v4). Only the **Phase 0 Library** screen is shipped; every other screen is a
-documented specification marked with the phase it belongs to. Full documentation:
-[`docs/ui-ux/`](../ui-ux/), including per-screen low-fidelity wireframes in
-[`docs/ui-ux/wireframes/`](../ui-ux/wireframes/README.md).
+v4). [`docs/ui/`](../ui/README.md) is the **current interface authority** — design
+system, shell, screens, and interaction contracts. [`docs/ui-ux/`](../ui-ux/) is
+the earlier UI/UX set, kept for history and superseded where it conflicts.
+
+The T2.1.0 shell implements three routed views (Library / Preparation / Auto
+Performance), a collapsible left nav, a per-view options bar, dark/light/system
+theming with persisted UI state, and a one-slot player dock with Hidden / Mini /
+Full modes. Preparation and Auto Performance are documented placeholders until
+Phase 3; the player dock is layout-only until T2.4.
 
 | Surface | Phase | Status |
 |---------|-------|--------|
-| App shell (header / progress strip / toolbar / content / status bar) | 0 | ✅ Implemented |
-| Library (scan, live progress, dense track table, empty/error states) | 0 | ✅ Implemented |
+| App shell (header view switcher, collapsible nav, options bar, view router) | 2 | ✅ Implemented (T2.1.0) |
+| Theme system (dark/light/system, semantic tokens, persisted preference) | 2 | ✅ Implemented (T2.1.0) |
+| Player dock (Hidden/Mini/Full, artwork, metadata, transport placeholders) | 2 | ✅ Layout + mode switching; playback T2.4 |
+| Library (scan, live progress, dense track table, empty/error states) | 0 | ✅ Implemented, relocated into the shell |
 | Track inspector drawer (similar tracks, gap chips, buy-links) | 0 | ✅ Implemented |
 | Tag Health modal (per-field bars + gap list; online lookup shown as planned) | 0 | ✅ Implemented |
-| Provider status (toolbar summary + status-bar readout) | 0 | ✅ Implemented |
+| Provider status (options-bar summary + status readout) | 0 | ✅ Implemented |
 | Analysis (background progress + confidence review) | 1 | ⏳ In progress |
 | Track detail / inspector (tags vs analysis, provenance) | 2 | 📋 Planned |
 | Cue / waveform editor (markers, phrase bands, cue list) | 2–3 | 📋 Planned |
 | Tag cleanup (preview → apply → undo) | 2 | 📋 Planned |
-| Set builder (energy curve, dual-waveform transitions, alternatives) | 3 | 📋 Planned |
+| Preparation view (set builder, energy curve, transitions, alternatives) | 3 | 📋 Placeholder route |
+| Auto Performance view (automix + skills) | 3 | 📋 Placeholder route |
 | Export (rekordbox XML, Serato crate, CSV, USB pack) | 3 | 📋 Planned |
 | Spotify Playlist Export (connect → match review → publish → delete) | Post-MVP | 📋 Planned |
 | Skills panel (run / view / undo, global kill-switch) | 3–4 | 📋 Planned |
 | Gig Ready / Prep Auditor | 4 | 📋 Planned |
 | Collaboration (shared B2B set + pre-gig sync check) | 4 | 📋 Planned |
 
-**UI/UX docs:** [README](../ui-ux/README.md) · [UX Principles](../ui-ux/UX_PRINCIPLES.md)
-· [Design System](../ui-ux/DESIGN_SYSTEM.md) · [Screens & Flows](../ui-ux/SCREENS_AND_FLOWS.md)
-· [Wireframes](../ui-ux/wireframes/README.md) · [Accessibility](../ui-ux/ACCESSIBILITY.md).
+**UI/UX docs (current):** [README](../ui/README.md) · [Design System](../ui/01-DESIGN-SYSTEM.md)
+· [Shell & Navigation](../ui/02-SHELL-AND-NAVIGATION.md) · [Screens](../ui/03-LIBRARY-VIEW.md)
+· [Player](../ui/06-PLAYER.md) · [Accessibility](../ui/10-ACCESSIBILITY-AND-KEYBOARD.md).  
+**Historical:** [ui-ux README](../ui-ux/README.md) · [Design System](../ui-ux/DESIGN_SYSTEM.md)
+· [Screens & Flows](../ui-ux/SCREENS_AND_FLOWS.md) · [Wireframes](../ui-ux/wireframes/README.md).
 
 ---
 
@@ -769,11 +779,16 @@ The full-pipeline entry point is
 per-analyzer graceful degradation (a single detector failure does not void the
 rest).
 
-### 17.3 Phase 2 — Library Intelligence — 🚧 STARTED (library query slice shipped)
+### 17.3 Phase 2 — Library Intelligence — 🚧 STARTED (shell + library query slice)
 
 Tag cleanup, duplicates/versions, health score, cues and waveform work are still
-planned. The first Phase 2 slice landed on top of the Phase 0/1 foundations:
+planned. The first Phase 2 slices landed on top of the Phase 0/1 foundations:
 
+- ✅ **T2.1.0 App shell** — three routed views (Library / Preparation / Auto
+  Performance), header view switcher + Ctrl/Cmd+1–3, collapsible left nav, per-view
+  options bar, dark/light/system semantic tokens, persisted UI state, and the
+  Hidden/Mini/Full PlayerDock slot (layout only; playback is T2.4). Implemented on
+  `feat/T2.1.0-shell-ui`; not merged at the time of this snapshot.
 - ✅ **T2.1.2 Library multi-filter + sorting** — `crates/core/src/library_query.rs`
   builds the complete `list_tracks` statement (server-side, parameterized):
   free-text search with `ESCAPE`, BPM range, Camelot key / analysis-status / genre
@@ -943,7 +958,8 @@ Start at [`docs/README.md`](../README.md). The complete set:
 | SDD | [`docs/sdd/`](../sdd/) | Specification → design → plan → tasks (incl. audit `TA.x`) → acceptance |
 | Audit | [`docs/audit/`](../audit/) | Audit summary, specs/functions/settings audits, improvements, proposals |
 | Diagrams | [`docs/diagrams/`](../diagrams/) | 17 Mermaid diagrams incl. the entire-project overview |
-| UI/UX | [`docs/ui-ux/`](../ui-ux/) | Interface principles, design system, screens & flows, per-screen wireframes, accessibility |
+| UI/UX (current) | [`docs/ui/`](../ui/) | Design system, app shell, screens, player, interactions, motion, content |
+| UI/UX (historical) | [`docs/ui-ux/`](../ui-ux/) | Earlier principles, design system, screens & flows, wireframes, accessibility |
 | ADR | [`docs/ADR/`](../ADR/) | Architecture decision records |
 | Evidence | [`docs/evidence/`](../evidence/) | Acceptance screenshots |
 | Context | [`docs/context/`](./) | This consolidated project context |
@@ -971,7 +987,8 @@ items on 4–6 week cycles.
   drift.
 - Current status snapshot: **Phase 0 complete** (P0.1–P0.8 pass); **Phase 1 in
   progress** (analysis engine tasks T1.1.1–T1.1.8 and T1.2.1–T1.2.6 shipped; the
-  P1.x exit criteria are still being verified); **Phase 2 started** with the library
+  P1.x exit criteria are still being verified); **Phase 2 started** with the app shell
+  (T2.1.0 implemented on `feat/T2.1.0-shell-ui`) and the library
   multi-filter/sorting slice (T2.1.2 implemented; manual running-window QA still
   pending) — tag cleanup, duplicates/versions, health score, cues and waveform work
   remain; **Phases 3–4 not started**. Live post-MVP foundations: TF.1–TF.6, TD.3,
@@ -980,4 +997,4 @@ items on 4–6 week cycles.
 
 ---
 
-*Maintained under `docs/context/`. Last synthesized 2026-10-14.*
+*Maintained under `docs/context/`. Last synthesized 2026-10-19.*

@@ -2,7 +2,7 @@
 
 **SDD Artifact:** Concrete Engineering Tasks  
 **Status:** Living  
-**Last reconciled:** 2026-10-18 (Phase 2 started: T2.1.2 library multi-filter + sorting implementation shipped — manual running-window QA still pending. The 2026-10-16 reconciliation that corrected an over-optimistic pass, and the 2026-10-14 audit of T1.x / TF.x / TD.3 / TE.x / TM.x, remain current; Phase 3–4 are **not implemented**.)  
+**Last reconciled:** 2026-10-19 (T2.1.0 app shell implemented on `feat/T2.1.0-shell-ui` — three views, collapsible nav, per-view options bar, theme system, persisted UI state, PlayerDock Hidden/Mini/Full layout; playback and waveform remain T2.4. Not merged; checkbox stays open until acceptance. T2.1.2 library multi-filter + sorting implementation shipped — manual running-window QA still pending. The 2026-10-16 reconciliation that corrected an over-optimistic pass, and the 2026-10-14 audit of T1.x / TF.x / TD.3 / TE.x / TM.x, remain current; Phase 3–4 are **not implemented**.)  
 **How to use:** Work top-to-bottom within a phase. Mark tasks `[x]` when Definition of Done is met. Update dependencies as reality changes.
 
 > **Reconciliation note (2026-10-12):** Phase 0 items were checked off against a verified
@@ -101,7 +101,7 @@
 ## Phase 2 — Library Intelligence & Tag Cleanup (Days 31–55)
 
 ### 2.1 Library UX
-- [ ] **T2.1.0** App shell per `docs/ui/` — *header (view switcher Library/Preparation/Auto Performance + status + theme + hover volume + player toggle), collapsible left nav, per-view options bar, view router with documented empty states, PlayerDock Hidden/Mini/Full slot, design tokens retokened to docs/ui (accent teal #2DD4BF)*
+- [ ] **T2.1.0** App shell per `docs/ui/` — *header (view switcher Library/Preparation/Auto Performance + quiet status + theme cycle + hover volume + player toggle), collapsible left nav (220/48 px), per-view options bar, view router with documented placeholders, PlayerDock Hidden/Mini/Full (layout only; playback T2.4), semantic design tokens for dark/light/system (accent #2DD4BF dark / #0F766E light), persisted UI state (`dj-assistant.ui-state.v1`) and Ctrl/Cmd+1–3 shortcuts*
 - [ ] **T2.1.1** Search across title/artist/album/tags — *title/artist/album/path search already shipped in the Phase 0 library slice; tag-field search not yet*
 - [ ] **T2.1.2** Multi-filter (BPM, key, genre, rating, analysis status) — *implementation shipped in this PR; manual running-window QA still pending (Definition of Done requires it). Server-side: `crates/core/src/library_query.rs` builds the whole list query (free-text search with `ESCAPE`, BPM range, Camelot key/status/genre `IN` lists, rating floor, allow-listed sort with NULLs last and an `id` pagination tiebreaker; every value is a bound parameter, invalid ranges rejected — 17 unit tests). `list_tracks` now honours `filters`/`sortBy`/`sortDir` and reports a matching `total`; new `list_genres` supplies real genre options. UI: Filters dropdown (tempo range, 24 Camelot keys, the four analysis statuses, genre list with counts, minimum rating) with draft → Apply/Reset, active-filter chips, and sortable column headers. Covered by `tests/schema/tests/persistence.rs` (mirrored filtered SQL against the migrated schema + count/rows agreement) and 7 new TS helper tests.*
 - [ ] **T2.1.3** Bulk select + bulk metadata edit

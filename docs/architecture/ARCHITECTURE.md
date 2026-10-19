@@ -26,6 +26,7 @@
 │                                                                             │
 │  ┌─────────────────────────┐            ┌────────────────────────────────┐  │
 │  │   UI LAYER (React)      │◄──IPC─────►│ RUST CORE BACKEND              │  │
+│  │   • App Shell + Player  │  (JSON)    │ • Config + Paths               │  │
 │  │   • Waveform Canvas     │  (JSON)    │ • Watch Folders (notify)       │  │
 │  │   • Energy Graph Canvas │            │ • SQLite Local Metadata DB     │  │
 │  │   • Skill Control Panel │            │ • Local Rule Engine            │  │
