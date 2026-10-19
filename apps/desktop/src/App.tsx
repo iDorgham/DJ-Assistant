@@ -267,9 +267,9 @@ function LibraryFilterPanel({
     <div
       role="dialog"
       aria-label="Library filters"
-      className="absolute right-5 top-11 z-40 w-[430px] rounded-lg border border-dj-border bg-dj-panel shadow-2xl shadow-black/60"
+      className="absolute right-5 top-11 z-40 flex max-h-[calc(100%-3.5rem)] w-[430px] flex-col overflow-hidden rounded-lg border border-dj-border bg-dj-panel shadow-2xl shadow-black/60"
     >
-      <div className="flex items-center justify-between border-b border-dj-border px-4 py-2.5">
+      <div className="flex shrink-0 items-center justify-between border-b border-dj-border px-4 py-2.5">
         <div className="flex items-center gap-1.5 text-xs font-semibold text-dj-text">
           <SlidersHorizontal className="h-3.5 w-3.5 text-dj-accent" />
           <span>Library filters</span>
@@ -284,7 +284,7 @@ function LibraryFilterPanel({
         </button>
       </div>
 
-      <div className="max-h-[62vh] space-y-4 overflow-y-auto px-4 py-3">
+      <div className="min-h-0 flex-1 space-y-4 overflow-y-auto px-4 py-3">
         {/* BPM range */}
         <div>
           <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-wider text-dj-text-muted">
@@ -457,7 +457,7 @@ function LibraryFilterPanel({
         </p>
       </div>
 
-      <div className="flex items-center justify-between border-t border-dj-border px-4 py-2.5">
+      <div className="flex shrink-0 items-center justify-between border-t border-dj-border px-4 py-2.5">
         <button
           type="button"
           onClick={onReset}
@@ -1403,9 +1403,9 @@ export default function App() {
           {ui.view === "library" ? (
             <>
               {/* Main Content Area */}
-              <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
+              <div className="relative flex min-h-0 flex-1 flex-col overflow-hidden">
                 {/* Options bar — view-context actions (docs/ui/02) */}
-                <div className="relative flex h-8 shrink-0 items-center gap-1.5 border-b border-dj-border bg-dj-panel px-3">
+                <div className="flex h-8 shrink-0 items-center gap-1.5 border-b border-dj-border bg-dj-panel px-3">
                   <div className="relative w-64">
                     <Search className="absolute left-2.5 top-1.5 h-3.5 w-3.5 text-dj-text-muted" />
                     <input
