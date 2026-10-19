@@ -36,7 +36,8 @@ Body text (one short paragraph or list)
 
 - Bottom or top stack  
 - Message + optional **Undo**  
-- Auto-dismiss 4–6s; pause on hover  
+- Auto-dismiss 4–6s; pause on hover or while keyboard focus is inside the toast  
+- **Undo** toasts stay until the user acts or dismisses them  
 - Used after: bulk tag, cue generate, reorder, Skill apply  
 
 ---

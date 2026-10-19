@@ -422,8 +422,8 @@ Everything lives under [`docs/`](./docs/README.md). New here? Start with the [Ca
 <details>
 <summary><b>Design</b> — UI/UX, wireframes, diagrams, and decision records</summary>
 
-- [UI/UX Overview](./docs/ui-ux/README.md) · [UX Principles](./docs/ui-ux/UX_PRINCIPLES.md) · [Design System](./docs/ui-ux/DESIGN_SYSTEM.md)
-- [Screens & Flows](./docs/ui-ux/SCREENS_AND_FLOWS.md) · [Wireframes](./docs/ui-ux/wireframes/README.md) · [Accessibility](./docs/ui-ux/ACCESSIBILITY.md)
+- [UI Specification (current)](./docs/ui/README.md) · [Design System](./docs/ui/01-DESIGN-SYSTEM.md) · [Shell & Navigation](./docs/ui/02-SHELL-AND-NAVIGATION.md) · [Player](./docs/ui/06-PLAYER.md)
+- [Earlier UI/UX set](./docs/ui-ux/README.md) · [UX Principles](./docs/ui-ux/UX_PRINCIPLES.md) · [Screens & Flows](./docs/ui-ux/SCREENS_AND_FLOWS.md) · [Accessibility](./docs/ui-ux/ACCESSIBILITY.md) · [Wireframes](./docs/ui-ux/wireframes/README.md)
 - [Diagrams](./docs/diagrams/README.md) · [Entire-project overview](./docs/diagrams/00-ENTIRE-PROJECT-OVERVIEW.md)
 - [Architecture Decision Records](./docs/ADR/README.md)
 

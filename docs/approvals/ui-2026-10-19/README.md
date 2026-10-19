@@ -21,14 +21,14 @@ wireframes.
 
 | # | Implementation | Evidence | Verdict |
 |---|---|---|---|
-| 1 | Library table (dense rows, sticky header, artwork placeholder, fingerprint, indexed badge, provider counts) | `01`, `27` | **Approved** |
+| 1 | Library table (dense rows, sticky header, artwork placeholder, fingerprint, indexed badge, provider counts) | `01`, `27` | **Blocked by F1** (status column); layout approved |
 | 2 | Filter panel (tempo, 24 Camelot keys, 4 analysis states, genre counts, min rating) | `02`, `16` | **Approved** |
 | 3 | Server-side filtering + active-filter chips + count badge | `03` (genre → 42), `17` (BPM 120–130 + needs review → 22) | **Approved** |
 | 4 | Column sorting (BPM asc, NULLs last, `id` tiebreaker) | `15`, `27` | **Approved** |
 | 5 | Client-side instant search + filtered-empty state | `24` (2 of 94), `08` | **Approved** |
 | 6 | Inspector drawer: identity, gap chips, similar tracks, buy links, Esc close | `04`, `18`, `25` | **Approved** |
 | 7 | Tag Health modal: library score, gap totals, per-track gaps, explicit opt-in lookup | `06`, `21` | **Approved** |
-| 8 | Online enrichment preview (MusicBrainz) | `20` | **Approved with follow-up** (no proposals surfaced, see F4) |
+| 8 | Online enrichment preview (MusicBrainz) | `20` | **Partially exercised** — lookup/progress verified; proposal review → apply → undo not exercised (F4) |
 | 9 | Charts: empty state, sample-snapshot import, versioned list w/ taste filter | `07`, `23` | **Approved** |
 | 10 | Analyse queue: per-track progress, device rows, persistent results | `10`, `26`, `27`, `28` | **Approved with follow-up** (see F1–F3) |
 | 11 | Scan flow (re-scan of the 94-file folder) | `11` | **Approved** (progress strip too fast to catch) |

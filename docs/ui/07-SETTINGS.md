@@ -13,7 +13,6 @@ Shortcut: `Ctrl/Cmd+,`
 ### General
 - Language  
 - Startup view (Library / Preparation / Auto Performance / last used)  
-- Default density  
 - Confirm before quit  
 - Session restore on/off  
 
@@ -58,7 +57,8 @@ Shortcut: `Ctrl/Cmd+,`
 - Theme: Dark / Light / System  
 - Accent color (optional)  
 - Waveform color family  
-- Density default  
+- Density default (Compact / Comfortable)  
+- High-contrast playhead (on/off)  
 - UI scale note (target compact ~85%)  
 
 ### Keyboard

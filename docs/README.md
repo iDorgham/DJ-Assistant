@@ -19,7 +19,8 @@ each folder below is self-contained and cross-links to its neighbours.
 | [`devops/`](./devops/) | CI/CD plans, pipeline security, AI automation, workflow templates | [DevOps & CI/CD Plan](./devops/DEVOPS_CICD_PLAN.md) |
 | [`sdd/`](./sdd/) | Specification-Driven Development set (spec → design → plan → tasks → acceptance) | [SDD Overview](./sdd/README.md) |
 | [`diagrams/`](./diagrams/) | Mermaid diagrams for architecture, pipelines, phases, skills, data | [Entire Project Overview](./diagrams/00-ENTIRE-PROJECT-OVERVIEW.md) |
-| [`ui-ux/`](./ui-ux/) | Interface design: principles, design system, screens & flows, accessibility | [UI/UX Index](./ui-ux/README.md) |
+| [`ui/`](./ui/) | Current UI specification: design system, shell, views, player, settings, dialogs, accessibility | [UI Specification](./ui/README.md) |
+| [`ui-ux/`](./ui-ux/) | Earlier UI docs: principles, Phase 0 design system, screens & flows, wireframes (tokens superseded by `ui/`) | [UI/UX Index](./ui-ux/README.md) |
 | [`ADR/`](./ADR/) | Architecture Decision Records (the "why") | [ADR Index](./ADR/README.md) |
 | [`audit/`](./audit/) | Spec/function/settings audits + TA.1–TA.14 tracking | [Audit summary](./audit/AUDIT-SUMMARY.md) |
 | [`context/`](./context/) | Single-file project digest for humans + AI agents | [Project Context](./context/PROJECT_CONTEXT.md) |
@@ -93,7 +94,19 @@ each folder below is self-contained and cross-links to its neighbours.
 
 See the [diagram index](./diagrams/README.md) for the full set (00–17).
 
-## UI/UX — [`ui-ux/`](./ui-ux/)
+## UI/UX — [`ui/`](./ui/) and [`ui-ux/`](./ui-ux/)
+
+The 2026-10-19 specification in [`ui/`](./ui/README.md) is the current source for design tokens, the shell, views, and the player. The [`ui-ux/`](./ui-ux/) set is the earlier Phase 0 design documentation; its design system is superseded by [`ui/01-DESIGN-SYSTEM.md`](./ui/01-DESIGN-SYSTEM.md).
+
+| Document | Purpose |
+|----------|---------|
+| [ui/README.md](./ui/README.md) | Current UI spec index and document map |
+| [ui/01-DESIGN-SYSTEM.md](./ui/01-DESIGN-SYSTEM.md) | Design tokens (current) |
+| [ui/02-SHELL-AND-NAVIGATION.md](./ui/02-SHELL-AND-NAVIGATION.md) | Shell, navigation, workspaces |
+| [ui/06-PLAYER.md](./ui/06-PLAYER.md) | Player modes, waveform, cues, grid |
+| [ui/11-IMPLEMENTATION-CHECKLIST.md](./ui/11-IMPLEMENTATION-CHECKLIST.md) | Build order and acceptance gate |
+
+Earlier set — [`ui-ux/`](./ui-ux/):
 
 | Document | Purpose |
 |----------|---------|

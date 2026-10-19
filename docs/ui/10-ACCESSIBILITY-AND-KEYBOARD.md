@@ -9,7 +9,7 @@
 - WCAG AA contrast for text and essential controls  
 - Visible focus rings on all interactive elements  
 - `prefers-reduced-motion` honored (instant/fade only)  
-- Icon-only controls have accessible names (aria-label / tooltip)  
+- Icon-only controls have an accessible name (`aria-label`, `aria-labelledby`, or a visible label); tooltips are supplemental, never the only name  
 - Transport and hot cues announced reasonably for screen readers  
 - High-contrast playhead option in Appearance  
 - Do not rely on color alone for key compatibility (pill shape + text)  
