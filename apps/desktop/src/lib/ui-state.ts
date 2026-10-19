@@ -1,6 +1,7 @@
 export type AppView = "library" | "preparation" | "autoPerformance";
 export type ThemeMode = "dark" | "light" | "system";
 export type PlayerMode = "hidden" | "mini" | "full";
+export type VisiblePlayerMode = Exclude<PlayerMode, "hidden">;
 
 export interface UiState {
   view: AppView;
@@ -8,7 +9,7 @@ export interface UiState {
   theme: ThemeMode;
   playerMode: PlayerMode;
   /** Restored when the player is toggled back from Hidden. */
-  lastVisiblePlayerMode: PlayerMode;
+  lastVisiblePlayerMode: VisiblePlayerMode;
 }
 
 export type UiAction =
@@ -29,13 +30,14 @@ export const DEFAULT_UI_STATE: UiState = {
   view: "library",
   navCollapsed: false,
   theme: "dark",
-  playerMode: "hidden",
+  playerMode: "mini",
   lastVisiblePlayerMode: "mini",
 };
 
 const VIEWS: readonly AppView[] = ["library", "preparation", "autoPerformance"];
 const THEMES: readonly ThemeMode[] = ["dark", "light", "system"];
 const PLAYER_MODES: readonly PlayerMode[] = ["hidden", "mini", "full"];
+const VISIBLE_PLAYER_MODES: readonly VisiblePlayerMode[] = ["mini", "full"];
 
 function oneOf<T extends string>(value: unknown, allowed: readonly T[]): T | null {
   return typeof value === "string" && (allowed as readonly string[]).includes(value)
@@ -103,7 +105,8 @@ export function initUiState(storage?: StorageLike): UiState {
       theme: oneOf(record.theme, THEMES) ?? DEFAULT_UI_STATE.theme,
       playerMode: oneOf(record.playerMode, PLAYER_MODES) ?? DEFAULT_UI_STATE.playerMode,
       lastVisiblePlayerMode:
-        oneOf(record.lastVisiblePlayerMode, PLAYER_MODES) ?? DEFAULT_UI_STATE.lastVisiblePlayerMode,
+        oneOf(record.lastVisiblePlayerMode, VISIBLE_PLAYER_MODES) ??
+        DEFAULT_UI_STATE.lastVisiblePlayerMode,
     };
   } catch {
     return { ...DEFAULT_UI_STATE };
