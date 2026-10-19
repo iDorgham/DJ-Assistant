@@ -28,7 +28,7 @@ jobs:
         with:
           # Fetch enough history for the diff to compare against the previous push.
           fetch-depth: 2
-      - uses: dorny/paths-filter@0e4a8c6effa4802afeda77dc8d303f8176d7dfad # v3.0.2
+      - uses: dorny/paths-filter@ceb8a2b8f2d89434be7ff52d3de7ec3738c5cc9d # v3.0.2
         id: filter
         with:
           filters: |
