@@ -4,10 +4,11 @@
 
 Use this as the UI build order and acceptance gate.
 
-**Status (2026-10-19):** Phase A foundations, Phase B shell, and the Phase D dock
-shell are implemented on `feat/T2.1.0-shell-ui` (pending merge). Player playback,
-waveform, and cue/grid controls remain T2.4; unchecked boxes are either not yet
-implemented or belong to later phases.
+**Status (2026-10-19):** Partial implementation on `feat/T2.1.0-shell-ui`
+(pending merge): tokens/theme/icons, shell layout, header, options bar, nav,
+search/filters, empty states, and the player dock shell. Density, font loading,
+motion helpers, menu bar, splitters, workspaces, command palette, and all player
+playback/waveform/cue/grid controls remain open.
 
 ---
 

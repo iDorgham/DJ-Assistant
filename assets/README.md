@@ -18,7 +18,8 @@ the design system and `apps/desktop/src/index.css`.
 | Tile sheen | `#FFFFFF` @ 8% | Top-edge highlight for depth |
 | EQ top / bottom | `#5CE1FF` → `#0090FF` | Equaliser bars (signature mark) |
 | Brand gradient | `#2563EB` → `#22D3EE` | In-app tile (blue-600 → cyan-400) |
-| Canvas | `#0F1117` | Banner / social-card background |
+| Banner / social background | `#0B0D12` → `#161A24` | Header banner and OG card gradient |
+| Light wordmark ink | `#0F1117` | Wordmark on light backgrounds (`wordmark-light.svg`) |
 | Text primary | `#F1F5F9` | Wordmark on dark |
 | Text muted | `#94A3B8` | Taglines, secondary copy |
 | Text dim | `#64748B` | Captions, footer copy |

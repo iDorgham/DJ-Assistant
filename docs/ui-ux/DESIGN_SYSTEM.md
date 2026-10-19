@@ -1,6 +1,6 @@
 # DJ Assistant — Design System
 
-**Status:** Living — 2026-10-14
+**Status:** Superseded — historical (2026-10-14)
 **Companions:** [UX Principles](./UX_PRINCIPLES.md) · [Screens & Flows](./SCREENS_AND_FLOWS.md) · [Accessibility](./ACCESSIBILITY.md)
 **Implemented in:** `apps/desktop/src/App.tsx` (Phase 0), `apps/desktop/src/lib/library.ts`
 

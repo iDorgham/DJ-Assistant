@@ -488,9 +488,9 @@ Phase 3; the player dock is layout-only until T2.4.
 
 | Surface | Phase | Status |
 |---------|-------|--------|
-| App shell (header view switcher, collapsible nav, options bar, view router) | 2 | ✅ Implemented (T2.1.0) |
-| Theme system (dark/light/system, semantic tokens, persisted preference) | 2 | ✅ Implemented (T2.1.0) |
-| Player dock (Hidden/Mini/Full, artwork, metadata, transport placeholders) | 2 | ✅ Layout + mode switching; playback T2.4 |
+| App shell (header view switcher, collapsible nav, options bar, view router) | 2 | 🟡 On branch — pending merge (T2.1.0) |
+| Theme system (dark/light/system, semantic tokens, persisted preference) | 2 | 🟡 On branch — pending merge (T2.1.0) |
+| Player dock (Hidden/Mini/Full, artwork, metadata, transport placeholders) | 2 | 🟡 On branch — layout + mode switching; playback T2.4 |
 | Library (scan, live progress, dense track table, empty/error states) | 0 | ✅ Implemented, relocated into the shell |
 | Track inspector drawer (similar tracks, gap chips, buy-links) | 0 | ✅ Implemented |
 | Tag Health modal (per-field bars + gap list; online lookup shown as planned) | 0 | ✅ Implemented |

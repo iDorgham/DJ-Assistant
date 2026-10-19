@@ -61,7 +61,7 @@ Notes / waivers: ________________________________
 | 2.3 | Tag cleanup is undoable | Must | ☐ |
 | 2.4 | Clear sense of library health / prep gaps (even if simple) | Should | ☐ |
 | 2.5 | Prep Auditor-style checklist answers “what’s blocking this gig?” | Should | ☐ |
-| 2.6 | Three-view workspace (Library / Preparation / Auto Performance) with collapsible nav, theme switch, and a persistent preview player dock | Must | ☐ |
+| 2.6 | Library view inside the new shell: three-view switcher, collapsible nav, theme persistence, and player dock layout (Preparation / Auto Performance are placeholders; playback is T2.4) | Must | ☐ |
 
 **PO decision:** ☐ Accepted · ☐ Accepted with waivers · ☐ Rejected  
 

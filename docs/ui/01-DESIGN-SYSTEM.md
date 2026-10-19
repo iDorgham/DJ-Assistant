@@ -32,10 +32,11 @@ Tokens and rules for a consistent Adobe × Ableton × 2026 professional look.
 | `text.secondary` | `#9AA3B2` | `#4B5563` |
 | `text.muted` | `#8A92A0` | `#5F6672` |
 | `text.inverse` | `#0E0F12` | `#FFFFFF` |
+| `text.on-accent` | `#0E0F12` | `#FFFFFF` |
 | `accent` | `#2DD4BF` (teal-cyan) | `#0F766E` |
 | `accent.strong` | `#14B8A6` | `#115E59` |
 | `accent.muted` | `#2DD4BF33` | `#0F766E33` |
-| `success` | `#22C55E` | `#16A34A` |
+| `success` | `#22C55E` | `#15803D` |
 | `warning` | `#F59E0B` | `#D97706` |
 | `danger` | `#EF4444` | `#DC2626` |
 
@@ -45,6 +46,8 @@ Tokens and rules for a consistent Adobe × Ableton × 2026 professional look.
 **Contrast:** light-theme `accent` is `#0F766E` (not the brighter `#0D9488`) so
 accent text on white clears WCAG AA 4.5:1; use `accent.strong` for hover/pressed.
 On-accent foreground is `#0E0F12` in dark and `#FFFFFF` in light (`text.on-accent`).
+Light-theme `success` is `#15803D` so white on-accent text on success fills clears
+4.5:1 (the brighter `#16A34A` measured ~3.3:1).
 
 ---
 

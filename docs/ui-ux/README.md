@@ -1,6 +1,6 @@
 # DJ Assistant — UI/UX
 
-**Status:** Living — snapshot as of 2026-10-14
+**Status:** Superseded — historical snapshot (2026-10-14)
 **Audience:** Frontend engineers, product, design, and AI agents building the desktop UI
 **Scope:** The visual language, interaction model, screens, and accessibility rules for the Tauri desktop app
 
@@ -18,6 +18,7 @@
 | [UX_PRINCIPLES.md](./UX_PRINCIPLES.md) | Who we design for, the prep loop, design principles, IA, interaction patterns, voice |
 | [DESIGN_SYSTEM.md](./DESIGN_SYSTEM.md) | Colour, type, spacing, motion, and the component inventory with states |
 | [SCREENS_AND_FLOWS.md](./SCREENS_AND_FLOWS.md) | Screen inventory, wireframes, and end-to-end user flows per phase |
+| [PLAYER_AND_LAYOUT_SPEC_2026-10-19.md](./PLAYER_AND_LAYOUT_SPEC_2026-10-19.md) | Historical v1.7 proposal for the app shell, player, and layout (superseded by `docs/ui/`) |
 | [wireframes/](./wireframes/README.md) | Low-fidelity structural wireframes for every screen (00–12) |
 | [ACCESSIBILITY.md](./ACCESSIBILITY.md) | WCAG targets, contrast findings, keyboard model, motion, and test checklist |
 

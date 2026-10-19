@@ -1,6 +1,6 @@
 # DJ Assistant — UX Principles
 
-**Status:** Living — 2026-10-14
+**Status:** Superseded — historical (2026-10-14)
 **Companions:** [Design System](./DESIGN_SYSTEM.md) · [Screens & Flows](./SCREENS_AND_FLOWS.md) · [Accessibility](./ACCESSIBILITY.md)
 **Source of truth:** [Canonical Documentation](../product/CANONICAL_DOCUMENTATION.md) §2, §7, §8
 

@@ -1,7 +1,7 @@
 # DJ Assistant — Application Views, Player & Layout UI/UX Spec
 
 **Version:** 1.7 (final polish)  
-**Status:** Design proposal for implementation  
+**Status:** Historical design proposal — superseded by [`docs/ui/`](../ui/README.md)
 **Date:** 2026-10-19  
 **Scope:** Final UI/UX language — Adobe-inspired precision + Ableton flexibility + 2026 pro-app trends; full screens, menus, settings, motion, dialogs, player, library tools
 
@@ -42,7 +42,7 @@ Compact segmented control, always visible:
 ```
 
 - Active view: filled / accent
-- Keyboard: `1` / `2` / `3` or `Ctrl/Cmd+1..3` when not typing in a field
+- Keyboard: `Ctrl/Cmd+1..3` (bare digits are reserved for hot cues)
 - View choice persists per session (and optionally as user preference)
 
 ---

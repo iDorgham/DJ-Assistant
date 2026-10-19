@@ -1,6 +1,6 @@
 # DJ Assistant — Screens & Flows
 
-**Status:** Living — 2026-10-14
+**Status:** Superseded — historical (2026-10-14)
 **Companions:** [UX Principles](./UX_PRINCIPLES.md) · [Design System](./DESIGN_SYSTEM.md) · [Accessibility](./ACCESSIBILITY.md)
 **Source of truth:** [Canonical Documentation](../product/CANONICAL_DOCUMENTATION.md) §7 (Workstation Interface Specifications)
 
