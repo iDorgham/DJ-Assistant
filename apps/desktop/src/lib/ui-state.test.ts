@@ -26,7 +26,7 @@ test("defaults when storage is empty", () => {
   assert.deepEqual(initUiState(fakeStorage()), DEFAULT_UI_STATE);
   assert.equal(DEFAULT_UI_STATE.view, "library");
   assert.equal(DEFAULT_UI_STATE.theme, "dark");
-  assert.equal(DEFAULT_UI_STATE.playerMode, "hidden");
+  assert.equal(DEFAULT_UI_STATE.playerMode, "mini");
   assert.equal(DEFAULT_UI_STATE.navCollapsed, false);
 });
 
@@ -61,16 +61,21 @@ test("throwing storage writes are ignored", () => {
   assert.equal(state.view, "preparation");
 });
 
-test("unknown persisted values are rejected per field", () => {
+test("unknown persisted values fall back per field", () => {
   const storage = fakeStorage({
     [UI_STATE_STORAGE_KEY]: JSON.stringify({
-      view: "moon",
+      view: "preparation",
       theme: "neon",
-      playerMode: "cinema",
+      playerMode: "full",
       navCollapsed: "yes",
+      lastVisiblePlayerMode: "cinema",
     }),
   });
-  assert.deepEqual(initUiState(storage), DEFAULT_UI_STATE);
+  assert.deepEqual(initUiState(storage), {
+    ...DEFAULT_UI_STATE,
+    view: "preparation",
+    playerMode: "full",
+  });
 });
 
 test("valid persisted state round-trips", () => {
@@ -124,9 +129,21 @@ test("togglePlayer restores the last visible mode", () => {
   assert.equal(s.playerMode, "full");
 });
 
-test("togglePlayer from hidden defaults to mini", () => {
-  const s = reduceUiState(DEFAULT_UI_STATE, { type: "togglePlayer" });
-  assert.equal(s.playerMode, "mini");
+test("togglePlayer from hidden restores mini by default", () => {
+  const hidden = { ...DEFAULT_UI_STATE, playerMode: "hidden" as const };
+  assert.equal(reduceUiState(hidden, { type: "togglePlayer" }).playerMode, "mini");
+});
+
+test("persisted lastVisiblePlayerMode never restores hidden", () => {
+  const storage = fakeStorage({
+    [UI_STATE_STORAGE_KEY]: JSON.stringify({
+      playerMode: "hidden",
+      lastVisiblePlayerMode: "hidden",
+    }),
+  });
+  const state = initUiState(storage);
+  assert.equal(state.lastVisiblePlayerMode, "mini");
+  assert.equal(reduceUiState(state, { type: "togglePlayer" }).playerMode, "mini");
 });
 
 test("setPlayerMode and setTheme validate input", () => {
