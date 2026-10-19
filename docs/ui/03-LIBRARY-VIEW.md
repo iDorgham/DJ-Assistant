@@ -109,7 +109,7 @@ When selection &gt; 0, show bulk bar:
 - Export selection  
 - Clear selection  
 
-All bulk writes offer **Undo** toast.
+All bulk writes offer **Undo** toast. Field-writing bulk actions (Smart Tag Cleanup, enrichment apply) must show a **preview → apply → undo** flow: preview the affected tracks and field changes before anything is written.
 
 ---
 

@@ -4,6 +4,8 @@
 **Companions:** [UX Principles](./UX_PRINCIPLES.md) · [Screens & Flows](./SCREENS_AND_FLOWS.md) · [Accessibility](./ACCESSIBILITY.md)
 **Implemented in:** `apps/desktop/src/App.tsx` (Phase 0), `apps/desktop/src/lib/library.ts`
 
+**Superseded (2026-10-19):** Design tokens, surfaces, typography, and component styling now live in [docs/ui/01-DESIGN-SYSTEM.md](../ui/01-DESIGN-SYSTEM.md). This document is kept as a historical reference for the shipped Phase 0 UI.
+
 This document is the single reference for the app's visual language and reusable
 components. The palette, sizes, and component states below are extracted from the
 **shipped Phase 0 UI**; entries marked _planned_ describe how the system extends for

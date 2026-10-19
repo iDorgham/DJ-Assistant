@@ -2,6 +2,8 @@
 
 **Version:** 1.0 · **Date:** 2026-10-19
 
+**Supersedes:** [`../ui-ux/DESIGN_SYSTEM.md`](../ui-ux/DESIGN_SYSTEM.md) for design tokens, surfaces, typography, and component styling.
+
 Tokens and rules for a consistent Adobe × Ableton × 2026 professional look.
 
 ---
@@ -28,7 +30,7 @@ Tokens and rules for a consistent Adobe × Ableton × 2026 professional look.
 |-------|------|-------|
 | `text.primary` | `#E8EAED` | `#111827` |
 | `text.secondary` | `#9AA3B2` | `#4B5563` |
-| `text.muted` | `#6B7380` | `#9CA3AF` |
+| `text.muted` | `#8A92A0` | `#5F6672` |
 | `text.inverse` | `#0E0F12` | `#FFFFFF` |
 | `accent` | `#2DD4BF` (teal-cyan) | `#0D9488` |
 | `accent.muted` | `#2DD4BF33` | `#0D948833` |
@@ -160,4 +162,4 @@ Persisted in Appearance / View menu.
 - System follow optional  
 - Accent override in Appearance (optional)  
 
-Contrast: WCAG AA for text; playhead and cues must remain visible on waveform in both themes.
+Contrast: WCAG AA for text (≥4.5:1; `text.muted` verified on L0–L3 surfaces in both themes); playhead and cues must remain visible on waveform in both themes.
