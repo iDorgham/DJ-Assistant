@@ -83,7 +83,12 @@ function defaultStorage(): StorageLike | undefined {
 export function initUiState(storage?: StorageLike): UiState {
   const store = storage ?? defaultStorage();
   if (!store) return { ...DEFAULT_UI_STATE };
-  const raw = store.getItem(UI_STATE_STORAGE_KEY);
+  let raw: string | null;
+  try {
+    raw = store.getItem(UI_STATE_STORAGE_KEY);
+  } catch {
+    return { ...DEFAULT_UI_STATE };
+  }
   if (!raw) return { ...DEFAULT_UI_STATE };
   try {
     const parsed: unknown = JSON.parse(raw);
@@ -108,7 +113,11 @@ export function initUiState(storage?: StorageLike): UiState {
 export function persistUiState(state: UiState, storage?: StorageLike): void {
   const store = storage ?? defaultStorage();
   if (!store) return;
-  store.setItem(UI_STATE_STORAGE_KEY, JSON.stringify(state));
+  try {
+    store.setItem(UI_STATE_STORAGE_KEY, JSON.stringify(state));
+  } catch {
+    // Persistence is best-effort; blocked or full storage must not break the UI.
+  }
 }
 
 export interface ShortcutEvent {
