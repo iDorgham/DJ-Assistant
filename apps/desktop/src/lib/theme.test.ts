@@ -1,6 +1,14 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { nextTheme, resolveTheme, THEME_LABELS } from "./theme.ts";
+import { nextTheme, resolveStoredTheme, resolveTheme, THEME_LABELS } from "./theme.ts";
+import type { StorageLike } from "./ui-state.ts";
+
+function storageWith(value: string | null): StorageLike {
+  return {
+    getItem: () => value,
+    setItem: () => {},
+  };
+}
 
 test("explicit themes ignore the system preference", () => {
   assert.equal(resolveTheme("dark", true), "dark");
@@ -22,4 +30,14 @@ test("theme toggle cycles dark -> light -> system -> dark", () => {
 
 test("every theme has a human label", () => {
   assert.deepEqual(THEME_LABELS, { dark: "Dark", light: "Light", system: "System" });
+});
+
+test("stored theme resolves before first paint", () => {
+  assert.equal(resolveStoredTheme(storageWith(JSON.stringify({ theme: "light" })), true), "light");
+  assert.equal(resolveStoredTheme(storageWith(JSON.stringify({ theme: "dark" })), false), "dark");
+  assert.equal(
+    resolveStoredTheme(storageWith(JSON.stringify({ theme: "system" })), false),
+    "light"
+  );
+  assert.equal(resolveStoredTheme(storageWith(null), true), "dark");
 });

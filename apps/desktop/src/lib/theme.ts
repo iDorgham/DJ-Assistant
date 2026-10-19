@@ -1,4 +1,4 @@
-import type { ThemeMode } from "./ui-state.ts";
+import { initUiState, type StorageLike, type ThemeMode } from "./ui-state.ts";
 
 export type ResolvedTheme = "dark" | "light";
 
@@ -17,4 +17,16 @@ export function nextTheme(theme: ThemeMode): ThemeMode {
   if (theme === "dark") return "light";
   if (theme === "light") return "system";
   return "dark";
+}
+
+export function resolveStoredTheme(
+  storage?: StorageLike,
+  systemPrefersDark?: boolean
+): ResolvedTheme {
+  const prefersDark =
+    systemPrefersDark ??
+    (typeof window !== "undefined" && window.matchMedia
+      ? window.matchMedia("(prefers-color-scheme: dark)").matches
+      : true);
+  return resolveTheme(initUiState(storage).theme, prefersDark);
 }
