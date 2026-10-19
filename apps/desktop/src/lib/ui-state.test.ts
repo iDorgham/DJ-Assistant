@@ -39,6 +39,28 @@ test("corrupt JSON falls back to defaults", () => {
   assert.deepEqual(initUiState(storage), DEFAULT_UI_STATE);
 });
 
+test("throwing storage reads fall back to defaults", () => {
+  const storage: StorageLike = {
+    getItem: () => {
+      throw new Error("storage blocked");
+    },
+    setItem: () => {},
+  };
+  assert.deepEqual(initUiState(storage), DEFAULT_UI_STATE);
+});
+
+test("throwing storage writes are ignored", () => {
+  const storage: StorageLike = {
+    getItem: () => null,
+    setItem: () => {
+      throw new Error("quota exceeded");
+    },
+  };
+  const state = reduceUiState(DEFAULT_UI_STATE, { type: "setView", view: "preparation" });
+  assert.doesNotThrow(() => persistUiState(state, storage));
+  assert.equal(state.view, "preparation");
+});
+
 test("unknown persisted values are rejected per field", () => {
   const storage = fakeStorage({
     [UI_STATE_STORAGE_KEY]: JSON.stringify({
