@@ -103,4 +103,4 @@ Use this as the UI build order and acceptance gate.
 | Patterns | [08-DIALOGS-AND-PATTERNS.md](08-DIALOGS-AND-PATTERNS.md) |
 | Components | [09-COMPONENTS.md](09-COMPONENTS.md) |
 | A11y | [10-ACCESSIBILITY-AND-KEYBOARD.md](10-ACCESSIBILITY-AND-KEYBOARD.md) |
-| Master narrative | [../UI_UX_PLAYER_AND_LAYOUT_SPEC.md](../UI_UX_PLAYER_AND_LAYOUT_SPEC.md) |
+| Product canon | [../product/CANONICAL_DOCUMENTATION.md](../product/CANONICAL_DOCUMENTATION.md) |
