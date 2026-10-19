@@ -3,7 +3,7 @@
 **Version:** 1.0  
 **Status:** Approved for design & implementation  
 **Date:** 2026-10-19  
-**Source of truth:** This folder + parent [`UI_UX_PLAYER_AND_LAYOUT_SPEC.md`](../UI_UX_PLAYER_AND_LAYOUT_SPEC.md)
+**Source of truth:** This folder. Earlier UI docs live in [`../ui-ux/`](../ui-ux/); where they overlap, this folder is newer.
 
 ---
 
@@ -55,7 +55,7 @@ Complete interface documentation for **DJ Assistant**: a desktop preparation too
 
 ## Related product docs
 
-- Canonical product: `DJ-Assistant-Canonical-Documentation.md`  
-- Architecture: `docs/ARCHITECTURE.md`  
-- Skills: `docs/SKILLS_SYSTEM.md`  
-- Consolidated context: `PROJECT_CONTEXT.md`  
+- Canonical product: [`../product/CANONICAL_DOCUMENTATION.md`](../product/CANONICAL_DOCUMENTATION.md)  
+- Architecture: [`../architecture/ARCHITECTURE.md`](../architecture/ARCHITECTURE.md)  
+- Skills: [`../architecture/SKILLS_SYSTEM.md`](../architecture/SKILLS_SYSTEM.md)  
+- Consolidated context: [`../context/PROJECT_CONTEXT.md`](../context/PROJECT_CONTEXT.md)  
