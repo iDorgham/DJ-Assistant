@@ -17,7 +17,7 @@ export const GLOBAL_SKILLS = path.join(os.homedir(), ".config", "opencode", "ski
 export const PROJECT_SKILLS = path.join(ROOT, ".opencode", "skills");
 export const POLICY_PATH = path.join(ROOT, "skills.policy.json");
 export const MANIFEST_PATH = path.join(ROOT, ".opencode", "skill-manifest.json");
-export const ROUTING_DOC = path.join(ROOT, "docs", "context", "SKILL_ROUTING.md");
+export const ROUTING_DOC = path.join(ROOT, "docs", "ai", "SKILL_ROUTING.md");
 
 // Order is precedence: a later source overrides an earlier one with the same ID.
 export const SOURCES = [

@@ -948,7 +948,7 @@ repository, so CI and collaborators are unaffected. With 240 registered, prefer
 router skills (`design`, `tauri`) over loading families wholesale. Full inventory,
 requirements (`taste-skill` needs Node 22 + Chrome/Edge/Chromium; `music-analyzer`
 and the beets/rekordbox skills pull Python deps on first use), and usage notes:
-[`docs/context/AGENT_SKILLS.md`](./AGENT_SKILLS.md).
+[`docs/ai/SKILLS.md`](../ai/SKILLS.md).
 
 ---
 

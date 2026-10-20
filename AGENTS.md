@@ -48,11 +48,11 @@ optional.
 ## Agent skills — routing workflow
 
 This machine has a large global OpenCode skill library (see
-[`docs/context/AGENT_SKILLS.md`](docs/context/AGENT_SKILLS.md)); every skill is
-advertised to the model. `skills.policy.json` records a curated **hot** priority
-set and the project's prompt triggers;
-[`docs/context/SKILL_ROUTING.md`](docs/context/SKILL_ROUTING.md) is the generated
-summary.
+[`docs/ai/SKILLS.md`](docs/ai/SKILLS.md)); every skill is advertised to the model.
+`skills.policy.json` records a curated **hot** priority set and the project's
+prompt triggers; [`docs/ai/SKILL_ROUTING.md`](docs/ai/SKILL_ROUTING.md) is the
+generated summary, and [`docs/ai/AGENTS.md`](docs/ai/AGENTS.md) documents the
+agents, commands, and scripts behind it.
 
 **Before starting a non-trivial task, match it to skills and load the winners:**
 

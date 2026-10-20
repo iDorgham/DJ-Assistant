@@ -20,8 +20,9 @@ Run, in order:
 
 Then report, concisely:
 
-- Installed total, the hot/cold split, and the advertised token cost per step
-  (flag it when it exceeds the 6k budget).
+- Installed total, the priority (`hot`/cold) split, and the advertised token cost
+  per step. Every skill is advertised here, so there is no budget threshold —
+  flag it when the cost **grows** (new installs).
 - **Hard problems** (missing `description`/frontmatter, duplicate IDs) — these are
   failures and must be listed first.
 - **Findings**: near-duplicates, oversized skills, hot entries that are not
@@ -33,4 +34,4 @@ Then report, concisely:
 Finish with minimal, concrete recommendations: which IDs to add to `hot`, which
 to add to `duplicates`, and which policy entries are stale. You never edit files
 yourself and never write to `~/.config/opencode/skills` — recommend the change;
-the human runs `pnpm skills:policy:apply`.
+the human edits `skills.policy.json` and runs `pnpm skills:inventory`.
