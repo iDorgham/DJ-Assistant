@@ -156,6 +156,10 @@ export function keywordHit(promptTokens, normalizedPrompt, keyword) {
   if (!phrase) return false;
   if (phrase.includes(" ")) return normalizedPrompt.includes(` ${phrase} `);
   if (promptTokens.has(phrase)) return true;
+  // tokenize() drops every word of two characters or fewer, so `ui` can never
+  // reach the token set; match it against the padded prompt instead of letting
+  // the length guard below discard the keyword.
+  if (phrase.length < 3) return normalizedPrompt.includes(` ${phrase} `);
   if (phrase.length < 5) return false;
   for (const token of promptTokens) {
     if (token.length < 5) continue;
