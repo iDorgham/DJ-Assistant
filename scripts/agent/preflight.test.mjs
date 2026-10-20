@@ -164,6 +164,15 @@ describe("verification selection", () => {
     assert.ok(!ids("document the trust boundary").includes("rust"));
     assert.ok(!ids("update the user guide").includes("ui"));
   });
+
+  it("keeps a two-letter keyword whole-word matchable", () => {
+    // tokenize() drops short words, so `ui` never reaches the token set — the
+    // group has to be selected from the padded prompt or it silently vanishes.
+    const ids = (prompt) =>
+      selectVerification(registry, { prompt, files: [] }).map((group) => group.id);
+    assert.ok(ids("fix the ui").includes("ui"), "fix the ui selected nothing");
+    assert.ok(ids("polish the waveform ui").includes("ui"), "trailing ui was lost");
+  });
 });
 
 describe("command matching", () => {
