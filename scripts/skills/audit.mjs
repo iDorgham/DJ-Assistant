@@ -31,7 +31,13 @@ for (const skill of skills) {
   }
 }
 
+// A project copy shadowing the machine-global skill of the same ID is expected:
+// `.opencode/skills/` is a locally synced mirror of the global library
+// (gitignored and eslint-ignored, so it never ships). Shadowing between any
+// other pair of sources is a real ID collision.
+const vendored = overrides.filter((o) => o.shadowed === "global" && o.wins === "project");
 for (const override of overrides) {
+  if (vendored.includes(override)) continue;
   hard.push(
     `${override.id}: defined in both ${override.shadowed} and ${override.wins} (later source wins)`
   );
@@ -79,6 +85,7 @@ const report = {
   total: skills.length,
   hot: skills.filter((skill) => hot.has(skill.id)).length,
   cold: skills.filter((skill) => !hot.has(skill.id)).length,
+  vendored: vendored.length,
   advertisedTokensPerStep: estimateTokens("x".repeat(advertised)),
   hotTokensPerStep: estimateTokens("x".repeat(hotAdvertised)),
   unclassified,

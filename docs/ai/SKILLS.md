@@ -4,10 +4,12 @@
 **Status:** Living — last updated 2026-10-20
 **Scope:** Machine-level OpenCode skills available to every session on this workstation
 
-> These skills live **outside the repository**, in the global OpenCode skills
-> directory (`C:\Users\User\.config\opencode\skills`). They are *not* committed
-> to this repo, so collaborators and CI do not receive them automatically.
-> Nothing in the project build, test, or CI pipeline depends on them.
+> The library lives **outside the repository**, in the machine-level OpenCode
+> skills directory (`C:\Users\User\.config\opencode\skills`). A `.opencode/skills/`
+> copy can be synced from it for local experiments, but that directory is
+> **gitignored and eslint-ignored** — it is machine-local, and collaborators and
+> CI do not receive it. Nothing in the project build, test, or CI pipeline
+> depends on either location.
 >
 > **Total installed: 240** — 18 pre-existing + 222 added on 2026-10-19.
 
@@ -321,8 +323,12 @@ Most relevant to this repo: `rust-best-practices` (Rust core/analysis crates),
 - Skills are plain `SKILL.md` directories; updating = re-copying the directory
   from the upstream repo. Installs are **not** automated; the inventory and audit
   are.
-- To add or remove a skill, edit `C:\Users\User\.config\opencode\skills\` — not
-  the repository.
+- A local mirror under `.opencode/skills/` **overrides** the global skill of the
+  same ID (`scripts/skills/lib.mjs` defines the source order, and `skills:audit`
+  treats that expected shadowing as a mirror rather than a collision). Because it
+  is gitignored, it is invisible to every other machine. To add or remove a
+  skill, edit the global directory — and if edits there appear to be ignored,
+  check for a stale `.opencode/skills/` copy shadowing them.
 - If a skill stops appearing, check its frontmatter `description`, its
   `metadata.opencode/autoinvoke` flag, and the agent's `skill` permission first.
 - The project keeps a routing policy in `skills.policy.json` and a generated
