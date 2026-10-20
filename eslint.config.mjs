@@ -21,6 +21,10 @@ export default tseslint.config(
       // uv-managed Python env kept on disk but not in git; its vendored
       // site-packages JS bundles are not lintable.
       "b5bf2e54cb654f7b/**",
+      // Machine-local OpenCode skill library (scripts, assets, vendored bundles).
+      // Untracked and not project source; linting it produces ~950 no-undef /
+      // no-require-imports errors from third-party skill code.
+      ".opencode/skills/**",
     ],
   },
 

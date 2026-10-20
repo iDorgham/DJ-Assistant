@@ -7,6 +7,16 @@
 
 Scope split agreed up front: **Bucket 1** = fixes and alignment on existing surfaces (applied, recorded below); **Bucket 2** = feature work (recorded as remaining — honestly scaffolded, never faked).
 
+> **This document is a dated record, not a live description of the UI.**
+> Findings and scores refer to the 2026-10-19 revision (pinned by the critiques'
+> `target_fingerprint`). Where it states a UI fact — e.g. §1 "three real views"
+> — that fact has since moved on: the shell now exposes six header views
+> (`import · library · analysis · studio · backup · sync`) plus two sidebar
+> entries. **`App.tsx` `VIEW_ITEMS` / `NAV_ITEMS` and the current specs
+> ([02-SHELL-AND-NAVIGATION](02-SHELL-AND-NAVIGATION.md),
+> [01-DESIGN-SYSTEM](01-DESIGN-SYSTEM.md)) are the source of truth**; treat this
+> file as the audit trail of what was found and fixed, not as the spec.
+
 ---
 
 ## 1. Applied (Bucket 1)
@@ -73,7 +83,7 @@ Scope split agreed up front: **Bucket 1** = fixes and alignment on existing surf
 
 ## 4. Post-critique follow-up (same day)
 
-Re-score recorded at `apps/desktop/.impeccable/critique/2026-10-19T14-03-27Z__src-app-tsx.md`: **29/40** (baseline 24/40), P1 findings 3 → 1. The findings below were closed immediately after that re-score:
+Re-score recorded at `apps/desktop/.impeccable/critique/2026-10-19T14-03-27Z__src-app-tsx.md`: **29/40** (baseline 24/40), P1 findings 3 → 1. The findings below were closed immediately after that re-score: (see the scope note above — the score is pinned to the 2026-10-19 revision, not to the current tree)
 
 - **P1 — the inspector drawer was pointer-only.** Library rows are now focusable (`tabIndex={0}`, `aria-label`, `aria-selected`) and toggle the drawer with Enter/Space, with a `focus-visible` ring.
 - **P2 — the honest synth-audio disclosure was missing in mini player mode** (the default mode). A compact `Synth` pill now sits in the mini identity strip; full mode keeps the "Synth preview audio" pill.
