@@ -26,7 +26,8 @@
     "skills:match": "node scripts/skills/match.mjs",
     "skills:audit": "node scripts/skills/audit.mjs",
     "skills:policy": "node scripts/skills/policy.mjs",
-    "skills:policy:restore": "node scripts/skills/policy.mjs --restore"
+    "skills:policy:restore": "node scripts/skills/policy.mjs --restore",
+    "memory:search": "node scripts/memory/search.mjs"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
