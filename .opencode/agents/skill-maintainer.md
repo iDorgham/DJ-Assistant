@@ -8,6 +8,9 @@ permissions:
   - action: shell
     resource: "node scripts/skills/*"
     effect: allow
+  - action: shell
+    resource: "node scripts/agent/*"
+    effect: allow
 ---
 
 You maintain the machine-global agent skill library this project routes against.
@@ -22,6 +25,7 @@ Run, in order:
 1. `node scripts/skills/inventory.mjs`
 2. `node scripts/skills/audit.mjs`
 3. `node scripts/skills/policy.mjs` — **dry run only; never pass `--apply`**
+4. `node scripts/agent/doctor.mjs` — registry vs. disk, mirror drift, memory weight
 
 Then report, concisely:
 
@@ -31,7 +35,8 @@ Then report, concisely:
 - **Hard problems** (missing `description`/frontmatter, duplicate IDs) — these are
   failures and must be listed first.
 - **Findings**: near-duplicates, oversized skills, hot entries that are not
-  installed, stale `duplicates`/`triggers` entries.
+  installed, stale `duplicates`/`triggers` entries, and any mirror drift the
+  doctor reported.
 - **Unclassified** skills (installed but in neither `hot` nor `duplicates`) that
   look worth curating.
 - **Candidate additions** from `skills.policy.json`.
@@ -40,3 +45,5 @@ Finish with minimal, concrete recommendations: which IDs to add to `hot`, which
 to add to `duplicates`, and which policy entries are stale. You never edit files
 yourself and never write to `~/.config/opencode/skills` — recommend the change;
 the human edits `skills.policy.json` and runs `pnpm skills:inventory`.
+
+End with the `RESULT` block from `docs/ai/COMMUNICATION.md` §5.

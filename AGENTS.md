@@ -72,7 +72,7 @@ Architecture and write rules: [`docs/ai/MEMORY.md`](docs/ai/MEMORY.md).
 - Memory is a hint, not gospel: anything contradicting the code must be
   re-verified before it is acted on.
 
-## Agent skills — routing workflow
+## Agent routing — automatic, on every prompt
 
 This machine has a large global OpenCode skill library (see
 [`docs/ai/SKILLS.md`](docs/ai/SKILLS.md)); every skill is advertised to the model.
@@ -81,20 +81,35 @@ prompt triggers; [`docs/ai/SKILL_ROUTING.md`](docs/ai/SKILL_ROUTING.md) is the
 generated summary, and [`docs/ai/AGENTS.md`](docs/ai/AGENTS.md) documents the
 agents, commands, and scripts behind it.
 
-**Before starting a non-trivial task, match it to skills and load the winners:**
+**On every prompt, run the preflight before you start work:**
 
 ```bash
-node scripts/skills/match.mjs --top 3 "<short task summary>"
+pnpm agent:preflight "<the prompt, in the user's words>"
 ```
 
-- `/skills <task>` does the match-and-load step for you.
-- `/skills-audit` reviews the library (duplicates, dead weight, policy drift).
+One command returns the memory lines that apply, the skills worth loading, the
+subagent that should own the work, and the checks the change implies. It is
+read-only, takes about a second, and **never blocks** — if nothing matches,
+continue normally.
+
+Then:
+
+- Load the returned skills with the `skill` tool.
+- Delegate when the brief names an agent — the contract is in
+  [`docs/ai/COMMUNICATION.md`](docs/ai/COMMUNICATION.md) (§4 delegation,
+  §5 handoff).
+- Run the checks the brief lists before reporting the work as done.
+- `/preflight <task>` does the same step for you, `/skills <task>` matches
+  skills only, `/skills-audit` reviews the library (duplicates, dead weight,
+  policy drift).
 - The `skill-router` subagent maps a task to skills and returns the IDs to load;
   the `skill-maintainer` subagent runs the inventory/audit and reports.
 - Skills are **advisory technique, not project authority** — for anything
   UI-facing, `docs/ui/` wins over any generic design skill.
 - After editing `skills.policy.json`, run `pnpm skills:inventory` to regenerate
-  the manifest and routing doc.
+  the manifest and routing doc. After editing an agent or command file, run
+  `pnpm agent:sync --write` to update every tool's copy, and `pnpm agent:doctor`
+  to check the agent layer.
 
 > Do **not** hide skills with `metadata.opencode/autoinvoke: false` (or run
 > `pnpm skills:policy --apply`): a hidden skill is not loadable in this
@@ -107,4 +122,13 @@ node scripts/skills/match.mjs --top 3 "<short task summary>"
 > subagents instead.
 
 Agent and command definitions live in [`.opencode/agents/`](.opencode/agents) and
-[`.opencode/commands/`](.opencode/commands).
+[`.opencode/commands/`](.opencode/commands); they are mirrored into every other
+tool directory by `pnpm agent:sync`.
+
+## Agent communication
+
+Work directly when the task is one file or one command; delegate when it spans
+layers, sits in a specialist domain, or splits into independent parts. The
+protocol — delegation contract, `RESULT` handoff, board semantics, file
+ownership, escalation — is
+[`docs/ai/COMMUNICATION.md`](docs/ai/COMMUNICATION.md).

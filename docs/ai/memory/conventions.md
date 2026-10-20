@@ -29,3 +29,12 @@ Standing rules. Every session, in every tool, follows these.
   [`feedback.md`](./feedback.md) / [`decisions.md`](./decisions.md); delete
   rot from [`state.md`](./state.md).
 - Never hide OpenCode skills and never add a file under `.opencode/plugins/`.
+
+## Agent layer
+
+- On every prompt, run `pnpm agent:preflight "<the prompt>"` before starting
+  work. It never blocks — if nothing matches, continue normally.
+- Edit agent and command files in `.opencode/` only, then run
+  `pnpm agent:sync --write`; never hand-edit a mirror.
+- A subagent ends with the `RESULT` handoff block (files | checks | findings |
+  remaining | risks) — see `docs/ai/COMMUNICATION.md`.

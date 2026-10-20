@@ -39,3 +39,19 @@ so there is exactly one home for AI documentation.
 Generic design skills inform technique but never override the project's own
 tokens, components, or layout spec.
 **Reverses if:** the team decides a skill should govern.
+
+## D-006 · Routing is automatic, one command per prompt (2026-10-20)
+
+Every prompt starts with `pnpm agent:preflight "<prompt>"`, which returns the
+memory lines, the skills, the agent that should own the work, and the checks.
+Routing is no longer a step an agent has to remember, and it never blocks.
+**Reverses if:** the brief costs more context than the routing it replaces.
+
+## D-007 · The agent layer has one source, mirrored per tool (2026-10-20)
+
+The agent and command files are canonical in `.opencode/agents` and
+`.opencode/commands`; every other tool directory holds a mirror kept in step by
+`pnpm agent:sync --write`, and `pnpm agent:doctor` reports drift. Editing one
+copy by hand was the failure mode this removes.
+**Reverses if:** a tool can only read an agent file from its own directory and
+cannot be synced.

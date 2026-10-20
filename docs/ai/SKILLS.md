@@ -364,24 +364,29 @@ domain, CI): the skills to reach for first and the bias for the matcher. It is a
 ranking, not a visibility filter. **Never run `pnpm skills:policy --apply`** — it
 is guarded and refuses without `--force`.
 
-**Routing.** Before a non-trivial task, match it and load the winners:
+**Routing.** On every prompt, the automatic brief picks the skills — and the
+agent, and the checks — in one command:
 
 ```bash
-node scripts/skills/match.mjs --top 3 "<task summary>"
+pnpm agent:preflight "<the prompt, in the user's words>"
 ```
 
-The matcher combines hand-curated `triggers` (project vocabulary → skills) with a
-BM25-flavoured lexical score over every skill description.
+Its skill section comes from the matcher, which combines hand-curated
+`triggers` (project vocabulary → skills) with a BM25-flavoured lexical score
+over every skill description. To match skills alone, use
+`node scripts/skills/match.mjs --top 3 "<task summary>"`.
 
 **Entry points.**
 
 | Thing | Use |
 |-------|-----|
+| `/preflight <task>` | The automatic brief — memory, skills, agents, checks — then do the task. |
 | `/skills <task>` | Match the task and load the best-matching skills, then do it. |
 | `/skills-audit` | Run the `skill-maintainer` subagent: inventory + audit report. |
 | `skill-router` subagent | Return the skill IDs a task should load (without doing the task). |
 | `skill-maintainer` subagent | Regenerate the inventory and audit the library. |
 | `AGENTS.md` | Project instructions; contains the routing workflow every session sees. |
+| [`COMMUNICATION.md`](./COMMUNICATION.md) | The delegation, handoff, and board protocol. |
 
 > Project-local plugins under `.opencode/plugins/` are **not** used: a plugin in
 > that directory currently causes OpenCode to drop the discovered skills from the
