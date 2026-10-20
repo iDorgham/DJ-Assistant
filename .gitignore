@@ -38,6 +38,10 @@ pnpm-debug.log*
 .kombai/
 .qodo/
 .opencode-notes/
+# Project skill library synced from the global OpenCode skills dir
+# (`npx skills add`); vendored third-party code, so kept out of git and
+# paired with the matching eslint ignore in eslint.config.mjs.
+.opencode/skills/
 .playwright-cli/
 
 # uv-managed Python environments (hash-named install dirs)
