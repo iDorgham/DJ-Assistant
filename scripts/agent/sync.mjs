@@ -34,7 +34,10 @@ for (const source of registrySources(registry)) {
     const absoluteSource = path.join(ROOT, sourceDir);
     if (!fs.existsSync(absoluteSource)) continue;
 
-    fs.mkdirSync(absoluteTarget, { recursive: true });
+    // A dry run reports what it would write; creating the directories here
+    // would leave a clean clone looking like a half-synced one, which
+    // `agent:doctor` then reads as per-file drift instead of "not generated".
+    if (write) fs.mkdirSync(absoluteTarget, { recursive: true });
     for (const name of fs.readdirSync(absoluteSource).filter((file) => file.endsWith(".md"))) {
       const from = path.join(absoluteSource, name);
       const to = path.join(absoluteTarget, name);

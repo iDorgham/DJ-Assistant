@@ -219,8 +219,16 @@ export function listSkills() {
         lines: text.split("\n").length,
         bytes: Buffer.byteLength(text),
       };
-      if (byId.has(skill.id))
-        overrides.push({ id: skill.id, shadowed: byId.get(skill.id).source, wins: source.name });
+      if (byId.has(skill.id)) {
+        const previous = byId.get(skill.id);
+        overrides.push({
+          id: skill.id,
+          shadowed: previous.source,
+          wins: source.name,
+          shadowedFile: previous.file,
+          file: skill.file,
+        });
+      }
       byId.set(skill.id, skill);
     }
   }

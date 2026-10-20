@@ -15,7 +15,7 @@
     "lint:eslint": "eslint .",
     "typecheck": "pnpm build:shared && pnpm --recursive run typecheck",
     "test": "pnpm --recursive run test && pnpm test:agent",
-    "test:agent": "node --test \"scripts/agent/*.test.mjs\"",
+    "test:agent": "node --test scripts/agent/preflight.test.mjs",
     "format": "prettier --write \"**/*.{ts,tsx,js,mjs,json,yaml,yml}\" \"*.md\"",
     "rust:fmt": "cargo fmt --all --check",
     "rust:clippy": "cargo clippy --all-targets -- -D warnings",

@@ -104,7 +104,7 @@ export function pathsInPrompt(prompt) {
  */
 export function gitChangedFiles({ root = ROOT, noise = [], limit = 200 } = {}) {
   try {
-    const output = execFileSync("git", ["status", "--porcelain", "-uall"], {
+    const output = execFileSync("git", ["status", "--porcelain", "-z", "-uall"], {
       cwd: root,
       encoding: "utf8",
       stdio: ["ignore", "pipe", "ignore"],
@@ -117,15 +117,24 @@ export function gitChangedFiles({ root = ROOT, noise = [], limit = 200 } = {}) {
   }
 }
 
-/** Parse `git status --porcelain` output into a list of paths. */
+/**
+ * Parse `git status --porcelain -z` output into a list of paths.
+ *
+ * `-z` separates records with NUL and leaves path bytes unquoted, which is what
+ * makes non-ASCII names survive: the quoted form prints `café.md` as
+ * `caf\303\251.md`, and any later backslash handling turns that into a path.
+ * Rename and copy records are followed by the original path, which is not the
+ * file being changed, so it is consumed with its pair.
+ */
 export function parsePorcelain(output) {
+  const records = String(output).split("\0");
   const files = [];
-  for (const line of String(output).split("\n")) {
-    if (!line.trim()) continue;
-    let rest = line.slice(3).trim();
-    if (rest.includes(" -> ")) rest = rest.split(" -> ").pop().trim();
-    rest = rest.replace(/^"(.*)"$/, "$1");
-    if (rest) files.push(rest.replace(/\\/g, "/"));
+  for (let index = 0; index < records.length; index += 1) {
+    const record = records[index];
+    if (!record) continue;
+    if (/^[RC]/.test(record)) index += 1;
+    const file = record.slice(3).replace(/^\.\//, "");
+    if (file) files.push(file);
   }
   return files;
 }
@@ -205,8 +214,15 @@ export function scoreCommands(registry, prompt) {
       const words = new Set(tokenize(`${command.id} ${command.summary} ${command.use}`));
       let overlap = 0;
       for (const token of tokens) if (words.has(token)) overlap += 1;
-      const idHit = keywordHit(tokens, normalized, command.id);
-      const score = (idHit ? 0.8 : 0) + Math.min(0.4, overlap * 0.08);
+      // A hyphenated ID is two words, and prose rarely spells them adjacently:
+      // "audit the installed skills" has to reach `/skills-audit` even though it
+      // never contains the phrase "skills audit".
+      const idTokens = tokenize(command.id.replace(/[-_]/g, " "));
+      const idCoverage = idTokens.length
+        ? idTokens.filter((token) => tokens.has(token)).length / idTokens.length
+        : 0;
+      const idHit = Math.max(keywordHit(tokens, normalized, command.id) ? 1 : 0, idCoverage);
+      const score = idHit * 0.8 + Math.min(0.4, overlap * 0.08);
       return { id: command.id, score: Number(score.toFixed(3)), command };
     })
     .filter((entry) => entry.score >= 0.3)
@@ -215,11 +231,19 @@ export function scoreCommands(registry, prompt) {
 
 /** Pick the verification groups implied by the files in play and the prompt. */
 export function selectVerification(registry, { prompt, files = [] }) {
-  const normalized = ` ${String(prompt).toLowerCase()} `;
+  const normalized = ` ${String(prompt)
+    .toLowerCase()
+    .replace(/[^a-z0-9+#]+/g, " ")
+    .trim()} `;
+  const tokens = new Set(tokenize(prompt));
   const selected = [];
   for (const group of registry.verify ?? []) {
     const matchedFiles = files.filter((file) => matchAny(group.paths, file));
-    const keywordHits = (group.keywords ?? []).filter((keyword) => normalized.includes(keyword));
+    // Word-level matching: a substring test let "trust" select the Rust checks
+    // and "guide" select the UI ones, and agents run every check they are shown.
+    const keywordHits = (group.keywords ?? []).filter((keyword) =>
+      keywordHit(tokens, normalized, keyword)
+    );
     if (!matchedFiles.length && !keywordHits.length) continue;
     selected.push({ ...group, matchedFiles, keywordHits });
   }
@@ -337,7 +361,9 @@ export function renderBrief(brief) {
   if (brief.memory.length) {
     for (const entry of brief.memory) {
       const where = entry.section ? `${entry.layer} § ${entry.section}` : entry.layer;
-      lines.push(`  ${where.padEnd(30)} ${truncate(entry.text, 80)}`);
+      // Full text: a memory line cut mid-sentence can drop the reason that
+      // makes it actionable, and the plan tells the agent to apply it.
+      lines.push(`  ${where.padEnd(30)} ${entry.text}`);
     }
   } else {
     lines.push("  (no matching memory lines)");
