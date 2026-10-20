@@ -30,3 +30,14 @@ skill. Hiding therefore removes capability rather than context cost. See
 
 Multiple `edit` calls against one file in a single block silently conflict; run
 same-file edits sequentially and batch only across independent files.
+
+## F-005 · A shared worktree can rewrite your file before you stage it (2026-10-21)
+
+`5d259065` committed a `search.mjs` that a concurrent session had already rewritten
+to import `./lib.mjs` — a file that commit did not contain, so it was broken
+standalone and its message described code that was not in it. `git status` did not
+warn: the rewrite had been picked up by the same `git add` that staged my work.
+
+Before committing a script, extract the tree you are about to create and run it:
+`git archive HEAD scripts | tar -x -C /tmp/x && node /tmp/x/scripts/...`. Fix
+forward with a note; do not rewrite published history.
