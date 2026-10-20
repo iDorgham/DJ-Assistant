@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo, useReducer } from "react";
+import { useEffect, useRef, useState, useMemo, useReducer } from "react";
 import type {
   TrackSummary,
   ScanProgressEvent,
@@ -62,26 +62,23 @@ import {
   BarChart3,
   X,
   SlidersHorizontal,
+  AlertTriangle,
   ArrowDown,
   ArrowUp,
   ArrowUpDown,
+  Clock,
   FolderTree,
-  Layers,
   Library,
   ListMusic,
-  Maximize2,
-  Minimize2,
   Monitor,
   Moon,
   PanelLeftClose,
   PanelLeftOpen,
-  Pause,
   Play,
-  SkipBack,
-  Square,
   Sun,
   Usb,
   Volume2,
+  XCircle,
   type LucideIcon,
 } from "lucide-react";
 import {
@@ -111,26 +108,69 @@ import {
   reduceUiState,
   shortcutToAction,
   type AppView,
-  type PlayerMode,
 } from "./lib/ui-state";
 import { nextTheme, resolveTheme, THEME_LABELS } from "./lib/theme";
+import { PreviewPlayer } from "./components/preview-player";
+import { ModalShell } from "./components/ModalShell";
+import { previewEngine } from "./lib/audio-engine";
 
 const VIEW_ITEMS: { view: AppView; label: string; shortcut: string }[] = [
-  { view: "library", label: "Library", shortcut: "1" },
-  { view: "preparation", label: "Preparation", shortcut: "2" },
-  { view: "autoPerformance", label: "Auto Performance", shortcut: "3" },
+  { view: "import", label: "Import", shortcut: "1" },
+  { view: "library", label: "Library", shortcut: "2" },
+  { view: "analysis", label: "Analysis", shortcut: "3" },
+  { view: "studio", label: "Studio", shortcut: "4" },
+  { view: "backup", label: "Backup", shortcut: "5" },
+  { view: "sync", label: "Sync", shortcut: "6" },
 ];
 
-const NAV_ITEMS: { label: string; icon: LucideIcon; view?: AppView; planned?: boolean }[] = [
+const NAV_ITEMS: { label: string; icon: LucideIcon; view: AppView }[] = [
   { label: "Library", icon: Library, view: "library" },
-  { label: "Playlists", icon: ListMusic, planned: true },
-  { label: "Browser", icon: FolderTree, planned: true },
-  { label: "Flash / USB", icon: Usb, planned: true },
-  { label: "Sets", icon: Layers, view: "preparation" },
-  { label: "Skills", icon: Sparkles, planned: true },
+  { label: "Studio", icon: Play, view: "studio" },
 ];
+
+/**
+ * Roadmap items are shown as a read-only strip, not disabled buttons — they
+ * are planned surfaces, not broken controls (docs/ui/02: no dead ends).
+ */
+const ROADMAP_ITEMS: { label: string; icon: LucideIcon }[] = [
+  { label: "Playlists", icon: ListMusic },
+  { label: "Browser", icon: FolderTree },
+  { label: "Flash / USB", icon: Usb },
+  { label: "Skills", icon: Sparkles },
+];
+
+/** User-facing failure detail — never surface raw serialized errors. */
+const errorDetail = (err: unknown): string =>
+  err instanceof Error && err.message ? err.message : "unexpected error";
 
 const THEME_ICONS = { dark: Moon, light: Sun, system: Monitor } as const;
+
+/** Real analysis state per track — never render a hardcoded success badge. */
+const ANALYSIS_STATUS_CHIP: Record<
+  TrackSummary["analysisStatus"],
+  { label: string; icon: LucideIcon; className: string }
+> = {
+  complete: {
+    label: "Analyzed",
+    icon: CheckCircle2,
+    className: "bg-dj-success/10 text-dj-success border border-dj-success/20",
+  },
+  pending: {
+    label: "Pending",
+    icon: Clock,
+    className: "bg-dj-accent/10 text-dj-accent border border-dj-accent/20",
+  },
+  failed: {
+    label: "Failed",
+    icon: XCircle,
+    className: "bg-dj-danger/10 text-dj-danger border border-dj-danger/20",
+  },
+  needs_review: {
+    label: "Needs review",
+    icon: AlertTriangle,
+    className: "bg-dj-warning/10 text-dj-warning border border-dj-warning/20",
+  },
+};
 
 /**
  * Lazily loads one track's cached cover art and falls back to a placeholder
@@ -228,7 +268,7 @@ function SortHeader({
         type="button"
         onClick={() => onSort(sortKey)}
         title={title ?? `Sort by ${label.toLowerCase()}`}
-        className={`inline-flex items-center gap-1 uppercase tracking-wider text-[10px] font-semibold transition ${
+        className={`inline-flex items-center gap-1 uppercase tracking-wider text-[11px] font-semibold transition ${
           active ? "text-dj-accent" : "text-dj-text-secondary hover:text-dj-text"
         } ${align === "text-center" ? "justify-center w-full" : ""}`}
       >
@@ -287,7 +327,7 @@ function LibraryFilterPanel({
       <div className="min-h-0 flex-1 space-y-4 overflow-y-auto px-4 py-3">
         {/* BPM range */}
         <div>
-          <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-wider text-dj-text-muted">
+          <p className="mb-1.5 text-[11px] font-semibold uppercase tracking-wider text-dj-text-muted">
             Tempo (BPM)
           </p>
           <div className="flex items-center gap-2">
@@ -317,7 +357,7 @@ function LibraryFilterPanel({
 
         {/* Camelot keys */}
         <div>
-          <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-wider text-dj-text-muted">
+          <p className="mb-1.5 text-[11px] font-semibold uppercase tracking-wider text-dj-text-muted">
             Key (Camelot)
           </p>
           <div className="grid grid-cols-6 gap-1">
@@ -353,7 +393,7 @@ function LibraryFilterPanel({
 
         {/* Analysis status */}
         <div>
-          <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-wider text-dj-text-muted">
+          <p className="mb-1.5 text-[11px] font-semibold uppercase tracking-wider text-dj-text-muted">
             Analysis status
           </p>
           <div className="grid grid-cols-2 gap-1.5">
@@ -387,7 +427,7 @@ function LibraryFilterPanel({
 
         {/* Genre */}
         <div>
-          <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-wider text-dj-text-muted">
+          <p className="mb-1.5 text-[11px] font-semibold uppercase tracking-wider text-dj-text-muted">
             Genre
           </p>
           {genres.length === 0 ? (
@@ -414,7 +454,7 @@ function LibraryFilterPanel({
                     <span className="min-w-0 flex-1 truncate" title={entry.genre}>
                       {entry.genre}
                     </span>
-                    <span className="font-mono text-[10px] text-dj-text-muted">{entry.count}</span>
+                    <span className="font-mono text-[11px] text-dj-text-muted">{entry.count}</span>
                   </label>
                 );
               })}
@@ -424,7 +464,7 @@ function LibraryFilterPanel({
 
         {/* Rating */}
         <div>
-          <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-wider text-dj-text-muted">
+          <p className="mb-1.5 text-[11px] font-semibold uppercase tracking-wider text-dj-text-muted">
             Minimum rating
           </p>
           <select
@@ -452,7 +492,7 @@ function LibraryFilterPanel({
           </p>
         )}
 
-        <p className="text-[10px] leading-relaxed text-dj-text-muted">
+        <p className="text-[11px] leading-relaxed text-dj-text-muted">
           Filters run locally against SQLite. Source files are never modified.
         </p>
       </div>
@@ -479,202 +519,65 @@ function LibraryFilterPanel({
 }
 
 function ViewPlaceholder({
-  icon: Icon,
+  icon: Icon = FolderTree,
   title,
   body,
-  options,
+  description,
+  options = [],
+  actions = [],
   onGoToLibrary,
 }: {
-  icon: LucideIcon;
+  icon?: LucideIcon;
   title: string;
-  body: string;
-  options: string[];
-  onGoToLibrary: () => void;
+  body?: string;
+  description?: string;
+  options?: string[];
+  actions?: { label: string; title?: string }[];
+  onGoToLibrary?: () => void;
 }) {
+  const displayBody = body ?? description ?? "";
+  const allBadges = [
+    ...options.map((opt) => ({ label: opt, title: `${opt} — planned for this view` })),
+    ...actions.map((act) => ({ label: act.label, title: act.title ?? `${act.label} — planned` })),
+  ];
   return (
     <div className="flex h-full min-h-0 flex-col">
       <div className="flex h-8 shrink-0 items-center gap-1.5 border-b border-dj-border bg-dj-panel px-3">
-        {options.map((label) => (
-          <button
-            key={label}
-            type="button"
-            disabled
-            title={`${label} — planned for this view`}
-            className="rounded-sm border border-dj-border bg-dj-elevated px-2 py-0.5 text-[11px] text-dj-text-secondary disabled:opacity-60"
+        {allBadges.map((b) => (
+          <span
+            key={b.label}
+            title={b.title}
+            className="rounded-sm border border-dashed border-dj-border bg-dj-elevated px-2 py-0.5 text-[11px] text-dj-text-secondary opacity-80"
           >
-            {label}
-          </button>
+            {b.label}
+          </span>
         ))}
       </div>
       <div className="flex flex-1 flex-col items-center justify-center gap-3 p-8 text-center">
         <div className="flex h-14 w-14 items-center justify-center rounded-xl border border-dj-border bg-dj-elevated">
           <Icon className="h-7 w-7 text-dj-text-muted" />
         </div>
-        <p className="text-lg font-semibold text-dj-text">{title}</p>
-        <p className="max-w-md text-xs leading-relaxed text-dj-text-secondary">{body}</p>
-        <button
-          type="button"
-          onClick={onGoToLibrary}
-          className="rounded-md border border-dj-border bg-dj-elevated px-3 py-1.5 text-xs text-dj-text transition hover:bg-dj-hover"
-        >
-          Go to Library
-        </button>
+        <div className="flex items-center gap-2">
+          <p className="text-lg font-semibold text-dj-text">{title}</p>
+          <span className="rounded border border-dj-warning/40 bg-dj-warning/10 px-1.5 py-0.5 text-[11px] font-medium text-dj-warning">
+            Planned view
+          </span>
+        </div>
+        {displayBody && (
+          <p className="max-w-md text-xs leading-relaxed text-dj-text-secondary">{displayBody}</p>
+        )}
+        {onGoToLibrary && (
+          <button
+            type="button"
+            onClick={onGoToLibrary}
+            className="mt-2 inline-flex items-center gap-1.5 rounded-md border border-dj-border bg-dj-panel px-3 py-1.5 text-xs font-medium text-dj-text hover:bg-dj-hover transition"
+          >
+            <Library className="h-3.5 w-3.5 text-dj-accent" />
+            <span>Go to Library</span>
+          </button>
+        )}
       </div>
     </div>
-  );
-}
-
-function PlayerDock({
-  mode,
-  track,
-  onMode,
-  onHide,
-}: {
-  mode: PlayerMode;
-  track: TrackSummary | null;
-  onMode: (mode: PlayerMode) => void;
-  onHide: () => void;
-}) {
-  const full = mode === "full";
-  const hotCues = ["A", "B", "C", "D", "E", "F", "G", "H"];
-
-  return (
-    <section
-      aria-label="Preview player"
-      className={`shrink-0 border-t border-dj-border bg-dj-panel transition-[height] duration-200 ${
-        full ? "h-[236px]" : "h-20"
-      }`}
-    >
-      <div className="flex h-full min-h-0 flex-col">
-        <div className="flex min-h-0 flex-1 items-center gap-3 px-3 py-2">
-          {track ? (
-            <ArtworkThumb trackId={track.id} hasArtwork={!!track.artworkHash} large={full} />
-          ) : (
-            <div
-              className={`flex items-center justify-center rounded-md border border-dj-border bg-dj-elevated ${
-                full ? "h-20 w-20" : "h-10 w-10"
-              }`}
-            >
-              <Music className="h-5 w-5 text-dj-text-muted" />
-            </div>
-          )}
-
-          <div className="w-52 min-w-0 shrink-0">
-            <p className="truncate text-[13px] font-semibold text-dj-text">
-              {track?.title || "No track loaded"}
-            </p>
-            <p className="truncate text-[11px] text-dj-text-secondary">
-              {track?.artist || "Select a track in the Library to preview it here."}
-            </p>
-            {track && (
-              <p className="mt-1 truncate font-mono text-[10px] text-dj-text-muted">
-                {formatBpm(track.bpm)} · {formatKey(track.keyCamelot, track.keyClassical)} ·{" "}
-                {formatDuration(track.durationMs)}
-              </p>
-            )}
-          </div>
-
-          <div className="flex min-w-0 flex-1 flex-col justify-center gap-1">
-            <div
-              className={`flex items-center justify-center rounded-md border border-dj-border bg-dj-bg text-[10px] text-dj-text-muted ${
-                full ? "h-24" : "h-6"
-              }`}
-              title="Waveform rendering lands with the preparation player (T2.4)"
-            >
-              {track ? "Waveform preview — T2.4" : "Select a track to preview"}
-            </div>
-            {full && (
-              <div className="flex h-5 items-center justify-center rounded-sm border border-dj-border bg-dj-bg text-[9px] text-dj-text-muted">
-                Overview map — T2.4
-              </div>
-            )}
-            <div className="flex items-center justify-center gap-1">
-              <button
-                type="button"
-                disabled
-                title="Set cue — needs the preview engine (T2.4)"
-                className="flex items-center gap-1 rounded-sm border border-dj-border bg-dj-elevated px-2 py-1 text-[10px] text-dj-text-secondary disabled:opacity-60"
-              >
-                <SkipBack className="h-3.5 w-3.5" />
-                CUE
-              </button>
-              <button
-                type="button"
-                disabled
-                title="Play/pause — needs the preview engine (T2.4)"
-                className="rounded-sm border border-dj-border bg-dj-elevated p-1.5 text-dj-text disabled:opacity-60"
-                aria-label="Play"
-              >
-                <Play className="h-3.5 w-3.5" />
-              </button>
-              <button
-                type="button"
-                disabled
-                title="Pause — needs the preview engine (T2.4)"
-                className="rounded-sm border border-dj-border bg-dj-elevated p-1.5 text-dj-text-secondary disabled:opacity-60"
-                aria-label="Pause"
-              >
-                <Pause className="h-3.5 w-3.5" />
-              </button>
-              <button
-                type="button"
-                disabled
-                title="Stop — needs the preview engine (T2.4)"
-                className="rounded-sm border border-dj-border bg-dj-elevated p-1.5 text-dj-text-secondary disabled:opacity-60"
-                aria-label="Stop"
-              >
-                <Square className="h-3 w-3" />
-              </button>
-              {full && (
-                <span className="ml-2 rounded-sm border border-dj-border bg-dj-bg px-2 py-1 font-mono text-[10px] text-dj-text-muted">
-                  GRID — T2.4
-                </span>
-              )}
-            </div>
-          </div>
-
-          <div className="flex shrink-0 flex-col items-end gap-1.5">
-            <div className="flex gap-0.5" aria-label="Hot cues">
-              {hotCues.map((cue) => (
-                <button
-                  key={cue}
-                  type="button"
-                  disabled
-                  title={`Hot cue ${cue} — needs the preview engine (T2.4)`}
-                  className="h-5 w-5 rounded-sm border border-dj-border bg-dj-elevated font-mono text-[9px] text-dj-text-secondary disabled:opacity-60"
-                >
-                  {cue}
-                </button>
-              ))}
-            </div>
-            <div className="flex items-center gap-1">
-              <button
-                type="button"
-                onClick={() => onMode(full ? "mini" : "full")}
-                title={full ? "Collapse player to Mini" : "Expand player to Full"}
-                aria-label={full ? "Collapse player to Mini" : "Expand player to Full"}
-                className="rounded-sm border border-dj-border bg-dj-elevated p-1.5 text-dj-text-secondary transition hover:bg-dj-hover hover:text-dj-text"
-              >
-                {full ? (
-                  <Minimize2 className="h-3.5 w-3.5" />
-                ) : (
-                  <Maximize2 className="h-3.5 w-3.5" />
-                )}
-              </button>
-              <button
-                type="button"
-                onClick={onHide}
-                title="Hide player"
-                aria-label="Hide player"
-                className="rounded-sm border border-dj-border bg-dj-elevated p-1.5 text-dj-text-secondary transition hover:bg-dj-hover hover:text-dj-text"
-              >
-                <X className="h-3.5 w-3.5" />
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
-    </section>
   );
 }
 
@@ -683,6 +586,27 @@ export default function App() {
   const [systemPrefersDark, setSystemPrefersDark] = useState(
     () => window.matchMedia?.("(prefers-color-scheme: dark)").matches ?? true
   );
+
+  const [headerVolume, setHeaderVolume] = useState(() => previewEngine.getState().volume);
+  const [headerMuted, setHeaderMuted] = useState(() => previewEngine.getState().isMuted);
+
+  useEffect(() => {
+    return previewEngine.subscribe((state) => {
+      setHeaderVolume(state.volume);
+      setHeaderMuted(state.isMuted);
+    });
+  }, []);
+
+  const handleViewChange = (newView: AppView) => {
+    dispatch({ type: "setView", view: newView });
+    if (ui.playerMode !== "hidden") {
+      if (newView === "studio" && ui.playerMode === "mini") {
+        dispatch({ type: "setPlayerMode", mode: "full" });
+      } else if (newView === "library" && ui.playerMode === "full") {
+        dispatch({ type: "setPlayerMode", mode: "mini" });
+      }
+    }
+  };
 
   useEffect(() => {
     persistUiState(ui);
@@ -700,8 +624,25 @@ export default function App() {
     return () => media.removeEventListener("change", onChange);
   }, []);
 
+  // True while a dialog (Tag Health / Charts) is open — view shortcuts must
+  // not unmount a dialog out from under the user (critique 2026-10-19).
+  const dialogsOpenRef = useRef(false);
+
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
+      // Never steal shortcuts while the user is typing in a field
+      // (docs/ui/10: view shortcuts are suppressed inside inputs/dialogs).
+      if (dialogsOpenRef.current) return;
+      const target = event.target instanceof HTMLElement ? event.target : null;
+      if (
+        target &&
+        (target.tagName === "INPUT" ||
+          target.tagName === "TEXTAREA" ||
+          target.tagName === "SELECT" ||
+          target.isContentEditable)
+      ) {
+        return;
+      }
       const action = shortcutToAction({
         key: event.key,
         ctrlKey: event.ctrlKey,
@@ -716,6 +657,8 @@ export default function App() {
   }, []);
 
   const [tracks, setTracks] = useState<TrackSummary[]>([]);
+  // Paginated fetch: start at 200, extend with Load more (libraryTotal bounds it).
+  const [visibleLimit, setVisibleLimit] = useState(200);
   const [loading, setLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [libraryTotal, setLibraryTotal] = useState(0);
@@ -734,6 +677,13 @@ export default function App() {
   const [scanning, setScanning] = useState(false);
   const [progress, setProgress] = useState<ScanProgressEvent | null>(null);
   const [statusMessage, setStatusMessage] = useState<string>("Ready");
+  // Tone drives the header status dot — never show a green dot during a
+  // failure or a scan in progress (docs/ui/08: status reflects real state).
+  const [statusTone, setStatusTone] = useState<"ok" | "busy" | "error">("ok");
+  const pushStatus = (message: string, tone: "ok" | "busy" | "error" = "ok") => {
+    setStatusMessage(message);
+    setStatusTone(tone);
+  };
 
   // Analysis queue (T1.2.2): version-aware run with per-track progress events.
   const [analyzing, setAnalyzing] = useState(false);
@@ -744,6 +694,9 @@ export default function App() {
   const [similar, setSimilar] = useState<SimilarTrackResult[]>([]);
   const [similarLoading, setSimilarLoading] = useState(false);
   const [storeLinks, setStoreLinks] = useState<StoreLinksResponse | null>(null);
+  const [similarError, setSimilarError] = useState(false);
+  const [storeLinksError, setStoreLinksError] = useState(false);
+  const [drawerRetry, setDrawerRetry] = useState(0);
   const [selectedGaps, setSelectedGaps] = useState<string[]>([]);
   const [copiedUrl, setCopiedUrl] = useState<string | null>(null);
   const [healthOpen, setHealthOpen] = useState(false);
@@ -765,6 +718,7 @@ export default function App() {
 
   // Chart snapshots Tier 1 (TD.3): versioned data with local taste filtering.
   const [chartsOpen, setChartsOpen] = useState(false);
+  dialogsOpenRef.current = healthOpen || chartsOpen;
   const [chartGenre, setChartGenre] = useState("techno");
   const [chartKind, setChartKind] = useState("top100");
   const [chartData, setChartData] = useState<ChartListResponse | null>(null);
@@ -783,18 +737,18 @@ export default function App() {
       filters: normalizeFilters(filters),
       sortBy,
       sortDir: sortBy ? sortDir : undefined,
-      limit: 200,
+      limit: visibleLimit,
     })
       .then((res) => {
         if (cancelled) return;
         setTracks(res.tracks);
         setLibraryTotal(res.total);
-        setStatusMessage(`Library loaded: ${res.total} track${res.total === 1 ? "" : "s"}`);
+        pushStatus(`Library loaded: ${res.total} track${res.total === 1 ? "" : "s"}`);
       })
       .catch((err) => {
         if (cancelled) return;
         console.error("Failed to load library tracks:", err);
-        setStatusMessage("Error loading tracks");
+        pushStatus("Couldn't load tracks — check the backend, then reload", "error");
       })
       .finally(() => {
         if (!cancelled) setLoading(false);
@@ -803,7 +757,7 @@ export default function App() {
       cancelled = true;
     };
     // Only the applied view state drives the fetch; the loader helpers are pure.
-  }, [filters, sortBy, sortDir, reloadToken]);
+  }, [filters, sortBy, sortDir, reloadToken, visibleLimit]);
 
   // Genre options for the filter panel, reloaded with the library so a scan
   // that introduced new genres surfaces them immediately.
@@ -849,8 +803,7 @@ export default function App() {
     setFilters({});
     setFilterError(null);
     setFiltersOpen(false);
-    setSortBy(undefined);
-    setSortDir("asc");
+    // Sort is a separate control — resetting filters must not reset sort.
   };
 
   const toggleSort = (key: ListTracksSortBy) => {
@@ -883,6 +836,8 @@ export default function App() {
     let cancelled = false;
     const trackId = selectedTrack.id;
     setSimilarLoading(true);
+    setSimilarError(false);
+    setStoreLinksError(false);
     setDeezerMatch(null);
     findSimilarTracks({ trackId, limit: 8 })
       .then((res) => {
@@ -890,7 +845,10 @@ export default function App() {
       })
       .catch((err) => {
         console.error("Failed to load similar tracks:", err);
-        if (!cancelled) setSimilar([]);
+        if (!cancelled) {
+          setSimilar([]);
+          setSimilarError(true);
+        }
       })
       .finally(() => {
         if (!cancelled) setSimilarLoading(false);
@@ -901,7 +859,10 @@ export default function App() {
       })
       .catch((err) => {
         console.error("Failed to load store links:", err);
-        if (!cancelled) setStoreLinks(null);
+        if (!cancelled) {
+          setStoreLinks(null);
+          setStoreLinksError(true);
+        }
       });
     trackTagHealth({ trackIds: [trackId], limit: 1 })
       .then((res) => {
@@ -914,7 +875,7 @@ export default function App() {
     return () => {
       cancelled = true;
     };
-  }, [selectedTrack]);
+  }, [selectedTrack, drawerRetry]);
 
   const openTagHealth = async () => {
     setHealthOpen(true);
@@ -958,7 +919,7 @@ export default function App() {
       setHealth(await trackTagHealth({}));
     } catch (err) {
       console.error("Enrichment lookup failed:", err);
-      setApplyMessage(`Lookup failed: ${err}`);
+      setApplyMessage(`Lookup failed — ${errorDetail(err)}. Try the lookup again.`);
     } finally {
       setEnrichLoading(false);
       setEnrichProgress(null);
@@ -988,7 +949,7 @@ export default function App() {
       setHealth(await trackTagHealth({}));
     } catch (err) {
       console.error("Enrichment apply failed:", err);
-      setApplyMessage(`Apply failed: ${err}`);
+      setApplyMessage(`Apply failed — ${errorDetail(err)}. Review the proposals and try again.`);
     } finally {
       setEnrichLoading(false);
     }
@@ -1006,7 +967,7 @@ export default function App() {
       setHealth(await trackTagHealth({}));
     } catch (err) {
       console.error("Enrichment undo failed:", err);
-      setApplyMessage(`Undo failed: ${err}`);
+      setApplyMessage(`Undo failed — ${errorDetail(err)}. Try the undo again.`);
     } finally {
       setEnrichLoading(false);
     }
@@ -1045,7 +1006,7 @@ export default function App() {
     } catch (err) {
       console.error("Chart list failed:", err);
       setChartData(null);
-      setChartError(`${err}`);
+      setChartError(`Couldn't load charts — ${errorDetail(err)}. Try again.`);
     } finally {
       setChartLoading(false);
     }
@@ -1098,11 +1059,11 @@ export default function App() {
           },
         ],
       });
-      setStatusMessage(`Chart snapshot imported: ${res.imported} entries, skipped ${res.skipped}`);
+      pushStatus(`Chart snapshot imported: ${res.imported} entries, skipped ${res.skipped}`);
       await loadCharts();
     } catch (err) {
       console.error("Sample snapshot import failed:", err);
-      setChartError(`${err}`);
+      setChartError(`Import failed — ${errorDetail(err)}. Try again.`);
     } finally {
       setChartLoading(false);
     }
@@ -1131,7 +1092,7 @@ export default function App() {
     listenToScanCompleted((summary: ScanCompletedEvent) => {
       setScanning(false);
       setProgress(null);
-      setStatusMessage(
+      pushStatus(
         `Scan complete! Imported: ${summary.totalImported}, Duplicates: ${summary.totalDuplicates}, Errors: ${summary.totalErrors}`
       );
       refreshLibrary();
@@ -1157,7 +1118,7 @@ export default function App() {
     listenToAnalysisCompleted((summary: AnalysisCompletedEvent) => {
       setAnalyzing(false);
       setAnalysisProgress(null);
-      setStatusMessage(
+      pushStatus(
         `Analysis complete! ${summary.succeeded} succeeded, ${summary.failed} failed in ${(summary.durationMs / 1000).toFixed(1)}s`
       );
       refreshLibrary();
@@ -1197,14 +1158,15 @@ export default function App() {
 
     setCurrentFolder(selected);
     setScanning(true);
-    setStatusMessage(`Scanning folder: ${selected}...`);
+    pushStatus(`Scanning folder: ${selected}...`, "busy");
 
     try {
       await scanFolder({ path: selected, recursive: true });
     } catch (err) {
       console.error("Error starting scan:", err);
       setScanning(false);
-      setStatusMessage(`Scan failed: ${err}`);
+      const scanReason = err instanceof Error && err.message ? err.message : "unexpected error";
+      pushStatus(`Scan failed — ${scanReason}. Pick the folder to retry.`, "error");
     }
   };
 
@@ -1212,20 +1174,21 @@ export default function App() {
     if (analyzing) return;
     setAnalyzing(true);
     setAnalysisProgress(null);
-    setStatusMessage("Starting analysis...");
+    pushStatus("Starting analysis...", "busy");
     try {
       const res = await analyzeLibrary({});
       if (res.total === 0) {
         setAnalyzing(false);
-        setStatusMessage("No tracks need analysis (all up to date).");
+        pushStatus("No tracks need analysis (all up to date).");
       } else {
-        setStatusMessage(`Analyzing ${res.total} track${res.total === 1 ? "" : "s"}...`);
+        pushStatus(`Analyzing ${res.total} track${res.total === 1 ? "" : "s"}...`);
       }
     } catch (err) {
       console.error("Error starting analysis:", err);
       setAnalyzing(false);
       setAnalysisProgress(null);
-      setStatusMessage(`Analysis failed: ${err}`);
+      const analysisReason = err instanceof Error && err.message ? err.message : "unexpected error";
+      pushStatus(`Analysis failed — ${analysisReason}. Press Analyze to retry.`, "error");
     }
   };
 
@@ -1259,7 +1222,7 @@ export default function App() {
             <button
               key={item.view}
               type="button"
-              onClick={() => dispatch({ type: "setView", view: item.view })}
+              onClick={() => handleViewChange(item.view)}
               aria-pressed={ui.view === item.view}
               title={`${item.label} (Ctrl/Cmd+${item.shortcut})`}
               className={`rounded-sm px-2.5 py-1 text-xs font-medium transition ${
@@ -1273,8 +1236,21 @@ export default function App() {
           ))}
         </nav>
 
-        <div className="flex min-w-0 flex-1 items-center gap-1.5 px-2">
-          <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-dj-success" />
+        <div
+          className="flex min-w-0 flex-1 items-center gap-1.5 px-2"
+          role="status"
+          aria-live="polite"
+        >
+          <span
+            aria-hidden="true"
+            className={`h-1.5 w-1.5 shrink-0 rounded-full ${
+              statusTone === "error"
+                ? "bg-dj-danger"
+                : statusTone === "busy"
+                  ? "bg-dj-accent animate-pulse"
+                  : "bg-dj-success"
+            }`}
+          />
           <span className="truncate text-[11px] text-dj-text-muted" title={statusMessage}>
             {statusMessage}
           </span>
@@ -1294,24 +1270,29 @@ export default function App() {
           <div className="group flex items-center">
             <button
               type="button"
-              disabled
-              title="Volume — preview engine arrives with T2.4"
-              aria-label="Volume"
-              className="rounded-sm p-1.5 text-dj-text-secondary transition hover:bg-dj-hover hover:text-dj-text disabled:opacity-60"
+              onClick={() => previewEngine.setMuted(!headerMuted)}
+              title={headerMuted ? "Unmute preview" : "Mute preview"}
+              aria-label={headerMuted ? "Unmute preview" : "Mute preview"}
+              className="rounded-sm p-1.5 text-dj-text-secondary transition hover:bg-dj-hover hover:text-dj-text"
             >
-              <Volume2 className="h-4 w-4" />
+              <Volume2 className={`h-4 w-4 ${headerMuted ? "text-dj-danger" : ""}`} />
             </button>
             <input
               id="preview-volume"
               name="preview-volume"
               type="range"
               min={0}
-              max={100}
-              defaultValue={80}
-              disabled
+              max={1}
+              step={0.01}
+              value={headerMuted ? 0 : headerVolume}
+              onChange={(e) => {
+                const val = Number(e.target.value);
+                setHeaderVolume(val);
+                previewEngine.setVolume(val);
+              }}
               aria-label="Preview volume"
-              title="Volume — preview engine arrives with T2.4"
-              className="w-0 opacity-0 transition-all duration-150 group-hover:w-16 group-hover:opacity-100"
+              title={`Preview volume: ${Math.round(headerVolume * 100)}%`}
+              className="w-0 opacity-0 transition-all duration-150 group-hover:w-16 group-hover:opacity-100 accent-dj-accent cursor-pointer"
             />
           </div>
 
@@ -1338,49 +1319,55 @@ export default function App() {
             ui.navCollapsed ? "w-12" : "w-[220px]"
           }`}
         >
-          <nav aria-label="Library sources" className="flex-1 space-y-0.5 overflow-y-auto p-2">
+          <nav aria-label="Primary views" className="flex-1 space-y-0.5 overflow-y-auto p-2">
             {NAV_ITEMS.map((item) => {
               const Icon = item.icon;
-              const active = item.view !== undefined && ui.view === item.view;
+              const active = ui.view === item.view;
               return (
                 <button
                   key={item.label}
                   type="button"
-                  disabled={item.planned}
-                  onClick={
-                    item.view
-                      ? () => dispatch({ type: "setView", view: item.view as AppView })
-                      : undefined
-                  }
+                  onClick={() => dispatch({ type: "setView", view: item.view })}
                   aria-current={active ? "page" : undefined}
-                  title={
-                    ui.navCollapsed
-                      ? `${item.label}${item.planned ? " — planned" : ""}`
-                      : item.planned
-                        ? `${item.label} — planned`
-                        : item.label
-                  }
-                  className={`flex w-full items-center gap-2 rounded-md border-l-2 px-2 py-1.5 text-left text-xs transition ${
+                  title={item.label}
+                  className={`flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-xs transition ${
                     active
-                      ? "border-dj-accent bg-dj-active text-dj-text"
-                      : "border-transparent text-dj-text-secondary hover:bg-dj-hover hover:text-dj-text"
-                  } disabled:opacity-50`}
+                      ? "bg-dj-active font-medium text-dj-text"
+                      : "text-dj-text-secondary hover:bg-dj-hover hover:text-dj-text"
+                  }`}
                 >
                   <Icon className="h-4 w-4 shrink-0" />
                   {!ui.navCollapsed && (
-                    <>
-                      <span className="min-w-0 flex-1 truncate">{item.label}</span>
-                      {item.planned && (
-                        <span className="text-[9px] uppercase tracking-wide text-dj-text-muted">
-                          Soon
-                        </span>
-                      )}
-                    </>
+                    <span className="min-w-0 flex-1 truncate">{item.label}</span>
                   )}
                 </button>
               );
             })}
           </nav>
+
+          {/* Roadmap strip: planned surfaces, honestly labeled and read-only */}
+          <div className="border-t border-dj-border space-y-0.5 p-2">
+            {!ui.navCollapsed && (
+              <p className="px-2 pb-1 text-[11px] font-semibold uppercase tracking-wider text-dj-text-muted">
+                Roadmap
+              </p>
+            )}
+            {ROADMAP_ITEMS.map((item) => {
+              const Icon = item.icon;
+              return (
+                <div
+                  key={item.label}
+                  title={`${item.label} — planned, not available yet`}
+                  className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-xs text-dj-text-secondary"
+                >
+                  <Icon className="h-4 w-4 shrink-0 text-dj-text-muted" />
+                  {!ui.navCollapsed && (
+                    <span className="min-w-0 flex-1 truncate">{item.label}</span>
+                  )}
+                </div>
+              );
+            })}
+          </div>
           <div className="border-t border-dj-border p-2">
             <button
               type="button"
@@ -1400,7 +1387,12 @@ export default function App() {
         </aside>
 
         <main className="relative flex min-w-0 flex-1 flex-col overflow-hidden">
-          {ui.view === "library" ? (
+          {ui.view === "import" ? (
+            <ViewPlaceholder
+              title="Import"
+              description="Ingest new downloaded tracks, validate tags, assess quality, rate, comment, and tag before importing them into your library."
+            />
+          ) : ui.view === "library" ? (
             <>
               {/* Main Content Area */}
               <div className="relative flex min-h-0 flex-1 flex-col overflow-hidden">
@@ -1582,7 +1574,7 @@ export default function App() {
                     <button
                       onClick={resetFilters}
                       className="ml-1 text-dj-text-muted hover:text-dj-text-secondary underline decoration-dotted"
-                      title="Clear every filter and restore the newest-first order"
+                      title="Clear every filter (sort order is kept)"
                     >
                       clear all
                     </button>
@@ -1645,7 +1637,7 @@ export default function App() {
                   ) : (
                     <table className="w-full min-w-[1200px] text-left border-collapse text-xs">
                       <thead>
-                        <tr className="border-b border-dj-border bg-dj-panel text-dj-text-secondary uppercase tracking-wider text-[10px] font-semibold sticky top-0 z-10">
+                        <tr className="border-b border-dj-border bg-dj-panel text-dj-text-secondary uppercase tracking-wider text-[11px] font-semibold sticky top-0 z-10">
                           <SortHeader
                             label="#"
                             sortKey="imported_at"
@@ -1711,27 +1703,44 @@ export default function App() {
                         {filteredTracks.map((track, idx) => (
                           <tr
                             key={track.id}
+                            tabIndex={0}
+                            aria-label={`Inspect ${track.title || "Untitled"} by ${track.artist || "Unknown Artist"}`}
+                            aria-selected={selectedTrack?.id === track.id}
                             onClick={() =>
                               setSelectedTrack((current) =>
                                 current?.id === track.id ? null : track
                               )
                             }
-                            title="Click to inspect: similar tracks, tag gaps, buy-links"
-                            className={`hover:bg-dj-hover transition duration-150 group cursor-pointer ${
+                            onKeyDown={(e) => {
+                              if (e.key === "Enter" || e.key === " ") {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                setSelectedTrack((current) =>
+                                  current?.id === track.id ? null : track
+                                );
+                              }
+                            }}
+                            title="Click or press Enter to inspect: similar tracks, tag gaps, buy-links"
+                            className={`hover:bg-dj-hover transition duration-150 group cursor-pointer focus-visible:outline-2 focus-visible:outline-dj-accent focus-visible:-outline-offset-2 ${
                               selectedTrack?.id === track.id ? "bg-dj-active" : ""
                             }`}
                           >
-                            {" "}
                             <td className="py-2.5 px-4 text-center text-dj-text-muted font-mono text-[11px]">
                               {idx + 1}
                             </td>
                             <td className="py-1.5 px-2">
                               <ArtworkThumb trackId={track.id} hasArtwork={!!track.artworkHash} />
                             </td>
-                            <td className="py-2.5 px-4 font-medium text-dj-text group-hover:text-dj-accent transition">
+                            <td
+                              className="py-2.5 px-4 font-medium text-dj-text group-hover:text-dj-accent transition max-w-[300px] truncate"
+                              title={track.title || "Untitled"}
+                            >
                               {track.title || "Untitled"}
                             </td>
-                            <td className="py-2.5 px-4 text-dj-text-secondary">
+                            <td
+                              className="py-2.5 px-4 text-dj-text-secondary max-w-[220px] truncate"
+                              title={track.artist || "Unknown Artist"}
+                            >
                               {track.artist || "Unknown Artist"}
                             </td>
                             <td className="py-2.5 px-4 text-dj-text-secondary">
@@ -1762,7 +1771,7 @@ export default function App() {
                               {formatDuration(track.durationMs)}
                             </td>
                             <td className="py-2.5 px-4 text-center">
-                              <span className="px-1.5 py-0.5 rounded-sm text-[10px] uppercase font-mono bg-dj-overlay text-dj-text-secondary border border-dj-border">
+                              <span className="px-1.5 py-0.5 rounded-sm text-[11px] uppercase font-mono bg-dj-overlay text-dj-text-secondary border border-dj-border">
                                 {track.format || "AUDIO"}
                               </span>
                             </td>
@@ -1773,16 +1782,27 @@ export default function App() {
                               {truncateComment(track.comments, 48)}
                             </td>
                             <td
-                              className="py-2.5 px-4 text-center font-mono text-[10px] text-dj-text-secondary"
+                              className="py-2.5 px-4 text-center font-mono text-[11px] text-dj-text-secondary"
                               title={track.fileHash}
                             >
                               {shortHash(track.fileHash)}
                             </td>
                             <td className="py-2.5 px-4 text-center">
-                              <span className="inline-flex items-center space-x-1 px-2 py-0.5 rounded-sm text-[10px] font-medium bg-dj-success/10 text-dj-success border border-dj-success/20">
-                                <CheckCircle2 className="w-3 h-3" />
-                                <span>Indexed</span>
-                              </span>
+                              {(() => {
+                                const chip =
+                                  ANALYSIS_STATUS_CHIP[track.analysisStatus] ??
+                                  ANALYSIS_STATUS_CHIP.pending;
+                                const StatusIcon = chip.icon;
+                                return (
+                                  <span
+                                    className={`inline-flex items-center space-x-1 px-2 py-0.5 rounded-sm text-[11px] font-medium border ${chip.className}`}
+                                    title={`Analysis status: ${chip.label}`}
+                                  >
+                                    <StatusIcon className="w-3 h-3" />
+                                    <span>{chip.label}</span>
+                                  </span>
+                                );
+                              })()}
                             </td>
                           </tr>
                         ))}
@@ -1790,6 +1810,20 @@ export default function App() {
                     </table>
                   )}
                 </div>
+
+                {/* Pagination: honest "there is more" affordance past the first page */}
+                {tracks.length > 0 && tracks.length < libraryTotal && (
+                  <div className="shrink-0 border-t border-dj-border bg-dj-panel px-3 py-2 flex justify-center">
+                    <button
+                      type="button"
+                      onClick={() => setVisibleLimit((n) => n + 200)}
+                      disabled={loading}
+                      className="inline-flex items-center gap-1.5 rounded-md border border-dj-border bg-dj-elevated px-3 py-1.5 text-xs text-dj-text-secondary transition hover:bg-dj-hover hover:text-dj-text disabled:opacity-50"
+                    >
+                      Load more — showing {tracks.length} of {libraryTotal}
+                    </button>
+                  </div>
+                )}
               </div>
 
               {/* Track inspector drawer: similar tracks, tag gaps, buy-links */}
@@ -1830,7 +1864,7 @@ export default function App() {
                         {selectedGaps.map((field) => (
                           <span
                             key={field}
-                            className="px-1.5 py-0.5 rounded-sm text-[10px] font-medium bg-dj-warning/10 text-dj-warning border border-dj-warning/20"
+                            className="px-1.5 py-0.5 rounded-sm text-[11px] font-medium bg-dj-warning/10 text-dj-warning border border-dj-warning/20"
                             title="Missing locally — online lookup (MusicBrainz / iTunes / Deezer) is planned and opt-in"
                           >
                             missing: {formatMissingField(field)}
@@ -1847,6 +1881,17 @@ export default function App() {
                     </p>
                     {similarLoading ? (
                       <p className="text-xs text-dj-text-muted mt-2">Scoring library…</p>
+                    ) : similarError ? (
+                      <p className="text-xs text-dj-danger mt-2">
+                        Couldn't score similar tracks.{" "}
+                        <button
+                          type="button"
+                          onClick={() => setDrawerRetry((n) => n + 1)}
+                          className="rounded px-1 text-dj-accent underline underline-offset-2 hover:bg-dj-hover transition"
+                        >
+                          Retry
+                        </button>
+                      </p>
                     ) : similar.length === 0 ? (
                       <p className="text-xs text-dj-text-muted mt-2">
                         No comparable tracks yet — import more music with BPM and key tags.
@@ -1875,13 +1920,13 @@ export default function App() {
                                 <span className="text-[11px] text-dj-text-muted truncate">
                                   {result.artist || "Unknown Artist"}
                                 </span>
-                                <span className="text-[10px] font-mono text-dj-text-muted shrink-0">
+                                <span className="text-[11px] font-mono text-dj-text-muted shrink-0">
                                   {formatBpm(result.bpm)} ·{" "}
                                   {formatKey(result.keyCamelot, result.keyClassical)}
                                 </span>
                               </div>
                               {result.reasons.length > 0 && (
-                                <p className="text-[10px] text-dj-text-muted mt-1 truncate">
+                                <p className="text-[11px] text-dj-text-muted mt-1 truncate">
                                   {result.reasons.join(" · ")}
                                 </p>
                               )}
@@ -1897,7 +1942,18 @@ export default function App() {
                       <ExternalLink className="w-3.5 h-3.5 text-dj-success" />
                       <span>Find to buy (metadata links only)</span>
                     </p>
-                    {!storeLinks || storeLinks.links.length === 0 ? (
+                    {storeLinksError ? (
+                      <p className="text-xs text-dj-danger mt-2">
+                        Couldn't load store links.{" "}
+                        <button
+                          type="button"
+                          onClick={() => setDrawerRetry((n) => n + 1)}
+                          className="rounded px-1 text-dj-accent underline underline-offset-2 hover:bg-dj-hover transition"
+                        >
+                          Retry
+                        </button>
+                      </p>
+                    ) : !storeLinks || storeLinks.links.length === 0 ? (
                       <p className="text-xs text-dj-text-muted mt-2">
                         No store links for this track.
                       </p>
@@ -1925,7 +1981,7 @@ export default function App() {
                         ))}
                       </ul>
                     )}
-                    <p className="text-[10px] text-dj-text-muted mt-2">
+                    <p className="text-[11px] text-dj-text-muted mt-2">
                       Links open the store's own search page. No audio is fetched; Beatport charts
                       and release radar arrive as data integrations next.
                     </p>
@@ -1980,7 +2036,7 @@ export default function App() {
                           <p className="text-dj-text-muted">No Deezer match for this track.</p>
                         )}
                         <p
-                          className="text-[10px] text-dj-text-muted mt-1.5"
+                          className="text-[11px] text-dj-text-muted mt-1.5"
                           title="Playlist export needs a Deezer application ID (TX follow-up)"
                         >
                           Playlist export: needs a Deezer app ID — matching stays read-only.
@@ -1993,417 +2049,436 @@ export default function App() {
 
               {/* Tag Health modal: library-wide missing tags/artwork */}
               {healthOpen && (
-                <div className="fixed inset-0 bg-black/60 z-30 flex items-center justify-center p-6">
-                  <div className="w-[560px] max-w-full max-h-full overflow-y-auto bg-dj-panel border border-dj-border rounded-lg shadow-2xl">
-                    <div className="p-4 border-b border-dj-border flex items-center justify-between">
-                      <p className="text-sm font-semibold text-dj-text flex items-center space-x-2">
-                        <Activity className="w-4 h-4 text-dj-warning" />
-                        <span>Tag Health — missing tags &amp; artwork</span>
-                      </p>
-                      <button
-                        onClick={() => setHealthOpen(false)}
-                        className="p-1.5 rounded-md hover:bg-dj-hover text-dj-text-secondary transition"
-                        title="Close"
-                      >
-                        <X className="w-4 h-4" />
-                      </button>
-                    </div>
-                    <div className="p-4">
-                      {healthLoading ? (
-                        <p className="text-xs text-dj-text-muted">Scanning library gaps…</p>
-                      ) : !health ? (
-                        <p className="text-xs text-dj-text-muted">Could not load tag health.</p>
-                      ) : (
-                        <>
-                          <p className="text-xs text-dj-text-secondary">
-                            {health.withGaps} of {health.checked} tracks have gaps.
-                            {health.averageScore != null && (
-                              <>
-                                {" "}
-                                Library score:{" "}
-                                <span className="font-mono text-dj-text">
-                                  {Math.round(health.averageScore)}
-                                </span>
-                                /100
-                              </>
-                            )}{" "}
-                            Online lookup is explicit and opt-in per provider — only metadata and
-                            search queries leave this device, never audio.
-                          </p>
-                          <div className="mt-3 flex items-center gap-2">
-                            <label
-                              htmlFor="enrich-provider"
-                              className="text-xs text-dj-text-secondary"
-                            >
-                              Source
-                            </label>
-                            <select
-                              id="enrich-provider"
-                              value={enrichProvider}
-                              onChange={(e) =>
-                                setEnrichProvider(e.target.value as EnrichmentProviderKind)
-                              }
-                              className="bg-dj-elevated border border-dj-border rounded-md px-2 py-1.5 text-xs text-dj-text"
-                              disabled={enrichLoading}
-                              title="Discogs / Last.fm need exported API keys (see .env.example)"
-                            >
-                              <option value="musicbrainz">MusicBrainz (no key)</option>
-                              <option value="itunes">iTunes Search (no key)</option>
-                              <option value="deezer">Deezer (no key)</option>
-                              <option value="discogs">Discogs (needs DISCOGS_TOKEN)</option>
-                              <option value="lastfm">Last.fm (needs LASTFM_API_KEY)</option>
-                              <option value="acoustid" disabled>
-                                AcoustID (fingerprinting pending)
-                              </option>
-                            </select>
-                            <button
-                              onClick={runEnrichmentPreview}
-                              disabled={enrichLoading || health.withGaps === 0}
-                              className="flex items-center space-x-1.5 px-2.5 py-1.5 rounded-md bg-dj-accent hover:bg-dj-accent-strong disabled:bg-dj-active text-dj-on-accent text-xs font-medium transition"
-                              title="Look up to 25 gap tracks on the selected source. Nothing is applied yet."
-                            >
-                              <Globe className="w-3.5 h-3.5" />
-                              <span>
-                                {enrichLoading && !preview ? "Looking up…" : "Look up online"}
-                              </span>
-                            </button>
-                          </div>
-                          {enrichProgress && (
-                            <p className="text-[11px] text-dj-text-muted font-mono mt-2">
-                              {enrichProgress.processed} / {enrichProgress.total} ·{" "}
-                              {enrichProgress.status}
-                            </p>
-                          )}
-                          {applyMessage && (
-                            <p className="text-xs text-dj-text-secondary mt-2">{applyMessage}</p>
-                          )}
-                          {preview && preview.proposals.length > 0 && (
-                            <div className="mt-3">
-                              <div className="flex items-center justify-between">
-                                <p className="text-[11px] uppercase tracking-wider font-semibold text-dj-text-muted">
-                                  Proposals from {preview.provider} ({preview.proposedTracks}{" "}
-                                  tracks, {preview.proposedChanges} changes
-                                  {preview.skipped > 0 ? `, ${preview.skipped} skipped` : ""})
-                                </p>
-                              </div>
-                              <ul className="mt-2 space-y-2 max-h-72 overflow-y-auto">
-                                {preview.proposals.map((proposal) => (
-                                  <li
-                                    key={proposal.trackId}
-                                    className="p-2 rounded-md bg-dj-elevated border border-dj-border text-xs"
-                                  >
-                                    <label className="flex items-start gap-2 cursor-pointer">
-                                      <input
-                                        type="checkbox"
-                                        checked={checkedProposals.includes(proposal.trackId)}
-                                        onChange={() => toggleProposal(proposal.trackId)}
-                                        className="mt-1 accent-dj-accent"
-                                      />
-                                      <span className="min-w-0 flex-1">
-                                        <span className="flex items-center gap-2">
-                                          <span className="text-dj-text truncate">
-                                            {proposal.title} — {proposal.artist}
-                                          </span>
-                                          <span
-                                            className={`shrink-0 px-1.5 py-0.5 rounded-sm text-[10px] font-medium border ${
-                                              proposal.tier === "high"
-                                                ? "bg-dj-success/10 text-dj-success border-dj-success/20"
-                                                : proposal.tier === "review"
-                                                  ? "bg-dj-warning/10 text-dj-warning border-dj-warning/20"
-                                                  : "bg-dj-active text-dj-text-secondary border-dj-border"
-                                            }`}
-                                            title={`Match confidence ${formatScore(proposal.confidence)}`}
-                                          >
-                                            {proposal.tier} · {formatScore(proposal.confidence)}
-                                          </span>
-                                        </span>
-                                        <span className="block mt-1 space-y-0.5">
-                                          {proposal.changes.map((change) => (
-                                            <span key={change.field} className="block text-[11px]">
-                                              <span className="text-dj-text-muted">
-                                                {formatMissingField(change.field)}:{" "}
-                                              </span>
-                                              <span className="text-dj-text-muted line-through">
-                                                {change.field === "artwork"
-                                                  ? "none"
-                                                  : (change.current ?? "—")}
-                                              </span>
-                                              <span className="text-dj-text-muted"> → </span>
-                                              <span className="text-dj-success">
-                                                {change.field === "artwork"
-                                                  ? "cover art"
-                                                  : truncateComment(change.proposed, 60)}
-                                              </span>
-                                            </span>
-                                          ))}
-                                        </span>
-                                      </span>
-                                    </label>
-                                  </li>
-                                ))}
-                              </ul>
-                              <div className="mt-3 flex items-center gap-2">
-                                <button
-                                  onClick={runEnrichmentApply}
-                                  disabled={enrichLoading || checkedProposals.length === 0}
-                                  className="px-3 py-1.5 rounded-md bg-dj-success hover:bg-dj-success/80 disabled:bg-dj-success/40 text-dj-on-accent text-xs font-medium transition"
-                                  title="Write checked proposals to DB canonical fields (never source files). Artwork fills empty slots only."
-                                >
-                                  {enrichLoading
-                                    ? "Applying…"
-                                    : `Apply checked (${checkedProposals.length})`}
-                                </button>
-                                <button
-                                  onClick={runEnrichmentUndo}
-                                  disabled={enrichLoading}
-                                  className="flex items-center space-x-1.5 px-3 py-1.5 rounded-md bg-dj-elevated hover:bg-dj-hover text-dj-text-secondary border border-dj-border text-xs transition"
-                                  title="Restore this run's before-state snapshot"
-                                >
-                                  <Undo2 className="w-3.5 h-3.5" />
-                                  <span>Undo run</span>
-                                </button>
-                              </div>
-                            </div>
-                          )}
-                          {preview && preview.proposals.length === 0 && (
-                            <p className="text-xs text-dj-text-muted mt-3">
-                              No new proposals from {preview.provider}
-                              {preview.skipped > 0 ? ` (${preview.skipped} skipped)` : ""}.
-                            </p>
-                          )}
-                          {health.totals.length > 0 && (
-                            <div className="mt-3 space-y-1.5">
-                              {health.totals.map((total) => (
-                                <div key={total.field} className="flex items-center gap-2 text-xs">
-                                  <span className="w-24 shrink-0 text-dj-text-secondary">
-                                    {formatMissingField(total.field)}
-                                  </span>
-                                  <div className="flex-1 h-1.5 rounded-full bg-dj-elevated overflow-hidden">
-                                    <div
-                                      className="h-1.5 rounded-full bg-dj-warning"
-                                      style={{
-                                        width: `${health.checked ? Math.round((total.missingCount / health.checked) * 100) : 0}%`,
-                                      }}
-                                    />
-                                  </div>
-                                  <span className="w-10 text-right font-mono text-dj-text-secondary">
-                                    {total.missingCount}
-                                  </span>
-                                </div>
-                              ))}
-                            </div>
-                          )}
-                          {health.gaps.length > 0 && (
-                            <div className="mt-4">
-                              <p className="text-[11px] uppercase tracking-wider font-semibold text-dj-text-muted">
-                                Tracks with gaps (first {health.gaps.length})
-                              </p>
-                              <ul className="mt-2 space-y-1.5 max-h-64 overflow-y-auto">
-                                {health.gaps.map((gap) => (
-                                  <li
-                                    key={gap.trackId}
-                                    className="p-2 rounded-md bg-dj-elevated border border-dj-border text-xs"
-                                  >
-                                    <p className="text-dj-text truncate">
-                                      {gap.title || "Untitled"} — {gap.artist || "Unknown Artist"}
-                                      <span
-                                        className="ml-2 font-mono text-[11px] text-dj-text-secondary"
-                                        title="Tag Health Score 0–100"
-                                      >
-                                        {Math.round(gap.score)}
-                                      </span>
-                                    </p>
-                                    <p className="text-[11px] text-dj-warning/90 mt-0.5">
-                                      {gap.missing.map(formatMissingField).join(", ")}
-                                    </p>
-                                  </li>
-                                ))}
-                              </ul>
-                            </div>
-                          )}
-                        </>
-                      )}
-                    </div>
+                <ModalShell
+                  onClose={() => setHealthOpen(false)}
+                  ariaLabel="Tag Health — missing tags and artwork"
+                  panelClassName="w-[560px] max-w-full max-h-full overflow-y-auto bg-dj-panel border border-dj-border rounded-lg shadow-2xl"
+                >
+                  <div className="p-4 border-b border-dj-border flex items-center justify-between">
+                    <p className="text-sm font-semibold text-dj-text flex items-center space-x-2">
+                      <Activity className="w-4 h-4 text-dj-warning" />
+                      <span>Tag Health — missing tags &amp; artwork</span>
+                    </p>
+                    <button
+                      onClick={() => setHealthOpen(false)}
+                      className="p-1.5 rounded-md hover:bg-dj-hover text-dj-text-secondary transition"
+                      title="Close"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
                   </div>
-                </div>
-              )}
-
-              {/* Charts modal: versioned snapshots with taste filtering (TD.3) */}
-              {chartsOpen && (
-                <div className="fixed inset-0 bg-black/60 z-30 flex items-center justify-center p-6">
-                  <div className="w-[620px] max-w-full max-h-full overflow-y-auto bg-dj-panel border border-dj-border rounded-lg shadow-2xl">
-                    <div className="p-4 border-b border-dj-border flex items-center justify-between">
-                      <p className="text-sm font-semibold text-dj-text flex items-center space-x-2">
-                        <BarChart3 className="w-4 h-4 text-dj-accent" />
-                        <span>Charts — snapshots, filtered by taste</span>
-                      </p>
-                      <button
-                        onClick={() => setChartsOpen(false)}
-                        className="p-1.5 rounded-md hover:bg-dj-hover text-dj-text-secondary transition"
-                        title="Close"
-                      >
-                        <X className="w-4 h-4" />
-                      </button>
-                    </div>
-                    <div className="p-4">
-                      <div className="flex flex-wrap items-center gap-2 text-xs">
-                        <select
-                          value={chartKind}
-                          onChange={(e) => {
-                            setChartKind(e.target.value);
-                            loadCharts(chartGenre, e.target.value, matchToSelected);
-                          }}
-                          className="bg-dj-elevated border border-dj-border rounded-md px-2 py-1.5 text-dj-text"
-                          title="Beatport chart"
-                        >
-                          <option value="top100">Top 100</option>
-                          <option value="hype">Hype Top 100</option>
-                        </select>
-                        <select
-                          value={chartGenre}
-                          onChange={(e) => {
-                            setChartGenre(e.target.value);
-                            loadCharts(e.target.value, chartKind, matchToSelected);
-                          }}
-                          className="bg-dj-elevated border border-dj-border rounded-md px-2 py-1.5 text-dj-text"
-                          title="Genre"
-                        >
-                          {[
-                            "techno",
-                            "house",
-                            "tech-house",
-                            "melodic-house-techno",
-                            "deep-house",
-                            "minimal-deep-tech",
-                            "progressive-house",
-                            "trance",
-                            "drum-and-bass",
-                          ].map((genre) => (
-                            <option key={genre} value={genre}>
-                              {genre}
-                            </option>
-                          ))}
-                        </select>
-                        <label className="flex items-center gap-1.5 text-dj-text-secondary cursor-pointer">
-                          <input
-                            type="checkbox"
-                            checked={matchToSelected}
-                            onChange={(e) => {
-                              setMatchToSelected(e.target.checked);
-                              loadCharts(chartGenre, chartKind, e.target.checked);
-                            }}
-                            className="accent-dj-accent"
-                          />
-                          Taste-match to selected track
-                        </label>
-                        <button
-                          onClick={() => loadCharts()}
-                          disabled={chartLoading}
-                          className="px-2.5 py-1.5 rounded-md bg-dj-elevated hover:bg-dj-hover text-dj-text-secondary border border-dj-border transition"
-                        >
-                          Refresh
-                        </button>
-                      </div>
-                      <p className="text-[11px] text-dj-text-muted mt-2">
-                        Versioned snapshot data — Beatport exposes no public catalog API. Ownership
-                        is ISRC-exact; taste is 60% tempo / 40% key vs the selected track.
-                      </p>
-                      {chartLoading ? (
-                        <p className="text-xs text-dj-text-muted mt-3">Loading snapshot…</p>
-                      ) : chartError ? (
-                        <div className="mt-3">
-                          <p className="text-xs text-dj-text-secondary">{chartError}</p>
-                          <button
-                            onClick={loadSampleSnapshot}
-                            disabled={chartLoading}
-                            className="mt-2 px-2.5 py-1.5 rounded-md bg-dj-accent hover:bg-dj-accent-strong disabled:bg-dj-active text-dj-on-accent text-xs font-medium transition"
-                            title="Imports 3 clearly-marked synthetic entries (demo format reference)"
+                  <div className="p-4">
+                    {healthLoading ? (
+                      <p className="text-xs text-dj-text-muted">Scanning library gaps…</p>
+                    ) : !health ? (
+                      <p className="text-xs text-dj-text-muted">Could not load tag health.</p>
+                    ) : (
+                      <>
+                        <p className="text-xs text-dj-text-secondary">
+                          {health.withGaps} of {health.checked} tracks have gaps.
+                          {health.averageScore != null && (
+                            <>
+                              {" "}
+                              Library score:{" "}
+                              <span className="font-mono text-dj-text">
+                                {Math.round(health.averageScore)}
+                              </span>
+                              /100
+                            </>
+                          )}{" "}
+                          Online lookup is explicit and opt-in per provider — only metadata and
+                          search queries leave this device, never audio.
+                        </p>
+                        <div className="mt-3 flex items-center gap-2">
+                          <label
+                            htmlFor="enrich-provider"
+                            className="text-xs text-dj-text-secondary"
                           >
-                            Load sample snapshot
+                            Source
+                          </label>
+                          <select
+                            id="enrich-provider"
+                            value={enrichProvider}
+                            onChange={(e) =>
+                              setEnrichProvider(e.target.value as EnrichmentProviderKind)
+                            }
+                            className="bg-dj-elevated border border-dj-border rounded-md px-2 py-1.5 text-xs text-dj-text"
+                            disabled={enrichLoading}
+                            title="Discogs / Last.fm need exported API keys (see .env.example)"
+                          >
+                            <option value="musicbrainz">MusicBrainz (no key)</option>
+                            <option value="itunes">iTunes Search (no key)</option>
+                            <option value="deezer">Deezer (no key)</option>
+                            <option value="discogs">Discogs (needs DISCOGS_TOKEN)</option>
+                            <option value="lastfm">Last.fm (needs LASTFM_API_KEY)</option>
+                            <option value="acoustid" disabled>
+                              AcoustID (fingerprinting pending)
+                            </option>
+                          </select>
+                          <button
+                            onClick={runEnrichmentPreview}
+                            disabled={enrichLoading || health.withGaps === 0}
+                            className="flex items-center space-x-1.5 px-2.5 py-1.5 rounded-md bg-dj-accent hover:bg-dj-accent-strong disabled:bg-dj-active text-dj-on-accent text-xs font-medium transition"
+                            title="Look up to 25 gap tracks on the selected source. Nothing is applied yet."
+                          >
+                            <Globe className="w-3.5 h-3.5" />
+                            <span>
+                              {enrichLoading && !preview ? "Looking up…" : "Look up online"}
+                            </span>
                           </button>
-                          <p className="text-[11px] text-dj-text-muted mt-2">
-                            Import format reference:{" "}
-                            <span className="font-mono">fixtures/charts/*.SAMPLE.json</span>
-                          </p>
                         </div>
-                      ) : (
-                        chartData && (
+                        {enrichProgress && (
+                          <p className="text-[11px] text-dj-text-muted font-mono mt-2">
+                            {enrichProgress.processed} / {enrichProgress.total} ·{" "}
+                            {enrichProgress.status}
+                          </p>
+                        )}
+                        {applyMessage && (
+                          <p className="text-xs text-dj-text-secondary mt-2">{applyMessage}</p>
+                        )}
+                        {preview && preview.proposals.length > 0 && (
                           <div className="mt-3">
-                            <p className="text-[11px] uppercase tracking-wider font-semibold text-dj-text-muted">
-                              {chartData.provider} {chartData.chart} · {chartData.genre} ·{" "}
-                              {chartData.snapshotDate} ({chartData.total})
-                            </p>
-                            <ul className="mt-2 space-y-1.5 max-h-80 overflow-y-auto">
-                              {chartData.entries.map((entry) => (
+                            <div className="flex items-center justify-between">
+                              <p className="text-[11px] uppercase tracking-wider font-semibold text-dj-text-muted">
+                                Proposals from {preview.provider} ({preview.proposedTracks} tracks,{" "}
+                                {preview.proposedChanges} changes
+                                {preview.skipped > 0 ? `, ${preview.skipped} skipped` : ""})
+                              </p>
+                            </div>
+                            <ul className="mt-2 space-y-2 max-h-72 overflow-y-auto">
+                              {preview.proposals.map((proposal) => (
                                 <li
-                                  key={entry.position}
+                                  key={proposal.trackId}
                                   className="p-2 rounded-md bg-dj-elevated border border-dj-border text-xs"
                                 >
-                                  <div className="flex items-center gap-2">
-                                    <span className="w-7 shrink-0 font-mono text-dj-text-muted">
-                                      {entry.position}
-                                    </span>
-                                    <span className="min-w-0 flex-1 truncate text-dj-text">
-                                      {entry.title} — {entry.artist}
-                                    </span>
-                                    {entry.owned && (
-                                      <span
-                                        className="shrink-0 px-1.5 py-0.5 rounded-sm text-[10px] font-medium bg-dj-success/10 text-dj-success border border-dj-success/20"
-                                        title="ISRC matches a library track"
-                                      >
-                                        owned
+                                  <label className="flex items-start gap-2 cursor-pointer">
+                                    <input
+                                      type="checkbox"
+                                      checked={checkedProposals.includes(proposal.trackId)}
+                                      onChange={() => toggleProposal(proposal.trackId)}
+                                      className="mt-1 accent-dj-accent"
+                                    />
+                                    <span className="min-w-0 flex-1">
+                                      <span className="flex items-center gap-2">
+                                        <span className="text-dj-text truncate">
+                                          {proposal.title} — {proposal.artist}
+                                        </span>
+                                        <span
+                                          className={`shrink-0 px-1.5 py-0.5 rounded-sm text-[11px] font-medium border ${
+                                            proposal.tier === "high"
+                                              ? "bg-dj-success/10 text-dj-success border-dj-success/20"
+                                              : proposal.tier === "review"
+                                                ? "bg-dj-warning/10 text-dj-warning border-dj-warning/20"
+                                                : "bg-dj-active text-dj-text-secondary border-dj-border"
+                                          }`}
+                                          title={`Match confidence ${formatScore(proposal.confidence)}`}
+                                        >
+                                          {proposal.tier} · {formatScore(proposal.confidence)}
+                                        </span>
                                       </span>
-                                    )}
-                                    {entry.tasteScore != null && (
-                                      <span
-                                        className="shrink-0 font-mono text-[11px] text-dj-accent"
-                                        title="Taste match vs the selected track"
-                                      >
-                                        {formatScore(entry.tasteScore)}
+                                      <span className="block mt-1 space-y-0.5">
+                                        {proposal.changes.map((change) => (
+                                          <span key={change.field} className="block text-[11px]">
+                                            <span className="text-dj-text-muted">
+                                              {formatMissingField(change.field)}:{" "}
+                                            </span>
+                                            <span className="text-dj-text-muted line-through">
+                                              {change.field === "artwork"
+                                                ? "none"
+                                                : (change.current ?? "—")}
+                                            </span>
+                                            <span className="text-dj-text-muted"> → </span>
+                                            <span className="text-dj-success">
+                                              {change.field === "artwork"
+                                                ? "cover art"
+                                                : truncateComment(change.proposed, 60)}
+                                            </span>
+                                          </span>
+                                        ))}
                                       </span>
-                                    )}
-                                  </div>
-                                  <p className="text-[11px] text-dj-text-muted mt-0.5 ml-9">
-                                    {entry.label ?? "Unknown label"} · {formatBpm(entry.bpm)} ·{" "}
-                                    {formatKey(entry.keyCamelot, null)}
+                                    </span>
+                                  </label>
+                                </li>
+                              ))}
+                            </ul>
+                            <div className="mt-3 flex items-center gap-2">
+                              <button
+                                onClick={runEnrichmentApply}
+                                disabled={enrichLoading || checkedProposals.length === 0}
+                                className="px-3 py-1.5 rounded-md bg-dj-success hover:bg-dj-success/80 disabled:bg-dj-success/40 text-dj-on-accent text-xs font-medium transition"
+                                title="Write checked proposals to DB canonical fields (never source files). Artwork fills empty slots only."
+                              >
+                                {enrichLoading
+                                  ? "Applying…"
+                                  : `Apply checked (${checkedProposals.length})`}
+                              </button>
+                              <button
+                                onClick={runEnrichmentUndo}
+                                disabled={enrichLoading}
+                                className="flex items-center space-x-1.5 px-3 py-1.5 rounded-md bg-dj-elevated hover:bg-dj-hover text-dj-text-secondary border border-dj-border text-xs transition"
+                                title="Restore this run's before-state snapshot"
+                              >
+                                <Undo2 className="w-3.5 h-3.5" />
+                                <span>Undo run</span>
+                              </button>
+                            </div>
+                          </div>
+                        )}
+                        {preview && preview.proposals.length === 0 && (
+                          <p className="text-xs text-dj-text-muted mt-3">
+                            No new proposals from {preview.provider}
+                            {preview.skipped > 0 ? ` (${preview.skipped} skipped)` : ""}.
+                          </p>
+                        )}
+                        {health.totals.length > 0 && (
+                          <div className="mt-3 space-y-1.5">
+                            {health.totals.map((total) => (
+                              <div key={total.field} className="flex items-center gap-2 text-xs">
+                                <span className="w-24 shrink-0 text-dj-text-secondary">
+                                  {formatMissingField(total.field)}
+                                </span>
+                                <div className="flex-1 h-1.5 rounded-full bg-dj-elevated overflow-hidden">
+                                  <div
+                                    className="h-1.5 rounded-full bg-dj-warning"
+                                    style={{
+                                      width: `${health.checked ? Math.round((total.missingCount / health.checked) * 100) : 0}%`,
+                                    }}
+                                  />
+                                </div>
+                                <span className="w-10 text-right font-mono text-dj-text-secondary">
+                                  {total.missingCount}
+                                </span>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                        {health.gaps.length > 0 && (
+                          <div className="mt-4">
+                            <p className="text-[11px] uppercase tracking-wider font-semibold text-dj-text-muted">
+                              Tracks with gaps (first {health.gaps.length})
+                            </p>
+                            <ul className="mt-2 space-y-1.5 max-h-64 overflow-y-auto">
+                              {health.gaps.map((gap) => (
+                                <li
+                                  key={gap.trackId}
+                                  className="p-2 rounded-md bg-dj-elevated border border-dj-border text-xs"
+                                >
+                                  <p className="text-dj-text truncate">
+                                    {gap.title || "Untitled"} — {gap.artist || "Unknown Artist"}
+                                    <span
+                                      className="ml-2 font-mono text-[11px] text-dj-text-secondary"
+                                      title="Tag Health Score 0–100"
+                                    >
+                                      {Math.round(gap.score)}
+                                    </span>
+                                  </p>
+                                  <p className="text-[11px] text-dj-warning/90 mt-0.5">
+                                    {gap.missing.map(formatMissingField).join(", ")}
                                   </p>
                                 </li>
                               ))}
                             </ul>
                           </div>
-                        )
-                      )}
-                    </div>
+                        )}
+                      </>
+                    )}
                   </div>
-                </div>
+                </ModalShell>
+              )}
+
+              {/* Charts modal: versioned snapshots with taste filtering (TD.3) */}
+              {chartsOpen && (
+                <ModalShell
+                  onClose={() => setChartsOpen(false)}
+                  ariaLabel="Charts — snapshots, filtered by taste"
+                  panelClassName="w-[620px] max-w-full max-h-full overflow-y-auto bg-dj-panel border border-dj-border rounded-lg shadow-2xl"
+                >
+                  <div className="p-4 border-b border-dj-border flex items-center justify-between">
+                    <p className="text-sm font-semibold text-dj-text flex items-center space-x-2">
+                      <BarChart3 className="w-4 h-4 text-dj-accent" />
+                      <span>Charts — snapshots, filtered by taste</span>
+                    </p>
+                    <button
+                      onClick={() => setChartsOpen(false)}
+                      className="p-1.5 rounded-md hover:bg-dj-hover text-dj-text-secondary transition"
+                      title="Close"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  </div>
+                  <div className="p-4">
+                    <div className="flex flex-wrap items-center gap-2 text-xs">
+                      <select
+                        value={chartKind}
+                        onChange={(e) => {
+                          setChartKind(e.target.value);
+                          loadCharts(chartGenre, e.target.value, matchToSelected);
+                        }}
+                        className="bg-dj-elevated border border-dj-border rounded-md px-2 py-1.5 text-dj-text"
+                        title="Beatport chart"
+                      >
+                        <option value="top100">Top 100</option>
+                        <option value="hype">Hype Top 100</option>
+                      </select>
+                      <select
+                        value={chartGenre}
+                        onChange={(e) => {
+                          setChartGenre(e.target.value);
+                          loadCharts(e.target.value, chartKind, matchToSelected);
+                        }}
+                        className="bg-dj-elevated border border-dj-border rounded-md px-2 py-1.5 text-dj-text"
+                        title="Genre"
+                      >
+                        {[
+                          "techno",
+                          "house",
+                          "tech-house",
+                          "melodic-house-techno",
+                          "deep-house",
+                          "minimal-deep-tech",
+                          "progressive-house",
+                          "trance",
+                          "drum-and-bass",
+                        ].map((genre) => (
+                          <option key={genre} value={genre}>
+                            {genre}
+                          </option>
+                        ))}
+                      </select>
+                      <label className="flex items-center gap-1.5 text-dj-text-secondary cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={matchToSelected}
+                          onChange={(e) => {
+                            setMatchToSelected(e.target.checked);
+                            loadCharts(chartGenre, chartKind, e.target.checked);
+                          }}
+                          className="accent-dj-accent"
+                        />
+                        Taste-match to selected track
+                      </label>
+                      <button
+                        onClick={() => loadCharts()}
+                        disabled={chartLoading}
+                        className="px-2.5 py-1.5 rounded-md bg-dj-elevated hover:bg-dj-hover text-dj-text-secondary border border-dj-border transition"
+                      >
+                        Refresh
+                      </button>
+                    </div>
+                    <p className="text-[11px] text-dj-text-muted mt-2">
+                      Versioned snapshot data — Beatport exposes no public catalog API. Ownership is
+                      ISRC-exact; taste is 60% tempo / 40% key vs the selected track.
+                    </p>
+                    {chartLoading ? (
+                      <p className="text-xs text-dj-text-muted mt-3">Loading snapshot…</p>
+                    ) : chartError ? (
+                      <div className="mt-3">
+                        <p className="text-xs text-dj-text-secondary">{chartError}</p>
+                        <button
+                          onClick={loadSampleSnapshot}
+                          disabled={chartLoading}
+                          className="mt-2 px-2.5 py-1.5 rounded-md bg-dj-accent hover:bg-dj-accent-strong disabled:bg-dj-active text-dj-on-accent text-xs font-medium transition"
+                          title="Imports 3 clearly-marked synthetic entries (demo format reference)"
+                        >
+                          Load sample snapshot
+                        </button>
+                        <p className="text-[11px] text-dj-text-muted mt-2">
+                          Import format reference:{" "}
+                          <span className="font-mono">fixtures/charts/*.SAMPLE.json</span>
+                        </p>
+                      </div>
+                    ) : (
+                      chartData && (
+                        <div className="mt-3">
+                          <p className="text-[11px] uppercase tracking-wider font-semibold text-dj-text-muted">
+                            {chartData.provider} {chartData.chart} · {chartData.genre} ·{" "}
+                            {chartData.snapshotDate} ({chartData.total})
+                          </p>
+                          <ul className="mt-2 space-y-1.5 max-h-80 overflow-y-auto">
+                            {chartData.entries.map((entry) => (
+                              <li
+                                key={entry.position}
+                                className="p-2 rounded-md bg-dj-elevated border border-dj-border text-xs"
+                              >
+                                <div className="flex items-center gap-2">
+                                  <span className="w-7 shrink-0 font-mono text-dj-text-muted">
+                                    {entry.position}
+                                  </span>
+                                  <span className="min-w-0 flex-1 truncate text-dj-text">
+                                    {entry.title} — {entry.artist}
+                                  </span>
+                                  {entry.owned && (
+                                    <span
+                                      className="shrink-0 px-1.5 py-0.5 rounded-sm text-[11px] font-medium bg-dj-success/10 text-dj-success border border-dj-success/20"
+                                      title="ISRC matches a library track"
+                                    >
+                                      owned
+                                    </span>
+                                  )}
+                                  {entry.tasteScore != null && (
+                                    <span
+                                      className="shrink-0 font-mono text-[11px] text-dj-accent"
+                                      title="Taste match vs the selected track"
+                                    >
+                                      {formatScore(entry.tasteScore)}
+                                    </span>
+                                  )}
+                                </div>
+                                <p className="text-[11px] text-dj-text-muted mt-0.5 ml-9">
+                                  {entry.label ?? "Unknown label"} · {formatBpm(entry.bpm)} ·{" "}
+                                  {formatKey(entry.keyCamelot, null)}
+                                </p>
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      )
+                    )}
+                  </div>
+                </ModalShell>
               )}
             </>
-          ) : ui.view === "preparation" ? (
+          ) : ui.view === "studio" ? (
             <ViewPlaceholder
-              icon={Layers}
-              title="Preparation"
-              body="Build sets, sequence harmonic and energy flow, run Skills, and export for the gig. Set building ships with Phase 3."
-              options={["Set", "Template", "Skills", "Export", "Gig Ready"]}
+              icon={Play}
+              title="Studio"
+              body="Two or four channel mix with timeline and grid. Automation for BPM, Filter, Hi, Mid, Low, Volume and Gain."
+              actions={[
+                { label: "New mix", title: "New mix project — planned" },
+                { label: "Timeline", title: "Timeline with grid — planned" },
+                { label: "Automation", title: "BPM, Filter, Hi/Mid/Low, Volume/Gain — planned" },
+              ]}
+              onGoToLibrary={() => dispatch({ type: "setView", view: "library" })}
+            />
+          ) : ui.view === "backup" ? (
+            <ViewPlaceholder
+              title="Backup"
+              description="Back up your library to cloud storage or backup USB storage."
+              onGoToLibrary={() => dispatch({ type: "setView", view: "library" })}
+            />
+          ) : ui.view === "sync" ? (
+            <ViewPlaceholder
+              title="Sync"
+              description="Sync your library with Traktor, rekordbox, Serato, Virtual DJ, and other DJ applications."
               onGoToLibrary={() => dispatch({ type: "setView", view: "library" })}
             />
           ) : (
             <ViewPlaceholder
-              icon={Play}
-              title="Auto Performance"
-              body="Validate a prepared set in order with auto-advance, set insights, and issue flagging. Validation ships with Phase 3."
-              options={["Set", "AUTO off", "Skip", "Flag issue"]}
-              onGoToLibrary={() => dispatch({ type: "setView", view: "library" })}
+              title="View not found"
+              description="This view is not implemented yet."
             />
           )}
         </main>
       </div>
 
       {ui.playerMode !== "hidden" && (
-        <PlayerDock
+        <PreviewPlayer
           mode={ui.playerMode}
           track={selectedTrack}
-          onMode={(mode) => dispatch({ type: "setPlayerMode", mode })}
+          onModeChange={(mode) => dispatch({ type: "setPlayerMode", mode })}
           onHide={() => dispatch({ type: "setPlayerMode", mode: "hidden" })}
+          activeView={ui.view}
+          isDarkTheme={resolveTheme(ui.theme, systemPrefersDark) === "dark"}
         />
       )}
     </div>

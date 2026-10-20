@@ -21,7 +21,12 @@
     "rust:test": "cargo test",
     "rust:test:portable": "cargo test -p dj-assistant-core -p dj-assistant-analysis -p dj-assistant-schema-tests",
     "ci:local": "pnpm lint && pnpm typecheck && pnpm test && pnpm rust:fmt && pnpm rust:clippy && pnpm rust:test",
-    "ci:local:portable": "pnpm lint && pnpm typecheck && pnpm test && pnpm rust:fmt && pnpm rust:clippy && pnpm rust:test:portable"
+    "ci:local:portable": "pnpm lint && pnpm typecheck && pnpm test && pnpm rust:fmt && pnpm rust:clippy && pnpm rust:test:portable",
+    "skills:inventory": "node scripts/skills/inventory.mjs",
+    "skills:match": "node scripts/skills/match.mjs",
+    "skills:audit": "node scripts/skills/audit.mjs",
+    "skills:policy": "node scripts/skills/policy.mjs",
+    "skills:policy:restore": "node scripts/skills/policy.mjs --restore"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",

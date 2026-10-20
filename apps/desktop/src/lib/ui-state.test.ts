@@ -56,15 +56,15 @@ test("throwing storage writes are ignored", () => {
       throw new Error("quota exceeded");
     },
   };
-  const state = reduceUiState(DEFAULT_UI_STATE, { type: "setView", view: "preparation" });
+  const state = reduceUiState(DEFAULT_UI_STATE, { type: "setView", view: "studio" });
   assert.doesNotThrow(() => persistUiState(state, storage));
-  assert.equal(state.view, "preparation");
+  assert.equal(state.view, "studio");
 });
 
 test("unknown persisted values fall back per field", () => {
   const storage = fakeStorage({
     [UI_STATE_STORAGE_KEY]: JSON.stringify({
-      view: "preparation",
+      view: "unknown-view",
       theme: "neon",
       playerMode: "full",
       navCollapsed: "yes",
@@ -73,23 +73,23 @@ test("unknown persisted values fall back per field", () => {
   });
   assert.deepEqual(initUiState(storage), {
     ...DEFAULT_UI_STATE,
-    view: "preparation",
+    view: "library",
     playerMode: "full",
   });
 });
 
 test("valid persisted state round-trips", () => {
   const storage = fakeStorage();
-  const state = reduceUiState(DEFAULT_UI_STATE, { type: "setView", view: "preparation" });
+  const state = reduceUiState(DEFAULT_UI_STATE, { type: "setView", view: "studio" });
   persistUiState(state, storage);
-  assert.deepEqual(initUiState(storage), { ...DEFAULT_UI_STATE, view: "preparation" });
+  assert.deepEqual(initUiState(storage), { ...DEFAULT_UI_STATE, view: "studio" });
 });
 
 test("persist omits nothing and stores under the versioned key", () => {
   const storage = fakeStorage();
   persistUiState(
     {
-      view: "autoPerformance",
+      view: "studio",
       navCollapsed: true,
       theme: "light",
       playerMode: "full",
@@ -98,7 +98,7 @@ test("persist omits nothing and stores under the versioned key", () => {
     storage
   );
   assert.deepEqual(JSON.parse(storage.dump()[UI_STATE_STORAGE_KEY]), {
-    view: "autoPerformance",
+    view: "studio",
     navCollapsed: true,
     theme: "light",
     playerMode: "full",
@@ -107,16 +107,16 @@ test("persist omits nothing and stores under the versioned key", () => {
 });
 
 test("setView switches view", () => {
-  const s1 = reduceUiState(DEFAULT_UI_STATE, { type: "setView", view: "autoPerformance" });
-  assert.equal(s1.view, "autoPerformance");
+  const s1 = reduceUiState(DEFAULT_UI_STATE, { type: "setView", view: "studio" });
+  assert.equal(s1.view, "studio");
   const s2 = reduceUiState(s1, { type: "setView", view: "library" });
   assert.equal(s2.view, "library");
 });
 
 test("toggleNav flips collapse without touching other fields", () => {
-  const s = reduceUiState({ ...DEFAULT_UI_STATE, view: "preparation" }, { type: "toggleNav" });
+  const s = reduceUiState({ ...DEFAULT_UI_STATE, view: "studio" }, { type: "toggleNav" });
   assert.equal(s.navCollapsed, true);
-  assert.equal(s.view, "preparation");
+  assert.equal(s.view, "studio");
   assert.equal(reduceUiState(s, { type: "toggleNav" }).navCollapsed, false);
 });
 
@@ -164,18 +164,22 @@ test("unknown action leaves state untouched", () => {
   assert.deepEqual(reduceUiState(DEFAULT_UI_STATE, { type: "explode" }), DEFAULT_UI_STATE);
 });
 
-test("Ctrl/Cmd+1..3 map to views; other keys do not", () => {
+test("Ctrl/Cmd+1..4 map to views; other keys do not", () => {
   assert.deepEqual(shortcutToAction({ key: "1", ctrlKey: true, metaKey: false }), {
     type: "setView",
-    view: "library",
+    view: "import",
   });
   assert.deepEqual(shortcutToAction({ key: "2", ctrlKey: false, metaKey: true }), {
     type: "setView",
-    view: "preparation",
+    view: "library",
   });
   assert.deepEqual(shortcutToAction({ key: "3", ctrlKey: true, metaKey: true }), {
     type: "setView",
-    view: "autoPerformance",
+    view: "analysis",
+  });
+  assert.deepEqual(shortcutToAction({ key: "4", ctrlKey: true, metaKey: true }), {
+    type: "setView",
+    view: "studio",
   });
   assert.equal(shortcutToAction({ key: "1", ctrlKey: false, metaKey: false }), null);
   assert.equal(shortcutToAction({ key: "k", ctrlKey: true, metaKey: false }), null);

@@ -1,4 +1,4 @@
-export type AppView = "library" | "preparation" | "autoPerformance";
+export type AppView = "import" | "library" | "analysis" | "studio" | "backup" | "sync";
 export type ThemeMode = "dark" | "light" | "system";
 export type PlayerMode = "hidden" | "mini" | "full";
 export type VisiblePlayerMode = Exclude<PlayerMode, "hidden">;
@@ -34,7 +34,7 @@ export const DEFAULT_UI_STATE: UiState = {
   lastVisiblePlayerMode: "mini",
 };
 
-const VIEWS: readonly AppView[] = ["library", "preparation", "autoPerformance"];
+const VIEWS: readonly AppView[] = ["import", "library", "analysis", "studio", "backup", "sync"];
 const THEMES: readonly ThemeMode[] = ["dark", "light", "system"];
 const PLAYER_MODES: readonly PlayerMode[] = ["hidden", "mini", "full"];
 const VISIBLE_PLAYER_MODES: readonly VisiblePlayerMode[] = ["mini", "full"];
@@ -133,11 +133,13 @@ export function shortcutToAction(event: ShortcutEvent): UiAction | null {
   if (!event.ctrlKey && !event.metaKey) return null;
   switch (event.key) {
     case "1":
-      return { type: "setView", view: "library" };
+      return { type: "setView", view: "import" };
     case "2":
-      return { type: "setView", view: "preparation" };
+      return { type: "setView", view: "library" };
     case "3":
-      return { type: "setView", view: "autoPerformance" };
+      return { type: "setView", view: "analysis" };
+    case "4":
+      return { type: "setView", view: "studio" };
     default:
       return null;
   }
