@@ -26,7 +26,11 @@ if (!prompt) {
   process.exit(2);
 }
 
-const limit = Number(value("limit", 10));
+const limit = Number(value("limit", "10"));
+if (!Number.isFinite(limit) || limit < 0) {
+  console.error(`usage: --limit expects a non-negative number, got "${value("limit", "10")}"`);
+  process.exit(2);
+}
 const results = searchMemory(prompt, limit);
 
 if (flags.has("--json")) {
@@ -37,14 +41,9 @@ if (flags.has("--json")) {
   console.log(`Memory matches for "${prompt}":`);
   for (const entry of results) {
     const where = entry.section ? `${entry.layer} § ${entry.section}` : entry.layer;
-    console.log(
-      `  ${String(entry.score).padStart(2)}  ${where.padEnd(34)}  ${truncate(entry.text, 90)}`
-    );
+    // One entry per line, uncut: the point of a hit is the reason it records.
+    console.log(`  ${String(entry.score).padStart(2)}  ${where.padEnd(34)}  ${entry.text}`);
   }
-}
-
-function truncate(text, max) {
-  return text.length <= max ? text : `${text.slice(0, max - 1)}…`;
 }
 
 function isFlagValue(arg) {

@@ -1,22 +1,32 @@
 // Tests for the agent-layer tooling.
 //
-//   node --test scripts/agent/
+//   pnpm test:agent
+//   node --test scripts/agent/preflight.test.mjs
+//
+// The file is named rather than globbed: a directory argument is treated as a
+// module path and a quoted glob needs Node 21+, while the project documents
+// Node 20 as the floor.
 //
 // The suite is deliberately machine-independent: the skill-library assertions
 // are skipped when the machine-global skills are not installed, so the tests
 // pass on a fresh clone as well as on the workstation that installed them.
 
 import assert from "node:assert/strict";
+import { execFileSync } from "node:child_process";
+import path from "node:path";
 import { describe, it } from "node:test";
+import { fileURLToPath } from "node:url";
 import { listSkills, tokenize } from "../skills/lib.mjs";
-import { readLayer, searchMemory } from "../memory/lib.mjs";
+import { readLayer, searchMemory, stripMarkup } from "../memory/lib.mjs";
 import {
   buildBrief,
   globToRegExp,
   keywordHit,
   matchPath,
   parsePorcelain,
+  renderBrief,
   scoreAgents,
+  scoreCommands,
   selectVerification,
 } from "./lib.mjs";
 import { loadRegistry } from "./lib.mjs";
@@ -59,15 +69,25 @@ describe("git porcelain parsing", () => {
       " M README.md",
       "A  crates/core/src/lib.rs",
       "?? scripts/agent/preflight.mjs",
-      '?? "a path with spaces.md"',
+      "?? a path with spaces.md",
       "",
-    ].join("\n");
+    ].join("\0");
     assert.deepEqual(parsePorcelain(output), [
       "README.md",
       "crates/core/src/lib.rs",
       "scripts/agent/preflight.mjs",
       "a path with spaces.md",
     ]);
+  });
+
+  it("keeps a non-ASCII path intact", () => {
+    // `-z` leaves path bytes unquoted, which is what keeps this readable; the
+    // quoted form would arrive as caf\303\251.md and lose its backslashes.
+    assert.deepEqual(parsePorcelain("?? café.md\0"), ["café.md"]);
+  });
+
+  it("takes the destination of a rename and drops the origin", () => {
+    assert.deepEqual(parsePorcelain("R  newname.md\0oldname.md\0"), ["newname.md"]);
   });
 });
 
@@ -135,6 +155,22 @@ describe("verification selection", () => {
     });
     assert.ok(groups.some((group) => group.id === "ui"));
   });
+
+  it("does not select a check for a word that merely contains the keyword", () => {
+    // "trust" contains rust and "guide" contains ui; substring matching used to
+    // hand those prompts builds and tests the change does not need.
+    const ids = (prompt) =>
+      selectVerification(registry, { prompt, files: [] }).map((group) => group.id);
+    assert.ok(!ids("document the trust boundary").includes("rust"));
+    assert.ok(!ids("update the user guide").includes("ui"));
+  });
+});
+
+describe("command matching", () => {
+  it("reaches a hyphenated command from prose that separates its words", () => {
+    const matched = scoreCommands(registry, "audit the installed skills").map((entry) => entry.id);
+    assert.ok(matched.includes("skills-audit"), matched.join(", "));
+  });
 });
 
 describe("memory reader", () => {
@@ -152,6 +188,29 @@ describe("memory reader", () => {
     assert.equal(
       results.some((entry) => entry.text.startsWith("Permanent, verifiable facts")),
       false
+    );
+  });
+
+  it("keeps one ledger entry as one result", () => {
+    for (const layer of ["decisions", "feedback"]) {
+      const sections = readLayer(layer).map((entry) => entry.section);
+      assert.equal(new Set(sections).size, sections.length, `${layer} split an entry`);
+    }
+  });
+
+  it("matches a ledger ID without crossing the layer", () => {
+    const results = searchMemory("F-001", 5);
+    assert.ok(results.length, "the ID query returned nothing");
+    assert.ok(
+      results.every((entry) => entry.layer === "feedback" && entry.section.startsWith("F-001")),
+      results.map((entry) => `${entry.layer}#${entry.section}`).join(", ")
+    );
+  });
+
+  it("keeps underscores inside inline code", () => {
+    assert.equal(
+      stripMarkup("regenerate `SKILL_ROUTING.md` and **facts.md**"),
+      "regenerate SKILL_ROUTING.md and facts.md"
     );
   });
 });
@@ -183,6 +242,17 @@ describe("the brief", () => {
     assert.ok(brief.verify.some((group) => group.id === "rust"));
   });
 
+  it("prints a selected memory line in full", () => {
+    const brief = buildBrief({
+      prompt: "why are hidden skills not loadable, metadata.opencode/autoinvoke false",
+      files: [],
+      memoryLimit: 2,
+    });
+    const long = brief.memory.find((entry) => entry.text.length > 120);
+    assert.ok(long, "no long memory entry was selected");
+    assert.ok(renderBrief(brief).includes(long.text), "the brief cut the entry short");
+  });
+
   it(
     "matches the curated trigger for a spectrum prompt",
     { skip: !installed.has("ffmpeg-waveforms-visualization") },
@@ -191,4 +261,28 @@ describe("the brief", () => {
       assert.ok(brief.skills.some((skill) => skill.id === "ffmpeg-waveforms-visualization"));
     }
   );
+});
+
+describe("preflight CLI", () => {
+  const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..");
+  const script = path.join(root, "scripts", "agent", "preflight.mjs");
+
+  const run = (args, input) =>
+    execFileSync(process.execPath, [script, ...args], {
+      cwd: root,
+      encoding: "utf8",
+      input,
+    });
+
+  it("takes the task from stdin, apostrophes and all", () => {
+    const task = "fix the deck's gain fader, cost $100";
+    const brief = JSON.parse(
+      run(["--json", "--stdin", "--top", "0", "--memory-limit", "0"], task + "\n")
+    );
+    assert.equal(brief.prompt, task);
+  });
+
+  it("rejects an empty stdin instead of routing an empty prompt", () => {
+    assert.throws(() => run(["--stdin"], ""));
+  });
 });

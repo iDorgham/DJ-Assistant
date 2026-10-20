@@ -78,7 +78,10 @@ export function readLayer(layer) {
       continue;
     }
     if (!line) {
-      flush();
+      // A blank line ends a bullet, but not a ledger body: `decisions.md` and
+      // `feedback.md` wrap one entry across paragraphs, and splitting them
+      // would hand the same entry to a brief twice.
+      addBullet();
       continue;
     }
     if (/^[-*] /.test(line)) {
@@ -112,13 +115,17 @@ export function readMemory() {
  * with domain vocabulary ("waveform", "beatgrid") and the store records the
  * inflected form ("waveforms"), which an exact-only matcher would silently
  * miss. The length floor keeps short tokens honest.
+ *
+ * Ledger IDs are matched as whole IDs. `tokenize` splits `F-001` into `f` and
+ * `001`, which would let an `F-001` query hit `D-001` and hand back a decision
+ * when the caller asked for a correction.
  */
 export function searchMemory(query, limit = 10) {
-  const tokens = new Set(tokenize(query).filter((token) => !QUERY_STOPWORDS.has(token)));
+  const tokens = new Set(memoryTokens(query).filter((token) => !QUERY_STOPWORDS.has(token)));
   if (!tokens.size) return [];
   const entries = readMemory().map((entry) => ({
     ...entry,
-    haystack: new Set(tokenize(`${entry.text} ${entry.section ?? ""}`)),
+    haystack: new Set(memoryTokens(`${entry.text} ${entry.section ?? ""}`)),
   }));
 
   return entries
@@ -137,12 +144,41 @@ export function searchMemory(query, limit = 10) {
     .slice(0, limit);
 }
 
-/** Memory prose embeds `**bold**`, `code`, and links — match on plain text. */
+/** Memory prose embeds bold, inline code, and links — match on plain text. */
 export function stripMarkup(text) {
-  return text
+  // Inline code is held aside first: its underscores are part of the name, so
+  // blanket marker removal turned SKILL_ROUTING.md into SKILLROUTING.md.
+  const code = [];
+  const held = String(text)
     .replace(/\[([^\]]+)\]\([^)]+\)/g, "$1")
-    .replace(/[*_`]/g, "")
+    .replace(CODE_SPAN, (_match, inner) => {
+      code.push(inner);
+      return MARKER + (code.length - 1) + MARKER;
+    });
+  return held
+    .replace(/(\*\*|__)(.+?)\1/g, "$2")
+    .replace(/(^|[\s([{])\*([^*\s][^*]*?)\*(?=[\s)\].,;:!?}]|$)/g, "$1$2")
+    .replace(/(^|[\s([{])_([^_\s][^_]*?)_(?=[\s)\].,;:!?}]|$)/g, "$1$2")
+    .replace(MARKER_INDEX, (_match, index) => code[Number(index)])
     .trim();
+}
+
+const BACKTICK = String.fromCharCode(96);
+const MARKER = String.fromCharCode(0);
+const CODE_SPAN = new RegExp(`${BACKTICK}([^${BACKTICK}]+)${BACKTICK}`, "g");
+const MARKER_INDEX = new RegExp(`${MARKER}(\\d+)${MARKER}`, "g");
+
+/**
+ * Tokens for a memory string: the lexical tokens plus any whole ledger ID.
+ * The numeric tail (`001`) is dropped only when it belongs to an ID in the same
+ * text, so dates and counts keep matching.
+ */
+const LEDGER_ID = /[a-z]-\d+[a-z]?/gi;
+
+function memoryTokens(text) {
+  const ids = [...String(text).toLowerCase().matchAll(LEDGER_ID)].map((match) => match[0]);
+  const tails = new Set(ids.map((id) => id.split("-")[1]));
+  return [...tokenize(text).filter((word) => !tails.has(word)), ...ids];
 }
 
 function hit(haystack, token) {

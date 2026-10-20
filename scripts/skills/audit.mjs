@@ -7,6 +7,7 @@
 // so it can gate a maintenance PR. Soft findings (near duplicates, oversize,
 // policy drift) only report.
 
+import fs from "node:fs";
 import { estimateTokens, listSkills, loadPolicy, tokenize } from "./lib.mjs";
 
 const argv = process.argv.slice(2);
@@ -33,11 +34,35 @@ for (const skill of skills) {
 
 // A project copy shadowing the machine-global skill of the same ID is expected:
 // `.opencode/skills/` is a locally synced mirror of the global library
-// (gitignored and eslint-ignored, so it never ships). Shadowing between any
+// (gitignored and eslint-ignored, so it never ships). Only an *identical* local
+// copy is pure vendoring — a copy that has drifted still wins silently, so it
+// surfaces as a finding rather than passing as a mirror. Shadowing between any
 // other pair of sources is a real ID collision.
-const vendored = overrides.filter((o) => o.shadowed === "global" && o.wins === "project");
+const sameText = (a, b) =>
+  fs.readFileSync(a, "utf8").replace(/\r\n/g, "\n") ===
+  fs.readFileSync(b, "utf8").replace(/\r\n/g, "\n");
+
+let vendored = 0;
+let driftedShadows = 0;
+
 for (const override of overrides) {
-  if (vendored.includes(override)) continue;
+  const shadow = override.shadowed === "global" && override.wins === "project";
+  const identical =
+    shadow &&
+    override.shadowedFile &&
+    override.file &&
+    sameText(override.shadowedFile, override.file);
+  if (identical) {
+    vendored += 1;
+    continue;
+  }
+  if (shadow) {
+    driftedShadows += 1;
+    soft.push(
+      `${override.id}: the project copy differs from the global one it shadows — intentional override, or stale mirror to refresh?`
+    );
+    continue;
+  }
   hard.push(
     `${override.id}: defined in both ${override.shadowed} and ${override.wins} (later source wins)`
   );
@@ -85,7 +110,8 @@ const report = {
   total: skills.length,
   hot: skills.filter((skill) => hot.has(skill.id)).length,
   cold: skills.filter((skill) => !hot.has(skill.id)).length,
-  vendored: vendored.length,
+  vendored,
+  driftedShadows,
   advertisedTokensPerStep: estimateTokens("x".repeat(advertised)),
   hotTokensPerStep: estimateTokens("x".repeat(hotAdvertised)),
   unclassified,
