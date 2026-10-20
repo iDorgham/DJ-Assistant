@@ -25,3 +25,8 @@ not inferable by reading the code.
   the discovered skills from the model list — that directory is forbidden.
 - A skill hidden with `metadata.opencode/autoinvoke: false` is **not loadable**
   here, so the whole skill library stays advertised (~15.4k tokens/step).
+- `.opencode/skill-manifest.json` records each skill's **source**, so with a local
+  `.opencode/skills/` mirror present `pnpm skills:inventory` rewrites all 240
+  entries to `project`/`overridden: global`. That is machine-local state in a
+  tracked file — regenerate only from a clean checkout, or commit the global-source
+  version.
