@@ -1,7 +1,7 @@
 # Agent Skills — Installed Inventory
 
 **Document type:** Reference for AI agents (and humans) working on DJ Assistant
-**Status:** Living — last updated 2026-10-19
+**Status:** Living — last updated 2026-10-20
 **Scope:** Machine-level OpenCode skills available to every session on this workstation
 
 > These skills live **outside the repository**, in the global OpenCode skills
@@ -10,6 +10,13 @@
 > Nothing in the project build, test, or CI pipeline depends on them.
 >
 > **Total installed: 240** — 18 pre-existing + 222 added on 2026-10-19.
+
+**Not to be confused with** [`architecture/SKILLS_SYSTEM.md`](../architecture/SKILLS_SYSTEM.md),
+which documents the *application's own* scoped-automation skills feature (a
+product concept). This file is about the **OpenCode agent skills** the model
+loads. For the agents, commands, and scripts that drive routing, see
+[`AGENTS.md`](./AGENTS.md); for the generated priority tables, see
+[`SKILL_ROUTING.md`](./SKILL_ROUTING.md).
 
 ---
 

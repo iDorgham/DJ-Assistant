@@ -5,7 +5,7 @@
 //
 // Outputs:
 //   .opencode/skill-manifest.json   machine index used by the matcher / subagents
-//   docs/context/SKILL_ROUTING.md   grouped priority tables for humans
+//   docs/ai/SKILL_ROUTING.md      grouped priority tables for humans
 
 import fs from "node:fs";
 import {

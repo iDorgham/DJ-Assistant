@@ -23,7 +23,8 @@ each folder below is self-contained and cross-links to its neighbours.
 | [`ui-ux/`](./ui-ux/) | Earlier UI docs: principles, Phase 0 design system, screens & flows, wireframes (tokens superseded by `ui/`) | [UI/UX Index](./ui-ux/README.md) |
 | [`ADR/`](./ADR/) | Architecture Decision Records (the "why") | [ADR Index](./ADR/README.md) |
 | [`audit/`](./audit/) | Spec/function/settings audits + TA.1–TA.14 tracking | [Audit summary](./audit/AUDIT-SUMMARY.md) |
-| [`context/`](./context/) | Single-file project digest for humans + AI agents, plus the agent skills inventory and routing policy | [Project Context](./context/PROJECT_CONTEXT.md) · [Agent Skills](./context/AGENT_SKILLS.md) · [Skill Routing](./context/SKILL_ROUTING.md) |
+| [`context/`](./context/) | Single-file project digest for humans + AI agents | [Project Context](./context/PROJECT_CONTEXT.md) |
+| [`ai/`](./ai/) | Agent skills inventory, skill routing policy, and the agents, commands, and scripts that automate them | [Agents & Automation](./ai/AGENTS.md) · [Skills](./ai/SKILLS.md) |
 | [`evidence/`](./evidence/) | Acceptance evidence (screenshots, captured runs) | [Phase 0 evidence](./engineering/PHASE0_ACCEPTANCE_EVIDENCE.md) |
 
 ---
