@@ -6,6 +6,7 @@
 // Reports:
 //   - registry entries that no longer match the canonical agent/command files
 //   - mirror drift (an adapter directory that disagrees with the canonical one)
+//   - mirrors that are not generated on this machine, as one summary line
 //   - tool directories that mirror canonical files but are not in the registry
 //   - registry skills that are not installed
 //   - the context cost of the shared memory store
@@ -57,37 +58,48 @@ for (const id of canonicalCommands) {
 
 /* ------------------------------------------------------------- mirror drift */
 
+// Mirrors are gitignored and generated, so their absence is the normal state
+// of a fresh clone. Absent directories are counted once instead of listed one
+// per kind, which would bury real findings under ~27 sync hints.
+const mirrorDirs = registrySources(registry)
+  .filter((source) => source.id !== "canonical")
+  .flatMap((source) =>
+    ["agents", "commands"]
+      .map((kind) => ({ id: source.id, kind, dir: source[kind], canonicalDir: canonical[kind] }))
+      .filter((entry) => entry.dir && entry.canonicalDir)
+  );
+const missing = mirrorDirs.filter((entry) => !fs.existsSync(path.join(ROOT, entry.dir)));
+const missingDirs = new Set(missing.map((entry) => entry.dir));
+
 const drift = [];
-for (const source of registrySources(registry)) {
-  if (source.id === "canonical") continue;
-  for (const kind of ["agents", "commands"]) {
-    const dir = source[kind];
-    if (!dir) continue;
-    const canonicalDir = canonical[kind];
-    if (!canonicalDir) continue;
-    if (!fs.existsSync(path.join(ROOT, dir))) {
-      soft.push(`mirror ${source.id}: ${dir} does not exist (run \`pnpm agent:sync --write\`)`);
+for (const { id, dir, canonicalDir } of mirrorDirs) {
+  if (missingDirs.has(dir)) continue;
+  for (const file of listIds(canonicalDir)) {
+    const from = path.join(ROOT, canonicalDir, `${file}.md`);
+    const to = path.join(ROOT, dir, `${file}.md`);
+    if (!fs.existsSync(to)) {
+      drift.push(`${id}: ${dir}/${file}.md is missing`);
       continue;
     }
-    for (const id of listIds(canonicalDir)) {
-      const from = path.join(ROOT, canonicalDir, `${id}.md`);
-      const to = path.join(ROOT, dir, `${id}.md`);
-      if (!fs.existsSync(to)) {
-        drift.push(`${source.id}: ${dir}/${id}.md is missing`);
-        continue;
-      }
-      if (!sameContent(from, to)) {
-        drift.push(`${source.id}: ${dir}/${id}.md differs from ${canonicalDir}/${id}.md`);
-      }
+    if (!sameContent(from, to)) {
+      drift.push(`${id}: ${dir}/${file}.md differs from ${canonicalDir}/${file}.md`);
     }
-    for (const id of listIds(dir)) {
-      if (!listIds(canonicalDir).includes(id)) {
-        soft.push(`mirror ${source.id}: ${dir}/${id}.md has no canonical counterpart`);
-      }
+  }
+  for (const file of listIds(dir)) {
+    if (!listIds(canonicalDir).includes(file)) {
+      soft.push(`mirror ${id}: ${dir}/${file}.md has no canonical counterpart`);
     }
   }
 }
 for (const line of drift) soft.push(`mirror drift — ${line}`);
+if (missing.length) {
+  const ids = [...new Set(missing.map((entry) => entry.id))];
+  soft.push(
+    `${missing.length} mirror dir(s) not generated on this machine (${shortList(
+      ids
+    )}) — gitignored local state; run \`pnpm agent:sync --write\` to create them`
+  );
+}
 
 /* ---------------------------------------------------- unregistered tool dirs */
 
@@ -147,6 +159,7 @@ const memoryLines = memoryEntries.length;
 const report = {
   canonical,
   mirrors: registrySources(registry).filter((source) => source.id !== "canonical").length,
+  missingMirrors: missing.map((entry) => entry.dir),
   agents: registry.agents?.length ?? 0,
   commands: registry.commands?.length ?? 0,
   memoryEntries: memoryLines,
@@ -190,6 +203,12 @@ function listIds(dir) {
 function sameContent(a, b) {
   const read = (file) => fs.readFileSync(file, "utf8").replace(/\r\n/g, "\n");
   return read(a) === read(b);
+}
+
+/** First few names of a list, collapsed so one finding stays one line. */
+function shortList(items, max = 6) {
+  if (items.length <= max) return items.join(", ");
+  return `${items.slice(0, max).join(", ")} +${items.length - max}`;
 }
 
 /** The subset of `dirs` (repo-relative) that git considers ignored. */
