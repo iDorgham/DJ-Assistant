@@ -25,6 +25,14 @@ not inferable by reading the code.
   the discovered skills from the model list — that directory is forbidden.
 - A skill hidden with `metadata.opencode/autoinvoke: false` is **not loadable**
   here, so the whole skill library stays advertised (~15.4k tokens/step).
+- `agents.registry.json` is the routing data of the agent layer: subagents
+  (keywords, owned files, skills), commands, verification groups, and the map of
+  tool directories that mirror the agent files.
+- The agent and command files are canonical in `.opencode/agents` and
+  `.opencode/commands` (tracked); every other tool directory (`.kilo`,
+  `.qoder`, `.claude`, `.cursor`, `.codex`, …) is a local mirror.
+- `pnpm agent:preflight "<prompt>"` turns any prompt into the brief every
+  session reads: memory lines, skills, the agent to delegate to, and the checks.
 - `.opencode/skill-manifest.json` records each skill's **source**, so with a local
   `.opencode/skills/` mirror present `pnpm skills:inventory` rewrites all 240
   entries to `project`/`overridden: global`. That is machine-local state in a

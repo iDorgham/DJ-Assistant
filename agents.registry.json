@@ -1,0 +1,288 @@
+{
+  "version": 1,
+  "owner": "DJ Assistant",
+  "notes": [
+    "Routing registry for the workspace agent layer: which subagent to delegate to, which",
+    "command to suggest, and which checks a change implies — all derived from the prompt plus",
+    "the files in play. `scripts/agent/preflight.mjs` reads this file; `scripts/agent/doctor.mjs`",
+    "checks that it still matches the agent files on disk. Keep agent prose in the agent files,",
+    "routing data here."
+  ],
+  "sources": {
+    "canonical": {
+      "agents": ".opencode/agents",
+      "commands": ".opencode/commands"
+    },
+    "mirrors": [
+      { "id": "kilo", "agents": ".kilo/agents", "commands": ".kilo/commands" },
+      { "id": "qoder", "agents": ".qoder/agents", "commands": ".qoder/commands" },
+      { "id": "claude", "agents": ".claude/agents", "commands": ".claude/commands" },
+      { "id": "cline", "agents": ".cline/agents", "commands": ".cline/commands" },
+      { "id": "cursor", "agents": ".cursor/agents", "commands": ".cursor/commands" },
+      { "id": "augment", "agents": ".augment/agents", "commands": ".augment/commands" },
+      { "id": "roo", "agents": ".roo/agents", "commands": ".roo/commands" },
+      { "id": "trae", "agents": ".trae/agents", "commands": ".trae/commands" },
+      { "id": "windsurf", "agents": ".windsurf/agents", "commands": ".windsurf/commands" },
+      { "id": "freebuff", "agents": ".freebuff/agents", "commands": ".freebuff/commands" },
+      { "id": "codex", "commands": ".codex/prompts" },
+      { "id": "continue", "commands": ".continue/prompts" },
+      { "id": "gemini", "commands": ".gemini/commands" },
+      { "id": "kilocode", "commands": ".kilocode/commands" },
+      { "id": "kiro", "agents": ".kiro/agents", "commands": ".kiro/commands" },
+      { "id": "github", "commands": ".github/prompts" }
+    ]
+  },
+  "noise": [
+    ".augment",
+    ".claude",
+    ".cline",
+    ".codex",
+    ".continue",
+    ".cursor",
+    ".freebuff",
+    ".gemini",
+    ".github/prompts",
+    ".kilo",
+    ".kilocode",
+    ".kiro",
+    ".opencode",
+    ".opencode-notes",
+    ".qoder",
+    ".roo",
+    ".superpowers",
+    ".trae",
+    ".windsurf"
+  ],
+  "delegation": {
+    "maxParallel": 2,
+    "direct": [
+      "A single-file edit or a question with a known answer",
+      "One command to run, or one error to read",
+      "A docs-only change inside one file"
+    ],
+    "delegate": [
+      "The change spans layers (Rust core, Tauri shell, React UI, API)",
+      "The work sits in a specialist domain (Tauri/IPC, audio/DJ analysis)",
+      "Two or more independent work items that can proceed in parallel"
+    ],
+    "handoff": "RESULT — files changed | checks run | findings | remaining work | risks",
+    "board": {
+      "postWhen": [
+        "A finding changes another participant's plan",
+        "Work is blocked and a decision is needed (ASK)",
+        "Another agent's change touches a file you own (HOLD)",
+        "A scope change needs approval only the human can give (HOLD)"
+      ],
+      "types": {
+        "INFO": "Material finding, no action requested",
+        "ASK": "A question that blocks progress; name the decision needed",
+        "RESULT": "Completed work worth integrating; name the files and checks",
+        "HOLD": "Advisory pause on shared scope; say what would release it",
+        "VETO": "Concrete objection to a proposed change; say what would work instead"
+      }
+    }
+  },
+  "agents": [
+    {
+      "id": "tauri-expert",
+      "kind": "subagent",
+      "summary": "Tauri v2 specialist: Rust commands, IPC, config, capabilities, plugins, builds.",
+      "keywords": [
+        "tauri",
+        "ipc",
+        "invoke",
+        "tauri.conf",
+        "capability",
+        "capabilities",
+        "plugin",
+        "tray",
+        "bundle",
+        "installer",
+        "rust command",
+        "src-tauri",
+        "webview"
+      ],
+      "owns": ["apps/desktop/src-tauri/**", "packages/shared/**"],
+      "skills": ["tauri", "tauri-ipc", "tauri-config", "tauri-security"],
+      "spawn": "The task touches the Tauri shell: Rust commands, IPC contracts, capabilities, or a desktop build.",
+      "verify": ["rust", "js"]
+    },
+    {
+      "id": "audio-dj-expert",
+      "kind": "subagent",
+      "summary": "Audio and DJ library specialist: analysis, waveforms, beatgrid, tagging, local SQLite.",
+      "keywords": [
+        "audio",
+        "waveform",
+        "beatgrid",
+        "beat grid",
+        "bpm",
+        "cue point",
+        "cue points",
+        "onset",
+        "spectrum",
+        "analyser",
+        "analyzer",
+        "symphonia",
+        "onnx",
+        "onnx model",
+        "rekordbox",
+        "serato",
+        "beets",
+        "musicbrainz",
+        "id3",
+        "tagging",
+        "music library",
+        "dj library",
+        "playlist",
+        "set list",
+        "setlist",
+        "tempo",
+        "key detection",
+        "transient"
+      ],
+      "owns": ["crates/analysis/**", "crates/core/**", "fixtures/**"],
+      "skills": [
+        "music-analyzer",
+        "ffmpeg-waveforms-visualization",
+        "dj-library-organizer",
+        "dj-set-architect",
+        "beets-music-library-manager-tagger",
+        "rekordbox",
+        "sql-optimization-patterns"
+      ],
+      "spawn": "The task touches audio analysis, waveforms, beatgrid/cues, or DJ library metadata.",
+      "verify": ["rust", "js"]
+    },
+    {
+      "id": "context-loader",
+      "kind": "subagent",
+      "summary": "Loads only the relevant slice of shared project memory for a task.",
+      "keywords": ["memory", "recall", "convention", "prior decision", "history"],
+      "owns": [],
+      "skills": [],
+      "spawn": "The task needs prior decisions or conventions and the shared memory has not been searched yet.",
+      "verify": []
+    },
+    {
+      "id": "skill-router",
+      "kind": "subagent",
+      "summary": "Maps a task to the installed skill IDs worth loading, without doing the task.",
+      "keywords": ["which skill", "skill match", "skill routing", "technique library"],
+      "owns": [],
+      "skills": [],
+      "spawn": "The skill match is ambiguous, or the task spans two domains and the right skills are unclear.",
+      "verify": []
+    },
+    {
+      "id": "skill-maintainer",
+      "kind": "subagent",
+      "summary": "Regenerates the skill inventory and reports library drift, duplicates, and policy gaps.",
+      "keywords": [
+        "skill audit",
+        "skill inventory",
+        "duplicate skill",
+        "policy drift",
+        "skill library",
+        "curation"
+      ],
+      "owns": [],
+      "skills": [],
+      "spawn": "The installed skill library changed, or the priority policy needs curation.",
+      "verify": []
+    },
+    {
+      "id": "memory-keeper",
+      "kind": "subagent",
+      "summary": "Maintains the shared memory layers: de-duplicate, rotate state, promote corrections.",
+      "keywords": [
+        "remember",
+        "write memory",
+        "keep this",
+        "note for later",
+        "hand-off",
+        "state.md"
+      ],
+      "owns": ["docs/ai/memory/**"],
+      "skills": [],
+      "spawn": "A session produced something durable worth keeping, or the memory layers need pruning.",
+      "verify": []
+    }
+  ],
+  "commands": [
+    {
+      "id": "preflight",
+      "kind": "command",
+      "summary": "Run the automatic prompt brief: skills, memory, agents, and checks.",
+      "use": "The default entry point — run it on any non-trivial prompt before starting work."
+    },
+    {
+      "id": "skills",
+      "kind": "command",
+      "summary": "Match the task to installed skills and load the winners.",
+      "use": "When only the skill routing is needed."
+    },
+    {
+      "id": "skills-audit",
+      "kind": "command",
+      "summary": "Run the skill-maintainer subagent and summarise the changes worth making.",
+      "use": "After installing, removing, or renaming skills."
+    },
+    {
+      "id": "remember",
+      "kind": "command",
+      "summary": "Record something durable in the shared project memory.",
+      "use": "At the end of a session that produced something worth keeping."
+    },
+    {
+      "id": "tauri",
+      "kind": "command",
+      "summary": "Load the tauri-expert subagent with its skill set.",
+      "use": "Tauri shell, IPC, capability, or build work."
+    },
+    {
+      "id": "audio",
+      "kind": "command",
+      "summary": "Load the audio-dj-expert subagent with its skill set.",
+      "use": "Audio analysis, waveform, beatgrid, rekordbox, beets, and library work."
+    }
+  ],
+  "verify": [
+    {
+      "id": "rust",
+      "label": "Rust",
+      "paths": ["**/*.rs", "crates/**", "apps/desktop/src-tauri/**", "tests/**"],
+      "keywords": ["rust", "cargo", "clippy", "crate"],
+      "commands": [
+        "cargo fmt --all --check",
+        "cargo clippy --all-targets -- -D warnings",
+        "cargo test -p dj-assistant-core -p dj-assistant-analysis -p dj-assistant-schema-tests"
+      ],
+      "note": "Use `pnpm rust:test` when the ONNX runtime is available; the portable set above skips it."
+    },
+    {
+      "id": "js",
+      "label": "JS/TS",
+      "paths": ["**/*.ts", "**/*.tsx", "**/*.mjs", "apps/**", "packages/**", "scripts/**"],
+      "keywords": ["typescript", "react", "vitest", "eslint", "prettier", "pnpm"],
+      "commands": ["pnpm lint", "pnpm typecheck", "pnpm test"],
+      "note": ""
+    },
+    {
+      "id": "ui",
+      "label": "UI",
+      "paths": ["docs/ui/**", "apps/desktop/src/**/*.tsx", "apps/desktop/src/**/*.css"],
+      "keywords": ["ui", "design system", "component", "layout", "tailwind", "accessibility"],
+      "commands": [],
+      "note": "docs/ui/01-DESIGN-SYSTEM.md is authoritative — a generic design skill never overrides it."
+    },
+    {
+      "id": "docs",
+      "label": "Docs",
+      "paths": ["docs/**", "*.md", "AGENTS.md", "CLAUDE.md"],
+      "keywords": ["documentation", "readme", "changelog"],
+      "commands": ["pnpm lint:root"],
+      "note": ""
+    }
+  ]
+}

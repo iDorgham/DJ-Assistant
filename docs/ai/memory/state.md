@@ -4,6 +4,22 @@ Ephemeral. Newest first. **Rotate aggressively** — if a line would still be tr
 in two weeks, it belongs in [`decisions.md`](./decisions.md); if it is just a
 fact, it belongs in [`facts.md`](./facts.md). Delete anything stale.
 
+## 2026-10-20 · Automatic agent routing and communication
+
+- `pnpm agent:preflight "<prompt>"` is now the entry point for every prompt:
+  it returns memory lines, skills, the agent to delegate to, and the checks.
+- `agents.registry.json` holds the routing data (agents, commands, verification
+  groups, mirror map); `scripts/agent/` holds the tooling — `preflight.mjs`,
+  `doctor.mjs`, `sync.mjs`, `lib.mjs`, plus `preflight.test.mjs` (21 tests,
+  run by `pnpm test:agent`).
+- The agent/command files are canonical in `.opencode/` and mirrored into every
+  other tool directory by `pnpm agent:sync --write`; `pnpm agent:doctor` reports
+  drift. The `/preflight` command was added to the same set.
+- `docs/ai/COMMUNICATION.md` documents the delegation contract, the `RESULT`
+  handoff, the board protocol, and file ownership.
+- The memory reader now skips each file's intro paragraph, and generic verbs
+  are dropped from memory queries — both were matching almost every prompt.
+
 ## 2026-10-20 · AI memory layers added
 
 - Created `docs/ai/` (agents, skills, routing, memory) and consolidated the

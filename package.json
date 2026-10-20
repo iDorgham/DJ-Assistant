@@ -14,7 +14,8 @@
     "lint:root": "prettier --check \"*.{json,md,yaml,yml,mjs}\" \".github/**/*.yml\"",
     "lint:eslint": "eslint .",
     "typecheck": "pnpm build:shared && pnpm --recursive run typecheck",
-    "test": "pnpm --recursive run test",
+    "test": "pnpm --recursive run test && pnpm test:agent",
+    "test:agent": "node --test \"scripts/agent/*.test.mjs\"",
     "format": "prettier --write \"**/*.{ts,tsx,js,mjs,json,yaml,yml}\" \"*.md\"",
     "rust:fmt": "cargo fmt --all --check",
     "rust:clippy": "cargo clippy --all-targets -- -D warnings",
@@ -27,7 +28,10 @@
     "skills:audit": "node scripts/skills/audit.mjs",
     "skills:policy": "node scripts/skills/policy.mjs",
     "skills:policy:restore": "node scripts/skills/policy.mjs --restore",
-    "memory:search": "node scripts/memory/search.mjs"
+    "memory:search": "node scripts/memory/search.mjs",
+    "agent:preflight": "node scripts/agent/preflight.mjs",
+    "agent:doctor": "node scripts/agent/doctor.mjs",
+    "agent:sync": "node scripts/agent/sync.mjs"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",

@@ -14,6 +14,9 @@ permissions:
   - action: shell
     resource: "node scripts/skills/*"
     effect: allow
+  - action: shell
+    resource: "node scripts/agent/*"
+    effect: allow
 ---
 
 You keep this workspace's shared project memory coherent.
@@ -41,6 +44,8 @@ Given this task or the current session (`$ARGUMENTS`), do:
    lists, config values that live in config files.
 6. **Never store secrets.** Remove any credential, token, or private URL found.
 
-Report: files changed, lines added vs removed, anything deliberately left because
-it is too new to rotate, and finish with one line on total memory size across the
-five layers.
+## Output
+
+Finish with the `RESULT` block from `docs/ai/COMMUNICATION.md` §5: the files
+changed, the lines added vs removed, anything deliberately left because it is
+too new to rotate, and the total memory size across the five layers.

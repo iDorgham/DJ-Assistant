@@ -6,26 +6,69 @@
 
 > [`docs/ai/`](./) is the home for AI-related documentation:
 > [`SKILLS.md`](./SKILLS.md) inventories what is **installed**, this file explains
-> **what runs**, [`SKILL_ROUTING.md`](./SKILL_ROUTING.md) is the generated
+> **what runs**, [`COMMUNICATION.md`](./COMMUNICATION.md) is the protocol between
+> participants, [`SKILL_ROUTING.md`](./SKILL_ROUTING.md) is the generated
 > priority table, and [`MEMORY.md`](./MEMORY.md) describes the shared memory
 > layers.
 
 ---
 
-## 1. What exists
+## 1. One command, any prompt
+
+Every session starts the same way — no command to remember, no syntax to get
+right:
+
+```bash
+pnpm agent:preflight "<the prompt, in the user's words>"
+```
+
+It returns four things in one read-only call:
+
+| Section | What it answers | Source |
+| --- | --- | --- |
+| **Memory** | What do we already know about this? | `docs/ai/memory/*` |
+| **Skills** | Which technique applies? | the installed library + `skills.policy.json` |
+| **Agents** | Who should own the work? | `agents.registry.json` |
+| **Checks** | How do we prove it works? | `agents.registry.json` → `verify` |
+
+It takes about a second, never blocks, and falls back to "proceed directly"
+when nothing matches. The brief format and the full workflow are in
+[`COMMUNICATION.md`](./COMMUNICATION.md) §2.
+
+---
+
+## 2. What exists
+
+### The registry — `agents.registry.json`
+
+The routing data, at the repository root next to `skills.policy.json`:
+
+- `sources.canonical` — the tracked agent/command files (`.opencode/agents`,
+  `.opencode/commands`). `sources.mirrors` — the local copies every other tool
+  on this machine reads (`.kilo`, `.qoder`, `.claude`, `.cursor`, …).
+- `agents[]` — each subagent: the keywords and file globs that route work to
+  it, the files it owns, and the skills it brings.
+- `commands[]` — the user-facing commands and when each applies.
+- `verify[]` — the checks a change implies, by file path and keyword.
+- `delegation` — when to delegate, how many agents at once, the handoff
+  format, and the board semantics.
 
 ### Subagents — `.opencode/agents/`
 
 | Subagent | Use it when | What it returns |
 | --- | --- | --- |
+| `tauri-expert` | Tauri shell work: Rust commands, IPC, capabilities, plugins, builds | Code + the `RESULT` handoff |
+| `audio-dj-expert` | Audio analysis, waveforms, beatgrid, cues, DJ library metadata | Code + the `RESULT` handoff |
 | `skill-router` | You need the right skills for a task, but not the task performed | Ranked list of installed skill IDs, each with a one-line reason |
 | `skill-maintainer` | Periodic library health, curation, or policy-drift review | Inventory + audit report: hard problems, findings, recommendations |
+| `context-loader` | The task needs prior decisions or conventions | A tight `## Memory Context` block |
 | `memory-keeper` | A session produced something worth keeping, or the memory needs pruning | Report of files changed, lines added vs removed, total memory size |
 
 `skill-router` and `skill-maintainer` are deliberately **read-only**: `edit` is
 denied for `*`, and their only allowed `shell` is scoped to
-`node scripts/skills/*`. Neither ever writes to `~/.config/opencode/skills`, nor
-to the vendored copies under `.opencode/skills/`.
+`node scripts/skills/*` and `node scripts/agent/*`. Neither ever writes to
+`~/.config/opencode/skills`, nor to the vendored copies under
+`.opencode/skills/`.
 
 `memory-keeper` is the single exception — its `edit` is allowed **only** for
 `docs/ai/memory/*` and `docs/ai/MEMORY.md`, and denied for everything else. It
@@ -35,50 +78,61 @@ never touches `AGENTS.md`, `CLAUDE.md`, `kilo.jsonc`, or the vendor rule files.
 
 | Command | Does |
 | --- | --- |
-| `/skills <task>` | Match this task to installed skills, load the winners with the `skill` tool, then do the task |
+| `/preflight <task>` | The automatic brief: memory, skills, agents, checks — then do the task |
+| `/skills <task>` | Match this task to installed skills, load the winners, then do the task |
 | `/skills-audit` | Run the `skill-maintainer` subagent and summarise the changes worth making |
 | `/remember <what to keep>` | Record something durable in the shared memory — or say so if it is not worth the context cost |
+| `/tauri <task>` | Load the `tauri-expert` subagent with its skill set |
+| `/audio <task>` | Load the `audio-dj-expert` subagent with its skill set |
 
-### Scripts — `scripts/skills/` (also `pnpm skills:*`)
+### Scripts
 
 | Script | Purpose |
 | --- | --- |
-| `match.mjs` | Prompt → ranked skills. `--top N`, `--json`, `--min S`, `--cold-only`, `--fail-on-match` |
-| `inventory.mjs` | Rebuilds `.opencode/skill-manifest.json` and `SKILL_ROUTING.md` from what is installed |
-| `audit.mjs` | Integrity and curation report: missing descriptions, duplicate IDs, near-duplicates, oversize, policy drift (`--json`) |
-| `policy.mjs` | Dry-run report of the priority split; `--restore` clears managed `autoinvoke` flags |
-| `../memory/search.mjs` | Prompt → relevant shared-memory lines across the five `docs/ai/memory/` layers. `--json`, `--limit N`. Exposed as `pnpm memory:search`; it is what `context-loader` and the `/audio`, `/tauri` commands call before working |
+| `scripts/agent/preflight.mjs` | Prompt → brief. `--json`, `--top N`, `--memory-limit N`, `--paths a,b`, `--no-git` |
+| `scripts/agent/doctor.mjs` | Agent-layer health: registry vs. disk, mirror drift, memory weight. Exits non-zero on hard problems |
+| `scripts/agent/sync.mjs` | Copy the canonical agent/command files to every tool mirror. Dry-run by default, `--write` to apply |
+| `scripts/agent/lib.mjs` | Registry loading, path matching, agent/command scoring, the brief builder |
+| `scripts/skills/match.mjs` | Prompt → ranked skills. `--top N`, `--json`, `--min S`, `--cold-only`, `--fail-on-match` |
+| `scripts/skills/inventory.mjs` | Rebuilds `.opencode/skill-manifest.json` and `SKILL_ROUTING.md` from what is installed |
+| `scripts/skills/audit.mjs` | Integrity and curation report: missing descriptions, duplicate IDs, near-duplicates, oversize, policy drift (`--json`) |
+| `scripts/skills/policy.mjs` | Dry-run report of the priority split; `--restore` clears managed `autoinvoke` flags |
+| `scripts/memory/search.mjs` | Prompt → relevant shared-memory lines across the five `docs/ai/memory/` layers. `--json`, `--limit N` |
 
-Shared logic (discovery, frontmatter parsing, scoring) lives in `lib.mjs`; the
-curated policy lives in [`skills.policy.json`](../../skills.policy.json).
+Shared logic (discovery, frontmatter parsing, scoring) lives in
+`scripts/skills/lib.mjs`; the curated skill policy lives in
+[`skills.policy.json`](../../skills.policy.json); the agent routing policy
+lives in [`agents.registry.json`](../../agents.registry.json).
 
 ---
 
-## 2. How routing works — normal prompts, no special syntax
+## 3. How routing works — normal prompts, no special syntax
 
-There is no command the model must remember to use. `AGENTS.md` carries the rule
-that every session sees:
-
-1. **Before a non-trivial task, match it.** Run
-   `node scripts/skills/match.mjs --top 3 "<short task summary>"`.
+1. **On every prompt, run the preflight.** `AGENTS.md` carries the rule that
+   every session sees, in every tool.
 2. **The matcher scores the prompt** against every installed skill description
    with a BM25-flavoured lexical score, plus hand-curated `triggers` in
    `skills.policy.json` that map project vocabulary onto skill IDs (for example
    `tauri global shortcut ipc` → `tauri-app-global-shortcut`).
-3. **Load the winners** with the `skill` tool, then do the task.
-4. **If nothing matches, continue normally** — routing never blocks work.
+3. **The agent router scores the prompt and the files in play** against the
+   registry: keywords answer *what is this about*, owned paths answer *who
+   should touch it*. The files come from the prompt, from `--paths`, and from
+   `git status` — so a vague "fix this" still routes.
+4. **Load the winners** with the `skill` tool, delegate when a specialist agent
+   is named, and run the checks the brief lists.
+5. **If nothing matches, continue normally** — routing never blocks work.
 
 `skill-router` reads `docs/ai/memory/facts.md` and `conventions.md` first, so
 its query uses this project's real vocabulary rather than generic terms — that is
 what makes the matcher hit the right skills.
 
 The `hot` list in `skills.policy.json` (72 skills) is the project's **priority**
-ranking: it biases selection toward the skills that actually matter here. It is a
-ranking, not a visibility filter — see §3.
+ranking: it biases selection toward the skills that actually matter here. It is
+a ranking, not a visibility filter — see §4.
 
 ---
 
-## 3. Standing rules — why the wiring looks like this
+## 4. Standing rules — why the wiring looks like this
 
 - **No project-local plugin.** Adding a file under `.opencode/plugins/` currently
   causes OpenCode to drop the discovered skills from the model list entirely, so
@@ -87,6 +141,10 @@ ranking, not a visibility filter — see §3.
   `metadata.opencode/autoinvoke: false` is **not loadable** in this environment —
   hiding only removes capability. `policy.mjs --apply` is guarded and refuses
   without `--force`; `skills:policy:apply` is deliberately not a package script.
+- **One source for the agent layer.** The agent and command files live once, in
+  `.opencode/agents` and `.opencode/commands`; every other tool directory is a
+  mirror. Edit the canonical file, then `pnpm agent:sync --write`. `pnpm
+  agent:doctor` reports drift.
 - **Skills are advisory, not authority.** For anything UI-facing,
   [`docs/ui/01-DESIGN-SYSTEM.md`](../ui/01-DESIGN-SYSTEM.md) and the rest of
   [`docs/ui/`](../ui/README.md) win over any generic design skill.
@@ -98,26 +156,31 @@ ranking, not a visibility filter — see §3.
 
 ---
 
-## 4. Maintenance workflow
+## 5. Maintenance workflow
 
 | Task | Command |
 | --- | --- |
+| See what a prompt would route to | `pnpm agent:preflight "<task>"` |
 | Rebuild the manifest + routing doc | `pnpm skills:inventory` |
 | Library health report | `pnpm skills:audit` |
-| See what a prompt would route to | `pnpm skills:match "<task>"` |
+| See what a prompt would match (skills only) | `pnpm skills:match "<task>"` |
 | Audit via subagent | `/skills-audit` |
 | Dry-run the policy split | `pnpm skills:policy` |
+| Agent-layer health | `pnpm agent:doctor` |
+| Update every tool's copy of the agent files | `pnpm agent:sync --write` |
 | Record something durable | `/remember <what>` |
 | Prune / rotate the memory layers | `/remember` (asks `memory-keeper`) |
 
 After editing `skills.policy.json`, run `pnpm skills:inventory` so the manifest
-and [`SKILL_ROUTING.md`](./SKILL_ROUTING.md) stay in sync. After a session that
+and [`SKILL_ROUTING.md`](./SKILL_ROUTING.md) stay in sync. After editing an
+agent or command file, run `pnpm agent:sync --write`. After a session that
 produced something worth keeping, run `/remember` so `state.md` does not rot.
 
 ---
 
-## 5. Related
+## 6. Related
 
+- [`COMMUNICATION.md`](./COMMUNICATION.md) — delegation, handoff, board protocol
 - [`MEMORY.md`](./MEMORY.md) — the shared memory layers and per-tool adapters
 - [`SKILLS.md`](./SKILLS.md) — installed-skill inventory by family and source
 - [`SKILL_ROUTING.md`](./SKILL_ROUTING.md) — generated priority tables

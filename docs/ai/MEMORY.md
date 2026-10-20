@@ -64,5 +64,6 @@ prune `state.md` aggressively.
   de-duplicates, and rotates `state.md`. Run it at the end of a session that
   produced something worth keeping.
 - Related: [`AGENTS.md`](./AGENTS.md) (the automation) ·
+  [`COMMUNICATION.md`](./COMMUNICATION.md) (delegation and handoff) ·
   [`SKILLS.md`](./SKILLS.md) (the skill library) ·
   [`SKILL_ROUTING.md`](./SKILL_ROUTING.md) (generated priorities).
