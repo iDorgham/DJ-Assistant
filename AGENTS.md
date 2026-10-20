@@ -84,8 +84,12 @@ agents, commands, and scripts behind it.
 **On every prompt, run the preflight before you start work:**
 
 ```bash
-pnpm agent:preflight "<the prompt, in the user's words>"
+pnpm agent:preflight '<the task, in plain words>'
 ```
+
+Single-quote the task: inside `"…"` the shell runs any `$(…)` or backticks the
+prompt happens to contain. If the task itself has an apostrophe, pipe it in
+instead: `pnpm agent:preflight --stdin`, with the text on stdin.
 
 One command returns the memory lines that apply, the skills worth loading, the
 subagent that should own the work, and the checks the change implies. It is

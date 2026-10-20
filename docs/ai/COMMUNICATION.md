@@ -18,7 +18,7 @@ Routing is **not** something an agent has to remember. Every prompt starts the
 same way:
 
 ```bash
-pnpm agent:preflight "<the prompt, in the user's words>"
+pnpm agent:preflight '<the task, in plain words>'
 ```
 
 That produces the brief in §2 — memory lines, skills, the agent that should
@@ -200,4 +200,8 @@ pnpm agent:sync --write  # copy the canonical files to every mirror
 
 Run `pnpm agent:doctor` after changing any agent or command file, and
 `pnpm agent:sync --write` before handing the machine to another tool. The
-doctor exits non-zero when the registry and the files disagree.
+doctor exits non-zero **only** when the registry and the canonical `.opencode/`
+files disagree: a registered file that is missing, or a canonical file nobody
+registered. Mirror drift and mirror directories this machine never generated
+are findings, not failures, and still exit 0 — they are gitignored local state.
+So the exit code is not a "did I sync?" check; read the report for that.

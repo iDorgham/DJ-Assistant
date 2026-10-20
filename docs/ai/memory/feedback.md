@@ -38,6 +38,24 @@ to import `./lib.mjs` — a file that commit did not contain, so it was broken
 standalone and its message described code that was not in it. `git status` did not
 warn: the rewrite had been picked up by the same `git add` that staged my work.
 
-Before committing a script, extract the tree you are about to create and run it:
-`git archive HEAD scripts | tar -x -C /tmp/x && node /tmp/x/scripts/...`. Fix
+Stage first, then extract **the index** — the tree the commit is about to become
+— and run it: `git archive "$(git write-tree)" scripts | tar -x -C /tmp/x &&
+node /tmp/x/scripts/...`. (`git archive HEAD` exports the *previous* commit, so
+as originally written this check could not have caught this breakage.) Fix
 forward with a note; do not rewrite published history.
+
+## F-006 · Check the installed tool's schema before accepting a severity (2026-10-21)
+
+Two reviewers graded the trailing `edit: "*"` deny in the agent files P1 — "blocks
+every file edit, so `/remember` cannot write". It blocked nothing: OpenCode
+1.1.6x parses only the singular `permission:` object, moves the unknown
+`permissions:` key into model options, and enforces **zero** of those rules with
+no error or warning (verified with `opencode agent list` on two test agents). The
+ordering was still wrong and becomes live on a v2-config release, so it is fixed
+— catch-all deny first — and the real bypass went the same round: `node scripts/*`
+shell grants let a "read-only" agent run `sync.mjs --write` and `policy.mjs
+--apply`.
+**Rule:** for a config file, confirm what the *installed* version parses before
+agreeing a finding is live; and prefer named-script shell grants over wildcards,
+because a wildcard grant quietly outranks the deny it sits next to. See
+[D-008](./decisions.md).

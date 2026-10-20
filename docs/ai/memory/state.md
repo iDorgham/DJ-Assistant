@@ -6,12 +6,12 @@ fact, it belongs in [`facts.md`](./facts.md). Delete anything stale.
 
 ## 2026-10-20 · Automatic agent routing and communication
 
-- `pnpm agent:preflight "<prompt>"` is now the entry point for every prompt:
+- `pnpm agent:preflight '<prompt>'` is now the entry point for every prompt:
   it returns memory lines, skills, the agent to delegate to, and the checks.
 - `agents.registry.json` holds the routing data (agents, commands, verification
   groups, mirror map); `scripts/agent/` holds the tooling — `preflight.mjs`,
-  `doctor.mjs`, `sync.mjs`, `lib.mjs`, plus `preflight.test.mjs` (21 tests,
-  run by `pnpm test:agent`).
+  `doctor.mjs`, `sync.mjs`, `lib.mjs`, plus `preflight.test.mjs`, run by
+  `pnpm test:agent` (read the count from that command, not from here).
 - The agent/command files are canonical in `.opencode/` and mirrored into every
   other tool directory by `pnpm agent:sync --write`; `pnpm agent:doctor` reports
   drift. The `/preflight` command was added to the same set.

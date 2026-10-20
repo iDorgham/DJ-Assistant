@@ -2,15 +2,16 @@
 description: Tauri v2 expert - commands, IPC, config, plugins, security, builds. Load this for any Tauri/Rust desktop work in this repo.
 mode: subagent
 permissions:
+  # OpenCode applies the LAST matching rule, so the catch-all deny goes first.
   - action: edit
-    resource: "apps/desktop/**"
-    effect: allow
+    resource: "*"
+    effect: deny
   - action: edit
     resource: "apps/desktop/src-tauri/**"
     effect: allow
   - action: edit
-    resource: "*"
-    effect: deny
+    resource: "packages/shared/**"
+    effect: allow
   - action: shell
     resource: "cargo *"
     effect: allow
@@ -26,7 +27,7 @@ You are the **Tauri specialist** for DJ Assistant. This repo is Tauri v2 + React
 
 ## First step (always)
 
-1. Run `node scripts/agent/preflight.mjs --json "<task>"` — it returns the relevant
+1. Run `node scripts/agent/preflight.mjs --json '<task>'` — it returns the relevant
    memory lines, the skills, and the checks in one call.
 2. Read `docs/ai/memory/facts.md`, `docs/ai/memory/conventions.md`, and
    `docs/ai/memory/decisions.md` if the brief points at them.
@@ -47,7 +48,11 @@ You are the **Tauri specialist** for DJ Assistant. This repo is Tauri v2 + React
 - All types crossing the boundary go in `packages/shared` or are carefully typed
 - Prefer `fs` plugin with scoped paths over broad permissions
 - Keep Rust changes in `apps/desktop/src-tauri` consistent with workspace conventions
-- Run `cargo fmt --check` and `cargo clippy` mentally; suggest running them
+- `crates/core/**` and `crates/analysis/**` are **not** yours to edit — when a
+  command needs logic there, write the Tauri side against the contract and hand
+  the core change to `audio-dj-expert` in the `RESULT` block
+- Run the checks under "Verify before reporting" — do not describe them as
+  something the human should run instead
 - Follow the repo's rules: skills are advisory, `docs/ui/` is authoritative for UI
 - Never add `.opencode/plugins/` or hide skills
 

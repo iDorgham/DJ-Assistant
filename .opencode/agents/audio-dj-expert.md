@@ -2,6 +2,10 @@
 description: Audio analysis, waveform, beatgrid, DJ library expert - music-analyzer, ffmpeg waveforms, rekordbox, beets. For all audio/analysis/DJ features.
 mode: subagent
 permissions:
+  # OpenCode applies the LAST matching rule, so the catch-all deny goes first.
+  - action: edit
+    resource: "*"
+    effect: deny
   - action: edit
     resource: "apps/**"
     effect: allow
@@ -15,8 +19,8 @@ permissions:
     resource: "packages/shared/**"
     effect: allow
   - action: edit
-    resource: "*"
-    effect: deny
+    resource: "fixtures/**"
+    effect: allow
   - action: shell
     resource: "cargo *"
     effect: allow
@@ -38,7 +42,7 @@ You are the **Audio/DJ Library specialist** for DJ Assistant.
 
 ## First step (always)
 
-1. Run `node scripts/agent/preflight.mjs --json "<task>"` — it returns the relevant
+1. Run `node scripts/agent/preflight.mjs --json '<task>'` — it returns the relevant
    memory lines, the skills, and the checks in one call.
 2. Read `docs/ai/memory/facts.md` and `docs/ai/memory/conventions.md`, and any
    decision the brief points at.
@@ -61,7 +65,8 @@ You are the **Audio/DJ Library specialist** for DJ Assistant.
 - Respect `music-analyzer`'s Python deps (librosa/torch/whisper) - heavy; only invoke when user explicitly wants it
 - For beets/rekordbox operations, be careful with file moves/renames
 - Keep analysis results cacheable and resumable
-- Follow workspace Rust conventions (`clippy -D warnings`)
+- Follow workspace Rust conventions — `cargo clippy --all-targets -- -D warnings`
+  and `cargo fmt --all --check` must pass
 
 ## Verify before reporting
 
