@@ -1,0 +1,7 @@
+{
+  // Kilo Code project config.
+  // Project instructions are auto-discovered from ./AGENTS.md (the open standard,
+  // shared with Qoder, OpenCode, FreeBuff and DeepSeek Harness). This file only
+  // wires up the Kilo-specific project rules — see docs/ai/MEMORY.md.
+  "instructions": [".kilo/rules/*.md"],
+}

@@ -45,6 +45,33 @@ optional.
 - Don't commit generated artifacts (`target/`, `dist/`, model binaries) or the
   local database.
 
+## Project memory — one store, every AI tool
+
+**Qoder, Kilo Code, OpenCode, FreeBuff, and DeepSeek Harness all read
+`AGENTS.md`**, so this project keeps a single canonical memory rather than one
+copy per tool: `AGENTS.md` + [`docs/ai/memory/`](docs/ai/memory/README.md).
+Architecture and write rules: [`docs/ai/MEMORY.md`](docs/ai/MEMORY.md).
+
+| Layer | File | Use for |
+| ----- | ---- | ------- |
+| L1 | [`facts.md`](docs/ai/memory/facts.md) | Structural/tooling facts not inferable from code |
+| L1 | [`conventions.md`](docs/ai/memory/conventions.md) | Standing rules every session follows |
+| L2 | [`decisions.md`](docs/ai/memory/decisions.md) | Append-only choices that must not be silently reversed |
+| L2 | [`feedback.md`](docs/ai/memory/feedback.md) | Append-only corrections and lessons learned |
+| L3 | [`state.md`](docs/ai/memory/state.md) | Hand-off between sessions; rotates (~2 weeks) |
+
+- Keep entries terse — every line is re-sent as context to every tool, every
+  session. Never duplicate what the repo already records, and **never store
+  secrets** in them.
+- **Never fork memory per tool.** `CLAUDE.md`, `.qoder/rules/`, `.kilo/rules/`,
+  and `kilo.jsonc` are thin adapters only — do not restate instructions in them.
+- Machine-specific notes go in `AGENTS.local.md` / `CLAUDE.local.md` (both
+  gitignored; template: [`AGENTS.local.example.md`](AGENTS.local.example.md)).
+- `/remember <what to keep>` writes to the right layer; the `memory-keeper`
+  subagent de-duplicates and rotates `state.md`.
+- Memory is a hint, not gospel: anything contradicting the code must be
+  re-verified before it is acted on.
+
 ## Agent skills — routing workflow
 
 This machine has a large global OpenCode skill library (see
