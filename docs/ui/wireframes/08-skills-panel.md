@@ -1,7 +1,7 @@
 # Wireframe — Skills Panel (08)
 
 **Phase:** 3–4 · 📋 Planned
-**See also:** [Skills System](../../architecture/SKILLS_SYSTEM.md) · [Screens & Flows §4.7](../SCREENS_AND_FLOWS.md)
+**See also:** [Skills System](../../architecture/SKILLS_SYSTEM.md) · [Screens & Flows §4.7](../12-SCREENS-AND-FLOWS.md)
 
 A drawer listing the scoped automation Skills with per-Skill control, last-run results, and
 a global kill-switch. Every mutating run is previewable and reversible.

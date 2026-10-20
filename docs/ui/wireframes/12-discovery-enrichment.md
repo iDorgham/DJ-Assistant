@@ -1,7 +1,7 @@
 # Wireframe — Discovery & Enrichment (12)
 
 **Phase:** 0 foundations ✅ Shipped (local, no network) · Enrichment review ✅ Shipped (opt-in MusicBrainz / iTunes / Deezer / Discogs / Last.fm) · Charts ✅ Shipped (snapshots + taste) · Radar/fingerprinting 📋 Planned
-**See also:** [Screens & Flows §4.2 / §4.11 / §4.12 / §5.9 / §5.10](../SCREENS_AND_FLOWS.md) · [Track Detail](./03-track-detail.md) · [Spotify Export](./11-spotify-export.md) · [Discovery diagram](../../diagrams/17-discovery-enrichment-providers.md) · [ADR-0007](../../ADR/0007-similar-tracks-enrichment-multiprovider.md)
+**See also:** [Screens & Flows §4.2 / §4.11 / §4.12 / §5.9 / §5.10](../12-SCREENS-AND-FLOWS.md) · [Track Detail](./03-track-detail.md) · [Spotify Export](./11-spotify-export.md) · [Discovery diagram](../../diagrams/17-discovery-enrichment-providers.md) · [ADR-0007](../../ADR/0007-similar-tracks-enrichment-multiprovider.md)
 
 Three shipped surfaces share one promise: **nothing here touches the network
 except through the explicit lookup buttons**. Online sources fire only from the

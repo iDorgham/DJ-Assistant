@@ -23,7 +23,7 @@ each folder below is self-contained and cross-links to its neighbours.
 | [`ui-ux/`](./ui-ux/) | Earlier UI docs: principles, Phase 0 design system, screens & flows, wireframes (tokens superseded by `ui/`) | [UI/UX Index](./ui-ux/README.md) |
 | [`ADR/`](./ADR/) | Architecture Decision Records (the "why") | [ADR Index](./ADR/README.md) |
 | [`audit/`](./audit/) | Spec/function/settings audits + TA.1–TA.14 tracking | [Audit summary](./audit/AUDIT-SUMMARY.md) |
-| [`context/`](./context/) | Single-file project digest for humans + AI agents | [Project Context](./context/PROJECT_CONTEXT.md) |
+| [`context/`](./context/) | Single-file project digest for humans + AI agents, plus the agent skills inventory and routing policy | [Project Context](./context/PROJECT_CONTEXT.md) · [Agent Skills](./context/AGENT_SKILLS.md) · [Skill Routing](./context/SKILL_ROUTING.md) |
 | [`evidence/`](./evidence/) | Acceptance evidence (screenshots, captured runs) | [Phase 0 evidence](./engineering/PHASE0_ACCEPTANCE_EVIDENCE.md) |
 
 ---
@@ -114,7 +114,7 @@ Earlier set — [`ui-ux/`](./ui-ux/):
 | [UX_PRINCIPLES.md](./ui-ux/UX_PRINCIPLES.md) | Personas, the prep loop, design principles, IA, interaction patterns, voice |
 | [DESIGN_SYSTEM.md](./ui-ux/DESIGN_SYSTEM.md) | Colour, typography, spacing, motion, and the component inventory |
 | [SCREENS_AND_FLOWS.md](./ui-ux/SCREENS_AND_FLOWS.md) | Screen inventory, wireframes, and end-to-end flows per phase |
-| [wireframes/](./ui-ux/wireframes/README.md) | Low-fidelity structural wireframes for every screen (00–12) |
+| ~~wireframes/~~ | Removed 2026-10-19 — wireframes live in [`ui/12-WIREFRAMES-AND-FLEXIBILITY.md`](./ui/12-WIREFRAMES-AND-FLEXIBILITY.md) |
 | [ACCESSIBILITY.md](./ui-ux/ACCESSIBILITY.md) | WCAG targets, contrast findings, keyboard model, motion, test checklist |
 | [PLAYER_AND_LAYOUT_SPEC_2026-10-19.md](./ui-ux/PLAYER_AND_LAYOUT_SPEC_2026-10-19.md) | Historical v1.7 app shell / player / layout proposal |
 

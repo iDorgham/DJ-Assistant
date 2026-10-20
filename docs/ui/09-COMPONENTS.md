@@ -1,6 +1,6 @@
 # 09 — Component Inventory
 
-**Version:** 1.0 · **Date:** 2026-10-19
+**Version:** 1.2 · **Date:** 2026-10-19
 
 Logical UI components for implementation (React + design tokens).
 
@@ -24,11 +24,18 @@ Logical UI components for implementation (React + design tokens).
 
 | Component | Responsibility |
 |-----------|----------------|
-| `TrackTable` | Virtualized rows, selection, sort |
-| `ColumnPicker` | Show/hide/reorder/resize |
+| `TrackTable` | Virtualized rows, selection, sort, context menu |
+| `ColumnPicker` | Show/hide/reorder/**resize** (widths persist) |
 | `SearchField` | Global/list search |
 | `FilterBar` | Chips + filter controls |
-| `KeyPill` | Harmonic-colored key |
+| `KeyPill` | Harmonic-colored key (Camelot 1A–12B + 1m/1d) |
+| `EnergyBars` | 1–10 charging-bar meter |
+| `TagChips` | Compact tag chips + overflow “+N” |
+| `StarRating` | Editable 5-star icons (click / keys 0–5) |
+| `ArtworkThumb` | Cover + **hover play overlay** |
+| `TrackContextMenu` | Per-view menus; Library: Play, Analyze, Edit/Fix tags, Add to playlist, Find in playlists, Mix suggestions, Find smaller/new tracks online, Remove |
+| `MixSuggestionsPanel` | Right dock: harmonic/BPM next-track suggestions |
+| `LibrarySourceTabs` | All Library · Categories · Playlists · Browser · Flash/Storage |
 | `BulkActionBar` | Selection actions |
 | `SmartCollectionList` | Saved filters |
 
@@ -71,6 +78,9 @@ Logical UI components for implementation (React + design tokens).
 | `HotCueBank` | A–H pads |
 | `GridControls` | Snap, nudge, BPM fine |
 | `BeatJumpControls` | ± beat jumps |
+| `SpectrumVisualizer` | Artistic real-time spectrum (2D / 3D / Psy / Particle / Club) |
+| `VisualizerStylePicker` | Family + preset + intensity / color / particle mix |
+| `VisualizerRecorder` | Record / export video or image sequence for Resolume |
 
 ---
 

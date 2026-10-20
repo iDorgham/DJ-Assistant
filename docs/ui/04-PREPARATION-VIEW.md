@@ -1,6 +1,7 @@
 # 04 — Preparation View
 
-**Version:** 1.0 · **Date:** 2026-10-19
+**Version:** 1.2 · **Date:** 2026-10-19  
+**Full wireframes:** [12-WIREFRAMES-AND-FLEXIBILITY.md](12-WIREFRAMES-AND-FLEXIBILITY.md)
 
 Primary job: **playlist creation and set mix preparation** — order tracks, cues, grid, Skills, sequence, export.
 
@@ -8,32 +9,61 @@ Primary job: **playlist creation and set mix preparation** — order tracks, cue
 
 ## 1. Layout
 
-```
-Header · Library [Preparation] Auto Performance
-Options: Set name | Template | Skills | Export | Gig Ready
-┌─ Sources ─┬─ Set track list ─────────────┬─ Inspector / Skills ─┐
-│ Library   │ Reorderable rows             │ Cue / Tag / Energy   │
-│ Playlists │ Harmonic / energy helpers    │ Skill cards          │
-│ Sets      │                              │ Constraints          │
-├───────────┴──────────────────────────────┴──────────────────────┤
-│ Player Full (preferred) — waveform + overview map + cues        │
-└─────────────────────────────────────────────────────────────────┘
-```
+Default workspace: **Prepare** · player **Full** · Skills dock open.  
+Columns + player height are adjustable; Skills can collapse to an icon strip.
 
-Default workspace: **Prepare** · player **Full** · Skills dock open.
+```
+┌─ Menu ──────────────────────────────────────────────────────────────┐
+├─ Header: Library [Preparation] Auto Performance · Export · Gig Ready│
+├─ Options: Set name | Template | Skill shortcuts                     │
+├─ Sources ─┬─ Set track list (reorder) ─┬─ Skills / inspector ───────┤
+│ ←resize→  │                            │ ←resize / collapse→        │
+├───────────┴────────────────────────────┴────────────────────────────┤
+│ Full player: detailed (zoomed, moving) + overview map + cues + grid │
+└─────────────────────────────────────────────────────────────────────┘
+```
 
 ---
 
 ## 2. Set workspace
 
 - Inline editable set name; dirty indicator if export state outdated  
-- Rows: #, Title, Artist, BPM, Key (colored), Time, cue status  
+- Rows: #, Title, Artist, BPM, Key (colored Camelot / 1m·1d), Time, cue status  
 - Drag reorder with drop gap highlight  
 - Drag in from left sources (Library / Playlists)  
 - Remove from set does not delete from library  
 - Optional energy/key path summary above or beside list  
 
-Same column-picker component as Library with tighter defaults.
+Same column-picker component as Library with tighter defaults (resize + show/hide).
+
+### 2.1 Preparation right-click context menu (set track row)
+
+**Different from Library.** Focused on set order and prep actions:
+
+```
+┌─────────────────────────────────────┐
+│ Play / Load into player             │
+│ ───────────────────────────────     │
+│ Move up / Move down                 │
+│ Move to top / Move to bottom        │
+│ Remove from set                     │
+│ ───────────────────────────────     │
+│ Analyze                             │
+│ Edit cues… / Cue Master             │
+│ Edit tags… / Tag Surgeon            │
+│ Rate ▸  ★★★★★                       │
+│ ───────────────────────────────     │
+│ Replace with suggestion…            │
+│ Find harmonic alternatives…         │
+│ ───────────────────────────────     │
+│ Reveal in library                   │
+│ Reveal in Finder / Explorer         │
+└─────────────────────────────────────┘
+```
+
+- Multi-select: reorder/remove/analyze apply to selection  
+- “Remove from set” never deletes the library file  
+- No “Remove from library” here (that belongs in Library menu only) 
 
 ---
 

@@ -13,7 +13,7 @@
 | Popover | Columns, layout, volume, small menus | Anchor to control; click-outside closes |
 | Toast | Success, Undo, soft errors | Auto-dismiss; action button |
 | Command palette | Jump / run / search | `Ctrl/Cmd+K`, fuzzy, keyboard |
-| Context menu | Right-click track, column, cue | Icons + shortcuts |
+| Context menu | Right-click track, column, cue | Icons + shortcuts; track menu includes **Show Energy** / **Show Tags** toggles |
 
 ---
 
@@ -36,8 +36,7 @@ Body text (one short paragraph or list)
 
 - Bottom or top stack  
 - Message + optional **Undo**  
-- Auto-dismiss 4–6s; pause on hover or while keyboard focus is inside the toast  
-- **Undo** toasts stay until the user acts or dismisses them  
+- Auto-dismiss 4–6s; pause on hover  
 - Used after: bulk tag, cue generate, reorder, Skill apply  
 
 ---

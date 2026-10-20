@@ -1,16 +1,16 @@
 # DJ Assistant — Wireframes
 
-**Status:** Superseded — historical (2026-10-14)
-**Companions:** [UX Principles](../UX_PRINCIPLES.md) · [Design System](../DESIGN_SYSTEM.md) · [Screens & Flows](../SCREENS_AND_FLOWS.md)
+**Status:** Historical — low-fidelity structural reference (Phase 0 shell, 2026-10-14 snapshot)
+**Companions:** [00 — Overview](../00-OVERVIEW.md) · [01 — Design System](../01-DESIGN-SYSTEM.md) · [12 — Screens & Flows](../12-SCREENS-AND-FLOWS.md)
 
-> **Superseded (2026-10-19):** current screen specs live in
-> [`docs/ui/`](../../ui/README.md). These wireframes are kept as a historical reference
-> for the Phase 0 UI.
+> **Historical:** current screen specs live in [docs/ui/](../README.md). These wireframes
+> are kept as a structural reference for the Phase 0 UI; where they conflict with the
+> numbered `docs/ui/` specs, the numbered specs win.
 
 Low-fidelity structural wireframes for every screen. They show **layout, hierarchy,
 states, and interaction affordances** — not final pixels. Visual tokens live in
-[DESIGN_SYSTEM.md](../DESIGN_SYSTEM.md); behaviour and flows live in
-[SCREENS_AND_FLOWS.md](../SCREENS_AND_FLOWS.md).
+[01 — Design System](../01-DESIGN-SYSTEM.md); behaviour and flows live in
+[12 — Screens & Flows](../12-SCREENS-AND-FLOWS.md).
 
 > These are deliberately low-fidelity. Do not lift colours or sizes from the ASCII art;
 > use the design-system tokens. Treat the art as a **structure contract**: regions,
@@ -65,7 +65,7 @@ states, and interaction affordances** — not final pixels. Visual tokens live i
 
 - **Callouts** (`{1}`, `{2}`, …) are explained in an annotation table below each wireframe.
 - **Widths** vary per screen; wide screens assume a window ≥ 1366px (see
-  [Screens & Flows](../SCREENS_AND_FLOWS.md) §7).
+  [Screens & Flows](../12-SCREENS-AND-FLOWS.md) §7).
 - **States** — every data screen documents empty, loading, error, and populated.
 - **Provenance** — AI-generated content is marked in the art (`AI`); user content is not.
 - Each screen file also lists its **accessibility obligations** for that specific view.

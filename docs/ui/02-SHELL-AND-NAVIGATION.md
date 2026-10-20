@@ -1,6 +1,7 @@
 # 02 — Shell & Navigation
 
-**Version:** 1.0 · **Date:** 2026-10-19
+**Version:** 1.2 · **Date:** 2026-10-19  
+**Wireframes & dock flexibility:** [12-WIREFRAMES-AND-FLEXIBILITY.md](12-WIREFRAMES-AND-FLEXIBILITY.md)
 
 ---
 
@@ -104,7 +105,7 @@ Changes by view:
 
 | View | Typical contents |
 |------|------------------|
-| Library | Search · filter chips · Columns · Analyze · Add to set |
+| Library | Search · filter chips · Columns · Analyze · **Mix Suggestions** · Add to set |
 | Preparation | Set name · Template · Skills shortcuts · Export · Gig Ready |
 | Auto Performance | Set selector · AUTO on/off · Skip · Flag issue |
 
@@ -112,14 +113,22 @@ Height ~32px; secondary to header; no duplicate of menu-only rare actions.
 
 ---
 
-## 5. Left navigation
+## 5. Left navigation (Library sources as tabs)
 
-| Item | Icon (Lucide) | Role |
-|------|---------------|------|
-| Library | `library` | All tracks, smart collections |
-| Playlists | `list-music` | User playlists |
-| Browser | `folder-tree` | Watched folder tree |
-| Flash / USB | `usb` | Mounted drives, export targets |
+Primary Library sources are **tabs / sections**:
+
+| Tab | Icon (Lucide) | Role |
+|-----|---------------|------|
+| **All Library** | `library` | Every imported track |
+| **Categories** | `folder` / `tags` | Genre, energy bands, smart collections, custom categories |
+| **Playlists** | `list-music` | User playlists / crates |
+| **Browser** | `folder-tree` | Watched folder tree on disk |
+| **Flash / Storage** | `usb` / `hard-drive` | Mounted USB, external drives, export targets |
+
+Also available when relevant (Preparation context or secondary list):
+
+| Item | Icon | Role |
+|------|------|------|
 | Sets | `layers` | Preparation sets |
 | Skills | `sparkles` | Skills shortcuts |
 
@@ -127,6 +136,8 @@ Height ~32px; secondary to header; no duplicate of menu-only rare actions.
 - Collapsed: icon rail 48px + tooltips  
 - Active: accent left bar + elevated background  
 - Collapse control: `panel-left` / `panel-left-close`  
+- Storage list refreshes on mount/unmount  
+- Selecting a tab filters the main track table (Library view)  
 
 ---
 

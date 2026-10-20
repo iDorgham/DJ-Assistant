@@ -1,7 +1,7 @@
 # Wireframe — Collaboration / B2B (10)
 
 **Phase:** 4 · 📋 Planned
-**See also:** [Screens & Flows §4.9](../SCREENS_AND_FLOWS.md) · [Canonical §3.9](../../product/CANONICAL_DOCUMENTATION.md)
+**See also:** [Screens & Flows §4.9](../12-SCREENS-AND-FLOWS.md) · [Canonical §3.9](../../product/CANONICAL_DOCUMENTATION.md)
 
 An overlay on shared sets: who's here, whose tracks are whose, the change log, and the
 pre-gig sync check. **No audio is ever transferred** — the UI must make that explicit.

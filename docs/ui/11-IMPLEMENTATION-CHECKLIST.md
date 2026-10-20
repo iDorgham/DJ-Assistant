@@ -1,56 +1,69 @@
 # 11 — Implementation Checklist
 
-**Version:** 1.0 · **Date:** 2026-10-19
+**Version:** 1.2 · **Date:** 2026-10-19
 
 Use this as the UI build order and acceptance gate.
-
-**Status (2026-10-19):** Partial implementation on `feat/T2.1.0-shell-ui`
-(pending merge): tokens/theme/icons, shell layout, header, options bar, nav,
-search/filters, empty states, and the player dock shell. Density, font loading,
-motion helpers, menu bar, splitters, workspaces, command palette, and all player
-playback/waveform/cue/grid controls remain open.
 
 ---
 
 ## Phase A — Foundations
 
-- [x] Design tokens (color L0–L3, text, accent, space, radius, type)  
-- [x] ThemeProvider dark/light (hook-based theme resolution + `data-theme`; system mode included)  
+- [ ] Design tokens (color L0–L3, text, accent, space, radius, type)  
+- [ ] ThemeProvider dark/light  
 - [ ] DensityProvider compact/comfortable  
-- [x] Lucide icon setup  
-- [ ] Inter + mono font loading (stacks declared; no webfont bundled yet)  
-- [ ] Motion helpers + reduced-motion (global reduced-motion rule only)  
+- [ ] Lucide icon setup  
+- [ ] IBM Plex Sans + IBM Plex Mono font loading  
+- [ ] Motion helpers + reduced-motion  
 
 ## Phase B — Shell
 
-- [x] AppShell layout slots  
+- [ ] AppShell layout slots  
 - [ ] Menu bar (all sections)  
-- [x] Header + view switcher  
-- [x] Options bar (three contexts)  
-- [x] LeftNav expand/collapse + icons  
-- [ ] Splitters + persistence  
-- [ ] Workspaces (Library / Prepare / Validate / save)  
+- [ ] Header + view switcher  
+- [ ] Options bar (three contexts)  
+- [ ] LeftNav expand/collapse + icons  
+- [ ] Splitters + persistence (left, right, player)  
+- [ ] Workspaces (Library / Prepare / Validate / save) — match [12-WIREFRAMES](12-WIREFRAMES-AND-FLEXIBILITY.md)  
 - [ ] Command palette  
 
 ## Phase C — Library
 
 - [ ] TrackTable virtualized  
-- [ ] ColumnPicker show/hide/reorder/resize  
-- [x] SearchField  
-- [x] FilterBar + chips (Compatible-only toggle not yet)  
-- [ ] KeyPill harmonic coloring  
+- [ ] ColumnPicker show/hide/reorder/**resize** (widths persist)  
+- [ ] **LibrarySourceTabs** — All Library · Categories · Playlists · Browser · Flash/Storage  
+- [ ] SearchField  
+- [ ] FilterBar + chips + Compatible only  
+- [ ] KeyPill — Camelot 1A–12B + classical 1m/1d (preference)  
+- [ ] **EnergyBars** (1–10 charging-bar meter)  
+- [ ] **TagChips** (compact chips + overflow)  
+- [ ] **StarRating** — editable 5 stars  
+- [ ] **ArtworkThumb** — hover play overlay; real embedded art per track  
+- [ ] Label + Year columns  
+- [ ] **MixSuggestionsPanel** (right dock) + Options bar button  
+- [ ] **TrackContextMenu** per view (Library ≠ Preparation ≠ Auto)  
+- [ ] Library menu: Play, Analyze, Edit tags, Fix tags, Add to playlist, Find in playlists, Mix suggestions, Find smaller/similar online, Find new tracks online, Remove from library  
+- [ ] Column toggles (Energy, Tags, Rating, Label, Year, Artwork) persist  
 - [ ] BulkActionBar + Undo toast  
-- [x] Empty states  
+- [ ] Empty states  
 
 ## Phase D — Player
 
-- [x] PlayerDock Mini / Full / Hidden (layout + mode switching; transport, waveform, cues, and grid are T2.4)  
-- [ ] WaveformDetailed + WaveformOverview  
-- [ ] Playhead seek/scrub  
+- [ ] PlayerDock Mini / Full / Hidden  
+- [ ] **WaveformDetailed** = zoomed viewport that **scrolls/moves** with playhead (not full-track strip)  
+- [ ] **WaveformOverview** = full-track map + zoom-window highlight (distinct from detailed)  
+- [ ] Per-track peak data (never shared waveform for all files)  
+- [ ] Real audio decode/playback per file (no shared metronome/sample)  
+- [ ] Beat grid + high detail on detailed wave  
+- [ ] Playhead seek/scrub RAF-locked to audio  
 - [ ] Transport Play↔Pause, Cue, Stop  
 - [ ] HotCueBank A–H  
 - [ ] GridControls + BeatJumpControls  
 - [ ] Keyboard shortcuts when focused  
+- [ ] **SpectrumVisualizer** (WebGL/Canvas) — at least one style per family: 2D Classic, 2D Artistic, 3D, Psychedelic, Particle, Club Hybrid  
+- [ ] VisualizerStylePicker + particle mix layer + intensity/color controls  
+- [ ] VisualizerRecorder — clean video / image-sequence export for Resolume Arena  
+- [ ] Expanded / floating Visualizer mode  
+- [ ] Performance caps + Reduce Motion respect  
 
 ## Phase E — Preparation
 
@@ -109,4 +122,5 @@ playback/waveform/cue/grid controls remain open.
 | Patterns | [08-DIALOGS-AND-PATTERNS.md](08-DIALOGS-AND-PATTERNS.md) |
 | Components | [09-COMPONENTS.md](09-COMPONENTS.md) |
 | A11y | [10-ACCESSIBILITY-AND-KEYBOARD.md](10-ACCESSIBILITY-AND-KEYBOARD.md) |
-| Product canon | [../product/CANONICAL_DOCUMENTATION.md](../product/CANONICAL_DOCUMENTATION.md) |
+| Wireframes & flexibility | [12-WIREFRAMES-AND-FLEXIBILITY.md](12-WIREFRAMES-AND-FLEXIBILITY.md) |
+| Master narrative | [../UI_UX_PLAYER_AND_LAYOUT_SPEC.md](../UI_UX_PLAYER_AND_LAYOUT_SPEC.md) |

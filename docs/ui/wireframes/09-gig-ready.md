@@ -1,7 +1,7 @@
 # Wireframe — Gig Ready / Prep Auditor (09)
 
 **Phase:** 4 · 📋 Planned
-**See also:** [Screens & Flows §4.8](../SCREENS_AND_FLOWS.md) · [Glossary](../../product/GLOSSARY.md)
+**See also:** [Screens & Flows §4.8](../12-SCREENS-AND-FLOWS.md) · [Glossary](../../product/GLOSSARY.md)
 
 One-click pre-gig workflow: health check → analyze → optional cleanup → cues → Prep Auditor
 → export/USB pack. Presented as a checklist with clear next actions for anything that fails.

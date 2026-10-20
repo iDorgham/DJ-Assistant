@@ -1,7 +1,7 @@
 # Wireframe — Spotify Playlist Export (11)
 
 **Phase:** Post-MVP · 📋 Planned
-**See also:** [Screens & Flows §4.10 / §5.8](../SCREENS_AND_FLOWS.md) · [UX Principles §4](../UX_PRINCIPLES.md) · [Export](./07-export.md) · [Export flow diagram](../../diagrams/16-spotify-playlist-export.md)
+**See also:** [Screens & Flows §4.10 / §5.8](../12-SCREENS-AND-FLOWS.md) · [UX Principles §4](../00-OVERVIEW.md) · [Export](./07-export.md) · [Export flow diagram](../../diagrams/16-spotify-playlist-export.md)
 
 Publishes a built set (or any playlist) to the DJ's **own** Spotify account as a real Spotify
 playlist, using **metadata only**. It is the one export path that touches the network. Audio is

@@ -1,7 +1,7 @@
 # Wireframe — Library (01)
 
 **Phase:** 0 · ✅ Implemented
-**See also:** [Screens & Flows §3](../SCREENS_AND_FLOWS.md) · [Design System §7.7](../DESIGN_SYSTEM.md)
+**See also:** [Screens & Flows §3](../12-SCREENS-AND-FLOWS.md) · [Design System §7.7](../01-DESIGN-SYSTEM.md)
 
 The home base: one dense, searchable table of the imported library. This is the only fully
 shipped screen so far.

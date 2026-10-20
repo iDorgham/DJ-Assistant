@@ -1,6 +1,7 @@
 # 05 — Auto Performance View
 
-**Version:** 1.0 · **Date:** 2026-10-19
+**Version:** 1.2 · **Date:** 2026-10-19  
+**Full wireframes:** [12-WIREFRAMES-AND-FLEXIBILITY.md](12-WIREFRAMES-AND-FLEXIBILITY.md)
 
 Primary job: **automated set validation** — play a prepared set in order to check flow before export.
 
@@ -10,20 +11,19 @@ Primary job: **automated set validation** — play a prepared set in order to ch
 
 ## 1. Layout
 
-```
-Header · Library  Preparation [Auto Performance]
-Options: Set selector | AUTO on/off | Skip | Flag issue
-┌─ Now playing (identity + transport + overview waveform) ───────────────┐
-├─ Queue (set order) ────────────────────┬─ Set insights ────────────────┤
-│ ▶ current                              │ Energy curve                  │
-│   upcoming…                            │ Key path                      │
-│   past muted                           │ Warnings → Fix in Preparation │
-├────────────────────────────────────────┴───────────────────────────────┤
-│ Compact player controls                                                │
-└────────────────────────────────────────────────────────────────────────┘
-```
+Default workspace: **Validate**. Queue vs insights split is resizable; insights collapsible.
 
-Default workspace: **Validate**.
+```
+┌─ Menu ──────────────────────────────────────────────────────────────┐
+├─ Header: Library  Preparation [Auto Performance]                    │
+├─ Options: Set ▾ | AUTO ON/OFF | Skip | Flag issue                   │
+├─ Now playing + overview waveform + transport ───────────────────────┤
+├─ Queue (set order) ──────────────┬─ Insights (energy · key · warns) ┤
+│ ▶ current · upcoming · past      │ ←resize / collapse→              │
+├──────────────────────────────────┴──────────────────────────────────┤
+│ Compact / Mini player                                               │
+└─────────────────────────────────────────────────────────────────────┘
+```
 
 ---
 
@@ -34,6 +34,7 @@ Default workspace: **Validate**.
 - Optional short crossfade *preview* (aesthetic only — not a mixer)  
 - Pause / skip / click queue row to jump; resume AUTO from there  
 - Flag issue → note + deep link back to Preparation on that track  
+- Playback must use **each track’s real audio** (not a shared sample/beat)
 
 ---
 
@@ -42,8 +43,30 @@ Default workspace: **Validate**.
 - Full set order  
 - Current row highlighted  
 - Past tracks slightly muted  
-- Same key coloring optional  
+- Same key coloring optional (Camelot / 1m·1d)  
 - Compact columns: #, Title, Artist, BPM, Key, Time  
+
+### 3.1 Auto Performance right-click context menu (queue row)
+
+**Different from Library and Preparation.** Focused on validation flow:
+
+```
+┌─────────────────────────────────────┐
+│ Play from here                      │
+│ Skip to next                        │
+│ ───────────────────────────────     │
+│ Flag issue…                         │
+│ Fix in Preparation                  │
+│ ───────────────────────────────     │
+│ Show in set (Preparation)           │
+│ Reveal in library                   │
+│ ───────────────────────────────     │
+│ Copy track info                     │
+└─────────────────────────────────────┘
+```
+
+- No library delete / tag bulk tools here  
+- “Fix in Preparation” deep-links with the track selected  
 
 ---
 

@@ -1,7 +1,7 @@
 # Wireframe — Export (07)
 
 **Phase:** 3 · 📋 Planned
-**See also:** [Screens & Flows §4.6](../SCREENS_AND_FLOWS.md) · [API Contracts §2.4 / §2.5](../../architecture/API_CONTRACTS.md) · [Spotify export](./11-spotify-export.md)
+**See also:** [Screens & Flows §4.6](../12-SCREENS-AND-FLOWS.md) · [API Contracts §2.4 / §2.5](../../architecture/API_CONTRACTS.md) · [Spotify export](./11-spotify-export.md)
 
 The exit point: turn a set into files the DJ's software can load. Deterministic file
 generation; the app never writes to a DJ app's live database. A **post-MVP** *Streaming*

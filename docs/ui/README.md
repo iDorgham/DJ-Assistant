@@ -1,26 +1,22 @@
 # DJ Assistant — UI/UX Documentation
 
-**Version:** 1.0  
-**Status:** Approved for design & implementation · App shell implemented (T2.1.0, pending merge)  
+**Version:** 1.3  
+**Status:** Canonical for design & implementation  
 **Date:** 2026-10-19  
-**Source of truth:** This folder. Earlier UI docs live in [`../ui-ux/`](../ui-ux/); where they overlap, this folder is newer.
+**Design language:** Adobe precision × Ableton flexibility × 2026 pro desktop  
+
+**Related:** Master narrative [`../UI_UX_PLAYER_AND_LAYOUT_SPEC.md`](../UI_UX_PLAYER_AND_LAYOUT_SPEC.md) (v1.9+) — Library tabs, Mix Suggestions, per-view menus, Traktor-style dual waveform, 5-star rating, key 1A–12B / 1m·1d
 
 ---
 
-## What this is
+## Product positioning (UI must reflect)
 
-Complete interface documentation for **DJ Assistant**: a desktop preparation tool for professional DJs.
-
-**Product is:**
-- Music library management
-- Playlist creation
-- Set mix preparation (cues, grid, harmonic/energy sequencing, export)
-
-**Product is not:**
-- Live DJ performance software
-- A replacement for rekordbox / Serato / Traktor / CDJs
-
-**Design language:** Adobe-class precision panels + Ableton-style flexible docks + 2026 professional desktop trends.
+| Is | Is not |
+|----|--------|
+| Music library management | Live DJ performance software |
+| Playlist creation | Dual-deck mixer / EQ / FX |
+| Set mix preparation + export | Replacement for rekordbox / Serato / CDJs |
+| Preview player for analysis & validation | Cloud analysis of raw audio |
 
 ---
 
@@ -28,34 +24,46 @@ Complete interface documentation for **DJ Assistant**: a desktop preparation too
 
 | Doc | Contents |
 |-----|----------|
-| [00-OVERVIEW.md](00-OVERVIEW.md) | Vision, principles, information architecture, user journeys |
-| [01-DESIGN-SYSTEM.md](01-DESIGN-SYSTEM.md) | Tokens: color, type, space, radius, elevation, icons, motion |
-| [02-SHELL-AND-NAVIGATION.md](02-SHELL-AND-NAVIGATION.md) | Window chrome, header, menus, left nav, options bar, workspaces |
-| [03-LIBRARY-VIEW.md](03-LIBRARY-VIEW.md) | Library screen: table, search, filters, columns, harmonic keys |
-| [04-PREPARATION-VIEW.md](04-PREPARATION-VIEW.md) | Preparation screen: sets, Skills, sequencing, export |
-| [05-AUTO-PERFORMANCE-VIEW.md](05-AUTO-PERFORMANCE-VIEW.md) | Auto Performance: queue, auto-advance, insights |
-| [06-PLAYER.md](06-PLAYER.md) | Mini/Full player, waveform, playhead, hot cues, grid, beat jump |
-| [07-SETTINGS.md](07-SETTINGS.md) | Settings window categories and controls |
-| [08-DIALOGS-AND-PATTERNS.md](08-DIALOGS-AND-PATTERNS.md) | Modals, toasts, command palette, context menus, empty/error states |
-| [09-COMPONENTS.md](09-COMPONENTS.md) | Component inventory and behaviors |
-| [10-ACCESSIBILITY-AND-KEYBOARD.md](10-ACCESSIBILITY-AND-KEYBOARD.md) | A11y, shortcuts, focus |
-| [11-IMPLEMENTATION-CHECKLIST.md](11-IMPLEMENTATION-CHECKLIST.md) | Build order and acceptance checks |
+| [00-OVERVIEW.md](00-OVERVIEW.md) | Principles, IA, journeys, personas |
+| [01-DESIGN-SYSTEM.md](01-DESIGN-SYSTEM.md) | Tokens: color, type, space, icons, motion |
+| [02-SHELL-AND-NAVIGATION.md](02-SHELL-AND-NAVIGATION.md) | Menus, header, options bar, nav, workspaces |
+| [03-LIBRARY-VIEW.md](03-LIBRARY-VIEW.md) | Table, search, filters, columns, harmonic keys |
+| [04-PREPARATION-VIEW.md](04-PREPARATION-VIEW.md) | Sets, Skills, sequencing, export, Gig Ready |
+| [05-AUTO-PERFORMANCE-VIEW.md](05-AUTO-PERFORMANCE-VIEW.md) | Auto queue, insights (validation only) |
+| [06-PLAYER.md](06-PLAYER.md) | Mini/Full, waveform, playhead, cues, grid |
+| [07-SETTINGS.md](07-SETTINGS.md) | Settings categories |
+| [08-DIALOGS-AND-PATTERNS.md](08-DIALOGS-AND-PATTERNS.md) | Modals, toasts, palette, empty/error |
+| [09-COMPONENTS.md](09-COMPONENTS.md) | Component inventory + icons |
+| [10-ACCESSIBILITY-AND-KEYBOARD.md](10-ACCESSIBILITY-AND-KEYBOARD.md) | A11y + shortcuts |
+| [11-IMPLEMENTATION-CHECKLIST.md](11-IMPLEMENTATION-CHECKLIST.md) | Build phases + acceptance |
+| [12-WIREFRAMES-AND-FLEXIBILITY.md](12-WIREFRAMES-AND-FLEXIBILITY.md) | **Screen wireframes + resizable docks** |
+| [13-REMEDIATION-STATUS.md](13-REMEDIATION-STATUS.md) | 2026-10-19 doc-vs-code remediation: applied vs. remaining |
 
 ---
 
-## Quick principles
+## Three application views
 
-1. **Prep, not performance** — preview player only; no dual-deck mixer UI  
-2. **Density ~85%** — professional desktop, not consumer streaming  
-3. **Flexible layout** — resizable/collapsible docks like Ableton; workspaces like Adobe  
-4. **Reversible actions** — Undo on bulk tags, cues, Skills  
-5. **Local-first** — UI never implies cloud analysis of audio  
+```
+[ Library ]           → manage collection, tags, analysis
+[ Preparation ]       → playlists, sets, cues, Skills, export
+[ Auto Performance ]  → auto-play set in order to validate flow
+```
+
+Shared shell: menus · header · options bar · left nav · **flexible docks** · player Mini/Full.
 
 ---
 
-## Related product docs
+## Flexibility (Ableton-style)
 
-- Canonical product: [`../product/CANONICAL_DOCUMENTATION.md`](../product/CANONICAL_DOCUMENTATION.md)  
-- Architecture: [`../architecture/ARCHITECTURE.md`](../architecture/ARCHITECTURE.md)  
-- Skills: [`../architecture/SKILLS_SYSTEM.md`](../architecture/SKILLS_SYSTEM.md)  
-- Consolidated context: [`../context/PROJECT_CONTEXT.md`](../context/PROJECT_CONTEXT.md)  
+- Resizable left nav, right inspector/Skills/insights, player height  
+- Collapse to icon rail or hide  
+- Named workspaces: Library · Prepare · Validate · Custom save  
+- Details: [12-WIREFRAMES-AND-FLEXIBILITY.md](12-WIREFRAMES-AND-FLEXIBILITY.md)
+
+---
+
+## Implementation entry points
+
+1. Tokens + shell → [01](01-DESIGN-SYSTEM.md) + [02](02-SHELL-AND-NAVIGATION.md)  
+2. Wireframes → [12](12-WIREFRAMES-AND-FLEXIBILITY.md)  
+3. Checklist → [11](11-IMPLEMENTATION-CHECKLIST.md)  

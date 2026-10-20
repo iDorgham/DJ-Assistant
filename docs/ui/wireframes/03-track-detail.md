@@ -1,7 +1,7 @@
 # Wireframe — Track Detail / Inspector (03)
 
 **Phase:** 2 · 📋 Planned (full inspector) · ✅ discovery slice shipped — see [12-discovery-enrichment](./12-discovery-enrichment.md)
-**See also:** [Screens & Flows §4.2](../SCREENS_AND_FLOWS.md) · [Design System §7.10](../DESIGN_SYSTEM.md)
+**See also:** [Screens & Flows §4.2](../12-SCREENS-AND-FLOWS.md) · [Design System §7.10](../01-DESIGN-SYSTEM.md)
 
 A right-hand drawer opened from a library row. Separates **what the file's tags say** from
 **what local analysis found**, and marks the provenance of every value.

@@ -19,7 +19,7 @@
 | [DESIGN_SYSTEM.md](./DESIGN_SYSTEM.md) | Colour, type, spacing, motion, and the component inventory with states |
 | [SCREENS_AND_FLOWS.md](./SCREENS_AND_FLOWS.md) | Screen inventory, wireframes, and end-to-end user flows per phase |
 | [PLAYER_AND_LAYOUT_SPEC_2026-10-19.md](./PLAYER_AND_LAYOUT_SPEC_2026-10-19.md) | Historical v1.7 proposal for the app shell, player, and layout (superseded by `docs/ui/`) |
-| [wireframes/](./wireframes/README.md) | Low-fidelity structural wireframes for every screen (00–12) |
+| ~~wireframes/~~ | Removed 2026-10-19 — structural wireframes now live in [`docs/ui/12-WIREFRAMES-AND-FLEXIBILITY.md`](../ui/12-WIREFRAMES-AND-FLEXIBILITY.md) |
 | [ACCESSIBILITY.md](./ACCESSIBILITY.md) | WCAG targets, contrast findings, keyboard model, motion, and test checklist |
 
 ---

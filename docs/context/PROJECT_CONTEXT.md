@@ -903,6 +903,53 @@ PR → review (AI + human) → fix → merge → close**. Implementation and rev
 prompts carry mandatory testing and security blocks. Required checks must be green
 before merge.
 
+### 19.4 Agent skills available to AI contributors
+
+**240 agent skills** are installed machine-wide for OpenCode sessions on this
+workstation (global `~/.config/opencode/skills`, not part of the repo) — 18
+pre-existing + 222 added on 2026-10-19:
+
+- **Interface craft (14)** — `better-interface`, `better-ui`, `better-typography`,
+  `better-colors`, `better-accessibility`, `better-layout`, `better-writing`,
+  `interface-review`, `explain-interface`, `break`, `state-machine`, `variant`,
+  `build-design`, `technical-drawing` ([jakubkrehel/skills](https://github.com/jakubkrehel/skills)).
+- **Design taste (8)** — `taste-skill` (art direction + real-browser self-check)
+  plus 7 opt-in classic style skills ([Leonxlnx/taste-skill](https://github.com/Leonxlnx/taste-skill)).
+- **Design system reference library (39)** — tokens, typography, color, layout,
+  components, governance, usability heuristics, accessibility, motion,
+  `platform-conventions` (incl. **Windows 11 Fluent**), router `design`
+  ([jpoindexter/design-and-ai-skills](https://github.com/jpoindexter/design-and-ai-skills)).
+- **UI/UX + animation (3)** — `ui-design`, `ui-animation`, `ui-verification`
+  ([mblode/agent-skills](https://github.com/mblode/agent-skills)).
+- **Wireframing (1)** — `wireframe`: 5 B&W options → Clean/Polished color variants
+  ([Magdoub/claude-wireframe-skill](https://github.com/Magdoub/claude-wireframe-skill)).
+- **Desktop frameworks (72)** — Tauri v2 deep set (52, router `tauri`),
+  Electron (3), framework survey `desktop-*` (10: Qt/GTK/WPF/WinForms/UWP/SwiftUI/
+  AppKit/GNOME/Electron/Tauri), official Microsoft WinUI 3 skills (7).
+- **Standalone design systems (2)** — `carbon` (IBM Carbon), `material-3` (Material Design 3).
+- **Music & DJ (9)** — `music-analyzer` (BPM/key/genre/mood/lyrics analysis),
+  `beets-music-library-manager-tagger` + `music-library-organizer` (tagging via
+  beets/MusicBrainz), `rekordbox` + `dj-library-curator` + `dj-library-organizer`
+  (rekordbox/Serato library & analysis checks), `dj-set-architect` +
+  `dj-mix-documentarian` (set planning/mix logs), `ffmpeg-waveforms-visualization`
+  (spectrum/waveform images & video — not realtime).
+- **Application stack & technology (74)** — Docker (5, official), Postgres
+  best practices (1, Neon), JS/TS app-dev (13: types, Node backend, testing,
+  API/auth/error handling, debugging, git, SQL), React/Next ecosystem (18:
+  Tailwind v4, shadcn, TanStack Query, Zod, React Hook Form, Vitest/MSW/TDD,
+  Playwright), Rust async + memory safety + Go concurrency (3), Python (17),
+  CI/CD + Kubernetes (8), AWS/CDK (9). Mostly for side/server work — only the
+  Rust/TypeScript/React items apply to this Tauri desktop app.
+
+Rules of engagement: skills are **advisory technique only** — for UI work,
+[`docs/ui/01-DESIGN-SYSTEM.md`](../ui/01-DESIGN-SYSTEM.md) and the `docs/ui/` spec
+stay authoritative over any generic design guidance. They live outside the
+repository, so CI and collaborators are unaffected. With 240 registered, prefer
+router skills (`design`, `tauri`) over loading families wholesale. Full inventory,
+requirements (`taste-skill` needs Node 22 + Chrome/Edge/Chromium; `music-analyzer`
+and the beets/rekordbox skills pull Python deps on first use), and usage notes:
+[`docs/context/AGENT_SKILLS.md`](./AGENT_SKILLS.md).
+
 ---
 
 ## 20. Architecture Decision Records
@@ -962,7 +1009,7 @@ Start at [`docs/README.md`](../README.md). The complete set:
 | UI/UX (historical) | [`docs/ui-ux/`](../ui-ux/) | Earlier principles, design system, screens & flows, wireframes, accessibility |
 | ADR | [`docs/ADR/`](../ADR/) | Architecture decision records |
 | Evidence | [`docs/evidence/`](../evidence/) | Acceptance screenshots |
-| Context | [`docs/context/`](./) | This consolidated project context |
+| Context | [`docs/context/`](./) | This consolidated project context + agent skills inventory |
 
 ---
 

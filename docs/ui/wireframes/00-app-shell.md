@@ -2,7 +2,7 @@
 
 **Phase:** 0 · ✅ Implemented
 **Applies to:** every screen
-**See also:** [Screens & Flows §1](../SCREENS_AND_FLOWS.md) · [Design System §4](../DESIGN_SYSTEM.md)
+**See also:** [Screens & Flows §1](../12-SCREENS-AND-FLOWS.md) · [Design System §4](../01-DESIGN-SYSTEM.md)
 
 Every screen renders inside this shell. Only the **CONTENT** region changes between
 screens; the header, toolbar, and status bar are constant.

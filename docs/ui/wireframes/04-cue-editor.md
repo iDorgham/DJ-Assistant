@@ -1,7 +1,7 @@
 # Wireframe — Cue / Waveform Editor (04)
 
 **Phase:** 2–3 · 📋 Planned
-**See also:** [Screens & Flows §4.3](../SCREENS_AND_FLOWS.md) · [Canonical §4.3](../../product/CANONICAL_DOCUMENTATION.md)
+**See also:** [Screens & Flows §4.3](../12-SCREENS-AND-FLOWS.md) · [Canonical §4.3](../../product/CANONICAL_DOCUMENTATION.md)
 
 Full-width waveform with a beat grid, phrase bands, colour-coded cue markers, and an
 editable cue list. AI-generated cues are marked and every manual change is a recorded

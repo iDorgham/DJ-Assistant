@@ -1,7 +1,7 @@
 # Wireframe — Set Builder (06)
 
 **Phase:** 3 · 📋 Planned
-**See also:** [Screens & Flows §4.5](../SCREENS_AND_FLOWS.md) · [Canonical §7](../../product/CANONICAL_DOCUMENTATION.md)
+**See also:** [Screens & Flows §4.5](../12-SCREENS-AND-FLOWS.md) · [Canonical §7](../../product/CANONICAL_DOCUMENTATION.md)
 
 The workstation: a constraint profile, an editable energy curve, the ordered sequence with
 a dual-waveform transition inspector, and alternative swaps. Sequencing is **deterministic**

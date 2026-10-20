@@ -13,6 +13,7 @@ Shortcut: `Ctrl/Cmd+,`
 ### General
 - Language  
 - Startup view (Library / Preparation / Auto Performance / last used)  
+- Default density  
 - Confirm before quit  
 - Session restore on/off  
 
@@ -57,9 +58,13 @@ Shortcut: `Ctrl/Cmd+,`
 - Theme: Dark / Light / System  
 - Accent color (optional)  
 - Waveform color family  
-- Density default (Compact / Comfortable)  
-- High-contrast playhead (on/off)  
+- Density default  
 - UI scale note (target compact ~85%)  
+- **Visualizer**  
+  - Default style family / preset  
+  - Particle layer default strength  
+  - Preferred export resolution & frame rate (for Resolume)  
+  - Auto-open Visualizer in Full / Auto Performance (on/off)  
 
 ### Keyboard
 - Searchable shortcut list  

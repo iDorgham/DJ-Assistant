@@ -1,7 +1,7 @@
 # Wireframe — Tag Cleanup (05)
 
 **Phase:** 2 · 📋 Planned
-**See also:** [Screens & Flows §4.4](../SCREENS_AND_FLOWS.md) · [UX Principles §5.3](../UX_PRINCIPLES.md)
+**See also:** [Screens & Flows §4.4](../12-SCREENS-AND-FLOWS.md) · [UX Principles §5.3](../00-OVERVIEW.md)
 
 Bulk, **preview-first** normalisation of messy metadata. Nothing is modified until the DJ
 presses Apply, and every apply writes an undo record.

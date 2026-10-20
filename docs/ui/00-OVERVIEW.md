@@ -1,12 +1,14 @@
 # 00 — UI/UX Overview
 
-**Version:** 1.0 · **Date:** 2026-10-19
+**Version:** 1.2 · **Date:** 2026-10-19  
+**Wireframes:** [12-WIREFRAMES-AND-FLEXIBILITY.md](12-WIREFRAMES-AND-FLEXIBILITY.md)  
+**Design system:** [01-DESIGN-SYSTEM.md](01-DESIGN-SYSTEM.md) (Ableton Live 12–inspired dark palette)
 
 ---
 
 ## 1. Product UI statement
 
-> DJ Assistant looks like a 2026 Adobe-class studio tool, flexes like Ableton, and stays ruthlessly focused on library management, playlist creation, and set preparation for professional DJs.
+> DJ Assistant looks and feels like a 2026 professional studio tool: cool Ableton Live 12–inspired dark surfaces, Adobe-class precision, and the same modular flexibility producers expect from Live — while staying ruthlessly focused on library management, playlist creation, and set preparation.
 
 ---
 
@@ -15,13 +17,14 @@
 | # | Principle | Implication |
 |---|-----------|-------------|
 | 1 | Prep tool, not performance deck | No dual decks, EQ racks, or live mixer chrome |
-| 2 | Professional density (~85%) | 12–13px UI, 28–32px rows, tight gaps |
-| 3 | Maximize track workspace | Mini player by default in Library; collapsible chrome |
-| 4 | Adobe precision | Workspaces, options bar, docked panels, numeric scrub |
-| 5 | Ableton flexibility | Resizable splits, collapse to icon strip, save layout |
-| 6 | Reversibility | Every bulk Skill/tag/cue action offers Undo |
-| 7 | Keyboard-first | Shortcuts for views, transport, cues, search, palette |
-| 8 | Calm confidence | Status visible but quiet; no gamification or social |
+| 2 | Ableton Live 12 dark palette | Cool neutral charcoal surfaces, subtle hierarchy, calm long-session readability |
+| 3 | Professional density (~85%) | 12–13px UI, 28–32px rows, tight gaps |
+| 4 | Maximize track workspace | Mini player by default in Library; collapsible chrome |
+| 5 | Adobe precision | Workspaces, options bar, docked panels, numeric scrub |
+| 6 | Ableton flexibility | Every major region resizable + collapsible; workspaces remember exact layout |
+| 7 | Reversibility | Every bulk Skill/tag/cue action offers Undo |
+| 8 | Keyboard-first | Shortcuts for views, transport, cues, search, palette |
+| 9 | Calm confidence | Status visible but quiet; no gamification or social |
 
 ---
 

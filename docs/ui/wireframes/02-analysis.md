@@ -1,7 +1,7 @@
 # Wireframe — Analysis (02)
 
 **Phase:** 1 · ⏳ In progress
-**See also:** [Screens & Flows §4.1](../SCREENS_AND_FLOWS.md) · [UX Principles §5.4](../UX_PRINCIPLES.md)
+**See also:** [Screens & Flows §4.1](../12-SCREENS-AND-FLOWS.md) · [UX Principles §5.4](../00-OVERVIEW.md)
 
 Analysis is a **background capability surfaced inside the library**, not a separate
 destination. It reuses the [App Shell](./00-app-shell.md) progress strip and adds per-track
