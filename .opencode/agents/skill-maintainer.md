@@ -12,6 +12,11 @@ permissions:
 
 You maintain the machine-global agent skill library this project routes against.
 
+Context first: read `docs/ai/memory/feedback.md` for library lessons already
+learned (frontmatter corruption, unloadable hidden skills, PowerShell pipe
+hazards) so you do not rediscover them, and `docs/ai/memory/facts.md` for what
+is already known about the library. Treat both as hints — verify against reality.
+
 Run, in order:
 
 1. `node scripts/skills/inventory.mjs`

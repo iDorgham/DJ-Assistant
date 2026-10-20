@@ -24,7 +24,7 @@ each folder below is self-contained and cross-links to its neighbours.
 | [`ADR/`](./ADR/) | Architecture Decision Records (the "why") | [ADR Index](./ADR/README.md) |
 | [`audit/`](./audit/) | Spec/function/settings audits + TA.1–TA.14 tracking | [Audit summary](./audit/AUDIT-SUMMARY.md) |
 | [`context/`](./context/) | Single-file project digest for humans + AI agents | [Project Context](./context/PROJECT_CONTEXT.md) |
-| [`ai/`](./ai/) | Agent skills inventory, skill routing policy, and the agents, commands, and scripts that automate them | [Agents & Automation](./ai/AGENTS.md) · [Skills](./ai/SKILLS.md) |
+| [`ai/`](./ai/) | Agent skills inventory, skill routing policy, shared AI memory layers, and the agents, commands, and scripts that automate them | [Agents & Automation](./ai/AGENTS.md) · [Memory](./ai/MEMORY.md) · [Skills](./ai/SKILLS.md) |
 | [`evidence/`](./evidence/) | Acceptance evidence (screenshots, captured runs) | [Phase 0 evidence](./engineering/PHASE0_ACCEPTANCE_EVIDENCE.md) |
 
 ---
