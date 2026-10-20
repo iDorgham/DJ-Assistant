@@ -2,20 +2,24 @@
 description: Maintains the shared project memory layers (facts, conventions, decisions, feedback, state) — de-duplicate, rotate state, promote corrections. Use after a session that produced something worth keeping.
 mode: subagent
 permissions:
+  # OpenCode applies the LAST matching rule, so the catch-all deny goes first.
   - action: edit
-    resource: "docs/ai/memory/*"
+    resource: "*"
+    effect: deny
+  - action: edit
+    resource: "docs/ai/memory/**"
     effect: allow
   - action: edit
     resource: "docs/ai/MEMORY.md"
     effect: allow
-  - action: edit
+  - action: shell
     resource: "*"
     effect: deny
   - action: shell
-    resource: "node scripts/skills/*"
+    resource: "node scripts/memory/search.mjs*"
     effect: allow
   - action: shell
-    resource: "node scripts/agent/*"
+    resource: "node scripts/agent/doctor.mjs*"
     effect: allow
 ---
 
@@ -34,9 +38,10 @@ Given this task or the current session (`$ARGUMENTS`), do:
 1. Read `docs/ai/memory/README.md`, then all five layer files.
 2. **De-duplicate.** One fact per line, and a fact must never appear under two
    files. Merge repeats, keep the shorter wording.
-3. **Rotate state.** Delete anything in `state.md` older than ~2 weeks. If it is
-   still true, promote it to `decisions.md` (it was chosen) or `facts.md` (it is
-   structural) and drop the stale copy.
+3. **Rotate state.** For each line in `state.md` older than ~2 weeks, decide
+   before you delete: if it is still true, promote it to `decisions.md` (it was
+   chosen) or `facts.md` (it is structural) **first**, then drop the stale copy.
+   Only delete outright what is neither true nor durable.
 4. **Promote corrections.** A lesson in `feedback.md` that is now a standing
    rule moves to `conventions.md`, leaving a one-line pointer back to its ID.
 5. **Trim for cost.** Every line here is re-sent as context to every tool on

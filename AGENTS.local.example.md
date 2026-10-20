@@ -1,8 +1,9 @@
 # AGENTS.local.example.md — template for local overrides
 
-> This file is **not** committed (see `.gitignore`). Copy it to `AGENTS.local.md`
-> (and optionally `CLAUDE.local.md`) for machine-specific notes that should never
-> be shared.
+> This **template** is tracked; the copy you make of it is not. Copy it to
+> `AGENTS.local.md` (and optionally `CLAUDE.local.md`), both of which
+> `.gitignore` keeps off the machine's shared history, for notes that should
+> never be shared.
 
 Machine-specific, non-durable notes — never put secrets, credentials, or
 team-shared facts here. Anything the whole team should know goes in

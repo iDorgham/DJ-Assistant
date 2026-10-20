@@ -8,7 +8,7 @@ automatically. This rule adds only what is Kilo-specific.
 `AGENTS.md` tells every session to run, on every prompt:
 
 ```bash
-pnpm agent:preflight "<the prompt, in the user's words>"
+pnpm agent:preflight '<the task, in plain words>'
 ```
 
 It returns the memory lines, the skills to load, the subagent that should own

@@ -338,7 +338,7 @@ Most relevant to this repo: `rust-best-practices` (Rust core/analysis crates),
 | Command | What it does |
 |---------|--------------|
 | `pnpm skills:inventory` | Rebuild `.opencode/skill-manifest.json` and `SKILL_ROUTING.md` from what is installed. |
-| `pnpm skills:match "<task>"` | Score a prompt against every skill; `--cold-only`, `--json`, `--top N`. |
+| `pnpm skills:match '<task>'` | Score a prompt against every skill; `--cold-only`, `--json`, `--top N`. |
 | `pnpm skills:audit` | Integrity, duplicate, and curation report (exits non-zero on hard problems). |
 | `pnpm skills:policy` | Dry-run report of the hot/cold split (informational). |
 | `pnpm skills:policy:restore` | Remove any `autoinvoke` flags the policy manages. |
@@ -368,13 +368,13 @@ is guarded and refuses without `--force`.
 agent, and the checks — in one command:
 
 ```bash
-pnpm agent:preflight "<the prompt, in the user's words>"
+pnpm agent:preflight '<the task, in plain words>'
 ```
 
 Its skill section comes from the matcher, which combines hand-curated
 `triggers` (project vocabulary → skills) with a BM25-flavoured lexical score
 over every skill description. To match skills alone, use
-`node scripts/skills/match.mjs --top 3 "<task summary>"`.
+`node scripts/skills/match.mjs --top 3 '<task summary>'`.
 
 **Entry points.**
 

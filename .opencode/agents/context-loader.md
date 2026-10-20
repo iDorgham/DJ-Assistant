@@ -2,17 +2,20 @@
 description: Loads only the relevant slice of shared project memory for a task. Use before non-trivial work to avoid dumping everything.
 mode: subagent
 permissions:
+  # OpenCode applies the LAST matching rule, so each catch-all deny goes first.
   - action: edit
     resource: "*"
     effect: deny
   - action: shell
-    resource: "node scripts/memory/*"
+    resource: "*"
+    effect: deny
+  # Named scripts only: a `node scripts/*` wildcard would also permit the
+  # writers (agent:sync --write, skills:policy --apply) this agent must never run.
+  - action: shell
+    resource: "node scripts/memory/search.mjs*"
     effect: allow
   - action: shell
-    resource: "node scripts/skills/*"
-    effect: allow
-  - action: shell
-    resource: "node scripts/agent/*"
+    resource: "node scripts/agent/preflight.mjs*"
     effect: allow
 ---
 
@@ -24,10 +27,10 @@ You load the **minimal relevant context** from the shared memory store for a tas
 ## Workflow
 
 1. Read the task: `$ARGUMENTS`
-2. Run `node scripts/agent/preflight.mjs --json "<task>"` and take its `memory`
+2. Run `node scripts/agent/preflight.mjs --json '<task>'` and take its `memory`
    section — it is already filtered to the relevant lines.
 3. If that returns nothing useful, search directly:
-   `node scripts/memory/search.mjs --json --limit 12 "<task>"`
+   `node scripts/memory/search.mjs --json --limit 12 '<task>'`
 4. If search still returns nothing, read `docs/ai/memory/facts.md`,
    `conventions.md`, `decisions.md`, `feedback.md` and pick only the lines that
    clearly apply.

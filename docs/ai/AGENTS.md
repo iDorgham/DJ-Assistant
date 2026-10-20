@@ -19,7 +19,7 @@ Every session starts the same way — no command to remember, no syntax to get
 right:
 
 ```bash
-pnpm agent:preflight "<the prompt, in the user's words>"
+pnpm agent:preflight '<the task, in plain words>'
 ```
 
 It returns four things in one read-only call:
@@ -162,10 +162,10 @@ a ranking, not a visibility filter — see §4.
 
 | Task | Command |
 | --- | --- |
-| See what a prompt would route to | `pnpm agent:preflight "<task>"` |
+| See what a prompt would route to | `pnpm agent:preflight '<task>'` |
 | Rebuild the manifest + routing doc | `pnpm skills:inventory` |
 | Library health report | `pnpm skills:audit` |
-| See what a prompt would match (skills only) | `pnpm skills:match "<task>"` |
+| See what a prompt would match (skills only) | `pnpm skills:match '<task>'` |
 | Audit via subagent | `/skills-audit` |
 | Dry-run the policy split | `pnpm skills:policy` |
 | Agent-layer health | `pnpm agent:doctor` |

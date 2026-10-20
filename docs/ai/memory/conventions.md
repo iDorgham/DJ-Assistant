@@ -6,8 +6,8 @@ Standing rules. Every session, in every tool, follows these.
 
 - Prettier: **100 columns**, double quotes, semicolons, `trailingComma: es5`.
   Run `pnpm format` before committing; `pnpm lint` must pass.
-- Rust: prefer the workspace crates; `cargo clippy -D warnings` is enforced and
-  `cargo fmt --all --check` must pass.
+- Rust: prefer the workspace crates; `cargo clippy --all-targets -- -D warnings`
+  (`pnpm rust:clippy`) is enforced and `cargo fmt --all --check` must pass.
 - Full local gate: `pnpm ci:local` (`ci:local:portable` when ONNX is unavailable).
 
 ## Boundaries
@@ -29,10 +29,14 @@ Standing rules. Every session, in every tool, follows these.
   [`feedback.md`](./feedback.md) / [`decisions.md`](./decisions.md); delete
   rot from [`state.md`](./state.md).
 - Never hide OpenCode skills and never add a file under `.opencode/plugins/`.
+- No machine-local data in the shared store: a workstation path, an install
+  count, or a personal tool setting belongs in the gitignored
+  `AGENTS.local.md`, because these files are re-sent to every tool on every
+  session. Keep counts out too — they go stale silently.
 
 ## Agent layer
 
-- On every prompt, run `pnpm agent:preflight "<the prompt>"` before starting
+- On every prompt, run `pnpm agent:preflight '<the prompt>'` before starting
   work. It never blocks — if nothing matches, continue normally.
 - Edit agent and command files in `.opencode/` only, then run
   `pnpm agent:sync --write`; never hand-edit a mirror.

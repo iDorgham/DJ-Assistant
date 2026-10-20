@@ -18,4 +18,8 @@ Have it de-duplicate and prune while it is there. If nothing here is durable
 enough to keep, say so and write nothing rather than adding noise — these lines
 cost context in every tool forever.
 
+Nothing machine-local goes here: a workstation path, a personal tool setting, a
+skill count from this machine, or anything about one person's setup belongs in
+the gitignored `AGENTS.local.md`, not in the shared store.
+
 To remember: $ARGUMENTS

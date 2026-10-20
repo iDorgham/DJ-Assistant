@@ -1,8 +1,11 @@
 # Decision ledger
 
-Append-only. Newest last. Each entry records **what** was chosen, **why**, and
-what would reverse it. Never edit an old entry — add a new one that supersedes
-it.
+Append-only, in the order the choices were **recorded**: the `D-00N` sequence is
+the ledger, and the date in each heading is when the decision was made, which is
+not necessarily when it was written down (D-002 and D-005 predate D-001). Each
+entry records **what** was chosen, **why**, and what would reverse it. Never edit
+an old entry — add a new one that supersedes it, and never renumber or reorder,
+because the IDs are cited from other files.
 
 ## D-001 · Canonical AI memory is shared, not per-tool (2026-10-20)
 
@@ -42,7 +45,7 @@ tokens, components, or layout spec.
 
 ## D-006 · Routing is automatic, one command per prompt (2026-10-20)
 
-Every prompt starts with `pnpm agent:preflight "<prompt>"`, which returns the
+Every prompt starts with `pnpm agent:preflight '<prompt>'`, which returns the
 memory lines, the skills, the agent that should own the work, and the checks.
 Routing is no longer a step an agent has to remember, and it never blocks.
 **Reverses if:** the brief costs more context than the routing it replaces.
@@ -55,3 +58,15 @@ The agent and command files are canonical in `.opencode/agents` and
 copy by hand was the failure mode this removes.
 **Reverses if:** a tool can only read an agent file from its own directory and
 cannot be synced.
+
+## D-008 · Agent permission blocks are declarative, not enforced (2026-10-21)
+
+`.opencode/agents/*.md` keep the `permissions: [{action, resource, effect}]`
+front matter — current OpenCode's documented shape — ordered the way that shape
+requires. The build installed here parses only the singular `permission:` object
+and ignores this one silently, so the blocks record intent rather than gating.
+Switching to the enforced shape was declined: it would apply rules that were
+never exercised, across six tools with six schemas.
+**Reverses if:** the workspace pins a v2-config OpenCode and every agent runs
+once under enforcement. Until then, never report that a permission block allowed
+or blocked something without checking the rules the binary resolved.
