@@ -21,29 +21,31 @@ fact, it belongs in [`facts.md`](./facts.md). Delete anything stale.
   mis-resolved domain still leaves the right answer reachable.
 - **Domains come from three signals, ranked**: the **files in play** say where
   the work *is* and always win; the **prompt vocabulary** is a weak signal and
-  the domain with the most keyword hits wins (a tie keeps them all); the
-  **routed subagent** is the last resort, because it owns a whole tree and is
-  coarser than the paths. A vague "fix this" over `crates/core/**` resolves to
-  Rust + API and offers that domain's defaults. "library" is deliberately *not*
-  an audio keyword — it names the whole app, so it would pull every library
-  task into the music domain.
-- **The policy is the place the judgement lives**: `domains` (8), `pathDomains`
-  (11), `genericTokens` (110), `inject.offDomainPenalty` (0.1) and `prune`
-  (126 entries, each with its reason) are all in `skills.policy.json` — not
-  in the shared memory, because they are machine-global state.
+  the domain with the most distinct prompt *words* wins (a tie keeps them all);
+  the **routed subagent** is the last resort, because it owns a whole tree and
+  is coarser than the paths. A vague "fix this" over `crates/core/**` resolves
+  to Rust + API and offers that domain's defaults. "library" is deliberately
+  *not* an audio keyword — it names the whole app, so it would pull every
+  library task into the music domain.
+- **The policy is the place the judgement lives**: `domains`, `pathDomains`,
+  `genericTokens`, `inject.offDomainPenalty` and `prune` (one entry per skill,
+  each with its reason) are all in `skills.policy.json` — not in the shared
+  memory, because they are machine-global state.
 - **Speed.** The whole library is advertised to the model on every step in
   every tool whether or not a skill is loaded; that advertising cost, not the
   routing, was the dominant spend. The `prune` list plus **`pnpm skills:prune`**
-  (dry run by default; `--apply` *moves* the skills into a timestamped backup
-  beside the project mirror, project-scoped only; `--restore <dir>` puts them
-  back) removes it. A parsed-skill cache under
-  `node_modules/.cache/` cut the preflight from ~266 ms to ~179 ms.
-- **The policy had been claiming something untrue**: seventeen duplicates were
-  marked "Kept installed, hidden" and `builtinHidden` named `playwright-cli` —
-  but nothing was hidden, all 240 skills were advertised and paid for. See
-  F-008; the duplicates now carry a real prune list.
-- Checks: `pnpm test:agent` 41 pass; `pnpm agent:doctor` clean (0 hard); the
-  audit reports 0 hard problems.
+  (dry run by default; `--apply` *moves* every installed copy of the listed
+  skills into a timestamped backup — a copy left anywhere would still be
+  advertised — and `--restore <dir>` puts each copy back from the backup's
+  manifest) removes it. A parsed-skill cache under
+  `node_modules/.cache/` cut the preflight time noticeably.
+- **The policy had been claiming something untrue**: the duplicates were
+  marked with a hidden-related reason and `builtinHidden` named
+  `playwright-cli` as hidden — but nothing was hidden, the whole library was
+  advertised and paid for. See F-008; the duplicates now carry a real prune
+  list.
+- Checks: `pnpm test:agent` passes; `pnpm agent:doctor` is clean; the audit
+  reports no hard problems.
 
 ## 2026-10-21 · Rekordbox pivot — `dj-query` built, MCP plan trimmed
 

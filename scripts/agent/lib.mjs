@@ -202,11 +202,19 @@ export function selectVerification(registry, { prompt, files = [] }) {
 /* ------------------------------------------------------------------- misc */
 
 /**
- * Resolve the task's domains and skill groups from the prompt and files.
+ * Resolve the domains a task belongs to, and the skill groups they map to.
  *
- * Domains from matching registry agents are fallback hints, used only when
- * neither the prompt nor the file paths resolve a domain. Returns
- * `{ domains, groups }`, both sets.
+ * Precedence is file → prompt → routed subagent, and it is the resolver in
+ * `scripts/skills/lib.mjs` that enforces it: the files in play win outright,
+ * the prompt decides only when no file matched, and the routed subagent speaks
+ * only when neither did.
+ *
+ * The registry records which domains a specialist owns, so the agent that owns
+ * the work also owns the domain — but only as the last resort, because that
+ * agent owns a whole tree. A vague "fix this" over `crates/core/**` resolves
+ * to the Rust and API areas, which is what the path policy maps that tree to.
+ *
+ * Returns `{ domains, groups }`, both sets.
  */
 export function resolveDomains({ prompt, files = [], registry, policy }) {
   const hints = [];
@@ -228,8 +236,9 @@ export function resolveDomains({ prompt, files = [], registry, policy }) {
  * installed skills, and memory store, and may refresh the parsed-skill cache.
  *
  * `top` caps the skill count; `memoryLimit` caps memory entries. Both accept
- * zero. `minScore` filters scored matches, but domain defaults have score zero
- * and can fill unused slots regardless of that threshold.
+ * zero. `minScore` filters scored matches; the domain defaults have score zero
+ * and are used only when nothing matched at all, so the threshold does not
+ * apply to them.
  *
  * Registry, policy, skill-library, and memory read or parse errors propagate;
  * cache read and write failures are ignored.
@@ -269,21 +278,26 @@ export function buildBrief({ prompt, files = [], top, memoryLimit, minScore }) {
   const picked = matched.filter(inDomain);
   const offDomain = matched.filter((entry) => !inDomain(entry));
 
-  for (const id of resolved.domains) {
-    if (picked.length >= skillLimit) break;
-    for (const skillId of policy.domains?.[id]?.defaultSkills ?? []) {
+  // The defaults are a fallback for an *empty* match set, not a top-up. A
+  // prompt that named a skill already has a real answer; padding the brief
+  // with the domain's defaults would bury it under a guess.
+  if (!picked.length) {
+    for (const id of resolved.domains) {
       if (picked.length >= skillLimit) break;
-      if (picked.some((entry) => entry.id === skillId)) continue;
-      if (offDomain.some((entry) => entry.id === skillId)) continue;
-      const skill = skills.find((item) => item.id === skillId);
-      if (!skill) continue;
-      picked.push({
-        id: skillId,
-        score: 0,
-        hot: skill.hot ?? (policy.hot ?? []).includes(skillId),
-        via: "domain",
-        group: index.docs.find((doc) => doc.skill.id === skillId)?.group ?? null,
-      });
+      for (const skillId of policy.domains?.[id]?.defaultSkills ?? []) {
+        if (picked.length >= skillLimit) break;
+        if (picked.some((entry) => entry.id === skillId)) continue;
+        if (offDomain.some((entry) => entry.id === skillId)) continue;
+        const skill = skills.find((item) => item.id === skillId);
+        if (!skill) continue;
+        picked.push({
+          id: skillId,
+          score: 0,
+          hot: skill.hot ?? (policy.hot ?? []).includes(skillId),
+          via: "domain",
+          group: index.docs.find((doc) => doc.skill.id === skillId)?.group ?? null,
+        });
+      }
     }
   }
 

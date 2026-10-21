@@ -565,7 +565,9 @@
     "apps/desktop/src/**": ["ui"],
     "apps/api/**": ["api"],
     "docs/ui/**": ["ui"],
-    "scripts/**": ["agent-layer"],
+    "scripts/agent/**": ["agent-layer"],
+    "scripts/skills/**": ["agent-layer"],
+    "scripts/memory/**": ["agent-layer"],
     "docs/ai/**": ["agent-layer"],
     "fixtures/**": ["audio"],
     ".github/**": ["ci"]

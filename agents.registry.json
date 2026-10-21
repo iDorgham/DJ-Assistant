@@ -317,7 +317,7 @@
     {
       "id": "prune",
       "kind": "command",
-      "summary": "Prune the machine-global skill library down to the skills this project uses.",
+      "summary": "Prune the installed skill library down to the skills this project uses.",
       "use": "When the advertised skill cost is too high, or after installing a large batch of skills."
     }
   ],

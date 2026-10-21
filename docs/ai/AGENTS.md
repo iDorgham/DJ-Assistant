@@ -103,7 +103,7 @@ never touches `AGENTS.md`, `CLAUDE.md`, `kilo.jsonc`, or the vendor rule files.
 | `scripts/skills/inventory.mjs` | Rebuilds `.opencode/skill-manifest.json` and `SKILL_ROUTING.md` from what is installed |
 | `scripts/skills/audit.mjs` | Integrity and curation report: missing descriptions, duplicate IDs, near-duplicates, oversize, policy drift (`--json`) |
 | `scripts/skills/policy.mjs` | Dry-run report of the priority split; `--restore` clears managed `autoinvoke` flags |
-| `scripts/skills/prune.mjs` | The **prune list** made mechanical: dry run by default, `--apply` moves the listed skills into a timestamped backup beside the **project mirror** (`.opencode/skills` — the global library and the bundled skills are left alone), `--restore <dir>` puts them back from the backup's manifest |
+| `scripts/skills/prune.mjs` | The **prune list** made mechanical: dry run by default, `--apply` moves every installed copy of the listed skills into a timestamped backup and `--restore <dir>` puts each copy back from the backup's manifest. It refuses to run when the policy puts a hot skill on the prune list |
 | `scripts/memory/search.mjs` | Prompt → relevant shared-memory lines across the five `docs/ai/memory/` layers. `--json`, `--limit N` |
 
 Shared logic (discovery, frontmatter parsing, scoring) lives in
@@ -117,10 +117,13 @@ lives in [`agents.registry.json`](../../agents.registry.json).
 
 1. **On every prompt, run the preflight.** `AGENTS.md` carries the rule that
    every session sees, in every tool.
-2. **The task is resolved to a domain.** Three signals: the prompt vocabulary
-   (`domains` in `skills.policy.json`), the files in play (`pathDomains`), and
-   the subagent the router picks (the registry's per-agent `domains`). A vague
-   "fix this" over `crates/core/**` still resolves to Rust and audio.
+2. **The task is resolved to a domain.** Three signals, in precedence order:
+   the **files in play** (`pathDomains`) first — they say where the work *is*,
+   so a vague "fix this" over `crates/core/**` resolves to Rust and API — then
+   the **prompt vocabulary** (`domains` in `skills.policy.json`), and only then
+   the **subagent the router picks** (the registry's per-agent `domains`). A
+   domain scores by the distinct prompt *words* it claims, so an alias pair
+   like "waveform"/"waveforms" cannot out-vote a second signal.
 3. **The matcher scores the prompt** against every installed skill description
    with a BM25-flavoured lexical score, plus hand-curated `triggers` in
    `skills.policy.json` that map project vocabulary onto skill IDs (for example
@@ -169,9 +172,10 @@ is a ranking, not a visibility filter — see §4.
   advertising cost is the dominant spend, not the routing. The `prune` list in
   `skills.policy.json` names the skills this project does not use, each with
   its reason; `pnpm skills:prune` moves them into a **backup**, never a
-  delete, and `--restore <dir>` reverses it. Pruning is project-scoped: only
-  the project mirror (`.opencode/skills`) is touched — the machine-global
-  library and the tool's own bundled skills are left alone. See
+  delete, and `--restore <dir>` reverses it. A skill installed in more than
+  one place is moved from **every** place, or it would still be advertised —
+  so the backup records each copy's own path. The tool refuses to run at all
+  if the policy puts a hot skill on the prune list. See
   [D-012](./memory/decisions.md).
 - **One source for the agent layer.** The agent and command files live once, in
   `.opencode/agents` and `.opencode/commands`; every other tool directory is a

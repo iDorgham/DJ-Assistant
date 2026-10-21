@@ -418,15 +418,21 @@ export function buildIndex(skills, hot = new Set(), groups = {}) {
  * Resolve which project domains a task belongs to, and therefore which
  * policy groups of skills are in play.
  *
- * File and prompt signals are combined; caller hints are a fallback:
+ * Three signals, strongest first:
  *
- * 1. **Prompt vocabulary** — the curated `domains` map in the policy. The
- *    domains with the most matching keyword entries are included, keeping all
- *    ties. Multiple keyword entries can match the same prompt word.
- * 2. **The files in play** — all domains from matching `pathDomains` globs are
- *    included. File paths are normalized to forward slashes with a leading `./` removed.
- * 3. **`domainHints`** — caller-provided domains are included only when neither
- *    the prompt nor the files resolve any domain.
+ * 1. **The files in play** — `pathDomains` maps a path prefix to a domain, so
+ *    a vague "fix this" still lands in the right area. The files say where the
+ *    work *is*, not only what the prompt mentions, so they win outright: when
+ *    a file matches, the prompt does not get to add a second opinion.
+ * 2. **Prompt vocabulary** — the curated `domains` map in the policy, used only
+ *    when no file matched. The domain with the *most* distinct prompt words
+ *    wins, so a task that names two areas ("make the library table prettier")
+ *    does not activate the audio area just because "library" is one of its
+ *    keywords. Ties keep every candidate.
+ * 3. **`domainHints`** — domains contributed by the caller, which is how the
+ *    agent layer passes in the domain of the subagent that owns the work. The
+ *    routed subagent owns a whole tree, so it is the last resort: it only
+ *    speaks when neither the files nor the prompt did.
  *
  * Returns `{ domains, groups }` as sets; groups are the union of the active
  * domains' policy groups. Both sets are empty when no signal resolves a domain.
@@ -447,25 +453,35 @@ export function resolveDomains({
   const tokens = new Set(tokenize(prompt));
   const scored = [];
   for (const [id, domain] of Object.entries(domains)) {
-    const hits = (domain.keywords ?? []).filter((keyword) =>
-      keywordHit(tokens, normalized, keyword)
-    );
-    if (hits.length) scored.push({ id, hits: hits.length });
+    // Count the distinct prompt *words* the domain claims, not the keyword
+    // entries it happens to match: "waveform" and "waveforms" are two entries
+    // but one word, and counting both let one alias out-vote a real signal.
+    const words = new Set();
+    for (const keyword of domain.keywords ?? []) {
+      for (const word of matchedWords(tokens, normalized, keyword)) words.add(word);
+    }
+    if (words.size) scored.push({ id, hits: words.size });
   }
   const best = scored.reduce((max, entry) => Math.max(max, entry.hits), 0);
 
   // The files in play are the strongest signal: they say where the work *is*,
-  // not only what the prompt mentions.
+  // not only what the prompt mentions. When a file matches, the prompt does
+  // not get to add a second opinion — an unrelated word in the prompt would
+  // otherwise make off-domain skills eligible at full score.
+  let pathMatched = false;
   for (const file of files) {
     for (const [pattern, ids] of Object.entries(pathDomains)) {
       if (globToRegExp(pattern).test(file.replace(/\\/g, "/").replace(/^\.\//, ""))) {
+        pathMatched = true;
         for (const id of ids ?? []) active.add(id);
       }
     }
   }
 
-  for (const entry of scored) {
-    if (entry.hits === best) active.add(entry.id);
+  if (!pathMatched) {
+    for (const entry of scored) {
+      if (entry.hits === best) active.add(entry.id);
+    }
   }
 
   // The routed subagent is the last resort: it knows the area, but it owns a
@@ -479,6 +495,42 @@ export function resolveDomains({
 }
 
 /**
+ * The prompt words a keyword matches.
+ *
+ * Phrases match as whole phrases and claim each of their words; single words
+ * match exactly, or by a shared prefix of at least five characters in either
+ * direction — so "skill" finds "skills" and "waveform" finds "waveforms", but
+ * "set" never finds "settings".
+ *
+ * The result is a list of *prompt words*, so two alias keywords — "waveform"
+ * and "waveforms" — claim the same word, and a domain's score counts the
+ * words it actually claims rather than the entries it happens to match.
+ */
+export function matchedWords(promptTokens, normalizedPrompt, keyword) {
+  const phrase = keyword
+    .toLowerCase()
+    .replace(/[^a-z0-9+#]+/g, " ")
+    .trim();
+  if (!phrase) return [];
+  if (phrase.includes(" ")) {
+    if (!normalizedPrompt.includes(` ${phrase} `)) return [];
+    return phrase.split(" ");
+  }
+  if (promptTokens.has(phrase)) return [phrase];
+  // tokenize() drops every word of two characters or fewer, so `ui` can never
+  // reach the token set; match it against the padded prompt instead of letting
+  // the length guard below discard the keyword.
+  if (phrase.length < 3) return normalizedPrompt.includes(` ${phrase} `) ? [phrase] : [];
+  if (phrase.length < 5) return [];
+  const matched = [];
+  for (const token of promptTokens) {
+    if (token.length < 5) continue;
+    if (token.startsWith(phrase) || phrase.startsWith(token)) matched.push(token);
+  }
+  return matched;
+}
+
+/**
  * True when the keyword appears in the prompt.
  *
  * Phrases match as whole phrases; single words match exactly, or by a shared
@@ -486,23 +538,7 @@ export function resolveDomains({
  * "skills" and "waveform" finds "waveforms", but "set" never finds "settings".
  */
 export function keywordHit(promptTokens, normalizedPrompt, keyword) {
-  const phrase = keyword
-    .toLowerCase()
-    .replace(/[^a-z0-9+#]+/g, " ")
-    .trim();
-  if (!phrase) return false;
-  if (phrase.includes(" ")) return normalizedPrompt.includes(` ${phrase} `);
-  if (promptTokens.has(phrase)) return true;
-  // tokenize() drops every word of two characters or fewer, so `ui` can never
-  // reach the token set; match it against the padded prompt instead of letting
-  // the length guard below discard the keyword.
-  if (phrase.length < 3) return normalizedPrompt.includes(` ${phrase} `);
-  if (phrase.length < 5) return false;
-  for (const token of promptTokens) {
-    if (token.length < 5) continue;
-    if (token.startsWith(phrase) || phrase.startsWith(token)) return true;
-  }
-  return false;
+  return matchedWords(promptTokens, normalizedPrompt, keyword).length > 0;
 }
 
 /**

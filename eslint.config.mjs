@@ -25,8 +25,10 @@ export default tseslint.config(
       // (paired with the `.opencode/skills/` entry in .gitignore). Third-party
       // scripts and assets, not project source, and several bundles are not
       // lintable CommonJS/ESM, so they are excluded to keep `eslint .` focused
-      // on the workspace's own code.
+      // on the workspace's own code. The backup folder holds the same vendored
+      // code, parked by `pnpm skills:prune --apply`.
       ".opencode/skills/**",
+      ".opencode/skills-backup/**",
     ],
   },
 

@@ -65,7 +65,7 @@ because a wildcard grant quietly outranks the deny it sits next to. See
 
 ## F-007 · One shared word is enough to pick a skill — and BM25 rewards it (2026-10-22)
 
-The skill matcher let a single description hit qualify a skill, and the ID
+The skill matcher let a single **skill-ID hit** qualify a skill, and the ID
 tokens earned a 3× weight. Inverse document frequency then made the *rarest*
 such word the most valuable one, so the rarest generic adjective won: on a
 task about the agent layer and shared memory, the preflight offered
@@ -83,8 +83,9 @@ BM25 makes the rarest wrong answer the most confident one. See
 
 ## F-008 · "Kept installed, hidden" is not a state that exists here (2026-10-22)
 
-`skills.policy.json` recorded seventeen known duplicates with the reason
-"Kept installed, hidden", and `builtinHidden` named `playwright-cli` as
+`skills.policy.json` recorded seventeen known duplicates, most of them with a
+hidden-related reason — two of them with exactly "Kept installed, hidden" — and
+`builtinHidden` named `playwright-cli` as
 hidden. Nothing in the library was hidden: all 240 skills were advertised,
 duplicate or not, and were paid for on every step. A reason field that
 describes an action nobody took is worse than no reason at all — it reads as

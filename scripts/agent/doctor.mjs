@@ -180,10 +180,11 @@ for (const agent of registry.agents ?? []) {
 }
 
 // A skill cannot be both a priority and a removal: the policy would reach for
-// it on one prompt and delete it on the next.
+// it on one prompt and delete it on the next. A prune entry that is not
+// installed is *expected* — that is what a completed prune looks like — so the
+// diagnostic is reserved for the contradictory references below.
 for (const id of Object.keys(prune)) {
   if (hot.has(id)) hard.push(`"${id}" is in the hot set and on the prune list`);
-  if (!installedIds.has(id)) soft.push(`prune list names "${id}", which is not installed`);
 }
 for (const [id, domain] of Object.entries(domains)) {
   for (const skill of domain.defaultSkills ?? []) {

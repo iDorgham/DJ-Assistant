@@ -35,6 +35,15 @@ const registry = loadRegistry();
 const policy = loadPolicy();
 const installed = new Set(listSkills().skills.map((skill) => skill.id));
 
+/**
+ * Whether every one of these skills is installed.
+ *
+ * The suite is machine-independent: an assertion about a skill only means
+ * something when that skill is actually there, so the skill-dependent tests
+ * skip instead of failing on a fresh clone that never installed the library.
+ */
+const has = (...ids) => ids.every((id) => installed.has(id));
+
 describe("path matching", () => {
   it("matches a directory tree", () => {
     assert.equal(matchPath("apps/desktop/src-tauri/**", "apps/desktop/src-tauri/src/lib.rs"), true);
@@ -308,40 +317,71 @@ describe("domain routing", () => {
     assert.ok(brief.domains.includes("tauri"), brief.domains.join(", "));
   });
 
-  it("does not offer a skill from an unrelated domain", () => {
-    // "memory" and "speed" used to select memory-safety-patterns and
-    // performance-and-perceived-speed on a task about the agent layer.
-    const brief = buildBrief({
-      prompt: "understand the agent routing and the shared memory, make it fast",
-      files: [],
-    });
-    const offered = brief.skills.map((skill) => skill.id);
-    assert.ok(!offered.includes("memory-safety-patterns"), offered.join(", "));
-    assert.ok(!offered.includes("performance-and-perceived-speed"), offered.join(", "));
-    assert.ok(!offered.includes("upstash-redis-js"), offered.join(", "));
-  });
+  it(
+    "does not offer a skill from an unrelated domain",
+    { skip: !has("memory-safety-patterns", "performance-and-perceived-speed", "upstash-redis-js") },
+    () => {
+      // "memory" and "speed" used to select memory-safety-patterns and
+      // performance-and-perceived-speed on a task about the agent layer.
+      const brief = buildBrief({
+        prompt: "understand the agent routing and the shared memory, make it fast",
+        files: [],
+      });
+      const offered = brief.skills.map((skill) => skill.id);
+      assert.ok(!offered.includes("memory-safety-patterns"), offered.join(", "));
+      assert.ok(!offered.includes("performance-and-perceived-speed"), offered.join(", "));
+      assert.ok(!offered.includes("upstash-redis-js"), offered.join(", "));
+    }
+  );
 
-  it("keeps a curated trigger even when the skill sits in another group", () => {
-    const brief = buildBrief({ prompt: "add a spectrum analyser to the waveform view" });
-    assert.ok(brief.skills.some((skill) => skill.id === "ffmpeg-waveforms-visualization"));
-  });
+  it(
+    "keeps a curated trigger even when the skill sits in another group",
+    { skip: !installed.has("ffmpeg-waveforms-visualization") },
+    () => {
+      const brief = buildBrief({ prompt: "add a spectrum analyser to the waveform view" });
+      assert.ok(brief.skills.some((skill) => skill.id === "ffmpeg-waveforms-visualization"));
+    }
+  );
 
-  it("offers the domain default when the prompt carries no signal", () => {
-    // "fix this" gives the matcher nothing to score; the files say Rust.
-    const brief = buildBrief({
-      prompt: "fix this",
-      files: ["crates/core/src/library_query.rs"],
-    });
-    assert.ok(
-      brief.skills.some((skill) => skill.via === "domain"),
-      brief.skills.map((skill) => skill.id).join(", ")
-    );
-  });
+  it(
+    "offers the domain default when the prompt carries no signal",
+    { skip: !has("rust-best-practices", "sql-optimization-patterns") },
+    () => {
+      // "fix this" gives the matcher nothing to score; the files say Rust.
+      const brief = buildBrief({
+        prompt: "fix this",
+        files: ["crates/core/src/library_query.rs"],
+      });
+      assert.ok(
+        brief.skills.some((skill) => skill.via === "domain"),
+        brief.skills.map((skill) => skill.id).join(", ")
+      );
+    }
+  );
 
-  it("does not dilute a real match with the domain defaults", () => {
-    const brief = buildBrief({ prompt: "add a tauri ipc command", files: [] });
-    assert.equal(brief.skills[0].via, "trigger");
-  });
+  it(
+    "does not dilute a real match with the domain defaults",
+    { skip: !has("tauri-ipc") },
+    () => {
+      const brief = buildBrief({ prompt: "add a tauri ipc command", files: [] });
+      assert.equal(brief.skills[0].via, "trigger");
+    }
+  );
+
+  it(
+    "adds no domain default when the prompt already matched",
+    { skip: !has("tauri-ipc") },
+    () => {
+      // The defaults are a fallback for an empty match set, not a top-up: a
+      // prompt that named a skill already has an answer, and padding the
+      // brief with the domain's defaults would bury it under a guess.
+      const brief = buildBrief({ prompt: "add a tauri ipc command", files: [] });
+      assert.ok(
+        !brief.skills.some((skill) => skill.via === "domain"),
+        brief.skills.map((skill) => skill.id).join(", ")
+      );
+    }
+  );
 
   it("lets the strongest prompt domain win", () => {
     // "library" is an audio keyword and "table"/"prettier" are interface ones.
@@ -353,9 +393,39 @@ describe("domain routing", () => {
   });
 
   it("keeps every domain on a tie", () => {
+    // "tauri" and "ipc" are two Tauri words; "waveform view" is two UI words;
+    // "waveform" on its own is one audio word. The two highest scores tie, and
+    // a tie keeps every domain that reached it.
     const brief = buildBrief({ prompt: "add a tauri ipc command to the waveform view" });
     assert.ok(brief.domains.includes("tauri"), brief.domains.join(", "));
-    assert.ok(brief.domains.includes("audio"), brief.domains.join(", "));
+    assert.ok(brief.domains.includes("ui"), brief.domains.join(", "));
+    assert.ok(!brief.domains.includes("audio"), brief.domains.join(", "));
+  });
+
+  it("lets the files in play override the prompt", () => {
+    // The files say where the work *is*; the prompt does not get to add a
+    // second opinion on top of them.
+    const resolved = resolveDomains({
+      prompt: "add a tauri ipc command",
+      files: ["crates/core/src/library_query.rs"],
+      domains: policy.domains,
+      pathDomains: policy.pathDomains,
+    });
+    assert.ok(resolved.domains.has("rust"), [...resolved.domains].join(", "));
+    assert.ok(!resolved.domains.has("tauri"), [...resolved.domains].join(", "));
+  });
+
+  it("counts distinct prompt words, not keyword entries", () => {
+    // "waveform" and "waveforms" are two entries in the audio domain but one
+    // word in the prompt, so they must not out-vote a real second signal.
+    const resolved = resolveDomains({
+      prompt: "fix the waveform layout",
+      files: [],
+      domains: policy.domains,
+      pathDomains: policy.pathDomains,
+    });
+    assert.ok(resolved.domains.has("audio"), [...resolved.domains].join(", "));
+    assert.ok(resolved.domains.has("ui"), [...resolved.domains].join(", "));
   });
 
   it("does not treat the word library as an audio signal", () => {
