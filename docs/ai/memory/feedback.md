@@ -39,11 +39,13 @@ standalone and its message described code that was not in it. `git status` did n
 warn: the rewrite had been picked up by the same `git add` that staged my work.
 
 Stage first, then extract **the index** — the tree the commit is about to become
-— and run it: `mkdir -p /tmp/x && git archive "$(git write-tree)" scripts |
-tar -x -C /tmp/x && node /tmp/x/scripts/...` (`tar -x -C` needs the directory to
-already exist). (`git archive HEAD` exports the *previous* commit, so
-as originally written this check could not have caught this breakage.) Fix
-forward with a note; do not rewrite published history.
+— into a directory that did not exist a moment ago, and run it there:
+`d=$(mktemp -d) && git archive "$(git write-tree)" scripts agents.registry.json
+skills.policy.json package.json docs | tar -x -C "$d" &&
+node "$d/scripts/agent/preflight.test.mjs"`. A fixed path keeps files from an
+earlier extraction, so a missing one can pass; `git archive HEAD` exports the
+*previous* commit, so as originally written this check could not have caught the
+breakage it describes. Fix forward with a note; do not rewrite published history.
 
 ## F-006 · Check the installed tool's schema before accepting a severity (2026-10-21)
 
