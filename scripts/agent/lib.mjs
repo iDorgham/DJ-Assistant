@@ -202,12 +202,11 @@ export function selectVerification(registry, { prompt, files = [] }) {
 /* ------------------------------------------------------------------- misc */
 
 /**
- * Resolve the domains a task belongs to, adding the routed subagent's own
- * domains on top of the prompt and file signals.
+ * Resolve the task's domains and skill groups from the prompt and files.
  *
- * The registry records which domains a specialist owns, so the agent that owns
- * the work also owns the domain — a vague "fix this" over `crates/core/**`
- * still lands in the Rust and audio areas.
+ * Domains from matching registry agents are fallback hints, used only when
+ * neither the prompt nor the file paths resolve a domain. Returns
+ * `{ domains, groups }`, both sets.
  */
 export function resolveDomains({ prompt, files = [], registry, policy }) {
   const hints = [];
@@ -225,8 +224,15 @@ export function resolveDomains({ prompt, files = [], registry, policy }) {
 
 /**
  * Build the full brief for a prompt: memory lines, skills, agents, commands,
- * and the checks the work implies. Pure apart from reading the registry, the
- * policy, the installed skills, and the memory store.
+ * domains, and the checks the work implies. Reads the registry, policy,
+ * installed skills, and memory store, and may refresh the parsed-skill cache.
+ *
+ * `top` caps the skill count; `memoryLimit` caps memory entries. Both accept
+ * zero. `minScore` filters scored matches, but domain defaults have score zero
+ * and can fill unused slots regardless of that threshold.
+ *
+ * Registry, policy, skill-library, and memory read or parse errors propagate;
+ * cache read and write failures are ignored.
  */
 export function buildBrief({ prompt, files = [], top, memoryLimit, minScore }) {
   const registry = loadRegistry();

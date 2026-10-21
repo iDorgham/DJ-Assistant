@@ -224,7 +224,16 @@ export function isAutoinvokeDisabled(data) {
   return value === false || value === "false";
 }
 
-/** List skills from every source, with later sources overriding earlier IDs. */
+/**
+ * List skills from every source, with later sources overriding earlier IDs.
+ * Returns `{ skills, overrides }`, with skills sorted by ID and overrides
+ * recording which source won each duplicate.
+ *
+ * Parsed metadata is reused when a file's modification time and size match.
+ * `cache: false` or a nonempty `DJ_ASSISTANT_NO_CACHE` bypasses cache reads and
+ * writes. Cache read/write failures are ignored; directory-listing and skill-read errors
+ * propagate. Missing sources and files that cannot be statted are skipped.
+ */
 export function listSkills({ cache = true } = {}) {
   const byId = new Map();
   const overrides = [];
@@ -272,7 +281,10 @@ export function listSkills({ cache = true } = {}) {
   return { skills: [...byId.values()].sort((a, b) => a.id.localeCompare(b.id)), overrides };
 }
 
-/** Parse one `SKILL.md` into the metadata the tooling uses. */
+/**
+ * Parse one `SKILL.md` into metadata, using the directory name as its ID and
+ * as the fallback name when frontmatter has no string name. Read errors propagate.
+ */
 function readSkill(file, entry, source) {
   const text = fs.readFileSync(file, "utf8");
   const { data, hadFrontmatter } = parseFrontmatter(text);
@@ -300,10 +312,8 @@ const CACHE_PATH = path.join(CACHE_DIR, "skills-index.json");
 /**
  * Read the parsed-skill cache.
  *
- * The preflight runs on every prompt and the library is ~240 files, so
- * re-parsing all of them each time costs more than the routing itself. The
- * cache is keyed on `mtime:size` per file, so a skill that is edited,
- * installed, or removed is re-read; everything else is reused.
+ * Returns a map keyed by skill file path, or an empty map when
+ * `DJ_ASSISTANT_NO_CACHE` is nonempty or reading/parsing the cache fails.
  */
 function readSkillCache() {
   if (process.env.DJ_ASSISTANT_NO_CACHE) return new Map();
@@ -315,6 +325,10 @@ function readSkillCache() {
   }
 }
 
+/**
+ * Persist the parsed metadata map, creating the cache directory as needed.
+ * A nonempty `DJ_ASSISTANT_NO_CACHE` disables writes; write failures are ignored.
+ */
 function writeSkillCache(entries) {
   if (process.env.DJ_ASSISTANT_NO_CACHE) return;
   try {
@@ -361,6 +375,7 @@ export function skillTokens(skill) {
  * `skills.policy.json` groups the library by the kind of work a skill serves
  * ("Rust core", "Tauri shell", "Music & DJ domain", …). A skill that matches
  * no group is outside every domain the project recognises.
+ * Returns the first group with a matching skill ID or glob pattern, or `null`.
  */
 export function skillGroup(skillId, groups = {}) {
   for (const [group, members] of Object.entries(groups)) {
@@ -403,20 +418,18 @@ export function buildIndex(skills, hot = new Set(), groups = {}) {
  * Resolve which project domains a task belongs to, and therefore which
  * policy groups of skills are in play.
  *
- * Three signals, weakest first:
+ * File and prompt signals are combined; caller hints are a fallback:
  *
  * 1. **Prompt vocabulary** — the curated `domains` map in the policy. The
- *    domain with the *most* keyword hits wins, so a task that names two areas
- *    ("make the library table prettier") does not activate the audio area just
- *    because "library" is one of its keywords. Ties keep every candidate.
- * 2. **The files in play** — `pathDomains` maps a path prefix to a domain, so
- *    a vague "fix this" still lands in the right area.
- * 3. **`domainHints`** — domains contributed by the caller, which is how the
- *    agent layer passes in the domain of the subagent that owns the work.
+ *    domains with the most matching keyword entries are included, keeping all
+ *    ties. Multiple keyword entries can match the same prompt word.
+ * 2. **The files in play** — all domains from matching `pathDomains` globs are
+ *    included. File paths are normalized to forward slashes with a leading `./` removed.
+ * 3. **`domainHints`** — caller-provided domains are included only when neither
+ *    the prompt nor the files resolve any domain.
  *
- * The result gates the skill matcher: a skill outside every active group is
- * scored down rather than dropped, which keeps a mis-resolved domain from
- * hiding a skill that was the right answer.
+ * Returns `{ domains, groups }` as sets; groups are the union of the active
+ * domains' policy groups. Both sets are empty when no signal resolves a domain.
  */
 export function resolveDomains({
   prompt,
@@ -495,19 +508,25 @@ export function keywordHit(promptTokens, normalizedPrompt, keyword) {
 /**
  * Score a prompt against the skill index.
  *
- * Three gates decide whether a skill is offered, in order of confidence:
+ * Three gates decide whether a skill qualifies for scoring:
  *
- * 1. **A curated trigger** wins outright. `skills.policy.json` maps project
- *    vocabulary onto skill IDs by hand, so a trigger outranks every other
- *    signal and is never penalised by the domain gate.
- * 2. **A specific ID hit** — the skill's own name is in the prompt. The token
+ * 1. **A curated trigger** qualifies the skill. `skills.policy.json` maps project
+ *    vocabulary onto skill IDs by hand. Each matching trigger adds 10 to the
+ *    score and bypasses lexical qualification and domain penalties.
+ * 2. **A specific ID hit** — a token from the skill's ID is in the prompt. The token
  *    must not be one of the domain-neutral words in `genericTokens`; "speed"
  *    alone used to select `performance-and-perceived-speed` and "memory" alone
  *    selected `memory-safety-patterns`, both on unrelated tasks.
  * 3. **Two independent hits**, so one shared adjective cannot pick a skill.
  *
- * A skill outside the prompt's active domain groups is scored down rather than
- * dropped, so a mis-resolved domain still leaves the skill reachable.
+ * When `activeGroups` is nonempty, lexical matches outside those groups have
+ * their score multiplied by `offDomainPenalty` before filtering.
+ *
+ * Returns up to `limit` entries with ID, score, hits, hot flag, and `via` match
+ * source; lexical entries also carry their group. `minScore` is inclusive and
+ * applied before rounding scores to four decimals. Results sort by descending
+ * rounded score, then ID; `includeHot: false` excludes hot skills.
+ * Returns an empty array when the prompt has no tokens, even if a trigger matches.
  */
 export function matchSkills(
   index,

@@ -32,6 +32,7 @@ import { PROJECT_SKILLS, isFile, listSkills, loadPolicy } from "./lib.mjs";
 
 const argv = process.argv.slice(2);
 const flags = new Set(argv.filter((arg) => arg.startsWith("--")));
+/** Return the argument following `--name`, or the fallback when absent or empty. */
 const value = (name, fallback) => {
   const index = argv.indexOf(`--${name}`);
   return index !== -1 && argv[index + 1] ? argv[index + 1] : fallback;
@@ -88,6 +89,14 @@ function report() {
 
 /* ------------------------------------------------------------------ apply */
 
+/**
+ * Move visible prune-list skills from the selected source into a timestamped
+ * backup and record successful moves in its manifest.
+ *
+ * Individual move errors are caught and remaining candidates are attempted.
+ * Missing hot skills after pruning set exit code 1; backup creation,
+ * manifest-write, and policy/library read errors propagate.
+ */
 function apply() {
   const policy = loadPolicy();
   const prune = policy.prune ?? {};
@@ -143,6 +152,14 @@ function apply() {
 
 /* ---------------------------------------------------------------- restore */
 
+/**
+ * Restore a backup manifest's entries to their original paths, skipping entries
+ * whose backup target does not resolve or whose destination already exists.
+ *
+ * `dir` is a backup directory, resolved relative to the working directory.
+ * Exits with code 2 when it is absent or has no manifest. Manifest read/parse,
+ * directory-creation, and move errors propagate, leaving earlier restores in place.
+ */
 function restore(dir) {
   if (!dir) {
     console.error("usage: node scripts/skills/prune.mjs --restore <backup-dir>");
@@ -188,6 +205,9 @@ function backupRoot() {
 /**
  * Move a directory, falling back to copy-then-delete when the two paths are
  * on different volumes (`rename` cannot cross a drive boundary on Windows).
+ * Preserves symlink targets verbatim during copying. Other rename errors and
+ * copy or removal errors propagate; a failed fallback can leave a partial copy
+ * or both paths in place.
  */
 function move(from, to) {
   try {
