@@ -12,7 +12,7 @@ fact, it belongs in [`facts.md`](./facts.md). Delete anything stale.
   stretching in `w-full`; auto-fit counts sort icons, chip/pill chrome and the
   artwork thumb; cells use `trackColumnTooltip` for the full comment, hash,
   both key notations and rating. The three threads are replied and resolved;
-  the cubic threads on the plan/diagram/picker are still open.
+  the remaining review threads on the plan/diagram/picker are still open.
 - The column model, persistence and 23 column tests are in
   `apps/desktop/src/lib/library-columns.ts`; the checklist is
   `components/ColumnPicker.tsx`; the table header/cells in `App.tsx` render
