@@ -425,7 +425,7 @@ fn search_matches_title_artist_album_and_path_case_insensitively() {
 
 #[test]
 fn get_track_returns_a_detail_row_and_its_cues() {
-    // P0.6 / cue contract: the detail query's 25 columns plus its cue join.
+    // P0.6 / cue contract: the detail query's 28 columns plus its cue join.
     let db_path = temp_db("detail.db");
     let conn = open_migrated_at(&db_path);
     insert_track(
@@ -441,6 +441,10 @@ fn get_track_returns_a_detail_row_and_its_cues() {
         },
     );
 
+    // An energy level the detail row must carry through (T2.1.6).
+    conn.execute("UPDATE tracks SET energy = 7 WHERE id = 't1'", [])
+        .unwrap();
+
     conn.execute(
         "INSERT INTO cue_points (id, track_id, position_ms, cue_type, slot, label, color_hex, source)
          VALUES ('c1', 't1', 1500, 'hot_cue', 1, 'Intro', '#3b82f6', 'ai_generated')",
@@ -448,18 +452,25 @@ fn get_track_returns_a_detail_row_and_its_cues() {
     )
     .unwrap();
 
-    let detail_sql =
-        "SELECT id, file_path, file_hash, title, artist, album, genre, bpm, key_camelot, \
-         duration_ms, format, analysis_status, user_rating, created_at, updated_at, \
-         file_size, sample_rate, channels, bit_depth, key_classical, loudness_lufs, \
+    // Mirrors `commands.rs::get_track`: the summary projection
+    // (`TRACK_SUMMARY_COLUMNS`) followed by the detail-only columns. The
+    // summary part carries `energy`, so the detail row cannot drift from the
+    // new summary contract without breaking this test.
+    let detail_sql = "SELECT id, file_path, file_hash, title, artist, album, genre, bpm, \
+         key_camelot, key_classical, duration_ms, format, analysis_status, \
+         user_rating, energy, comments, artwork_hash, created_at, updated_at, \
+         file_size, sample_rate, channels, bit_depth, loudness_lufs, \
          vocal_presence, phrase_confidence, analysis_version, notes \
          FROM tracks WHERE id = ?";
 
-    let (title, file_size): (String, i64) = conn
-        .query_row(detail_sql, params!["t1"], |r| Ok((r.get(3)?, r.get(15)?)))
+    let (title, file_size, energy): (String, i64, Option<i64>) = conn
+        .query_row(detail_sql, params!["t1"], |r| {
+            Ok((r.get(3)?, r.get(19)?, r.get(14)?))
+        })
         .expect("detail query must match the schema");
     assert_eq!(title, "Midnight Groove");
     assert_eq!(file_size, 1024);
+    assert_eq!(energy, Some(7), "the detail row carries the energy level");
 
     let cues: Vec<(i64, String, String)> = conn
         .prepare(
@@ -952,11 +963,17 @@ fn filtered_query_narrows_on_the_energy_range_and_the_rating_floor() {
     let _ = std::fs::remove_file(&db_path);
 }
 #[test]
-fn rating_and_energy_writes_are_reversible() {
-    // T2.1.4 / T2.1.6: the write path snapshots the rating/energy it replaced
-    // in a `skill_runs` row and the undo command restores them. This mirrors
-    // the exact SQL of `commands.rs::apply_metadata_patch` and
-    // `commands.rs::undo_track_metadata`.
+fn rating_and_energy_sql_keeps_the_snapshot_round_trip() {
+    // T2.1.4 / T2.1.6 — SCHEMA-LEVEL SQL COVERAGE ONLY.
+    //
+    // This test proves that the SQL shape the write path uses works against
+    // the real schema: the write, the `skill_runs` snapshot row (with both
+    // `before_state` and `after_state`) and the restore UPDATE.
+    //
+    // It does NOT cover the command's behaviour: `commands.rs::update_track_metadata`
+    // and `commands.rs::undo_track_metadata` are Tauri commands and cannot be
+    // invoked from this crate. The command-layer contract (including the
+    // stale-snapshot skip) lives in the desktop crate.
     let db_path = temp_db("undo-metadata.db");
     let conn = open_migrated_at(&db_path);
 
@@ -1047,6 +1064,89 @@ fn rating_and_energy_writes_are_reversible() {
         )
         .expect("the snapshot status must be readable");
     assert_eq!(status, "undone", "a snapshot is only undoable once");
+
+    let _ = std::fs::remove_file(&db_path);
+}
+
+#[test]
+fn a_stale_metadata_snapshot_is_detectable_against_the_current_row() {
+    // T2.1.4 / T2.1.6 — SCHEMA-LEVEL SQL COVERAGE ONLY.
+    //
+    // The undo command restores a snapshot only while it still describes the
+    // row: it compares the current values with the `after_state` the write
+    // recorded. This test proves the SQL that comparison relies on works
+    // against the real schema, and that a second edit is what makes a
+    // snapshot stale. The comparison itself lives in the desktop crate.
+    let db_path = temp_db("stale-metadata.db");
+    let conn = open_migrated_at(&db_path);
+
+    insert_filterable_track(
+        &conn,
+        "w1",
+        "House",
+        Some(120.0),
+        Some("8A"),
+        "complete",
+        Some(3),
+        None,
+    );
+
+    // The write: rating 4, energy 7 — recorded in `after_state`.
+    conn.execute(
+        "UPDATE tracks SET user_rating = ?2, energy = ?3, updated_at = datetime('now') WHERE id = ?1",
+        params!["w1", 4i64, 7i64],
+    )
+    .expect("the rating/energy write must succeed");
+
+    let undo_id = "22222222-3333-4444-5555-666666666666";
+    conn.execute(
+        "INSERT INTO skill_runs (
+            id, workspace_id, skill_name, status, input_summary, before_state, after_state,
+            error, created_at
+        ) VALUES (?1, 'default', 'update_track_metadata', 'success', ?2, ?3, ?4, NULL, datetime('now'))",
+        params![
+            undo_id,
+            r#"{"trackIds":["w1"],"rating":4,"energy":7}"#,
+            r#"{"w1":{"user_rating":3,"energy":null}}"#,
+            r#"{"w1":{"user_rating":4,"energy":7}}"#,
+        ],
+    )
+    .expect("the undo snapshot must be insertable");
+
+    // The SQL the undo command reads the current values with.
+    let current: (Option<i64>, Option<i64>) = conn
+        .query_row(
+            "SELECT user_rating, energy FROM tracks WHERE id = ?1",
+            params!["w1"],
+            |r| Ok((r.get(0)?, r.get(1)?)),
+        )
+        .expect("the current values must be readable");
+    assert_eq!(
+        current,
+        (Some(4), Some(7)),
+        "the row still matches the recorded after_state, so the snapshot is current"
+    );
+
+    // A second edit makes the snapshot stale: the undo must skip the track
+    // instead of overwriting the newer value.
+    conn.execute(
+        "UPDATE tracks SET user_rating = ?2, updated_at = datetime('now') WHERE id = ?1",
+        params!["w1", 2i64],
+    )
+    .expect("the second edit must succeed");
+
+    let current: (Option<i64>, Option<i64>) = conn
+        .query_row(
+            "SELECT user_rating, energy FROM tracks WHERE id = ?1",
+            params!["w1"],
+            |r| Ok((r.get(0)?, r.get(1)?)),
+        )
+        .expect("the current values must be readable");
+    assert_eq!(
+        current,
+        (Some(2), Some(7)),
+        "the current rating no longer matches after_state, so the snapshot is stale"
+    );
 
     let _ = std::fs::remove_file(&db_path);
 }

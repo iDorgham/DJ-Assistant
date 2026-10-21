@@ -607,4 +607,7 @@ pub struct UndoTrackMetadataRequest {
 pub struct UndoTrackMetadataResponse {
     /// Number of tracks restored to their previous values.
     pub restored: usize,
+    /// Number of tracks skipped because they were edited again after the
+    /// snapshot was taken, so restoring would overwrite the newer edit.
+    pub skipped: usize,
 }

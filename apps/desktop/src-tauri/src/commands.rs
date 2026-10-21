@@ -843,6 +843,11 @@ pub async fn set_track_rating(
 ///
 /// The snapshot is marked `undone`, so a second undo of the same id is
 /// refused instead of restoring twice.
+///
+/// A snapshot only restores what it still describes: when a track was edited
+/// again after the snapshot was taken, its current value no longer matches the
+/// snapshot's `after_state`. Such a track is skipped (and counted) instead of
+/// being overwritten with the older value.
 #[tauri::command]
 pub async fn undo_track_metadata(
     db: State<'_, Arc<Mutex<Database>>>,
@@ -854,11 +859,11 @@ pub async fn undo_track_metadata(
         .transaction()
         .map_err(|e| e.to_string())?;
 
-    let (status, before_raw): (String, Option<String>) = tx
+    let (status, before_raw, after_raw): (String, Option<String>, Option<String>) = tx
         .query_row(
-            "SELECT status, before_state FROM skill_runs WHERE id = ?1",
+            "SELECT status, before_state, after_state FROM skill_runs WHERE id = ?1",
             [&request.undo_id],
-            |row| Ok((row.get(0)?, row.get(1)?)),
+            |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?)),
         )
         .map_err(|_| format!("undo snapshot not found: {}", request.undo_id))?;
 
@@ -876,10 +881,46 @@ pub async fn undo_track_metadata(
         .as_object()
         .ok_or_else(|| format!("undo snapshot {} has a corrupt snapshot", request.undo_id))?;
 
+    // The state the write produced. It is what the current values are checked
+    // against, so an undo never overwrites a newer edit.
+    let after: serde_json::Map<String, serde_json::Value> = match after_raw {
+        Some(raw) => {
+            let parsed: serde_json::Value =
+                serde_json::from_str(&raw).map_err(|e| e.to_string())?;
+            parsed.as_object().cloned().ok_or_else(|| {
+                format!(
+                    "undo snapshot {} has a corrupt after-state",
+                    request.undo_id
+                )
+            })?
+        }
+        None => serde_json::Map::new(),
+    };
+
     let mut restored = 0usize;
+    let mut skipped = 0usize;
     for (track_id, values) in snapshot {
-        // `?1` is always the track id; only the snapshotted columns are
-        // written back, so an undo never touches anything else.
+        // The columns this snapshot touches. Only those are read and written
+        // back, so an undo never touches anything else.
+        let mut columns: Vec<&str> = Vec::new();
+        if values.get("user_rating").is_some() {
+            columns.push("user_rating");
+        }
+        if values.get("energy").is_some() {
+            columns.push("energy");
+        }
+        if columns.is_empty() {
+            continue;
+        }
+
+        // A newer edit won: the snapshot no longer describes the current
+        // values, so it must not overwrite them.
+        if !snapshot_still_current(&tx, track_id, &columns, after.get(track_id))? {
+            skipped += 1;
+            continue;
+        }
+
+        // `?1` is always the track id; the snapshotted columns are bound.
         let mut assignments: Vec<String> = Vec::new();
         let mut params: Vec<rusqlite::types::Value> = vec![track_id.clone().into()];
         if let Some(rating) = values.get("user_rating") {
@@ -889,9 +930,6 @@ pub async fn undo_track_metadata(
         if let Some(energy) = values.get("energy") {
             params.push(json_to_sql_value(energy));
             assignments.push(format!("energy = ?{}", params.len()));
-        }
-        if assignments.is_empty() {
-            continue;
         }
         let sql = format!(
             "UPDATE tracks SET {}, updated_at = datetime('now') WHERE id = ?1",
@@ -910,7 +948,49 @@ pub async fn undo_track_metadata(
 
     tx.commit().map_err(|e| e.to_string())?;
 
-    Ok(UndoTrackMetadataResponse { restored })
+    Ok(UndoTrackMetadataResponse { restored, skipped })
+}
+
+/// True when the track's current values still match the state the snapshot
+/// recorded *after* its write.
+///
+/// A mismatch means the track was edited again after the snapshot was taken,
+/// so restoring the snapshot would overwrite the newer edit.
+fn snapshot_still_current(
+    tx: &rusqlite::Transaction<'_>,
+    track_id: &str,
+    columns: &[&str],
+    expected: Option<&serde_json::Value>,
+) -> Result<bool, String> {
+    let expected = match expected.and_then(serde_json::Value::as_object) {
+        Some(values) => values,
+        // Without an after-state there is nothing to compare against, so the
+        // snapshot cannot prove it still describes the current values.
+        None => return Ok(false),
+    };
+
+    // Column names come from the snapshot's own keys, never from user input.
+    let sql = format!("SELECT {} FROM tracks WHERE id = ?1", columns.join(", "));
+    let current: Vec<Option<i64>> = match tx.query_row(&sql, [track_id], |row| {
+        let mut values = Vec::with_capacity(columns.len());
+        for column in columns {
+            values.push(row.get::<_, Option<i64>>(*column)?);
+        }
+        Ok(values)
+    }) {
+        Ok(values) => values,
+        // The track is gone: there is nothing left to restore.
+        Err(rusqlite::Error::QueryReturnedNoRows) => return Ok(false),
+        Err(e) => return Err(e.to_string()),
+    };
+
+    Ok(columns.iter().zip(current.iter()).all(|(column, value)| {
+        let recorded = expected
+            .get(*column)
+            .map(json_to_sql_value)
+            .unwrap_or(rusqlite::types::Value::Null);
+        recorded == rusqlite::types::Value::from(*value)
+    }))
 }
 
 /// Applies a rating/energy patch and records the undo snapshot.
@@ -919,6 +999,10 @@ pub async fn undo_track_metadata(
 /// between them would leave the library changed with no way back. Only the
 /// columns the patch touched are snapshotted, so an undo restores exactly
 /// what the write changed.
+///
+/// The returned count is the number of tracks whose value actually changed: a
+/// track that already held the requested value is not written, not counted and
+/// not snapshotted.
 fn apply_metadata_patch(
     conn: &mut rusqlite::Connection,
     skill_name: &str,
@@ -956,29 +1040,37 @@ fn apply_metadata_patch(
         let mut before_values = serde_json::Map::new();
         let mut after_values = serde_json::Map::new();
 
+        // Only a column whose value really differs is written and snapshotted.
+        // A track that already holds the requested value is left alone: the
+        // write would change nothing, so it is neither counted as updated nor
+        // recorded in the snapshot (there is nothing to restore).
         if let Some(rating) = patch.rating {
-            params.push(stored_value(rating).into());
-            assignments.push(format!("user_rating = ?{}", params.len()));
-            before_values.insert(
-                "user_rating".to_string(),
-                serde_json::Value::from(*previous_rating),
-            );
-            after_values.insert(
-                "user_rating".to_string(),
-                serde_json::Value::from(stored_value(rating)),
-            );
+            let stored = stored_value(rating);
+            if stored != *previous_rating {
+                params.push(stored.into());
+                assignments.push(format!("user_rating = ?{}", params.len()));
+                before_values.insert(
+                    "user_rating".to_string(),
+                    serde_json::Value::from(*previous_rating),
+                );
+                after_values.insert("user_rating".to_string(), serde_json::Value::from(stored));
+            }
         }
         if let Some(energy) = patch.energy {
-            params.push(stored_value(energy).into());
-            assignments.push(format!("energy = ?{}", params.len()));
-            before_values.insert(
-                "energy".to_string(),
-                serde_json::Value::from(*previous_energy),
-            );
-            after_values.insert(
-                "energy".to_string(),
-                serde_json::Value::from(stored_value(energy)),
-            );
+            let stored = stored_value(energy);
+            if stored != *previous_energy {
+                params.push(stored.into());
+                assignments.push(format!("energy = ?{}", params.len()));
+                before_values.insert(
+                    "energy".to_string(),
+                    serde_json::Value::from(*previous_energy),
+                );
+                after_values.insert("energy".to_string(), serde_json::Value::from(stored));
+            }
+        }
+
+        if assignments.is_empty() {
+            continue;
         }
 
         let sql = format!(

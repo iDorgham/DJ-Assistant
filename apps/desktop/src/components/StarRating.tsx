@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type { KeyboardEvent } from "react";
 import { Star } from "lucide-react";
 
@@ -48,6 +48,14 @@ export function StarRating({
   const [hovered, setHovered] = useState<number | null>(null);
   const preview = hovered ?? current;
 
+  // The committed value wins over a stale hover target: once a rating is
+  // written, the preview drops the hovered star so the widget shows what was
+  // actually stored (e.g. after a keyboard write, where the pointer never
+  // moved and no new hover event arrives).
+  useEffect(() => {
+    setHovered(null);
+  }, [current]);
+
   const commit = (star: number) => {
     if (readOnly || !onChange) return;
     // Clicking the star that is already set clears the rating (spec §3.4).
@@ -57,18 +65,34 @@ export function StarRating({
   const onKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
     if (readOnly || !onChange) return;
     const key = event.key;
+    // Ctrl/Cmd/Alt + digit belongs to the app's global shortcuts (Ctrl/Cmd+1-4
+    // switch views) and to the player's hot cues — never to the rating.
+    const modified = event.ctrlKey || event.metaKey || event.altKey;
+    if (modified) return;
+
     if (key >= "1" && key <= String(STAR_COUNT)) {
       event.preventDefault();
-      commit(Number(key));
+      // The digits belong to this widget: stop them here so they never reach
+      // the preview player's window listener, where 1-8 trigger hot cues.
+      event.stopPropagation();
+      // The keyboard contract sets a rating; only a click toggles it.
+      onChange(Number(key));
       return;
     }
     if (key === "0") {
       event.preventDefault();
+      event.stopPropagation();
       onChange(null);
       return;
     }
-    // Everything else (Tab, Escape, …) must not reach the row handler.
-    event.stopPropagation();
+    // Enter and Space are the row keys: the widget handles them on the
+    // button, so they must not reach the row handler behind it. Every other
+    // key — Escape, Tab, … — keeps bubbling, so the app-level actions
+    // (Escape closes the inspector) still work from this control.
+    if (key === "Enter" || key === " ") {
+      event.preventDefault();
+      event.stopPropagation();
+    }
   };
 
   return (
@@ -88,7 +112,13 @@ export function StarRating({
             key={star}
             type="button"
             disabled={readOnly}
-            aria-label={`Rate ${star} of ${STAR_COUNT}`}
+            aria-label={
+              readOnly
+                ? `Rating ${current} of ${STAR_COUNT}`
+                : isCurrent
+                  ? `Clear rating (currently ${current} of ${STAR_COUNT})`
+                  : `Rate ${star} of ${STAR_COUNT}`
+            }
             aria-pressed={isCurrent}
             title={
               readOnly
@@ -110,12 +140,12 @@ export function StarRating({
               if (!readOnly) setHovered(star);
             }}
             onBlur={() => setHovered(null)}
-            className={`rounded-sm p-px transition focus:outline-hidden ${
+            className={`rounded-sm p-px transition focus:outline-hidden focus-visible:ring-1 focus-visible:ring-dj-accent ${
               filled
                 ? "text-dj-accent"
                 : readOnly
                   ? "text-dj-text-muted"
-                  : "text-dj-text-muted hover:text-dj-accent focus-visible:ring-1 focus-visible:ring-dj-accent"
+                  : "text-dj-text-muted hover:text-dj-accent"
             }`}
           >
             <Star className={className} fill={filled ? "currentColor" : "none"} />

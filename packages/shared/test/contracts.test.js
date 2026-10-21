@@ -48,6 +48,7 @@ const trackSummaryFromRust = {
   format: "mp3",
   analysisStatus: "pending",
   userRating: 4,
+  energy: null,
   comments: "Peak-time weapon",
   artworkHash: "d41d8cd98f00b204e9800998ecf8427e",
   createdAt: "2026-01-01T00:00:00Z",
@@ -91,12 +92,28 @@ test("track summary payload uses camelCase keys", () => {
     "format",
     "analysisStatus",
     "userRating",
+    "energy",
     "comments",
     "artworkHash",
     "createdAt",
     "updatedAt",
   ];
   assert.deepEqual(Object.keys(trackSummaryFromRust).sort(), [...expected].sort());
+});
+
+test("track metadata write and undo use camelCase keys", () => {
+  // Mirrors models.rs::UpdateTrackMetadataRequest/Response +
+  // UndoTrackMetadataRequest/Response.
+  const req = { trackIds: ["t1", "t2"], rating: 4, energy: 7 };
+  assert.deepEqual(Object.keys(req).sort(), ["energy", "rating", "trackIds"]);
+  const res = { undoId: "run-1", updated: 2 };
+  assert.deepEqual(Object.keys(res).sort(), ["undoId", "updated"]);
+  const undoReq = { undoId: "run-1" };
+  assert.deepEqual(Object.keys(undoReq), ["undoId"]);
+  // `skipped` counts the tracks that were edited again after the snapshot, so
+  // the undo must not overwrite the newer edit.
+  const undoRes = { restored: 1, skipped: 2 };
+  assert.deepEqual(Object.keys(undoRes).sort(), ["restored", "skipped"]);
 });
 
 test("get artwork request uses the camelCase trackId key", () => {

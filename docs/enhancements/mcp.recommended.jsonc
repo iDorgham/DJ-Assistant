@@ -36,7 +36,9 @@
 //     disabling, which is the entire rollback story.
 //   - Write-capable MCP tools are hard-disabled in the "tools" map below, so
 //     flipping a server on cannot re-enable them.
-//   - No server in this template requires a hosted service or an API token.
+//   - No ENABLED server in this template requires a hosted service or an API
+//     token. The one hosted entry (`dj-docs`, Context7) is deferred and
+//     disabled, and it is the only entry that can use the optional token.
 //
 // LOCAL-FIRST
 //   `dj-db` points at a SNAPSHOT COPY of the app's database, never the live
@@ -103,7 +105,14 @@
       "type": "remote",
       "url": "https://mcp.context7.com/mcp",
       "enabled": false,
-      "timeout": 30000
+      "timeout": 30000,
+      // The optional Context7 key travels as the documented header. OpenCode
+      // substitutes `{env:...}` before sending it; an unset variable resolves
+      // to an empty string. Delete this block to use the server
+      // unauthenticated (lower rate limits).
+      "headers": {
+        "CONTEXT7_API_KEY": "{env:DJ_ASSISTANT_MCP_TOKEN}"
+      }
     }
   },
 

@@ -137,7 +137,8 @@ interface UpdateTrackMetadataRequest {
 
 interface UpdateTrackMetadataResponse {
   undoId: string;           // id of the skill_runs row holding the undo snapshot
-  updated: number;          // tracks actually changed
+  updated: number;          // tracks whose value actually changed (a track that
+                            // already held the value is left alone and not counted)
 }
 ```
 Validation: an empty `trackIds` is rejected (`no tracks selected`), a `rating` outside
@@ -156,7 +157,7 @@ interface SetTrackRatingRequest {
 
 interface SetTrackRatingResponse {
   undoId: string;
-  updated: number;
+  updated: number;          // tracks whose rating actually changed
 }
 ```
 
@@ -169,6 +170,8 @@ interface UndoTrackMetadataRequest {
 
 interface UndoTrackMetadataResponse {
   restored: number;         // tracks restored to their previous values
+  skipped: number;          // tracks left alone because they were edited again
+                            // after the snapshot was taken
 }
 ```
 The write and its snapshot commit in one transaction, so an applied write always has
@@ -176,6 +179,11 @@ an undo. The snapshot lives in `skill_runs` (`skill_name` = `update_track_metada
 `set_track_rating`), holds only the columns the write touched, and can be undone once —
 a second attempt fails because the row's status is no longer `success`. Unknown ids
 fail with `undo snapshot not found: <id>`.
+
+A snapshot only restores what it still describes: the current values are compared with the
+`after_state` the write recorded, and a track that was edited again since then no longer
+matches. Such a track is skipped (and counted in `skipped`) instead of being overwritten
+with the older value.
 
 `undo_skill_run` (see §2.3) stays the generic contract for skill runs; the metadata
 writes use this typed command instead.

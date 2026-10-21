@@ -104,14 +104,17 @@ export function normalizeFilters(
   const genres = normalizeStringList(filters.genre);
   if (genres.length > 0) normalized.genre = genres;
 
-  if (filters.ratingMin != null && Number.isFinite(filters.ratingMin)) {
+  // The backend reads the rating and energy bounds as integers (`i64`), so a
+  // fractional bound would fail to deserialize at the IPC boundary. Only whole
+  // numbers are forwarded.
+  if (filters.ratingMin != null && Number.isInteger(filters.ratingMin)) {
     normalized.ratingMin = filters.ratingMin;
   }
 
-  if (filters.energyMin != null && Number.isFinite(filters.energyMin)) {
+  if (filters.energyMin != null && Number.isInteger(filters.energyMin)) {
     normalized.energyMin = filters.energyMin;
   }
-  if (filters.energyMax != null && Number.isFinite(filters.energyMax)) {
+  if (filters.energyMax != null && Number.isInteger(filters.energyMax)) {
     normalized.energyMax = filters.energyMax;
   }
 

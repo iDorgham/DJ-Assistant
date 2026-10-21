@@ -100,7 +100,7 @@ time, after the audit and plan are read.
 
 | Document | Purpose |
 |----------|---------|
-| [mcb-plugin-audit.md](./enhancements/mcb-plugin-audit.md) | Audit of MCP servers ("MCBs"), OpenCode plugins and skills — current state, gaps, candidate matrix, findings |
+| [mcb-plugin-audit.md](./enhancements/mcb-plugin-audit.md) | Audit of MCP servers, OpenCode plugins and skills — current state, gaps, candidate matrix, findings |
 | [mcb-plugin-enhancement-plan.md](./enhancements/mcb-plugin-enhancement-plan.md) | Integration plan: decision table, safety model, testing, rollback, sequencing |
 | [mcp.recommended.jsonc](./enhancements/mcp.recommended.jsonc) | Commented MCP config template — copy to `opencode.json`, flip `enabled` per server |
 
