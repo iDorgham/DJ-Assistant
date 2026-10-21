@@ -19,7 +19,7 @@ flowchart TB
   subgraph Library["Library surface"]
     S1["Slice 1 — T2.1.5<br/>Column framework"]
     S2["Slice 2 — T2.1.4 + T2.1.6<br/>Rating + Energy"]
-    S3["Slice 3 — T2.1.7 + T2.1.8<br/>Tags + Key pills"]
+    S3["Slice 3 — T2.1.7 + T2.1.8 + T2.1.13<br/>Tags + Key pills + Comments"]
     S4["Slice 4 — T2.1.9<br/>Artwork + hover-play"]
     S5["Slice 5 — T2.1.10 + T2.1.12<br/>Context menu + Left-nav sources"]
     S6["Slice 6 — T2.1.11<br/>Mix Suggestions dock"]
@@ -31,7 +31,7 @@ flowchart TB
   end
 
   subgraph Hardening["Ongoing"]
-    S9["Slice 9 — Harden<br/>T2.1.1 Search · T2.1.3 Bulk<br/>a11y · perf · empty states"]
+    S9["Slice 9 — Harden<br/>T2.1.1 Search · T2.1.3 Bulk<br/>virtualization · a11y · perf · empty states"]
   end
 
   subgraph OutOfPath["Not on exit path"]
@@ -152,6 +152,7 @@ flowchart TB
     T2110[T2.1.10 Context menu]
     T2111[T2.1.11 Mix Suggestions]
     T2112[T2.1.12 Left-nav sources]
+    T2113[T2.1.13 Comments]
     T241[T2.4.1 Player modes]
     T242[T2.4.2 Dual-wave]
     T243[T2.4.3 Real audio/art]
@@ -175,6 +176,7 @@ flowchart TB
   T216 --> SL2
   T217 --> SL3
   T218 --> SL3
+  T2113 --> SL3
   T219 --> SL4
   T2110 --> SL5
   T2112 --> SL5

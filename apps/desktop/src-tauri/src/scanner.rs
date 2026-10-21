@@ -159,6 +159,8 @@ pub fn run_scan(
                 format: Some(meta.format.clone()),
                 analysis_status: "pending".to_string(),
                 user_rating: meta.rating,
+                // Energy is user-assigned (T2.1.6); a freshly scanned file has none.
+                energy: None,
                 comments: meta.comments.clone(),
                 artwork_hash: artwork_hash.clone(),
                 created_at: now.clone(),

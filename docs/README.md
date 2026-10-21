@@ -24,6 +24,7 @@ each folder below is self-contained and cross-links to its neighbours.
 | [`ADR/`](./ADR/) | Architecture Decision Records (the "why") | [ADR Index](./ADR/README.md) |
 | [`audit/`](./audit/) | Spec/function/settings audits + TA.1–TA.14 tracking | [Audit summary](./audit/AUDIT-SUMMARY.md) |
 | [`context/`](./context/) | Single-file project digest for humans + AI agents | [Project Context](./context/PROJECT_CONTEXT.md) |
+| [`enhancements/`](./enhancements/) | Optional extensions — MCP server audit, integration plan, recommended MCP config | [MCP & Plugin Enhancement Plan](./enhancements/mcb-plugin-enhancement-plan.md) |
 | [`ai/`](./ai/) | Agent skills inventory, skill routing policy, shared AI memory layers, agent communication protocol, and the agents, commands, and scripts that automate them | [Agents & Automation](./ai/AGENTS.md) · [Communication](./ai/COMMUNICATION.md) · [Memory](./ai/MEMORY.md) · [Skills](./ai/SKILLS.md) |
 | [`evidence/`](./evidence/) | Acceptance evidence (screenshots, captured runs) | [Phase 0 evidence](./engineering/PHASE0_ACCEPTANCE_EVIDENCE.md) |
 
@@ -90,6 +91,18 @@ each folder below is self-contained and cross-links to its neighbours.
 | [03-settings-audit.md](./audit/03-settings-audit.md) | Settings/config review |
 | [04-improvements.md](./audit/04-improvements.md) | Prioritized fixes (TA.1–TA.14) |
 | [05-proposed-specs-functions.md](./audit/05-proposed-specs-functions.md) | New settings S-1–S-7, functions F-1–F-10 / X-1–X-6 |
+
+## Enhancements — [`enhancements/`](./enhancements/)
+
+Optional, opt-in extensions to the agent layer. Nothing in this folder is active by
+default: the recommended MCP config ships disabled and is enabled one server at a
+time, after the audit and plan are read.
+
+| Document | Purpose |
+|----------|---------|
+| [mcb-plugin-audit.md](./enhancements/mcb-plugin-audit.md) | Audit of MCP servers ("MCBs"), OpenCode plugins and skills — current state, gaps, candidate matrix, findings |
+| [mcb-plugin-enhancement-plan.md](./enhancements/mcb-plugin-enhancement-plan.md) | Integration plan: decision table, safety model, testing, rollback, sequencing |
+| [mcp.recommended.jsonc](./enhancements/mcp.recommended.jsonc) | Commented MCP config template — copy to `opencode.json`, flip `enabled` per server |
 
 ## Diagrams — [`diagrams/`](./diagrams/)
 

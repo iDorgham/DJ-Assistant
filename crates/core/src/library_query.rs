@@ -30,6 +30,10 @@ pub struct TrackFilters {
     pub genre: Vec<String>,
     /// Inclusive minimum star rating (0–5).
     pub rating_min: Option<i64>,
+    /// Inclusive minimum energy level (1–10).
+    pub energy_min: Option<i64>,
+    /// Inclusive maximum energy level (1–10).
+    pub energy_max: Option<i64>,
 }
 
 impl TrackFilters {
@@ -38,6 +42,8 @@ impl TrackFilters {
         self.bpm_min.is_none()
             && self.bpm_max.is_none()
             && self.rating_min.is_none()
+            && self.energy_min.is_none()
+            && self.energy_max.is_none()
             && self.key_camelot.iter().all(|k| k.trim().is_empty())
             && self.analysis_status.iter().all(|s| s.trim().is_empty())
             && self.genre.iter().all(|g| g.trim().is_empty())
@@ -51,6 +57,7 @@ impl TrackFilters {
             !self.normalized_statuses().is_empty(),
             !self.normalized_genres().is_empty(),
             self.rating_min.is_some(),
+            self.energy_min.is_some() || self.energy_max.is_some(),
         ]
         .iter()
         .filter(|active| **active)
@@ -84,6 +91,18 @@ impl TrackFilters {
         if let Some(rating) = self.rating_min {
             if !(0..=5).contains(&rating) {
                 return Err(QueryError::RatingOutOfRange { value: rating });
+            }
+        }
+        // Energy is a 1-10 user scale; 0 would mean "cleared", so it is not a
+        // valid bound.
+        for energy in [self.energy_min, self.energy_max].into_iter().flatten() {
+            if !(1..=10).contains(&energy) {
+                return Err(QueryError::EnergyOutOfRange { value: energy });
+            }
+        }
+        if let (Some(min), Some(max)) = (self.energy_min, self.energy_max) {
+            if min > max {
+                return Err(QueryError::InvertedEnergyRange { min, max });
             }
         }
         Ok(())
@@ -148,7 +167,16 @@ pub struct TrackQuery {
 
 /// Sort keys accepted by [`TrackQuery`] — the contract in
 /// `packages/shared` (`ListTracksRequest.sortBy`).
-pub const SORT_KEYS: [&str; 6] = ["title", "artist", "bpm", "key", "duration", "imported_at"];
+pub const SORT_KEYS: [&str; 8] = [
+    "title",
+    "artist",
+    "bpm",
+    "key",
+    "duration",
+    "imported_at",
+    "rating",
+    "energy",
+];
 
 /// A fully rendered query: WHERE/ORDER text plus the parameters to bind.
 #[derive(Debug, Clone, PartialEq)]
@@ -217,6 +245,15 @@ impl TrackQuery {
             conditions.push(format!("user_rating >= ?{}", params.len()));
         }
 
+        if let Some(energy) = self.filters.energy_min {
+            params.push(QueryParam::Int(energy));
+            conditions.push(format!("energy >= ?{}", params.len()));
+        }
+        if let Some(energy) = self.filters.energy_max {
+            params.push(QueryParam::Int(energy));
+            conditions.push(format!("energy <= ?{}", params.len()));
+        }
+
         let where_clause = if conditions.is_empty() {
             String::new()
         } else {
@@ -272,6 +309,10 @@ impl TrackQuery {
             Some("bpm") => ("bpm", true, "ASC"),
             Some("key") => ("key_camelot", true, "ASC"),
             Some("duration") => ("duration_ms", false, "ASC"),
+            // Rating and energy are user-assigned and nullable: unrated tracks
+            // sort last in both directions, best/highest first by default.
+            Some("rating") => ("user_rating", true, "DESC"),
+            Some("energy") => ("energy", true, "DESC"),
             // `imported_at` is the default order and reads newest-first.
             _ => ("created_at", false, "DESC"),
         };
@@ -324,6 +365,8 @@ pub enum QueryError {
     NegativeBpm { field: &'static str, value: f64 },
     NonFiniteBpm { field: &'static str, value: f64 },
     RatingOutOfRange { value: i64 },
+    EnergyOutOfRange { value: i64 },
+    InvertedEnergyRange { min: i64, max: i64 },
 }
 
 impl std::fmt::Display for QueryError {
@@ -340,6 +383,15 @@ impl std::fmt::Display for QueryError {
             }
             Self::RatingOutOfRange { value } => {
                 write!(f, "ratingMin must be between 0 and 5 (got {value})")
+            }
+            Self::EnergyOutOfRange { value } => {
+                write!(
+                    f,
+                    "energyMin/energyMax must be between 1 and 10 (got {value})"
+                )
+            }
+            Self::InvertedEnergyRange { min, max } => {
+                write!(f, "energyMin ({min}) must not exceed energyMax ({max})")
             }
         }
     }
@@ -505,6 +557,11 @@ mod tests {
             ),
             ("duration", " ORDER BY duration_ms ASC, id ASC"),
             ("imported_at", " ORDER BY created_at DESC, id ASC"),
+            (
+                "rating",
+                " ORDER BY user_rating IS NULL, user_rating DESC, id ASC",
+            ),
+            ("energy", " ORDER BY energy IS NULL, energy DESC, id ASC"),
         ];
         for (sort_by, expected) in cases {
             let built = build(TrackQuery {
@@ -714,7 +771,9 @@ mod tests {
                 "keyCamelot": ["8A"],
                 "analysisStatus": ["complete"],
                 "genre": ["House"],
-                "ratingMin": 3
+                "ratingMin": 3,
+                "energyMin": 2,
+                "energyMax": 8
             },
             "sortBy": "bpm",
             "sortDir": "desc"
@@ -723,6 +782,8 @@ mod tests {
         assert_eq!(query.query.as_deref(), Some(" deep "));
         assert_eq!(query.filters.bpm_min, Some(120.0));
         assert_eq!(query.filters.rating_min, Some(3));
+        assert_eq!(query.filters.energy_min, Some(2));
+        assert_eq!(query.filters.energy_max, Some(8));
         assert_eq!(query.sort_by.as_deref(), Some("bpm"));
         let built = query.build(COLUMNS, 200, 0).expect("must build");
         assert!(built.select_sql.contains("bpm IS NULL, bpm DESC"));
@@ -733,5 +794,172 @@ mod tests {
         let query: TrackQuery = serde_json::from_str("{}").expect("empty request must parse");
         assert_eq!(query, TrackQuery::default());
         assert!(query.filters.is_empty());
+    }
+
+    #[test]
+    fn energy_min_only_binds_one_parameter() {
+        let built = build(TrackQuery {
+            filters: TrackFilters {
+                energy_min: Some(3),
+                ..Default::default()
+            },
+            ..Default::default()
+        });
+        assert_eq!(
+            built.count_sql,
+            "SELECT COUNT(*) FROM tracks WHERE energy >= ?1"
+        );
+        assert_eq!(
+            built.params,
+            vec![QueryParam::Int(3), QueryParam::Int(50), QueryParam::Int(0)]
+        );
+    }
+
+    #[test]
+    fn energy_max_only_binds_one_parameter() {
+        let built = build(TrackQuery {
+            filters: TrackFilters {
+                energy_max: Some(8),
+                ..Default::default()
+            },
+            ..Default::default()
+        });
+        assert_eq!(
+            built.count_sql,
+            "SELECT COUNT(*) FROM tracks WHERE energy <= ?1"
+        );
+        assert_eq!(
+            built.params,
+            vec![QueryParam::Int(8), QueryParam::Int(50), QueryParam::Int(0)]
+        );
+    }
+
+    #[test]
+    fn energy_range_binds_two_parameters() {
+        let built = build(TrackQuery {
+            filters: TrackFilters {
+                energy_min: Some(3),
+                energy_max: Some(7),
+                ..Default::default()
+            },
+            ..Default::default()
+        });
+        assert_eq!(
+            built.count_sql,
+            "SELECT COUNT(*) FROM tracks WHERE energy >= ?1 AND energy <= ?2"
+        );
+        assert_eq!(
+            built.params,
+            vec![
+                QueryParam::Int(3),
+                QueryParam::Int(7),
+                QueryParam::Int(50),
+                QueryParam::Int(0)
+            ]
+        );
+    }
+
+    #[test]
+    fn energy_bounds_follow_the_rating_floor_in_parameter_order() {
+        // The rating floor binds before the energy bounds: the front end and
+        // the schema contract test mirror this exact order.
+        let built = build(TrackQuery {
+            filters: TrackFilters {
+                rating_min: Some(3),
+                energy_min: Some(2),
+                energy_max: Some(8),
+                ..Default::default()
+            },
+            ..Default::default()
+        });
+        assert_eq!(
+            built.count_sql,
+            "SELECT COUNT(*) FROM tracks WHERE user_rating >= ?1 AND energy >= ?2 AND energy <= ?3"
+        );
+        assert_eq!(
+            built.params,
+            vec![
+                QueryParam::Int(3),
+                QueryParam::Int(2),
+                QueryParam::Int(8),
+                QueryParam::Int(50),
+                QueryParam::Int(0)
+            ]
+        );
+    }
+
+    #[test]
+    fn validate_rejects_out_of_range_energy() {
+        let too_low = TrackQuery {
+            filters: TrackFilters {
+                energy_min: Some(0),
+                ..Default::default()
+            },
+            ..Default::default()
+        };
+        assert_eq!(
+            too_low.build(COLUMNS, 10, 0).unwrap_err(),
+            QueryError::EnergyOutOfRange { value: 0 }
+        );
+
+        let too_high = TrackQuery {
+            filters: TrackFilters {
+                energy_max: Some(11),
+                ..Default::default()
+            },
+            ..Default::default()
+        };
+        assert_eq!(
+            too_high.build(COLUMNS, 10, 0).unwrap_err(),
+            QueryError::EnergyOutOfRange { value: 11 }
+        );
+    }
+
+    #[test]
+    fn validate_rejects_an_inverted_energy_range() {
+        let inverted = TrackQuery {
+            filters: TrackFilters {
+                energy_min: Some(8),
+                energy_max: Some(3),
+                ..Default::default()
+            },
+            ..Default::default()
+        };
+        assert_eq!(
+            inverted.build(COLUMNS, 10, 0).unwrap_err(),
+            QueryError::InvertedEnergyRange { min: 8, max: 3 }
+        );
+    }
+
+    #[test]
+    fn rating_and_energy_sort_direction_can_be_overridden() {
+        let rating_ascending = build(TrackQuery {
+            sort_by: Some("rating".into()),
+            sort_dir: Some("asc".into()),
+            ..Default::default()
+        });
+        assert!(rating_ascending
+            .select_sql
+            .contains("ORDER BY user_rating IS NULL, user_rating ASC, id ASC"));
+
+        let energy_ascending = build(TrackQuery {
+            sort_by: Some("energy".into()),
+            sort_dir: Some("asc".into()),
+            ..Default::default()
+        });
+        assert!(energy_ascending
+            .select_sql
+            .contains("ORDER BY energy IS NULL, energy ASC, id ASC"));
+    }
+
+    #[test]
+    fn energy_bounds_count_as_one_filter_group() {
+        let mut filters = TrackFilters::default();
+        assert!(filters.is_empty());
+        filters.energy_min = Some(2);
+        assert!(!filters.is_empty(), "an energy bound narrows the query");
+        assert_eq!(filters.active_count(), 1);
+        filters.energy_max = Some(8);
+        assert_eq!(filters.active_count(), 1, "both bounds are one group");
     }
 }

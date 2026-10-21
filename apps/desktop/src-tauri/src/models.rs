@@ -19,6 +19,7 @@ pub struct TrackSummary {
     pub format: Option<String>,
     pub analysis_status: String,
     pub user_rating: Option<i64>,
+    pub energy: Option<i64>,
     pub comments: Option<String>,
     pub artwork_hash: Option<String>,
     pub created_at: String,
@@ -98,8 +99,9 @@ pub struct ScanCompletedEvent {
 pub struct ListTracksRequest {
     pub workspace_id: Option<String>,
     pub query: Option<String>,
-    /// Structured narrowing (BPM range, keys, statuses, genres, rating).
-    /// `None` and an all-empty filter set are equivalent (no narrowing).
+    /// Structured narrowing (BPM range, keys, statuses, genres, rating,
+    /// energy). `None` and an all-empty filter set are equivalent (no
+    /// narrowing).
     #[serde(default)]
     pub filters: Option<TrackFilters>,
     pub limit: Option<i64>,
@@ -551,4 +553,58 @@ pub struct ChartListResponse {
     pub snapshot_date: String,
     pub entries: Vec<ChartEntry>,
     pub total: usize,
+}
+
+// --- Track metadata write path: rating + energy (T2.1.4 / T2.1.6) ---
+
+/// Patch applied to one or more tracks. An absent field is left untouched;
+/// `0` clears the value (the column is stored as NULL).
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct UpdateTrackMetadataRequest {
+    /// Tracks to patch. Unknown ids are ignored.
+    pub track_ids: Vec<String>,
+    /// Star rating 0–5. `0` clears the rating.
+    pub rating: Option<i64>,
+    /// Energy level 1–10. `0` clears the energy (0 is outside the valid range).
+    pub energy: Option<i64>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct UpdateTrackMetadataResponse {
+    /// Id of the `skill_runs` row holding the undo snapshot.
+    pub undo_id: String,
+    /// Number of tracks actually changed.
+    pub updated: usize,
+}
+
+/// Rating-only variant of [`UpdateTrackMetadataRequest`].
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SetTrackRatingRequest {
+    pub track_ids: Vec<String>,
+    /// Star rating 0–5. `0` clears the rating.
+    pub rating: i64,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SetTrackRatingResponse {
+    pub undo_id: String,
+    pub updated: usize,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct UndoTrackMetadataRequest {
+    /// The `undoId` returned by the write command.
+    pub undo_id: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct UndoTrackMetadataResponse {
+    /// Number of tracks restored to their previous values.
+    pub restored: usize,
 }

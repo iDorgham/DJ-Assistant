@@ -5,11 +5,14 @@ import type { TrackSummary } from "@dj-assistant/shared";
 
 import {
   activeFilterCount,
+  clampEnergy,
+  clampRating,
   defaultSortDirection,
   describeFilters,
   filterTracks,
   formatBpm,
   formatDuration,
+  formatEnergy,
   formatKey,
   formatRating,
   hasFilterValue,
@@ -17,6 +20,7 @@ import {
   normalizeFilters,
   scanPercent,
   shortHash,
+  SORT_OPTIONS,
   toggleFilterValue,
   truncateComment,
 } from "./library.ts";
@@ -37,6 +41,7 @@ function track(over: Partial<TrackSummary> = {}): TrackSummary {
     format: "mp3",
     analysisStatus: "pending",
     userRating: null,
+    energy: null,
     comments: null,
     artworkHash: null,
     createdAt: "2026-01-01T00:00:00Z",
@@ -99,6 +104,31 @@ test("formatRating renders five stars with the filled ones first", () => {
   assert.equal(formatRating(6), "★★★★★", "clamps above the scale");
   assert.equal(formatRating(null), "—");
   assert.equal(formatRating(undefined), "—");
+});
+
+test("formatEnergy renders the level, or an em dash when none is set", () => {
+  assert.equal(formatEnergy(1), "1");
+  assert.equal(formatEnergy(10), "10");
+  assert.equal(formatEnergy(6), "6");
+  assert.equal(formatEnergy(null), "—");
+  assert.equal(formatEnergy(undefined), "—");
+  assert.equal(formatEnergy(0), "—", "0 is outside the 1-10 scale");
+  assert.equal(formatEnergy(11), "10", "clamps above the scale");
+});
+
+test("clampEnergy and clampRating keep values inside their scale", () => {
+  assert.equal(clampEnergy(5), 5);
+  assert.equal(clampEnergy(0), 0, "0 means 'no energy set'");
+  assert.equal(clampEnergy(11), 10);
+  assert.equal(clampEnergy(-2), 0);
+  assert.equal(clampEnergy(Number.NaN), 0);
+  assert.equal(clampEnergy(4.4), 4);
+
+  assert.equal(clampRating(3), 3);
+  assert.equal(clampRating(0), 0, "0 means 'no rating set'");
+  assert.equal(clampRating(6), 5);
+  assert.equal(clampRating(-1), 0);
+  assert.equal(clampRating(Number.NaN), 0);
 });
 
 test("truncateComment collapses whitespace and ellipsizes long comments", () => {
@@ -185,6 +215,16 @@ test("activeFilterCount counts groups, not individual values", () => {
   assert.equal(activeFilterCount({ keyCamelot: ["8A", "9A"] }), 1);
   assert.equal(activeFilterCount({ keyCamelot: ["8A"], genre: ["Techno"], ratingMin: 0 }), 3);
   assert.equal(activeFilterCount({ bpmMin: 120, bpmMax: 130 }), 1, "range is one group");
+  assert.equal(
+    activeFilterCount({ energyMin: 3, energyMax: 8 }),
+    1,
+    "the energy range is one group (matches the Rust counter)"
+  );
+  assert.equal(
+    activeFilterCount({ ratingMin: 4, energyMin: 3 }),
+    2,
+    "rating and energy are separate groups"
+  );
 });
 
 test("describeFilters summarizes active filters for the toolbar", () => {
@@ -199,6 +239,9 @@ test("describeFilters summarizes active filters for the toolbar", () => {
   ]);
   assert.deepEqual(describeFilters({ genre: ["Techno"] }), ["Genre Techno"]);
   assert.deepEqual(describeFilters({ ratingMin: 4 }), ["Rating ≥ 4★"]);
+  assert.deepEqual(describeFilters({ energyMin: 3, energyMax: 8 }), ["Energy 3–8"]);
+  assert.deepEqual(describeFilters({ energyMin: 3 }), ["Energy ≥ 3"]);
+  assert.deepEqual(describeFilters({ energyMax: 8 }), ["Energy ≤ 8"]);
 });
 
 test("toggleFilterValue adds and removes case-insensitively", () => {
@@ -219,4 +262,28 @@ test("defaultSortDirection puts newest imports first and everything else A-Z", (
   for (const key of ["title", "artist", "bpm", "key", "duration"] as const) {
     assert.equal(defaultSortDirection(key), "asc");
   }
+});
+
+test("defaultSortDirection reads rating and energy best-first", () => {
+  assert.equal(defaultSortDirection("rating"), "desc");
+  assert.equal(defaultSortDirection("energy"), "desc");
+});
+
+test("normalizeFilters keeps the energy bounds", () => {
+  assert.deepEqual(normalizeFilters({ energyMin: 3, energyMax: 8 }), {
+    energyMin: 3,
+    energyMax: 8,
+  });
+  assert.deepEqual(
+    normalizeFilters({ energyMin: Number.NaN, energyMax: 8 }),
+    { energyMax: 8 },
+    "a non-finite bound is not an active filter"
+  );
+});
+
+test("SORT_OPTIONS offers rating and energy next to the other sort keys", () => {
+  const values = SORT_OPTIONS.map((option) => option.value);
+  assert.ok(values.includes("rating"));
+  assert.ok(values.includes("energy"));
+  assert.equal(new Set(values).size, values.length, "every sort key is offered exactly once");
 });

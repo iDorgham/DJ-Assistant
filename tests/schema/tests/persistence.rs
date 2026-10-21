@@ -24,13 +24,13 @@ use dj_assistant_schema_tests::open_migrated_at;
 /// tiebreaker and LIMIT/OFFSET bound as parameters.
 const LIST_TRACKS_SQL: &str =
     "SELECT id, file_path, file_hash, title, artist, album, genre, bpm, key_camelot, key_classical, \
-     duration_ms, format, analysis_status, user_rating, comments, artwork_hash, created_at, updated_at \
+     duration_ms, format, analysis_status, user_rating, energy, comments, artwork_hash, created_at, updated_at \
      FROM tracks ORDER BY created_at DESC, id ASC LIMIT ?1 OFFSET ?2";
 
 /// Mirrors the search SELECT (four repeated `?1` binds plus `ESCAPE` so `%`/`_`
 /// in the search box match literally).
 const SEARCH_TRACKS_SQL: &str = "SELECT id, file_path, file_hash, title, artist, album, genre, bpm, key_camelot, key_classical, \
-     duration_ms, format, analysis_status, user_rating, comments, artwork_hash, created_at, updated_at \
+     duration_ms, format, analysis_status, user_rating, energy, comments, artwork_hash, created_at, updated_at \
      FROM tracks \
      WHERE (LOWER(title) LIKE ?1 ESCAPE '\\' \
         OR LOWER(artist) LIKE ?1 ESCAPE '\\' \
@@ -48,14 +48,16 @@ const COUNT_SEARCH_SQL: &str = "SELECT COUNT(*) FROM tracks \
 
 /// Mirrors the builder's filtered SELECT for
 /// `{bpmMin: 120, bpmMax: 130, keyCamelot: ["8a"], analysisStatus: ["complete"],
-/// genre: ["techno"], ratingMin: 3, sortBy: "bpm", sortDir: "asc"}`.
+/// genre: ["techno"], ratingMin: 3, energyMin: 4, energyMax: 6, sortBy: "bpm",
+/// sortDir: "asc"}`.
 const FILTER_TRACKS_SQL: &str = "SELECT id, title FROM tracks \
      WHERE bpm >= ?1 AND bpm <= ?2 \
        AND UPPER(key_camelot) IN (?3) \
        AND LOWER(analysis_status) IN (?4) \
        AND LOWER(TRIM(genre)) IN (?5) \
        AND user_rating >= ?6 \
-     ORDER BY bpm IS NULL, bpm ASC, id ASC LIMIT ?7 OFFSET ?8";
+       AND energy >= ?7 AND energy <= ?8 \
+     ORDER BY bpm IS NULL, bpm ASC, id ASC LIMIT ?9 OFFSET ?10";
 
 /// Count half of the same filtered query (no LIMIT/OFFSET placeholders).
 const COUNT_FILTER_SQL: &str = "SELECT COUNT(*) FROM tracks \
@@ -63,12 +65,30 @@ const COUNT_FILTER_SQL: &str = "SELECT COUNT(*) FROM tracks \
        AND UPPER(key_camelot) IN (?3) \
        AND LOWER(analysis_status) IN (?4) \
        AND LOWER(TRIM(genre)) IN (?5) \
-       AND user_rating >= ?6";
+       AND user_rating >= ?6 \
+       AND energy >= ?7 AND energy <= ?8";
 
 /// Mirrors the builder's `{sortBy: "bpm", sortDir: "asc"}` SELECT: unknown BPMs
 /// sort last in both directions.
 const SORT_BPM_SQL: &str = "SELECT id, title FROM tracks \
      ORDER BY bpm IS NULL, bpm ASC, id ASC LIMIT ?1 OFFSET ?2";
+
+/// Mirrors the builder's filtered SELECT for
+/// `{ratingMin: 4, energyMin: 5, energyMax: 7, sortBy: "energy", sortDir: "asc"}`.
+const ENERGY_RATED_SQL: &str = "SELECT id FROM tracks \
+     WHERE user_rating >= ?1 \
+       AND energy >= ?2 AND energy <= ?3 \
+     ORDER BY energy IS NULL, energy ASC, id ASC LIMIT ?4 OFFSET ?5";
+
+/// Count half of the energy/rating filtered query (no LIMIT/OFFSET placeholders).
+const COUNT_ENERGY_RATED_SQL: &str = "SELECT COUNT(*) FROM tracks \
+     WHERE user_rating >= ?1 \
+       AND energy >= ?2 AND energy <= ?3";
+
+/// Mirrors the builder for `{sortBy: "energy", sortDir: "desc"}`: the
+/// highest energy first, unrated tracks last.
+const SORT_ENERGY_DESC_SQL: &str = "SELECT id FROM tracks \
+     ORDER BY energy IS NULL, energy DESC, id ASC LIMIT ?1 OFFSET ?2";
 
 /// Escapes `LIKE` wildcards the way the query builder does, so a search for a
 /// literal `%`, `_` or `\` behaves the same here as in the app.
@@ -81,7 +101,7 @@ fn like_pattern(term: &str) -> String {
     format!("%{escaped}%")
 }
 
-/// The 18 columns `map_track_summary` reads, in order.
+/// The 19 columns `map_track_summary` reads, in order.
 #[derive(Debug, PartialEq)]
 struct TrackRow {
     id: String,
@@ -98,6 +118,7 @@ struct TrackRow {
     format: Option<String>,
     analysis_status: String,
     user_rating: Option<i64>,
+    energy: Option<i64>,
     comments: Option<String>,
     artwork_hash: Option<String>,
     created_at: String,
@@ -120,10 +141,11 @@ fn map_row(row: &rusqlite::Row) -> rusqlite::Result<TrackRow> {
         format: row.get(11)?,
         analysis_status: row.get(12)?,
         user_rating: row.get(13)?,
-        comments: row.get(14)?,
-        artwork_hash: row.get(15)?,
-        created_at: row.get(16)?,
-        updated_at: row.get(17)?,
+        energy: row.get(14)?,
+        comments: row.get(15)?,
+        artwork_hash: row.get(16)?,
+        created_at: row.get(17)?,
+        updated_at: row.get(18)?,
     })
 }
 
@@ -602,14 +624,15 @@ fn insert_filterable_track(
     key_camelot: Option<&str>,
     analysis_status: &str,
     user_rating: Option<i64>,
+    energy: Option<i64>,
 ) {
     conn.execute(
         "INSERT INTO tracks (
             id, workspace_id, file_path, file_hash, file_size, duration_ms, format,
             title, artist, album, genre, year, bpm, key_camelot, key_classical,
-            analysis_status, user_rating, created_at, updated_at
+            analysis_status, user_rating, energy, created_at, updated_at
         ) VALUES (?1, 'default', ?2, ?3, 1024, 180000, 'flac', ?1, 'Artist', NULL, ?4, 2024,
-                  ?5, ?6, NULL, ?7, ?8, '2026-01-01T00:00:00Z', '2026-01-01T00:00:00Z')",
+                  ?5, ?6, NULL, ?7, ?8, ?9, '2026-01-01T00:00:00Z', '2026-01-01T00:00:00Z')",
         params![
             id,
             format!("D:\\Music\\{id}.flac"),
@@ -619,20 +642,21 @@ fn insert_filterable_track(
             key_camelot,
             analysis_status,
             user_rating,
+            energy,
         ],
     )
     .expect("filterable track insert must succeed");
 }
 
 #[test]
-fn filtered_list_query_narrows_on_bpm_key_status_genre_and_rating() {
+fn filtered_list_query_narrows_on_bpm_key_status_genre_rating_and_energy() {
     // T2.1.2: the library filter panel. This mirrors the exact SQL emitted by
     // `crates/core/src/library_query.rs` for the representative filter set on
     // FILTER_TRACKS_SQL, so a schema/query drift fails here.
     let db_path = temp_db("filters.db");
     let conn = open_migrated_at(&db_path);
 
-    //                      id    genre     bpm    key     status       rating
+    //                      id    genre     bpm    key     status       rating  energy
     insert_filterable_track(
         &conn,
         "t1",
@@ -641,6 +665,7 @@ fn filtered_list_query_narrows_on_bpm_key_status_genre_and_rating() {
         Some("8A"),
         "complete",
         Some(4),
+        Some(5),
     ); // match
     insert_filterable_track(
         &conn,
@@ -650,6 +675,7 @@ fn filtered_list_query_narrows_on_bpm_key_status_genre_and_rating() {
         Some("8A"),
         "complete",
         Some(4),
+        Some(5),
     ); // bpm high
     insert_filterable_track(
         &conn,
@@ -659,6 +685,7 @@ fn filtered_list_query_narrows_on_bpm_key_status_genre_and_rating() {
         Some("8A"),
         "complete",
         Some(4),
+        Some(5),
     ); // genre
     insert_filterable_track(
         &conn,
@@ -668,6 +695,7 @@ fn filtered_list_query_narrows_on_bpm_key_status_genre_and_rating() {
         Some("8A"),
         "pending",
         Some(4),
+        Some(5),
     ); // status
     insert_filterable_track(
         &conn,
@@ -677,6 +705,7 @@ fn filtered_list_query_narrows_on_bpm_key_status_genre_and_rating() {
         Some("9A"),
         "complete",
         Some(4),
+        Some(5),
     ); // key
     insert_filterable_track(
         &conn,
@@ -686,6 +715,7 @@ fn filtered_list_query_narrows_on_bpm_key_status_genre_and_rating() {
         Some("8A"),
         "complete",
         Some(1),
+        Some(5),
     ); // rating
     insert_filterable_track(
         &conn,
@@ -695,14 +725,34 @@ fn filtered_list_query_narrows_on_bpm_key_status_genre_and_rating() {
         Some("8A"),
         "complete",
         Some(3),
+        Some(5),
     ); // match (bounds)
-    insert_filterable_track(&conn, "t8", "Techno", None, Some("8A"), "complete", Some(3)); // no bpm
+    insert_filterable_track(
+        &conn,
+        "t8",
+        "Techno",
+        None,
+        Some("8A"),
+        "complete",
+        Some(3),
+        Some(5),
+    ); // no bpm
+    insert_filterable_track(
+        &conn,
+        "t9",
+        "Techno",
+        Some(124.0),
+        Some("8A"),
+        "complete",
+        Some(4),
+        Some(9),
+    ); // energy out of range
 
     let ids: Vec<String> = conn
         .prepare(FILTER_TRACKS_SQL)
         .unwrap()
         .query_map(
-            params![120.0f64, 130.0f64, "8A", "complete", "techno", 3i64, 200i64, 0i64],
+            params![120.0f64, 130.0f64, "8A", "complete", "techno", 3i64, 4i64, 6i64, 200i64, 0i64],
             |r| r.get(0),
         )
         .unwrap()
@@ -717,7 +767,7 @@ fn filtered_list_query_narrows_on_bpm_key_status_genre_and_rating() {
     let total: i64 = conn
         .query_row(
             COUNT_FILTER_SQL,
-            params![120.0f64, 130.0f64, "8A", "complete", "techno", 3i64],
+            params![120.0f64, 130.0f64, "8A", "complete", "techno", 3i64, 4i64, 6i64],
             |r| r.get(0),
         )
         .unwrap();
@@ -756,6 +806,7 @@ fn filtered_query_survives_case_variant_tags() {
         Some("8A"),
         "COMPLETE",
         Some(5),
+        Some(5),
     );
     insert_filterable_track(
         &conn,
@@ -765,19 +816,237 @@ fn filtered_query_survives_case_variant_tags() {
         Some("8a"),
         "complete",
         Some(3),
+        Some(5),
     );
 
     let ids: Vec<String> = conn
         .prepare(FILTER_TRACKS_SQL)
         .unwrap()
         .query_map(
-            params![120.0f64, 130.0f64, "8A", "complete", "techno", 3i64, 200i64, 0i64],
+            params![120.0f64, 130.0f64, "8A", "complete", "techno", 3i64, 4i64, 6i64, 200i64, 0i64],
             |r| r.get(0),
         )
         .unwrap()
         .map(Result::unwrap)
         .collect();
     assert_eq!(ids, vec!["b".to_string(), "a".to_string()]);
+
+    let _ = std::fs::remove_file(&db_path);
+}
+
+#[test]
+fn migrated_schema_has_an_energy_column() {
+    // T2.1.6: migration 006 adds the user-assigned energy level. The column
+    // must be a nullable INTEGER: an unrated track stores NULL, and the energy
+    // filter depends on that (a NULL never matches a bounded range).
+    let db_path = temp_db("energy-column.db");
+    let conn = open_migrated_at(&db_path);
+
+    let mut stmt = conn
+        .prepare("SELECT type, \"notnull\" FROM pragma_table_info('tracks') WHERE name = 'energy'")
+        .expect("pragma_table_info must be queryable");
+    let mut rows = stmt.query([]).expect("the tracks columns must be readable");
+    let column = rows
+        .next()
+        .expect("tracks.energy must exist after migration 006")
+        .expect("the pragma row must be readable");
+    let column_type: String = column.get(0).expect("the column type must be readable");
+    let not_null: i64 = column.get(1).expect("the notnull flag must be readable");
+    assert_eq!(column_type, "INTEGER", "energy is stored as a whole number");
+    assert_eq!(not_null, 0, "energy must stay nullable for unrated tracks");
+    drop(rows);
+    drop(stmt);
+
+    let versions: i64 = conn
+        .query_row(
+            "SELECT COUNT(*) FROM schema_migrations WHERE version = 6",
+            [],
+            |r| r.get(0),
+        )
+        .expect("schema_migrations must be queryable");
+    assert_eq!(versions, 1, "migration 006 must be recorded exactly once");
+
+    let _ = std::fs::remove_file(&db_path);
+}
+
+#[test]
+fn filtered_query_narrows_on_the_energy_range_and_the_rating_floor() {
+    // T2.1.6: the energy filter is a bounded range over a nullable column and
+    // it sits next to the rating floor. This mirrors the SQL emitted by
+    // `crates/core/src/library_query.rs` for
+    // `{ratingMin: 4, energyMin: 5, energyMax: 7, sortBy: "energy", sortDir: "asc"}`.
+    let db_path = temp_db("energy-filter.db");
+    let conn = open_migrated_at(&db_path);
+
+    let seed = |id: &str, rating: Option<i64>, energy: Option<i64>| {
+        insert_filterable_track(
+            &conn,
+            id,
+            "House",
+            Some(120.0),
+            Some("8A"),
+            "complete",
+            rating,
+            energy,
+        );
+    };
+
+    seed("e1", Some(4), Some(5)); // match
+    seed("e2", Some(4), Some(7)); // match (upper bound)
+    seed("e3", Some(4), Some(4)); // energy below the range
+    seed("e4", Some(4), Some(8)); // energy above the range
+    seed("e5", Some(3), Some(6)); // below the rating floor
+    seed("e6", Some(4), None); // energy never set
+    seed("e7", None, Some(6)); // rating never set
+
+    let ids: Vec<String> = conn
+        .prepare(ENERGY_RATED_SQL)
+        .unwrap()
+        .query_map(params![4i64, 5i64, 7i64, 200i64, 0i64], |r| r.get(0))
+        .unwrap()
+        .map(Result::unwrap)
+        .collect();
+    assert_eq!(
+        ids,
+        vec!["e1".to_string(), "e2".to_string()],
+        "only tracks inside the energy range and above the rating floor survive"
+    );
+    assert!(
+        !ids.iter().any(|id| id == "e6"),
+        "a NULL energy must never match a bounded energy filter"
+    );
+    assert!(
+        !ids.iter().any(|id| id == "e7"),
+        "a NULL rating must never match a rating floor"
+    );
+
+    let total: i64 = conn
+        .query_row(COUNT_ENERGY_RATED_SQL, params![4i64, 5i64, 7i64], |r| {
+            r.get(0)
+        })
+        .unwrap();
+    assert_eq!(total as usize, ids.len(), "count/rows must agree");
+
+    // Sorting by energy descending: the highest energy first, unrated tracks last.
+    let sorted: Vec<String> = conn
+        .prepare(SORT_ENERGY_DESC_SQL)
+        .unwrap()
+        .query_map(params![200i64, 0i64], |r| r.get(0))
+        .unwrap()
+        .map(Result::unwrap)
+        .collect();
+    assert_eq!(
+        sorted,
+        vec![
+            "e4".to_string(),
+            "e2".to_string(),
+            "e5".to_string(),
+            "e7".to_string(),
+            "e1".to_string(),
+            "e3".to_string(),
+            "e6".to_string(),
+        ],
+        "energy sorts high to low and a NULL energy sorts last"
+    );
+
+    let _ = std::fs::remove_file(&db_path);
+}
+#[test]
+fn rating_and_energy_writes_are_reversible() {
+    // T2.1.4 / T2.1.6: the write path snapshots the rating/energy it replaced
+    // in a `skill_runs` row and the undo command restores them. This mirrors
+    // the exact SQL of `commands.rs::apply_metadata_patch` and
+    // `commands.rs::undo_track_metadata`.
+    let db_path = temp_db("undo-metadata.db");
+    let conn = open_migrated_at(&db_path);
+
+    insert_filterable_track(
+        &conn,
+        "w1",
+        "House",
+        Some(120.0),
+        Some("8A"),
+        "complete",
+        Some(3),
+        None,
+    );
+
+    // --- The write: rating 4, energy 7. ---
+    conn.execute(
+        "UPDATE tracks SET user_rating = ?2, energy = ?3, updated_at = datetime('now') WHERE id = ?1",
+        params!["w1", 4i64, 7i64],
+    )
+    .expect("the rating/energy write must succeed");
+
+    let (rating, energy): (Option<i64>, Option<i64>) = conn
+        .query_row(
+            "SELECT user_rating, energy FROM tracks WHERE id = 'w1'",
+            [],
+            |r| Ok((r.get(0)?, r.get(1)?)),
+        )
+        .expect("the written values must be readable");
+    assert_eq!(rating, Some(4), "the rating must be written");
+    assert_eq!(energy, Some(7), "the energy must be written");
+
+    // --- The undo snapshot: the values the write replaced. ---
+    let undo_id = "11111111-2222-3333-4444-555555555555";
+    conn.execute(
+        "INSERT INTO skill_runs (
+            id, workspace_id, skill_name, status, input_summary, before_state, after_state,
+            error, created_at
+        ) VALUES (?1, 'default', 'update_track_metadata', 'success', ?2, ?3, ?4, NULL, datetime('now'))",
+        params![
+            undo_id,
+            r#"{"trackIds":["w1"],"rating":4,"energy":7}"#,
+            r#"{"w1":{"user_rating":3,"energy":null}}"#,
+            r#"{"w1":{"user_rating":4,"energy":7}}"#,
+        ],
+    )
+    .expect("the undo snapshot must be insertable");
+
+    let (status, before_state): (String, String) = conn
+        .query_row(
+            "SELECT status, before_state FROM skill_runs WHERE id = ?1",
+            params![undo_id],
+            |r| Ok((r.get(0)?, r.get(1)?)),
+        )
+        .expect("the snapshot must be readable");
+    assert_eq!(status, "success");
+    assert_eq!(
+        before_state, r#"{"w1":{"user_rating":3,"energy":null}}"#,
+        "the snapshot holds the previous values, not the new ones"
+    );
+
+    // --- The undo: restore the snapshot and mark it undone. ---
+    conn.execute(
+        "UPDATE tracks SET user_rating = ?2, energy = ?3, updated_at = datetime('now') WHERE id = ?1",
+        params!["w1", 3i64, None::<i64>],
+    )
+    .expect("the undo restore must succeed");
+    conn.execute(
+        "UPDATE skill_runs SET status = 'undone' WHERE id = ?1",
+        params![undo_id],
+    )
+    .expect("the snapshot must be marked undone");
+
+    let (rating, energy): (Option<i64>, Option<i64>) = conn
+        .query_row(
+            "SELECT user_rating, energy FROM tracks WHERE id = 'w1'",
+            [],
+            |r| Ok((r.get(0)?, r.get(1)?)),
+        )
+        .expect("the restored values must be readable");
+    assert_eq!(rating, Some(3), "the previous rating must come back");
+    assert_eq!(energy, None, "a NULL energy must be restored as NULL");
+
+    let status: String = conn
+        .query_row(
+            "SELECT status FROM skill_runs WHERE id = ?1",
+            params![undo_id],
+            |r| r.get(0),
+        )
+        .expect("the snapshot status must be readable");
+    assert_eq!(status, "undone", "a snapshot is only undoable once");
 
     let _ = std::fs::remove_file(&db_path);
 }

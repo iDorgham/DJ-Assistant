@@ -57,6 +57,8 @@ export const SORT_OPTIONS: Array<{ value: ListTracksSortBy; label: string }> = [
   { value: "key", label: "Key" },
   { value: "duration", label: "Duration" },
   { value: "imported_at", label: "Imported" },
+  { value: "rating", label: "Rating" },
+  { value: "energy", label: "Energy" },
 ];
 
 /** Trims, drops blanks and de-duplicates case-insensitively, keeping first casing. */
@@ -106,6 +108,13 @@ export function normalizeFilters(
     normalized.ratingMin = filters.ratingMin;
   }
 
+  if (filters.energyMin != null && Number.isFinite(filters.energyMin)) {
+    normalized.energyMin = filters.energyMin;
+  }
+  if (filters.energyMax != null && Number.isFinite(filters.energyMax)) {
+    normalized.energyMax = filters.energyMax;
+  }
+
   return Object.keys(normalized).length > 0 ? normalized : undefined;
 }
 
@@ -118,6 +127,7 @@ export function activeFilterCount(filters: ListTracksFilters | undefined): numbe
     normalizeStringList(filters.analysisStatus).length > 0,
     normalizeStringList(filters.genre).length > 0,
     filters.ratingMin != null,
+    filters.energyMin != null || filters.energyMax != null,
   ].filter(Boolean).length;
 }
 
@@ -151,6 +161,15 @@ export function describeFilters(filters: ListTracksFilters | undefined): string[
 
   if (filters.ratingMin != null) parts.push(`Rating ≥ ${filters.ratingMin}★`);
 
+  const { energyMin, energyMax } = filters;
+  if (energyMin != null && energyMax != null) {
+    parts.push(`Energy ${energyMin}–${energyMax}`);
+  } else if (energyMin != null) {
+    parts.push(`Energy ≥ ${energyMin}`);
+  } else if (energyMax != null) {
+    parts.push(`Energy ≤ ${energyMax}`);
+  }
+
   return parts;
 }
 
@@ -166,9 +185,16 @@ export function hasFilterValue(values: string[] | undefined, value: string): boo
   return normalizeStringList(values).some((entry) => entry.toLowerCase() === value.toLowerCase());
 }
 
-/** Default direction for a freshly selected sort column. */
+/**
+ * Default direction for a freshly selected sort column.
+ *
+ * Rating and energy read best-first (the highest value on top); every other
+ * key starts ascending, except the newest-first import order.
+ */
 export function defaultSortDirection(sortBy: ListTracksSortBy): SortDirection {
-  return sortBy === "imported_at" ? "desc" : "asc";
+  if (sortBy === "imported_at") return "desc";
+  if (sortBy === "rating" || sortBy === "energy") return "desc";
+  return "asc";
 }
 
 /** Formats a millisecond duration as `m:ss`, or `--:--` when unknown/invalid. */
@@ -227,6 +253,31 @@ export function formatRating(rating: number | null | undefined): string {
   if (rating == null || !Number.isFinite(rating)) return "—";
   const stars = Math.min(5, Math.max(0, Math.round(rating)));
   return "★".repeat(stars) + "☆".repeat(5 - stars);
+}
+
+/**
+ * Renders an energy level 1–10 as a plain number, or an em dash when the track
+ * has no energy yet. The charging-bar meter is the primary display; this is
+ * the text fallback (cell title, copy to clipboard).
+ */
+export function formatEnergy(energy: number | null | undefined): string {
+  if (energy == null || !Number.isFinite(energy)) return "—";
+  const level = clampEnergy(energy);
+  // 0 is the "cleared" value, not a level — it reads as no energy at all.
+  if (level < 1) return "—";
+  return String(level);
+}
+
+/** Clamps an energy level into 1–10; `0` means "no energy set". */
+export function clampEnergy(energy: number): number {
+  if (!Number.isFinite(energy)) return 0;
+  return Math.min(10, Math.max(0, Math.round(energy)));
+}
+
+/** Clamps a star rating into 0–5; `0` means "no rating set". */
+export function clampRating(rating: number): number {
+  if (!Number.isFinite(rating)) return 0;
+  return Math.min(5, Math.max(0, Math.round(rating)));
 }
 
 /** Renders a 0–1 similarity score as a whole percent, e.g. `93%`. */

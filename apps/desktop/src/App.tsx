@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, useMemo, useReducer } from "react";
-import type { PointerEvent as ReactPointerEvent } from "react";
+import type { MouseEvent as ReactMouseEvent, PointerEvent as ReactPointerEvent } from "react";
 import type {
   TrackSummary,
   ScanProgressEvent,
@@ -42,6 +42,9 @@ import {
   chartList,
   listenToScanProgress,
   listenToScanCompleted,
+  setTrackRating,
+  undoTrackMetadata,
+  updateTrackMetadata,
 } from "./services/api";
 import {
   FolderOpen,
@@ -131,6 +134,8 @@ import { nextTheme, resolveTheme, THEME_LABELS } from "./lib/theme";
 import { PreviewPlayer } from "./components/preview-player";
 import { ModalShell } from "./components/ModalShell";
 import { ColumnPicker } from "./components/ColumnPicker";
+import { EnergyBars } from "./components/EnergyBars";
+import { StarRating } from "./components/StarRating";
 import { previewEngine } from "./lib/audio-engine";
 
 const VIEW_ITEMS: { view: AppView; label: string; shortcut: string }[] = [
@@ -444,19 +449,27 @@ const MONO_COLUMNS: readonly ColumnId[] = [
 ];
 
 /**
- * One cell of a Library row. The cells are plain text for this slice (T2.1.5):
- * the Energy bars, tag chips, editable stars and cue widgets docs/ui/03 describes
- * come later, and columns with no field on `TrackSummary` yet show the
- * placeholder rather than an invented value.
+ * One cell of a Library row.
+ *
+ * Most cells are plain text. Rating (T2.1.4) and Energy (T2.1.6) carry their
+ * own widgets — the stars and the meter — and report the change upwards; the
+ * cell never writes to the database itself. Columns with no field on
+ * `TrackSummary` yet show the placeholder rather than an invented value.
  */
 function TrackCell({
   id,
   track,
   rowNumber,
+  onRate,
+  onSetEnergy,
 }: {
   id: ColumnId;
   track: TrackSummary;
   rowNumber: number;
+  /** Applies a star rating (1–5) or clears it when `null`. */
+  onRate?: (track: TrackSummary, rating: number | null) => void;
+  /** Applies an energy level (1–10) or clears it when `null`. */
+  onSetEnergy?: (track: TrackSummary, energy: number | null) => void;
 }) {
   const definition = columnDefinition(id);
   const base = `py-2.5 px-4 overflow-hidden whitespace-nowrap text-ellipsis ${
@@ -478,6 +491,30 @@ function TrackCell({
     return (
       <td className={`${base} text-dj-text-muted text-[11px]`} title={`Row ${rowNumber}`}>
         {rowNumber}
+      </td>
+    );
+  }
+
+  if (id === "rating") {
+    return (
+      <td className="py-2.5 px-4 text-center">
+        <StarRating
+          value={track.userRating}
+          label={`Rating for ${track.title || "Untitled"}`}
+          onChange={(rating) => onRate?.(track, rating)}
+        />
+      </td>
+    );
+  }
+
+  if (id === "energy") {
+    return (
+      <td className="py-2.5 px-4 text-center">
+        <EnergyBars
+          value={track.energy}
+          label={`Energy for ${track.title || "Untitled"}`}
+          onChange={(energy) => onSetEnergy?.(track, energy)}
+        />
       </td>
     );
   }
@@ -730,6 +767,36 @@ function LibraryFilterPanel({
           </select>
         </div>
 
+        {/* Energy (T2.1.6) */}
+        <div>
+          <p className="mb-1.5 text-[11px] font-semibold uppercase tracking-wider text-dj-text-muted">
+            Energy (1–10)
+          </p>
+          <div className="flex items-center gap-2">
+            <input
+              type="number"
+              min={1}
+              max={10}
+              step={1}
+              value={draft.energyMin ?? ""}
+              onChange={(e) => onChange({ ...draft, energyMin: numberOrUndefined(e.target.value) })}
+              placeholder="Min"
+              className="w-full rounded-md border border-dj-border bg-dj-elevated px-2.5 py-1.5 text-xs text-dj-text placeholder:text-dj-text-muted focus:border-dj-accent focus:outline-hidden"
+            />
+            <span className="text-xs text-dj-text-muted">to</span>
+            <input
+              type="number"
+              min={1}
+              max={10}
+              step={1}
+              value={draft.energyMax ?? ""}
+              onChange={(e) => onChange({ ...draft, energyMax: numberOrUndefined(e.target.value) })}
+              placeholder="Max"
+              className="w-full rounded-md border border-dj-border bg-dj-elevated px-2.5 py-1.5 text-xs text-dj-text placeholder:text-dj-text-muted focus:border-dj-accent focus:outline-hidden"
+            />
+          </div>
+        </div>
+
         {error && (
           <p className="rounded-sm border border-dj-danger/30 bg-dj-danger/10 px-2 py-1.5 text-[11px] text-dj-danger">
             {error}
@@ -943,6 +1010,15 @@ export default function App() {
 
   // Discovery / enrichment / provider state (local-first; online lookup is planned).
   const [selectedTrack, setSelectedTrack] = useState<TrackSummary | null>(null);
+  // Multi-select for the library table (T2.1.4/T2.1.6). Ctrl/Cmd-click toggles
+  // a track, Shift-click takes the range from the anchor. A rating or energy
+  // edit applies to the whole selection when the edited track is part of it.
+  const [selection, setSelection] = useState<string[]>([]);
+  const [selectionAnchor, setSelectionAnchor] = useState<number | null>(null);
+  // Undo for the newest metadata write (T2.1.4/T2.1.6). The backend keeps the
+  // pre-write values, so the toast restores real data instead of guessing it.
+  const [pendingUndo, setPendingUndo] = useState<{ undoId: string; message: string } | null>(null);
+  const undoTimerRef = useRef<number | null>(null);
   const [similar, setSimilar] = useState<SimilarTrackResult[]>([]);
   const [similarLoading, setSimilarLoading] = useState(false);
   const [storeLinks, setStoreLinks] = useState<StoreLinksResponse | null>(null);
@@ -1044,6 +1120,20 @@ export default function App() {
         normalized.bpmMin > normalized.bpmMax)
     ) {
       setFilterError("BPM bounds must be non-negative and minimum must not exceed maximum.");
+      return;
+    }
+    // Energy is a 1–10 scale, so an out-of-range bound is a typo, not a value
+    // the backend could answer with. The backend validates the same bounds.
+    if (
+      (normalized?.energyMin != null && (normalized.energyMin < 1 || normalized.energyMin > 10)) ||
+      (normalized?.energyMax != null && (normalized.energyMax < 1 || normalized.energyMax > 10)) ||
+      (normalized?.energyMin != null &&
+        normalized.energyMax != null &&
+        normalized.energyMin > normalized.energyMax)
+    ) {
+      setFilterError(
+        "Energy bounds must be between 1 and 10, and minimum must not exceed maximum."
+      );
       return;
     }
     setFilterError(null);
@@ -1447,6 +1537,115 @@ export default function App() {
   };
 
   const filteredTracks = useMemo(() => filterTracks(tracks, searchQuery), [tracks, searchQuery]);
+
+  // --- Rating / energy writes (T2.1.4 rating, T2.1.6 energy) --------------------
+  // The undo affordance is offered for the newest write only. Older snapshots
+  // stay in the database, but a single toast can only point at one of them.
+  const offerUndo = (undoId: string, message: string) => {
+    if (undoTimerRef.current !== null) window.clearTimeout(undoTimerRef.current);
+    setPendingUndo({ undoId, message });
+    undoTimerRef.current = window.setTimeout(() => {
+      setPendingUndo(null);
+      undoTimerRef.current = null;
+    }, 6000);
+  };
+
+  useEffect(
+    () => () => {
+      if (undoTimerRef.current !== null) window.clearTimeout(undoTimerRef.current);
+    },
+    []
+  );
+
+  // A rating or energy edit applies to the whole selection when the edited
+  // track is part of it; otherwise it applies to that track alone.
+  const editTargets = (track: TrackSummary): string[] =>
+    selection.includes(track.id) ? selection : [track.id];
+
+  const handleSetRating = async (track: TrackSummary, rating: number | null) => {
+    const trackIds = editTargets(track);
+    try {
+      // `0` is the backend's "clear the rating" value (docs/ui/03 §3.4).
+      const res = await setTrackRating({ trackIds, rating: rating ?? 0 });
+      refreshLibrary();
+      offerUndo(
+        res.undoId,
+        trackIds.length > 1
+          ? `Rated ${trackIds.length} tracks`
+          : `Rated “${track.title || "Untitled"}”`
+      );
+      pushStatus(`Rating saved for ${trackIds.length} track${trackIds.length === 1 ? "" : "s"}`);
+    } catch (err) {
+      console.error("Failed to set rating:", err);
+      pushStatus("Couldn't save the rating", "error");
+    }
+  };
+
+  const handleSetEnergy = async (track: TrackSummary, energy: number | null) => {
+    const trackIds = editTargets(track);
+    try {
+      // `0` is the backend's "clear the energy" value — 0 is outside 1–10.
+      const res = await updateTrackMetadata({ trackIds, energy: energy ?? 0 });
+      refreshLibrary();
+      offerUndo(
+        res.undoId,
+        trackIds.length > 1
+          ? `Set energy on ${trackIds.length} tracks`
+          : `Set energy on “${track.title || "Untitled"}”`
+      );
+      pushStatus(`Energy saved for ${trackIds.length} track${trackIds.length === 1 ? "" : "s"}`);
+    } catch (err) {
+      console.error("Failed to set energy:", err);
+      pushStatus("Couldn't save the energy level", "error");
+    }
+  };
+
+  const handleUndoMetadata = async () => {
+    if (!pendingUndo) return;
+    const undoId = pendingUndo.undoId;
+    setPendingUndo(null);
+    if (undoTimerRef.current !== null) {
+      window.clearTimeout(undoTimerRef.current);
+      undoTimerRef.current = null;
+    }
+    try {
+      const res = await undoTrackMetadata({ undoId });
+      refreshLibrary();
+      pushStatus(`Undone — ${res.restored} track${res.restored === 1 ? "" : "s"} restored`);
+    } catch (err) {
+      console.error("Failed to undo track metadata:", err);
+      pushStatus("Couldn't undo that change", "error");
+    }
+  };
+
+  // Row selection: a plain click inspects a track (and replaces the selection),
+  // Ctrl/Cmd-click toggles one track, Shift-click takes the range from the
+  // anchor. Inspecting and multi-selecting stay separate on purpose — the
+  // inspector must never depend on how the row was selected.
+  const handleRowClick = (event: ReactMouseEvent, track: TrackSummary, index: number) => {
+    if (event.ctrlKey || event.metaKey) {
+      event.preventDefault();
+      setSelection((current) =>
+        current.includes(track.id)
+          ? current.filter((id) => id !== track.id)
+          : [...current, track.id]
+      );
+      setSelectionAnchor(index);
+      setSelectedTrack(track);
+      return;
+    }
+    if (event.shiftKey && selectionAnchor !== null) {
+      event.preventDefault();
+      const [from, to] =
+        selectionAnchor < index ? [selectionAnchor, index] : [index, selectionAnchor];
+      setSelection(filteredTracks.slice(from, to + 1).map((entry) => entry.id));
+      setSelectedTrack(track);
+      return;
+    }
+    setSelection([track.id]);
+    setSelectionAnchor(index);
+    setSelectedTrack((current) => (current?.id === track.id ? null : track));
+  };
 
   // T2.1.5: the table renders exactly this list, in storage order. Resizing is
   // committed on pointer-up, so a drag writes one preference, not one per move.
@@ -1881,6 +2080,25 @@ export default function App() {
                   </div>
                 )}
 
+                {/* Multi-select indicator (T2.1.4/T2.1.6): a rating or energy
+                    edit applies to every selected track. */}
+                {selection.length > 1 && (
+                  <div className="flex items-center gap-2 border-b border-dj-border bg-dj-panel px-5 py-1.5 text-[11px] text-dj-text-secondary">
+                    <span className="font-mono text-dj-accent">{selection.length} selected</span>
+                    <span className="text-dj-text-muted">
+                      Rating and energy edits apply to all of them.
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => setSelection([])}
+                      className="ml-auto text-dj-text-muted hover:text-dj-text-secondary underline decoration-dotted"
+                      title="Drop the multi-selection"
+                    >
+                      clear selection
+                    </button>
+                  </div>
+                )}
+
                 {/* Track List Table */}
                 <div className="flex-1 overflow-auto">
                   {filteredTracks.length === 0 ? (
@@ -1955,22 +2173,20 @@ export default function App() {
                             key={track.id}
                             tabIndex={0}
                             aria-label={`Inspect ${track.title || "Untitled"} by ${track.artist || "Unknown Artist"}`}
-                            aria-selected={selectedTrack?.id === track.id}
-                            onClick={() =>
-                              setSelectedTrack((current) =>
-                                current?.id === track.id ? null : track
-                              )
-                            }
+                            aria-selected={selection.includes(track.id)}
+                            onClick={(event) => handleRowClick(event, track, idx)}
                             onKeyDown={(e) => {
                               if (e.key === "Enter" || e.key === " ") {
                                 e.preventDefault();
                                 e.stopPropagation();
+                                setSelection([track.id]);
+                                setSelectionAnchor(idx);
                                 setSelectedTrack((current) =>
                                   current?.id === track.id ? null : track
                                 );
                               }
                             }}
-                            title="Click or press Enter to inspect: similar tracks, tag gaps, buy-links"
+                            title="Click or press Enter to inspect: similar tracks, tag gaps, buy-links · Ctrl/Cmd-click to multi-select, Shift-click for a range"
                             className={`hover:bg-dj-hover transition duration-150 group cursor-pointer focus-visible:outline-2 focus-visible:outline-dj-accent focus-visible:-outline-offset-2 ${
                               selectedTrack?.id === track.id ? "bg-dj-active" : ""
                             }`}
@@ -1981,6 +2197,8 @@ export default function App() {
                                 id={column.id}
                                 track={track}
                                 rowNumber={idx + 1}
+                                onRate={handleSetRating}
+                                onSetEnergy={handleSetEnergy}
                               />
                             ))}
                           </tr>
@@ -2000,6 +2218,27 @@ export default function App() {
                       className="inline-flex items-center gap-1.5 rounded-md border border-dj-border bg-dj-elevated px-3 py-1.5 text-xs text-dj-text-secondary transition hover:bg-dj-hover hover:text-dj-text disabled:opacity-50"
                     >
                       Load more — showing {tracks.length} of {libraryTotal}
+                    </button>
+                  </div>
+                )}
+
+                {/* Undo toast (T2.1.4/T2.1.6): the backend kept the pre-write
+                    values, so this restores real data instead of guessing it. */}
+                {pendingUndo && (
+                  <div
+                    role="status"
+                    aria-live="polite"
+                    className="absolute bottom-4 left-5 z-30 flex items-center gap-3 rounded-lg border border-dj-border bg-dj-panel px-3 py-2 text-[11px] text-dj-text-secondary shadow-2xl shadow-black/60"
+                  >
+                    <span>{pendingUndo.message}</span>
+                    <button
+                      type="button"
+                      onClick={handleUndoMetadata}
+                      className="inline-flex items-center gap-1 rounded-sm border border-dj-border bg-dj-elevated px-2 py-1 text-[11px] text-dj-text transition hover:bg-dj-hover hover:text-dj-accent"
+                      title="Restore the previous rating / energy"
+                    >
+                      <Undo2 className="h-3 w-3" />
+                      Undo
                     </button>
                   </div>
                 )}

@@ -48,10 +48,12 @@ interface ListTracksRequest {
     analysisStatus?: Array<'pending' | 'complete' | 'failed' | 'needs_review'>;
     genre?: string[];             // matched case-insensitively
     ratingMin?: number;           // inclusive integer 0-5 star floor
+    energyMin?: number;           // inclusive integer 1-10 energy floor
+    energyMax?: number;           // inclusive integer 1-10 energy ceiling
   };
   limit?: number;                 // default 200, clamped to 0..=1000
   offset?: number;
-  sortBy?: 'title' | 'artist' | 'bpm' | 'key' | 'duration' | 'imported_at';
+  sortBy?: 'title' | 'artist' | 'bpm' | 'key' | 'duration' | 'imported_at' | 'rating' | 'energy';
   sortDir?: 'asc' | 'desc';
 }
 
@@ -68,13 +70,16 @@ page. Semantics:
 - Filter groups combine with `AND`; list values are `IN` lists compared
   case-insensitively (`key_camelot` upper-cased, `genre`/`analysis_status` lower-cased).
 - Blank strings/empty lists are ignored, so `{ filters: {} }` is the same as omitting
-  `filters`. `bpmMin > bpmMax`, negative/non-finite BPM bounds and `ratingMin` outside
-  `0..=5` are rejected with a descriptive error instead of silently returning nothing.
+  `filters`. `bpmMin > bpmMax`, negative/non-finite BPM bounds, `ratingMin` outside
+  `0..=5` and `energyMin`/`energyMax` outside `1..=10` (or inverted against each
+  other) are rejected with a descriptive error instead of silently returning nothing.
 - Every user value is a **bound parameter**; only allow-listed column names and sort
   directions are interpolated (see `crates/core/src/library_query.rs`).
 - Unknown `sortBy` values fall back to the default (`imported_at` desc); unknown
   `sortDir` values use the selected sort key's default direction. Nullable columns
   sort NULLs last, and `id` is the stable pagination tiebreaker.
+- `rating` and `energy` are user-assigned and nullable, so they default to
+  **descending** (best/highest first) with unrated tracks last in both directions.
 
 #### `list_genres` (shipped — T2.1.2)
 Distinct non-empty genre tags with track counts, used to populate the library filter
@@ -116,7 +121,64 @@ type GetArtworkResponse = string | null; // e.g. "data:image/jpeg;base64,..."
 `TrackSummary` also carries the tag-sourced fields read at import time (no analysis): `bpm?`,
 `keyCamelot?`, `keyClassical?`, `userRating?`, `comments?` and `artworkHash?` — the latter is the
 BLAKE3 content hash the `get_artwork` cache file is named after. Rows imported before migration 002
-return `null` for `comments` / `artworkHash` until rescanned.
+return `null` for `comments` / `artworkHash` until rescanned. `energy?` (migration 006) is the
+user-assigned 1–10 level; it is `null` until the user sets it.
+
+#### `update_track_metadata` (shipped — T2.1.4/T2.1.6)
+Writes user-assigned metadata on one or more tracks and returns the id of an undo
+snapshot. An omitted field is left untouched; `0` clears the value (the column is
+stored as `NULL`).
+```ts
+interface UpdateTrackMetadataRequest {
+  trackIds: string[];       // unknown ids are ignored
+  rating?: number;          // 0-5, 0 clears the rating
+  energy?: number;          // 1-10, 0 clears the energy (0 is outside the scale)
+}
+
+interface UpdateTrackMetadataResponse {
+  undoId: string;           // id of the skill_runs row holding the undo snapshot
+  updated: number;          // tracks actually changed
+}
+```
+Validation: an empty `trackIds` is rejected (`no tracks selected`), a `rating` outside
+`0..=5` (`rating must be between 0 and 5`), an `energy` outside `0..=10`
+(`energy must be between 0 and 10`) and a request with neither field
+(`nothing to update`) are rejected with a descriptive error.
+
+#### `set_track_rating` (shipped — T2.1.4)
+Rating-only variant of `update_track_metadata`, used by the star widget. It shares the
+same undo behaviour and the same validation.
+```ts
+interface SetTrackRatingRequest {
+  trackIds: string[];
+  rating: number;           // 0-5, 0 clears the rating
+}
+
+interface SetTrackRatingResponse {
+  undoId: string;
+  updated: number;
+}
+```
+
+#### `undo_track_metadata` (shipped — T2.1.4/T2.1.6)
+Restores the values a metadata write replaced.
+```ts
+interface UndoTrackMetadataRequest {
+  undoId: string;           // the undoId the write returned
+}
+
+interface UndoTrackMetadataResponse {
+  restored: number;         // tracks restored to their previous values
+}
+```
+The write and its snapshot commit in one transaction, so an applied write always has
+an undo. The snapshot lives in `skill_runs` (`skill_name` = `update_track_metadata` /
+`set_track_rating`), holds only the columns the write touched, and can be undone once —
+a second attempt fails because the row's status is no longer `success`. Unknown ids
+fail with `undo snapshot not found: <id>`.
+
+`undo_skill_run` (see §2.3) stays the generic contract for skill runs; the metadata
+writes use this typed command instead.
 
 ### 2.2 Analysis
 

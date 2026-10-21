@@ -20,6 +20,8 @@ export interface TrackSummary {
   format?: string | null;
   analysisStatus: AnalysisStatus;
   userRating?: number | null;
+  /** Energy level 1–10 (migration 006); `null` when the user never set one. */
+  energy?: number | null;
   comments?: string | null;
   artworkHash?: string | null;
   createdAt: string;
@@ -96,10 +98,15 @@ export interface ListTracksFilters {
   genre?: string[];
   /** Inclusive minimum star rating (0–5). */
   ratingMin?: number;
+  /** Inclusive minimum energy level (1–10). */
+  energyMin?: number;
+  /** Inclusive maximum energy level (1–10). */
+  energyMax?: number;
 }
 
 /** Sort keys accepted by `list_tracks` (mirrors `SORT_KEYS` in Rust). */
-export type ListTracksSortBy = "title" | "artist" | "bpm" | "key" | "duration" | "imported_at";
+export type ListTracksSortBy =
+  "title" | "artist" | "bpm" | "key" | "duration" | "imported_at" | "rating" | "energy";
 
 export type SortDirection = "asc" | "desc";
 
@@ -145,6 +152,52 @@ export interface GetArtworkRequest {
  * cached cover art.
  */
 export type GetArtworkResponse = string | null;
+
+// --- Track metadata writes (T2.1.4 rating, T2.1.6 energy) ---
+// Every write is logged as a `skill_runs` row that holds the pre-write values,
+// so the UI can offer a real Undo instead of a hopeful re-read.
+
+/**
+ * Patch applied to one or more tracks. An omitted field is left untouched;
+ * `0` clears the value (the column is stored as NULL).
+ */
+export interface UpdateTrackMetadataRequest {
+  /** Tracks to patch. Unknown ids are ignored. */
+  trackIds: string[];
+  /** Star rating 0–5. `0` clears the rating. */
+  rating?: number;
+  /** Energy level 1–10. `0` clears the energy (0 is outside the valid range). */
+  energy?: number;
+}
+
+export interface UpdateTrackMetadataResponse {
+  /** Id of the `skill_runs` row holding the undo snapshot. */
+  undoId: string;
+  /** Number of tracks actually changed. */
+  updated: number;
+}
+
+/** Rating-only variant of `UpdateTrackMetadataRequest`. */
+export interface SetTrackRatingRequest {
+  trackIds: string[];
+  /** Star rating 0–5. `0` clears the rating. */
+  rating: number;
+}
+
+export interface SetTrackRatingResponse {
+  undoId: string;
+  updated: number;
+}
+
+export interface UndoTrackMetadataRequest {
+  /** The `undoId` returned by the write command. */
+  undoId: string;
+}
+
+export interface UndoTrackMetadataResponse {
+  /** Number of tracks restored to their previous values. */
+  restored: number;
+}
 
 // --- Analysis queue (T1.2.1 / T1.2.2): analyze_library + progress events ---
 // Mirrors apps/desktop/src-tauri/src/models.rs (serde camelCase). The backend
