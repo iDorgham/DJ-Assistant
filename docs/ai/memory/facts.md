@@ -50,10 +50,9 @@ not inferable by reading the code.
   (*File → Export → XML* → `rekordbox.xml`); `masterPlaylists6.xml` is
   **playlists only**. No adoptable Rekordbox MCP exists on npm — only
   libraries.
-- The music library on this workstation is `D:\Music\Music Library` (sets in
-  `D:\Music\My Sets`); the maintainer's stated `D:\Music\DJ_Library` **does not
-  exist here**, so the path stays configurable
-  (`$DJ_ASSISTANT_MUSIC_LIBRARY`).
+- The music library path is **configurable**
+  (`$DJ_ASSISTANT_MUSIC_LIBRARY`); the concrete folders differ per workstation,
+  so no absolute path belongs in this shared memory.
 - The app's library DB (`%APPDATA%\com.djassistant.desktop\dj_assistant.db`) is
   in **WAL mode**, so a read-only open can fail once the app is closed —
   `dj-query` falls back to `immutable=1` only when the `-wal` is empty and

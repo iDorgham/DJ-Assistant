@@ -86,9 +86,12 @@ export function StarRating({
       return;
     }
     // Enter and Space are the row keys: the widget handles them on the
-    // button, so they must not reach the row handler behind it. Every other
-    // key — Escape, Tab, … — keeps bubbling, so the app-level actions
-    // (Escape closes the inspector) still work from this control.
+    // button, so they must not reach the row handler behind it. The default
+    // action is deliberately NOT cancelled — the focused button's native
+    // activation is what calls `commit` (Enter on key-down, Space on
+    // key-up), and cancelling it would leave the keyboard path dead. Every
+    // other key — Escape, Tab, … — keeps bubbling, so the app-level
+    // actions (Escape closes the inspector) still work from this control.
     if (key === "Enter" || key === " ") {
       event.stopPropagation();
     }

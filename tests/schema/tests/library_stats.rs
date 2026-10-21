@@ -116,6 +116,22 @@ fn count(conn: &Connection, key: &str) -> i64 {
         .unwrap_or_else(|e| panic!("stat {key} must run: {e}"))
 }
 
+/// Runs the production status-breakdown statement and returns its rows.
+///
+/// The statement is executed as exported — a copy of the SQL inside the test
+/// would keep passing when the real statement drifts.
+fn status_breakdown(conn: &Connection) -> Vec<(String, i64)> {
+    let mut stmt = conn
+        .prepare(STATUS_BREAKDOWN_SQL)
+        .expect("status breakdown must prepare");
+    let rows = stmt
+        .query_map([], |row| {
+            Ok((row.get::<_, String>(0)?, row.get::<_, i64>(1)?))
+        })
+        .expect("status breakdown must run");
+    rows.flatten().collect()
+}
+
 /// The list query's own count, for the same filter the summary uses.
 fn list_count(conn: &Connection, status: &str) -> i64 {
     let built = TrackQuery {
@@ -190,15 +206,7 @@ fn duplicate_counts_group_by_file_hash() {
 #[test]
 fn status_breakdown_sums_to_the_total() {
     let conn = seeded();
-    let mut stmt = conn
-        .prepare(STATUS_BREAKDOWN_SQL)
-        .expect("status breakdown must prepare");
-    let rows = stmt
-        .query_map([], |row| {
-            Ok((row.get::<_, String>(0)?, row.get::<_, i64>(1)?))
-        })
-        .expect("status breakdown must run");
-    let breakdown: Vec<(String, i64)> = rows.flatten().collect();
+    let breakdown = status_breakdown(&conn);
 
     let sum: i64 = breakdown.iter().map(|(_, count)| count).sum();
     assert_eq!(sum, count(&conn, "total"));
@@ -214,15 +222,18 @@ fn status_breakdown_sums_to_the_total() {
 #[test]
 fn the_summary_and_the_list_agree_on_the_same_tracks() {
     let conn = seeded();
+    let breakdown = status_breakdown(&conn);
+
     for status in ["complete", "pending", "needs_review", "failed"] {
         let from_list = list_count(&conn, status);
-        let from_stats: i64 = conn
-            .query_row(
-                "SELECT COUNT(*) FROM tracks WHERE LOWER(analysis_status) = ?1",
-                params![status],
-                |row| row.get(0),
-            )
-            .expect("count must run");
+        // The breakdown row of the very statement `dj-query --stats` prints.
+        // A status that is missing from the breakdown means zero rows, so a
+        // drift in the production statement shows up as a mismatch here.
+        let from_stats = breakdown
+            .iter()
+            .find(|(breakdown_status, _)| breakdown_status == status)
+            .map(|(_, count)| *count)
+            .unwrap_or(0);
         assert_eq!(
             from_list, from_stats,
             "list and summary disagree about {status}"

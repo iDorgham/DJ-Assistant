@@ -9,6 +9,8 @@ import {
   clampRating,
   defaultSortDirection,
   describeFilters,
+  describeMetadataUndo,
+  describeMetadataWrite,
   filterTracks,
   formatBpm,
   formatDuration,
@@ -296,4 +298,34 @@ test("SORT_OPTIONS offers rating and energy next to the other sort keys", () => 
   assert.ok(values.includes("rating"));
   assert.ok(values.includes("energy"));
   assert.equal(new Set(values).size, values.length, "every sort key is offered exactly once");
+});
+
+test("describeMetadataWrite reports the changed tracks, not the selection", () => {
+  assert.equal(describeMetadataWrite("rating", 3), "Rating saved for 3 tracks");
+  assert.equal(describeMetadataWrite("rating", 1), "Rating saved for 1 track");
+  assert.equal(describeMetadataWrite("energy", 2), "Energy saved for 2 tracks");
+  assert.equal(
+    describeMetadataWrite("rating", 0),
+    "Rating unchanged — nothing to save",
+    "a write that changed nothing is not announced as a save"
+  );
+  assert.equal(describeMetadataWrite("energy", 0), "Energy unchanged — nothing to save");
+});
+
+test("describeMetadataUndo offers no undo when nothing changed", () => {
+  assert.equal(describeMetadataUndo("rating", 0, 1, "Title"), null);
+  assert.equal(describeMetadataUndo("energy", 0, 3, "Title"), null);
+});
+
+test("describeMetadataUndo names the track only for a single-track edit", () => {
+  assert.equal(describeMetadataUndo("rating", 1, 1, "Nightcall"), "Rated “Nightcall”");
+  assert.equal(describeMetadataUndo("energy", 1, 1, "Nightcall"), "Set energy on “Nightcall”");
+  assert.equal(describeMetadataUndo("rating", 1, 1, null), "Rated “Untitled”");
+  assert.equal(
+    describeMetadataUndo("rating", 1, 4, "Nightcall"),
+    "Rated 1 track",
+    "a multi-track edit never names one track"
+  );
+  assert.equal(describeMetadataUndo("rating", 3, 4, "Nightcall"), "Rated 3 tracks");
+  assert.equal(describeMetadataUndo("energy", 2, 4, "Nightcall"), "Set energy on 2 tracks");
 });

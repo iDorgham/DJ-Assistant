@@ -89,13 +89,14 @@ The DJ runs **Rekordbox** on Pioneer CDJs (Little Buddha, Arena Beach Club), so
 Rekordbox — not Serato — is the authoritative library. Serato tooling and the
 Playwright MCP are dropped (the latter: `playwright-cli` + `ui-verification`
 already cover UI checks inside the Tauri/React stack). The primary agent path
-into the library is the Rust **`dj-query`** binary
+into the **app's imported library** is the Rust **`dj-query`** binary
 (`crates/core/src/bin/query.rs`), which reuses the app's own `library_query`
 builder, opens the DB with `SQLITE_OPEN_READ_ONLY`, and adapts to a schema
 older than the code; the read-only SQLite MCP stays an ad-hoc fallback over a
-**snapshot**. Rekordbox's `master.db` is encrypted, so the DJ's library is read
-through the **exported `rekordbox.xml`** — by our own Rust reader, staged until
-an export exists. Agent access to the music library is **strictly read-only**:
-never write an audio file, edit a tag, or write to the primary database.
+**snapshot**. The **Rekordbox path is separate**: Rekordbox's `master.db` is
+encrypted, so the authoritative library is read through the **exported
+`rekordbox.xml`** — by our own Rust reader, **staged, not built yet**. Agent
+access to the music library is **strictly read-only**: never write an audio
+file, edit a tag, or write to the primary database.
 **Reverses if:** the DJ switches to Serato, or Rekordbox ships a readable
 `master.db` (or an adoptable MCP) that changes the parsing path.
