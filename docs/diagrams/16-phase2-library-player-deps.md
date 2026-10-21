@@ -356,8 +356,8 @@ flowchart LR
   S6 -.-> GATE
 ```
 
-**Critical path length:** S0 → S1 → S2 → S5 → S7 → S8  
-**Parallel off-path (still required for full P2.1a–c):** S3, S4, S6
+**Critical path length:** S0 → S1 → (S2 ∥ S3 ∥ S4) → S5 → S7 → S8  
+**Parallel off-path (still required for full P2.1a–c):** S6
 
 ---
 
