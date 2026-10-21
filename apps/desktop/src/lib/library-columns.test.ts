@@ -5,6 +5,7 @@ import type { TrackSummary } from "@dj-assistant/shared";
 
 import type { ColumnId, ColumnState } from "./library-columns.ts";
 import {
+  ARTWORK_MIN_WIDTH,
   COLUMN_IDS,
   DEFAULT_LIBRARY_COLUMNS,
   MAX_COLUMN_WIDTH,
@@ -21,7 +22,9 @@ import {
   saveLibraryColumns,
   setColumnWidth,
   toggleColumnVisible,
+  totalColumnWidth,
   trackColumnText,
+  trackColumnTooltip,
   validateColumnConfig,
   visibleColumns,
 } from "./library-columns.ts";
@@ -188,6 +191,55 @@ test("auto-fit grows with the longest value and stays inside the range", () => {
   assert.ok(long > short, "auto-fit did not grow with the content");
   assert.ok(short >= MIN_COLUMN_WIDTH);
   assert.ok(long <= MAX_COLUMN_WIDTH);
+});
+
+test("auto-fit leaves room for the artwork thumb and its cell padding", () => {
+  const fitted = autoFitWidth("", columnDefinition("artwork"));
+  assert.ok(
+    fitted >= ARTWORK_MIN_WIDTH,
+    `artwork auto-fit is ${fitted}px, narrower than the 36px thumb plus padding`
+  );
+  assert.ok(ARTWORK_MIN_WIDTH >= 36 + 16, "the artwork minimum must fit px-2 around the thumb");
+});
+
+test("auto-fit counts header controls and cell decorations", () => {
+  // Sortable headers add a 12px icon and a 4px gap next to the label.
+  assert.ok(
+    autoFitWidth("", columnDefinition("time")) > autoFitWidth("", columnDefinition("size")),
+    "the header sort icon was not counted"
+  );
+
+  // Status renders a chip: px-2 padding, a 12px icon and a 4px gap.
+  assert.ok(
+    autoFitWidth("Needs review", columnDefinition("status")) >
+      autoFitWidth("Needs review", columnDefinition("genre")),
+    "the status chip was not counted"
+  );
+
+  // Format renders a bordered pill inside px-1.5.
+  assert.ok(
+    autoFitWidth("aiffc", columnDefinition("format")) >= 5 * 7 + 32 + 12 + 2,
+    "the format pill chrome was not counted"
+  );
+});
+
+test("the table width follows the drag preview and the committed widths", () => {
+  const shown = visibleColumns(DEFAULT_LIBRARY_COLUMNS);
+  const titleWidth = pick(shown, "title").width;
+  const sum = shown.reduce((total, column) => total + column.width, 0);
+
+  assert.equal(totalColumnWidth(shown), sum, "the table must render exactly its columns");
+  assert.equal(totalColumnWidth(shown, null), sum);
+  assert.equal(
+    totalColumnWidth(shown, { id: "title", width: titleWidth - 120 }),
+    sum - 120,
+    "the preview did not move the table edge with the drag"
+  );
+  assert.equal(
+    totalColumnWidth(shown, { id: "title", width: 10 }),
+    sum - titleWidth + MIN_COLUMN_WIDTH,
+    "the preview width was not clamped like the commit"
+  );
 });
 
 test("config round-trips through storage", () => {
@@ -387,4 +439,32 @@ test("columns without data in this slice show a placeholder, not a fake value", 
   for (const id of notYetSourced) {
     assert.equal(trackColumnText(FULL_TRACK, id), PLACEHOLDER, `${id} has no source field`);
   }
+});
+
+test("tooltips keep the details the cells shorten", () => {
+  const longComment =
+    "Keeps the floor moving through the break, cue at 3:20 for the second drop and ride the outro.";
+  const fullHash = "9f2c1ab34d5e6f708192a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2c3d4";
+  const track: TrackSummary = { ...FULL_TRACK, comments: longComment, fileHash: fullHash };
+
+  assert.ok(
+    trackColumnText(track, "comment").length < longComment.length,
+    "the comment cell was not shortened, so this test proves nothing"
+  );
+  assert.equal(trackColumnTooltip(track, "comment"), longComment);
+  assert.ok(trackColumnText(track, "fingerprint").length < fullHash.length);
+  assert.equal(trackColumnTooltip(track, "fingerprint"), fullHash);
+  assert.equal(trackColumnTooltip(track, "key"), "Camelot 8A • Am");
+  assert.equal(trackColumnTooltip(FULL_TRACK, "rating"), "4 / 5");
+});
+
+test("tooltips are absent when there is no extra detail to show", () => {
+  assert.equal(trackColumnTooltip(BARE_TRACK, "rating"), "Unrated");
+  assert.equal(trackColumnTooltip(BARE_TRACK, "comment"), undefined);
+  assert.equal(trackColumnTooltip(BARE_TRACK, "fingerprint"), undefined);
+  // Only one key notation exists, so the cell already shows all of it.
+  assert.equal(trackColumnTooltip({ ...FULL_TRACK, keyClassical: null }, "key"), undefined);
+  // Columns whose cells are not shortened do not repeat themselves on hover.
+  assert.equal(trackColumnTooltip(FULL_TRACK, "title"), undefined);
+  assert.equal(trackColumnTooltip(FULL_TRACK, "path"), undefined);
 });

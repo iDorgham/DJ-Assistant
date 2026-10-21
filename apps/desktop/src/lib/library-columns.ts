@@ -66,8 +66,8 @@ export interface ColumnDefinition {
   defaultVisible: boolean;
 }
 
-// The artwork thumb is 36px (`h-9`), so the minimum has to leave the narrowest
-// default columns reachable without an immediate clamp.
+// The narrowest a column may be dragged. It is intentionally below every
+// default width so the defaults survive validation unchanged.
 export const MIN_COLUMN_WIDTH = 40;
 export const MAX_COLUMN_WIDTH = 640;
 
@@ -78,7 +78,19 @@ const UNKNOWN_ARTIST = "Unknown Artist";
 const COMMENT_CELL_LENGTH = 48;
 
 const CHARACTER_PX = 7;
-const CELL_PADDING_PX = 28;
+/** Horizontal cell padding: `px-4` on both header and body cells. */
+const CELL_PADDING_PX = 32;
+/** Sortable headers put a `w-3` icon and a `gap-1` next to the label. */
+const HEADER_SORT_PX = 16;
+/** Extra width the cell's own widget adds around its text. */
+const CELL_CHROME_PX: Partial<Record<ColumnId, number>> = {
+  // Chip `px-2` + status icon `w-3` + `space-x-1`.
+  status: 16 + 12 + 4,
+  // Pill `px-1.5` plus its border on each side.
+  format: 12 + 2,
+};
+/** The 36px (`h-9`) artwork thumb inside a `px-2` cell. */
+export const ARTWORK_MIN_WIDTH = 36 + 16;
 
 const DEFINITIONS: Record<ColumnId, ColumnDefinition> = {
   index: {
@@ -483,11 +495,36 @@ export function setColumnWidth(
 /**
  * Width for a double-clicked resize handle. Measuring the DOM is not worth a
  * re-render per row: the longest value in the loaded page is close enough, and
- * the header label keeps the column from shrinking below its own name.
+ * the header (label plus sort icon) keeps the column from shrinking below what
+ * the header itself needs. Cells with decorations reserve their chrome too, and
+ * the artwork column reserves its thumb, which has no text to measure.
  */
 export function autoFitWidth(text: string, definition: ColumnDefinition): number {
-  const content = Math.max(text.length, definition.label.length) * CHARACTER_PX + CELL_PADDING_PX;
-  return clampWidth(content, definition.id);
+  const header =
+    definition.label.length * CHARACTER_PX +
+    CELL_PADDING_PX +
+    (definition.sortable ? HEADER_SORT_PX : 0);
+  const body = text.length * CHARACTER_PX + CELL_PADDING_PX + (CELL_CHROME_PX[definition.id] ?? 0);
+  const floor = definition.id === "artwork" ? ARTWORK_MIN_WIDTH : MIN_COLUMN_WIDTH;
+  return clampWidth(Math.max(header, body, floor), definition.id);
+}
+
+/**
+ * Rendered width of the whole table: the sum of the columns, with an in-flight
+ * resize substituted. The table must be exactly this wide — with `table-fixed`
+ * a wider container spreads the leftover pixels across the columns, so their
+ * rendered widths would stop matching the saved ones, and a drag would move
+ * every column.
+ */
+export function totalColumnWidth(
+  columns: readonly ColumnState[],
+  preview?: { id: ColumnId; width: number } | null
+): number {
+  return columns.reduce(
+    (sum, column) =>
+      sum + (preview && preview.id === column.id ? clampColumnWidth(preview.width) : column.width),
+    0
+  );
 }
 
 const STORAGE_PREFIX = "dj-assistant.columns.v1.";
@@ -603,5 +640,29 @@ export function trackColumnText(track: TrackSummary, id: ColumnId): string {
     case "cues":
     case "size":
       return PLACEHOLDER;
+  }
+}
+
+/**
+ * Hover text for a cell that shows only part of its value. The table shortens
+ * comments and hashes and prefers one key notation, so the tooltip carries the
+ * full comment, the full hash and both notations. Columns whose cell already
+ * shows everything return `undefined` rather than repeating themselves.
+ */
+export function trackColumnTooltip(track: TrackSummary, id: ColumnId): string | undefined {
+  switch (id) {
+    case "comment":
+      return track.comments?.trim() || undefined;
+    case "fingerprint":
+      return track.fileHash?.trim() || undefined;
+    case "key": {
+      const camelot = track.keyCamelot?.trim();
+      const classical = track.keyClassical?.trim();
+      return camelot && classical ? `Camelot ${camelot} • ${classical}` : undefined;
+    }
+    case "rating":
+      return track.userRating != null ? `${track.userRating} / 5` : "Unrated";
+    default:
+      return undefined;
   }
 }
