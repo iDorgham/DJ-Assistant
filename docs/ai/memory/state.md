@@ -6,10 +6,11 @@ fact, it belongs in [`facts.md`](./facts.md). Delete anything stale.
 
 ## 2026-10-21 · Phase 2 Slice 2 — rating + energy (T2.1.4 + T2.1.6)
 
-- Branch `feat/T2.1.4-T2.1.6-rating-energy` (off `docs/T2.1.5-tick-phase2-expansion-T0.1.21`).
-  **Nothing committed yet** — Slice 2 and the previous session's doc
-  reconciliation are both uncommitted. `README.md` and `kilo.jsonc` are
-  unrelated local edits; keep them out of the slice commit.
+- **PR #51** (`feat/T2.1.4-T2.1.6-rating-energy` → `main`), one commit
+  `eca26ad4` on top of `origin/main`. The pending roadmap reconciliation and
+  the MCP/plugin docs (`docs/enhancements/`) are folded into the same commit.
+  `README.md` and `kilo.jsonc` were left out — they are unrelated local
+  edits from another session.
 - New `tracks.energy INTEGER` column (migration `006_track_energy.sql`).
   `db.rs::without_applied_alters` only parses **single-line**
   `ALTER TABLE … ADD COLUMN`, so the migration must stay one physical line.

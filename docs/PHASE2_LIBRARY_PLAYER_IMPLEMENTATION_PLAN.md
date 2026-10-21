@@ -193,7 +193,7 @@ Slice 7 real audio ──► Slice 8 dual-wave + transport
 
 ### Slice 2 — Rating + Energy (T2.1.4 rating, T2.1.6 energy)
 
-**Status:** Done — 2026-10-21 (branch `feat/T2.1.4-T2.1.6-rating-energy`). Rating and energy ship together because they share one reversible write path; neither task owns the other's field.
+**Status:** Done — PR #51 (2026-10-21), branch `feat/T2.1.4-T2.1.6-rating-energy`. Rating and energy ship together because they share one reversible write path; neither task owns the other's field.
 
 **Scope split:** **T2.1.4 = rating only** (star rating + rating sort; the `ratingMin` filter already ships with T2.1.2). **T2.1.6 = everything energy** (bars, inline edit, `energyMin`/`energyMax` filter, energy sort). Neither task owns the other’s field.
 
