@@ -135,13 +135,72 @@ describe("moving a skill keeps what it is", () => {
 });
 
 describe("every installed copy is found", () => {
+  it("sees the copies that listSkills collapses", () => {
+    // listSkills() reports one entry per skill id — the project copy shadows
+    // the global one — so the shadowed copy is invisible to it. The prune
+    // needs it, or the skill keeps being advertised after the prune.
+    //
+    // The library is a temporary one: the test must not depend on what the
+    // developer (or a CI runner) happens to have installed.
+    const first = makeTree("source-a");
+    const second = makeTree("source-b");
+    const shared = path.join(first, "shared-skill");
+    fs.mkdirSync(shared);
+    fs.writeFileSync(path.join(shared, "SKILL.md"), "# shared");
+    const only = path.join(second, "only-skill");
+    fs.mkdirSync(only);
+    fs.writeFileSync(path.join(only, "SKILL.md"), "# only");
+
+    const physical = copies([
+      { name: "a", dir: first },
+      { name: "b", dir: second },
+    ]);
+
+    assert.deepEqual([...physical.keys()].sort(), ["only-skill", "shared-skill"]);
+    assert.deepEqual(
+      [...physical.get("shared-skill").entries()].map(([source]) => source),
+      ["a"]
+    );
+    assert.deepEqual(
+      [...physical.get("only-skill").entries()].map(([source]) => source),
+      ["b"]
+    );
+    assert.equal(physical.get("shared-skill").get("a"), shared);
+  });
+
+  it("finds a skill installed in more than one source", () => {
+    const first = makeTree("dup-a");
+    const second = makeTree("dup-b");
+    for (const dir of [first, second]) {
+      const skill = path.join(dir, "shared-skill");
+      fs.mkdirSync(skill);
+      fs.writeFileSync(path.join(skill, "SKILL.md"), "# shared");
+    }
+
+    const physical = copies([
+      { name: "a", dir: first },
+      { name: "b", dir: second },
+    ]);
+
+    assert.equal(physical.get("shared-skill").size, 2);
+    assert.deepEqual(
+      [...physical.get("shared-skill").keys()].sort(),
+      ["a", "b"]
+    );
+  });
+
+  it("ignores a directory that holds no skill", () => {
+    const dir = makeTree("not-a-skill");
+    fs.mkdirSync(path.join(dir, "just-a-folder"));
+
+    const physical = copies([{ name: "a", dir }]);
+    assert.equal(physical.size, 0);
+  });
+
   it(
-    "sees the copies that listSkills collapses",
+    "finds the shadowed copies in the real library",
     { skip: installed.size ? false : "no skill library is installed" },
     () => {
-      // listSkills() reports one entry per skill id — the project copy shadows
-      // the global one — so the shadowed copy is invisible to it. The prune
-      // needs it, or the skill keeps being advertised after the prune.
       const physical = copies();
       assert.ok(physical.size > 0, "no skills found at all");
 

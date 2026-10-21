@@ -283,10 +283,13 @@ export function hotPruneOverlap(hot = [], removable = []) {
  * last source wins — so the copies that are shadowed are invisible to it. The
  * prune needs all of them, each with its own path, so that a skill stops
  * being advertised wherever it happens to live.
+ *
+ * The sources are a parameter so the test suite can point it at a temporary
+ * library instead of the developer's own.
  */
-export function copies() {
+export function copies(sources = SOURCES) {
   const byId = new Map();
-  for (const source of SOURCES) {
+  for (const source of sources) {
     if (!fs.existsSync(source.dir)) continue;
     for (const entry of fs.readdirSync(source.dir, { withFileTypes: true })) {
       if (!entry.isDirectory() && !entry.isSymbolicLink()) continue;
