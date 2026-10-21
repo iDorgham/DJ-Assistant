@@ -13,10 +13,11 @@ fact, it belongs in [`facts.md`](./facts.md). Delete anything stale.
   artwork thumb; cells use `trackColumnTooltip` for the full comment, hash,
   both key notations and rating. The three threads are replied and resolved;
   the remaining review threads on the plan/diagram/picker are still open.
-- The column model, persistence and 23 column tests are in
-  `apps/desktop/src/lib/library-columns.ts`; the checklist is
-  `components/ColumnPicker.tsx`; the table header/cells in `App.tsx` render
-  from the configured list.
+- The column model and persistence are in
+  `apps/desktop/src/lib/library-columns.ts`; its 29 tests are in
+  `apps/desktop/src/lib/library-columns.test.ts`; the checklist is
+  `components/ColumnPicker.tsx`; the table header/cells in `App.tsx`
+  render from the configured list.
 - Verified in the dev-server browser with mock tracks: toggle, resize,
   reorder, double-click auto-fit, reset, reload persistence and wide-window
   widths all hold; the last identity column stays pinned. 77 desktop tests,
