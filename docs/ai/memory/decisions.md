@@ -70,3 +70,15 @@ never exercised, across six tools with six schemas.
 **Reverses if:** the workspace pins a v2-config OpenCode and every agent runs
 once under enforcement. Until then, never report that a permission block allowed
 or blocked something without checking the rules the binary resolved.
+
+## D-009 · MCP integration is opt-in, config-only, and never owns app truth (2026-10-21)
+
+Any MCP server this project uses lives in a tracked `opencode.json` at the repo
+root, ships **disabled**, and has its write-capable tools hard-disabled through
+OpenCode's `tools` map. No project plugin is ever added (D-002), no MCP owns
+analysis or library truth, and the agent reads the app's database through a
+read-only Rust binary rather than a server that could write to it. Template,
+safety envelope and rollback:
+[`docs/enhancements/mcb-plugin-enhancement-plan.md`](../../../enhancements/mcb-plugin-enhancement-plan.md).
+**Reverses if:** OpenCode gains a first-class bundle primitive, or the
+tool-disable guarantee proves unenforceable in a shipped build.

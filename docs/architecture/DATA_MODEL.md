@@ -42,7 +42,7 @@ Primary library table.
 | bpm | REAL | From tags; overwritten by analysis when available |
 | key_camelot | TEXT | e.g. "8A" (from tags or analysis) |
 | key_classical | TEXT | e.g. "A minor" (from tags or analysis) |
-| energy | REAL | Optional / user or derived |
+| energy | INTEGER | 1–10, user-assigned (migration 006); `NULL` until set |
 | loudness_lufs | REAL | EBU R128 |
 | vocal_presence | INTEGER 0/1 | Thresholded presence flag (pipeline `VOCAL_PRESENCE_THRESHOLD=0.5` in `crates/analysis/src/pipeline.rs`); continuous 0–1 density lives in the analyzer output, stored thresholded |
 | analysis_status | TEXT | pending / complete / failed / needs_review |

@@ -129,7 +129,7 @@ This is the actionable engineering task list. Check items off as they are comple
 - [ ] App shell per `docs/ui/`: three views (Library / Preparation / Auto Performance), collapsible nav, options bar, theme cycle, player dock (T2.1.0 — implemented on `feat/T2.1.0-shell-ui`; pending merge and acceptance)
 - [ ] Full library browser: search, multi-filter (BPM, key, genre, rating, analysis status) — *search + filters implemented, pending merge; saved views outstanding*
 - [ ] Bulk select + bulk edit
-- [ ] User ratings, tags, comments
+- [ ] User ratings, tags, comments — *tracked in `docs/sdd/04-TASKS.md`: T2.1.4 (rating), T2.1.7 (tags), T2.1.13 (comments)*
 - [ ] Sort options and saved views (nice-to-have)
 
 ### Smart Tag Cleanup — Tag Surgeon

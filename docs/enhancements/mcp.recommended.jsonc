@@ -1,0 +1,233 @@
+// =============================================================================
+// DJ Assistant — recommended MCP ("MCB") configuration
+// =============================================================================
+//
+// Document type : Config template (JSONC — comments allowed)
+// Status        : Proposed — 2026-10-21
+// Companion     : docs/enhancements/mcb-plugin-enhancement-plan.md
+//                 docs/enhancements/mcb-plugin-audit.md
+//
+// WHAT THIS IS
+//   A copy-paste template for the repo-root `opencode.json`. OpenCode merges
+//   that file with the user's global `~/.config/opencode/opencode.json`
+//   (remote -> global -> custom -> project -> .opencode -> inline), so the
+//   user's existing servers are preserved — nothing here replaces anything.
+//
+// HOW TO USE
+//   1. Copy this file to the repo root as `opencode.json`.
+//   2. Set the environment variables listed under each server.
+//   3. Flip ONE server from "enabled": false to "enabled": true.
+//   4. Verify:  opencode mcp list
+//
+// SECRETS
+//   This file contains none. OpenCode substitutes environment variables with
+//   `{env:VARIABLE_NAME}` (and file contents with `{file:path/to/file}`).
+//   Shell-style `${VARIABLE}` is NOT substituted by OpenCode — it would be
+//   passed through literally — so `{env:...}` is used everywhere here.
+//   An unset variable resolves to an empty string.
+//
+// SAFETY POSTURE (see plan §6)
+//   - Every server ships DISABLED. Enabling is a one-word edit; so is
+//     disabling, which is the entire rollback story.
+//   - Write-capable MCP tools are hard-disabled in the "tools" map below, so
+//     flipping a server on cannot re-enable them.
+//   - No server in this template requires a hosted service or an API token.
+//
+// LOCAL-FIRST
+//   `dj-db` points at a SNAPSHOT COPY of the app's database, never the live
+//   file the running app owns. The live DB lives at
+//     %APPDATA%\com.djassistant.desktop\dj_assistant.db
+//   and is reachable only through the Rust `dj-query` binary (read-only).
+//
+// =============================================================================
+
+{
+  "$schema": "https://opencode.ai/config.json",
+
+  // ---------------------------------------------------------------------------
+  // MCP servers
+  // ---------------------------------------------------------------------------
+  "mcp": {
+    // -------------------------------------------------------------------------
+    // dj-db — read-only SQL over a SNAPSHOT of the app's library database.
+    //
+    //   source : uvx (PyPI `mcp-server-sqlite`)
+    //   local  : yes
+    //   risk   : low (write tools disabled below; sees a copy, not the live DB)
+    //   why    : ad-hoc questions the Rust `dj-query` binary does not model yet.
+    //
+    //   PREREQUISITE — make a snapshot first (SQLite online backup, or copy
+    //   the file while the app is closed; never copy a live WAL database):
+    //     python scripts/inspect-db.py            # find the DB and its tables
+    //     copy "%APPDATA%\com.djassistant.desktop\dj_assistant.db" "%TEMP%\dj-assistant-snapshot.db"
+    //
+    //   If `{env:...}` is not substituted inside "command" on your OpenCode
+    //   build, replace it with a literal path.
+    // -------------------------------------------------------------------------
+    "dj-db": {
+      "type": "local",
+      "command": [
+        "uvx",
+        "mcp-server-sqlite==2025.4.25",
+        "--db-path",
+        "{env:DJ_ASSISTANT_DB_SNAPSHOT}"
+      ],
+      "environment": {},
+      "enabled": false,
+      "timeout": 20000
+    },
+
+    // -------------------------------------------------------------------------
+    // dj-ui — drive the app's own UI in a browser.
+    //
+    //   source : npm (`@playwright/mcp`, version pinned on purpose)
+    //   local  : yes
+    //   risk   : low (origin-scoped, isolated profile, no state on disk)
+    //   why    : apps/desktop/src-tauri/tauri.conf.json sets
+    //            devUrl http://localhost:1420 and apps/desktop/src/services/api.ts
+    //            falls back to mock IPC outside Tauri — so the real React UI
+    //            runs in a plain browser and can be checked for focus order,
+    //            overflow and empty states.
+    //
+    //   --allowed-origins : trusted-origin list. This is scoping, NOT a
+    //                        sandbox — do not read it as containment.
+    //   --isolated         : browser profile stays in memory; nothing on disk.
+    //   --headless         : no visible window.
+    //
+    //   Start the app first:  pnpm dev:desktop
+    // -------------------------------------------------------------------------
+    "dj-ui": {
+      "type": "local",
+      "command": [
+        "npx",
+        "-y",
+        "@playwright/mcp@0.0.83",
+        "--allowed-origins",
+        "http://localhost:1420",
+        "--isolated",
+        "--headless"
+      ],
+      "environment": {},
+      "enabled": false,
+      "timeout": 60000
+    },
+
+    // -------------------------------------------------------------------------
+    // dj-serato — read the DJ's REAL Serato library (crates, BPM, Camelot key)
+    // so the agent can reconcile it against what DJ Assistant imported.
+    //
+    //   source : npm (`serato-dj-mcp`, version pinned on purpose)
+    //   local  : yes
+    //   risk   : MEDIUM — upstream states Windows is UNTESTED. It has no
+    //            Windows path discovery, its cache/state dirs default to
+    //            macOS-style paths, and its "is Serato running" check uses
+    //            `ps` (absent on Windows). Read-only mode is unaffected.
+    //            Smoke-test before relying on it (plan §7.2).
+    //
+    //   The server is read-only BY DEFAULT: every read goes through a snapshot
+    //   copy in --cache-dir, so a question can never change the library.
+    //
+    //   DO NOT ADD `--allow-writes` or `--allow-raw-sql`. Both widen the tool
+    //   surface; neither is needed for read-only library questions.
+    //
+    //   Point --cache-dir and --state-dir at Windows-friendly locations; they
+    //   are the server's scratch space and are writable.
+    // -------------------------------------------------------------------------
+    "dj-serato": {
+      "type": "local",
+      "command": [
+        "npx",
+        "-y",
+        "serato-dj-mcp@0.1.1",
+        "--library",
+        "{env:DJ_ASSISTANT_SERATO_LIBRARY}",
+        "--cache-dir",
+        "{env:DJ_ASSISTANT_SERATO_CACHE}",
+        "--state-dir",
+        "{env:DJ_ASSISTANT_SERATO_STATE}"
+      ],
+      "environment": {},
+      "enabled": false,
+      "timeout": 30000
+    },
+
+    // -------------------------------------------------------------------------
+    // dj-docs — DEFERRED, shown for reference only.
+    //
+    //   Pulls current library docs (Tauri v2, rusqlite, Tailwind v4) from a
+    //   THIRD-PARTY hosted service. It is the only network-dependent entry
+    //   here, which is why it is deferred: the local-first posture does not
+    //   extend to a mandatory doc fetch, and `websearch` / `webfetch` plus
+    //   the hot `docker-docs` skill already cover the need.
+    //
+    //   CONTEXT7_API_KEY is optional; the server works without it at lower
+    //   rate limits. Never commit a token.
+    // -------------------------------------------------------------------------
+    "dj-docs": {
+      "type": "remote",
+      "url": "https://mcp.context7.com/mcp",
+      "enabled": false,
+      "timeout": 30000
+    }
+  },
+
+  // ---------------------------------------------------------------------------
+  // Tool-level safety net.
+  //
+  // OpenCode's "tools" map disables individual MCP tools by name
+  // (`<server>_<tool>`), and supports glob patterns. This is the enforcement
+  // point that actually binds — prompt-level politeness does not.
+  //
+  // The dj-db server exposes `read_query`, `write_query`, `create_table`,
+  // `list_tables`, `describe-table` and `append_insight`. Only the read side
+  // is wanted; the mutating tools are switched off here so that flipping
+  // `dj-db.enabled` to true cannot re-enable them.
+  //
+  // Verify the exact tool names for your OpenCode build with:
+  //   opencode mcp list
+  // ---------------------------------------------------------------------------
+  "tools": {
+    "dj-db_write_query": false,
+    "dj-db_create_table": false,
+    "dj-db_append_insight": false
+
+    // Optional, for context-cost control: switch a whole server's tools off
+    // without touching its "enabled" flag. Uncomment when a server is rarely
+    // needed and you want it connected but silent.
+    // "dj-ui_*": false,
+    // "dj-serato_*": false,
+  }
+}
+
+// =============================================================================
+// Environment variables referenced above (set these in your shell profile —
+// never in this file, and never in docs/ai/memory/*):
+//
+//   DJ_ASSISTANT_DB_SNAPSHOT
+//       Full path to a SNAPSHOT COPY of the app's SQLite database.
+//       Example: %TEMP%\dj-assistant-snapshot.db
+//
+//   DJ_ASSISTANT_SERATO_LIBRARY
+//       The Serato library folder (the one holding master.sqlite).
+//       Example: D:\Music\_Serato_
+//
+//   DJ_ASSISTANT_SERATO_CACHE
+//       Writable scratch dir for the server's library snapshot.
+//       Example: %LOCALAPPDATA%\dj-assistant\serato-cache
+//
+//   DJ_ASSISTANT_SERATO_STATE
+//       Writable scratch dir for staged changes (unused while writes are off).
+//       Example: %LOCALAPPDATA%\dj-assistant\serato-state
+//
+//   DJ_ASSISTANT_MCP_TOKEN   (deferred dj-docs only)
+//       Optional Context7 API key. Not needed by any other server.
+//
+// NOT INCLUDED, ON PURPOSE
+//   - No docker-based server: the repo has no Docker artefacts and npx/uvx is
+//     the lower-friction route on Windows.
+//   - No filesystem MCP: it is write-capable and duplicates the built-in file
+//     tools. See audit §3.1.
+//   - No ffmpeg MCP: `mcp-ffmpeg` exposes `execute_ffmpeg_command`, i.e.
+//     arbitrary command execution. See audit §3.1.
+//   - No `server-memory`: it would fork the shared memory store (D-001).
+// =============================================================================

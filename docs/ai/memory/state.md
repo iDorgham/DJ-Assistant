@@ -4,6 +4,53 @@ Ephemeral. Newest first. **Rotate aggressively** — if a line would still be tr
 in two weeks, it belongs in [`decisions.md`](./decisions.md); if it is just a
 fact, it belongs in [`facts.md`](./facts.md). Delete anything stale.
 
+## 2026-10-21 · Phase 2 Slice 2 — rating + energy (T2.1.4 + T2.1.6)
+
+- Branch `feat/T2.1.4-T2.1.6-rating-energy` (off `docs/T2.1.5-tick-phase2-expansion-T0.1.21`).
+  **Nothing committed yet** — Slice 2 and the previous session's doc
+  reconciliation are both uncommitted. `README.md` and `kilo.jsonc` are
+  unrelated local edits; keep them out of the slice commit.
+- New `tracks.energy INTEGER` column (migration `006_track_energy.sql`).
+  `db.rs::without_applied_alters` only parses **single-line**
+  `ALTER TABLE … ADD COLUMN`, so the migration must stay one physical line.
+  `user_rating` already existed (nullable INTEGER).
+- Reversible write path: `update_track_metadata({trackIds, rating?, energy?})`,
+  `set_track_rating({trackIds, rating})`, `undo_track_metadata({undoId})`.
+  `0` clears (stores NULL), an omitted field is untouched. The undo snapshot is
+  a `skill_runs` row (`before_state`/`after_state` JSON, only the touched
+  columns) written **in the same transaction** as the track UPDATE — hence
+  `Database::conn_mut()` and `MutexGuard`'s `DerefMut` (`db_guard.conn_mut()`;
+  `MutexGuard::get_mut()` does not exist on this toolchain).
+- Sort: `rating`/`energy` are nullable → `ORDER BY <col> IS NULL, <col> DESC,
+  id ASC`, default direction descending, `SORT_KEYS` is now 8 entries.
+  `energyMin`/`energyMax` count as **one** filter group (1–10, inverted bounds
+  rejected on both sides).
+- Front end: `StarRating.tsx` + `EnergyBars.tsx` (new), the `energy`/`rating`
+  column model entries, energy bounds in the filter panel, table multi-select
+  (Ctrl/Cmd-click toggles, Shift-click takes a range) and an Undo toast inside
+  the library view's `relative` container (6 s). Logic lives in pure
+  `lib/*.ts` helpers tested with `node --test` — **there is no React component
+  test harness in this repo** and the three Tauri commands have no handler
+  test.
+- **Open gap:** the full bulk-metadata flow (BulkActionBar, select-all) is
+  still **T2.1.3**; Slice 2 ships only the table multi-select subset.
+- Checks: `pnpm ci:local:portable` green (lint, typecheck, 83 desktop + 34
+  agent tests, `cargo fmt`, `cargo clippy -D warnings`, 113+9+7+9+12 Rust
+  tests). `cargo test -p dj-assistant-desktop` **cannot run here** —
+  `STATUS_ENTRYPOINT_NOT_FOUND (0xC0000139)` from the Tauri-linked harness on
+  the `x86_64-pc-windows-gnu` host (documented in `CHANGELOG.md`); use
+  `pnpm rust:test:portable`.
+
+## 2026-10-21 · Phase 2 roadmap reconciliation (docs only)
+
+- `docs/sdd/04-TASKS.md` + the Library+Player plan were reconciled: T2.1.4 =
+  rating only, T2.1.6 = all energy work, **T2.1.13 = comment editing** (it
+  was dropped when T2.1.4 was rewritten; the `Edit tags…` editor now lists a
+  Comment field in `docs/ui/03-LIBRARY-VIEW.md` §3.5).
+- Row virtualization **does not exist** — `App.tsx` maps every row and no
+  virtualizer is in `apps/desktop`. The plan’s Slice 0 no longer claims it,
+  Slice 9 owns implementing it, and the T2.1.5 entry carries the caveat.
+
 ## 2026-10-21 · T2.1.5 column framework — PR #49
 
 - PR #49 (`feat/T2.1.5-column-framework` → `main`) carries the Phase 2 plan
@@ -22,8 +69,8 @@ fact, it belongs in [`facts.md`](./facts.md). Delete anything stale.
   reorder, double-click auto-fit, reset, reload persistence and wide-window
   widths all hold; the last identity column stays pinned. 77 desktop tests,
   workspace typecheck and lint pass.
-- T2.1.5 is not yet a row in `docs/sdd/04-TASKS.md` — the plan proposes
-  T2.1.5–T2.1.12 but the tracker still ends at T2.1.4.
+- T2.1.5 is now a ticked row in `docs/sdd/04-TASKS.md`; the tracker runs
+  T2.1.0–T2.1.13.
 
 ## 2026-10-20 · Automatic agent routing and communication
 

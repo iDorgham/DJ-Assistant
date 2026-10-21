@@ -8,6 +8,12 @@ import type {
   GetTrackResponse,
   GetArtworkRequest,
   GetArtworkResponse,
+  UpdateTrackMetadataRequest,
+  UpdateTrackMetadataResponse,
+  SetTrackRatingRequest,
+  SetTrackRatingResponse,
+  UndoTrackMetadataRequest,
+  UndoTrackMetadataResponse,
   ScanProgressEvent,
   ScanCompletedEvent,
   AnalyzeLibraryRequest,
@@ -89,6 +95,45 @@ export async function getArtwork(req: GetArtworkRequest): Promise<GetArtworkResp
   }
   const { invoke } = await import("@tauri-apps/api/core");
   return invoke<GetArtworkResponse>("get_artwork", { request: req });
+}
+
+/**
+ * Patches user-assigned metadata (rating, energy) on one or more tracks.
+ *
+ * The backend answers with the id of the undo snapshot it stored, so the UI
+ * can offer a real Undo instead of guessing the previous values.
+ */
+export async function updateTrackMetadata(
+  req: UpdateTrackMetadataRequest
+): Promise<UpdateTrackMetadataResponse> {
+  if (!isTauri) {
+    console.warn("[Mock API] Tauri not detected, ignoring track metadata update");
+    return { undoId: "mock-undo", updated: 0 };
+  }
+  const { invoke } = await import("@tauri-apps/api/core");
+  return invoke<UpdateTrackMetadataResponse>("update_track_metadata", { request: req });
+}
+
+/** Rating-only variant of {@link updateTrackMetadata}. */
+export async function setTrackRating(req: SetTrackRatingRequest): Promise<SetTrackRatingResponse> {
+  if (!isTauri) {
+    console.warn("[Mock API] Tauri not detected, ignoring rating update");
+    return { undoId: "mock-undo", updated: 0 };
+  }
+  const { invoke } = await import("@tauri-apps/api/core");
+  return invoke<SetTrackRatingResponse>("set_track_rating", { request: req });
+}
+
+/** Reverts a metadata write using the `undoId` the write returned. */
+export async function undoTrackMetadata(
+  req: UndoTrackMetadataRequest
+): Promise<UndoTrackMetadataResponse> {
+  if (!isTauri) {
+    console.warn("[Mock API] Tauri not detected, ignoring undo");
+    return { restored: 0 };
+  }
+  const { invoke } = await import("@tauri-apps/api/core");
+  return invoke<UndoTrackMetadataResponse>("undo_track_metadata", { request: req });
 }
 
 /**

@@ -42,7 +42,7 @@ Deliver the professional Library working surface and a trustworthy preview playe
 |------|---------------|-------|
 | T2.1.0 App shell | Merged or stable branch | View switcher, LeftNav slot, OptionsBar, PlayerDock modes, `ui-state` persistence, Ableton tokens |
 | T2.1.2 Multi-filter + sort | Merged | BPM, key, genre, rating, analysis status; extend for Energy in Slice 2 |
-| Virtualized track table | Exists from Phase 0 | Become `TrackTable` + column config |
+| Virtualized track table | **Does not exist** — the Phase 0 list renders every row (`App.tsx` maps the full filtered list) | Become `TrackTable` + column config in Slice 1; row virtualization is a Slice 9 item |
 | `list_tracks` / `get_track` | Exists | Extend request/response shapes below |
 | Analysis fields | Phase 1 in progress | `key_camelot`, `key_classical`, BPM; energy may need migration |
 
@@ -108,7 +108,7 @@ cueCount?: number;
 
 | Command | Purpose |
 |---------|---------|
-| `update_track_metadata` | Patch rating, energy, tags, label, year, notes (logged; undo payload) |
+| `update_track_metadata` | Patch rating, energy, tags, label, year, notes (logged; undo payload) — `notes` is the free-text `comments` field (T2.1.13) |
 | `set_track_rating` | Convenience for single/multi rating |
 | `get_waveform_peaks` | `{ trackId, zoomLevel? }` → peaks for detailed + overview |
 | `player_load` | Load track into player engine (path validated server-side) |
@@ -140,14 +140,14 @@ These get unit tests **first** (TDD-friendly).
 |---|--------|--------|------|----------|
 | 0 | Baseline merge | T2.1.0, T2.1.2 | — | — |
 | 1 | Column framework — **done (PR #49, `d037128b`)** | **T2.1.5** | S | — |
-| 2 | Rating + Energy | **T2.1.4**, **T2.1.6** | S–M | After 1 |
-| 3 | Tags + Key pills | **T2.1.7**, **T2.1.8** | M | After 1; key needs playing id |
+| 2 | Rating + Energy — **done (Slice 2, 2026-10-21)** | **T2.1.4** (rating), **T2.1.6** (energy) | S–M | After 1 |
+| 3 | Tags + Key pills + Comments | **T2.1.7**, **T2.1.8**, **T2.1.13** | M | After 1; key needs playing id |
 | 4 | Artwork | **T2.1.9** | S | After 1 |
 | 5 | Context menu + nav sources | **T2.1.10**, **T2.1.12** | M | After 2–4 |
 | 6 | Mix Suggestions | **T2.1.11** | M | After 3 + 5 |
 | 7 | Player modes + real audio | **T2.4.1**, **T2.4.3** | M | After play path (5) |
 | 8 | Dual-wave + transport | **T2.4.2**, **T2.4.4**, **T2.4.5** | L | After 7 |
-| 9 | Hardening (optional same sprint) | a11y, perf, search fields T2.1.1, bulk T2.1.3 | M | Continuous |
+| 9 | Hardening (optional same sprint) | a11y, perf, **row virtualization**, search fields T2.1.1, bulk T2.1.3 | M | Continuous |
 
 S ≈ 1–2d · M ≈ 2–4d · L ≈ 4–7d (one mid-level engineer).
 
@@ -173,7 +173,7 @@ Slice 7 real audio ──► Slice 8 dual-wave + transport
 1. `ColumnId` union + default config (match `03-LIBRARY-VIEW` §3.2).
 2. Persist `{ id, visible, width, order }[]` per view in `localStorage` / workspace prefs.
 3. `ColumnPicker`: checklist, drag reorder, resize handles, double-click auto-fit, Reset.
-4. `TrackTable` header + body read config; virtualization still works with variable row height only if Artwork on (document rule: artwork row taller or fixed thumb).
+4. `TrackTable` header + body read config; the body still renders every row — when row virtualization lands (Slice 9) it needs a fixed row height unless Artwork is on (document rule: artwork row taller or fixed thumb).
 5. Forbid hiding the last identity column (Title).
 
 **Files (shipped)**
@@ -184,40 +184,60 @@ Slice 7 real audio ──► Slice 8 dual-wave + transport
 **DoD**
 - [x] Toggle any optional column; order + widths survive relaunch
 - [x] Reset restores defaults
-- [ ] No layout jump that breaks virtualization — *the table still renders all rows; virtualization lands with the Slice 9 hardening pass*
+- [ ] No layout jump that breaks virtualization — *the table still renders all rows (row virtualization is not implemented); it lands with the explicit “Virtualized track table” item in the Slice 9 hardening table below*
 - [x] Unit tests for merge/validate/persist
 
 **Out of scope:** Fancy cell widgets (plain text OK).
 
 ---
 
-### Slice 2 — Rating + Energy (T2.1.4, T2.1.6)
+### Slice 2 — Rating + Energy (T2.1.4 rating, T2.1.6 energy)
+
+**Status:** Done — 2026-10-21 (branch `feat/T2.1.4-T2.1.6-rating-energy`). Rating and energy ship together because they share one reversible write path; neither task owns the other's field.
+
+**Scope split:** **T2.1.4 = rating only** (star rating + rating sort; the `ratingMin` filter already ships with T2.1.2). **T2.1.6 = everything energy** (bars, inline edit, `energyMin`/`energyMax` filter, energy sort). Neither task owns the other’s field.
 
 **Data**
-- Migration if `energy` not INTEGER 1–10.
-- `update_track_metadata` / `set_track_rating` with undo snapshot in skill_runs or lightweight undo stack.
+- Migration if `energy` not INTEGER 1–10. — *done: migration `006_track_energy.sql`, `ALTER TABLE tracks ADD COLUMN energy INTEGER;`*
+- `update_track_metadata` / `set_track_rating` with undo snapshot in skill_runs or lightweight undo stack. — *done: the snapshot is a `skill_runs` row (`before_state` / `after_state` JSON, only the touched columns) written in the same transaction as the track UPDATE; `undo_track_metadata` restores it and flips the row to `undone`.*
 
 **UI**
-- `StarRating`: filled/outline, hover preview, keys `1`–`5` / `0`, multi-select apply.
-- `EnergyBars`: 10 segments, accent fill, tooltip “Energy N / 10”, unanalyzed → “—”.
-- Sort by `energy` / `rating`; filter `energyMin/Max`, `ratingMin`.
+- `StarRating` (T2.1.4): filled/outline, hover preview, keys `1`–`5` / `0`, multi-select apply.
+- `EnergyBars` (T2.1.6): 10 segments, accent fill, tooltip “Energy N / 10”, unanalyzed → “—”.
+- Sort by `rating` (T2.1.4) and `energy` (T2.1.6); filter `ratingMin` (shipped) and `energyMin/Max` (T2.1.6).
+
+**Files (shipped)**
+- `apps/desktop/src/components/StarRating.tsx`, `apps/desktop/src/components/EnergyBars.tsx`
+- `apps/desktop/src/App.tsx` (rating/energy cells, table multi-select, Undo toast, energy bounds in the filter panel)
+- `apps/desktop/src/lib/library.ts`, `apps/desktop/src/lib/library-columns.ts` (filters, sort keys, column text/tooltip)
+- `apps/desktop/src/services/api.ts`, `packages/shared/src/index.ts` (the three new commands)
+- `apps/desktop/src-tauri/src/commands.rs`, `apps/desktop/src-tauri/src/models.rs`, `apps/desktop/src-tauri/src/db.rs` (+ `migrations/006_track_energy.sql`)
+- `crates/core/src/library_query.rs` (energy filters, `rating`/`energy` sort keys, `SORT_KEYS` → 8 entries)
 
 **DoD**
-- [ ] Edit rating on 20 tracks; multi-select rate; Undo
-- [ ] Filter Energy 6–8 + sort rating works via `list_tracks`
-- [ ] Values survive app restart
-- [ ] Component tests + IPC handler tests
+- [x] Edit rating on 20 tracks; multi-select rate; Undo *(T2.1.4)* — *the write is batch-capable (`trackIds[]`) and reversible; `tests/schema/tests/persistence.rs` writes and reverts a batch, the UI applies an edit to the whole selection (Ctrl/Cmd-click toggles, Shift-click takes a range)*
+- [x] Sort by rating works via `list_tracks` *(T2.1.4)* — *`rating` is an allow-listed sort key with NULLs last and descending by default*
+- [x] Filter Energy 6–8 + sort by energy works via `list_tracks` *(T2.1.6)* — *`energyMin`/`energyMax` are one filter group; the mirrored filtered SQL is asserted against the migrated schema*
+- [x] Values survive app restart — *both values live in SQLite (`tracks.user_rating`, `tracks.energy`)*
+- [ ] Component tests + IPC handler tests — *partial: the pure helpers are covered by `node --test` and the query layer by Rust unit tests, but this repo has no React component-test harness and the three Tauri commands have no automated handler test (they are covered indirectly by the schema contract test)*
 
-**Enhancement:** Inline energy edit (click bars or context “Set energy”) with same undo path.
+**Enhancement:** Inline energy edit (click bars or context “Set energy”) with same undo path — T2.1.6. — *shipped: clicking a segment sets the level, clicking it again clears it.*
+
+**Known gap:** the full bulk-metadata flow (BulkActionBar, select-all, per-field bulk dialog) stays in **T2.1.3**; Slice 2 ships only the table multi-select subset.
 
 ---
 
-### Slice 3 — Tags + Key pills (T2.1.7, T2.1.8)
+### Slice 3 — Tags + Key pills + Comments (T2.1.7, T2.1.8, T2.1.13)
 
 **Tags**
 - Read tags into `TrackSummary.tags`.
 - `TagChips` + `+N` overflow; click → push tag into `FilterBar`.
 - Edit via existing “Edit tags…” stub or minimal dialog; full Tag Surgeon remains T2.2.
+
+**Comments (T2.1.13)**
+- The metadata editor opened by “Edit tags…” gains a **Comment** field — `docs/ui/03-LIBRARY-VIEW.md` §3.5 now lists it; the implementation must add it (the editor currently covers title/artist/album/genre/label/year/custom tags only).
+- Written through `update_track_metadata` (`notes`) with the same undo path as rating/energy; bulk comment edit lands with T2.1.3.
+- `comment` joins the T2.1.1 search fields.
 
 **Key**
 - `key-format` + `harmonic` modules.
@@ -228,6 +248,7 @@ Slice 7 real audio ──► Slice 8 dual-wave + transport
 **DoD**
 - [ ] Playing 5A colors 5A / 4A / 6A / 5B correctly
 - [ ] Tag chip filters table
+- [ ] Comment edited in the metadata editor persists and is searchable *(T2.1.13)*
 - [ ] Preference switch updates column without reload
 - [ ] Pure function tests for all Camelot relations (12×12 matrix sample)
 
@@ -346,7 +367,8 @@ Slice 7 real audio ──► Slice 8 dual-wave + transport
 | Item | Notes |
 |------|--------|
 | T2.1.1 Search fields | title, artist, album, genre, tags, label, year, filename, comment |
-| T2.1.3 Bulk select + bulk metadata | Undo for bulk rating/tags/energy |
+| T2.1.3 Bulk select + bulk metadata | Undo for bulk rating/tags/energy/comments |
+| **Virtualized track table (implement)** | **Window the Library table body — it renders every row today (`App.tsx` maps the full filtered list) and no virtualizer is in `apps/desktop`. Fixed row height, or the artwork-row rule from Slice 1. Unblocks the Slice 1 DoD item “no layout jump that breaks virtualization” and `docs/ui/11-IMPLEMENTATION-CHECKLIST.md` Phase C “TrackTable virtualized”.** |
 | Virtualization perf | 5k–20k rows smoke; column toggle does not drop FPS |
 | a11y | Star/Energy names; menu keyboard; focus rings; reduced motion on player height |
 | Empty/error states | No tracks, no peaks yet, analyze failed |
@@ -440,7 +462,7 @@ main
 
 ## 11. Definition of Done — sequence complete
 
-- [ ] All T2.1.5–T2.1.12 and T2.4.1–T2.4.5 checked in `04-TASKS.md`
+- [ ] All T2.1.5–T2.1.13 and T2.4.1–T2.4.5 checked in `04-TASKS.md`
 - [ ] P2.1, P2.1a, P2.1b, P2.1c, P2.1d pass with notes/evidence
 - [ ] API contracts and DATA_MODEL match implementation
 - [ ] No shared waveform/audio/art across tracks

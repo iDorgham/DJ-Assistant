@@ -113,7 +113,16 @@ test("only columns the list query can sort are sortable", () => {
   const sortable = COLUMN_IDS.filter((id) => columnDefinition(id).sortable !== null).map(
     (id) => id
   );
-  assert.deepEqual(sortable, ["index", "title", "artist", "bpm", "key", "time"]);
+  assert.deepEqual(sortable, [
+    "index",
+    "title",
+    "artist",
+    "bpm",
+    "key",
+    "energy",
+    "rating",
+    "time",
+  ]);
 });
 
 test("toggling a plain column hides it", () => {
@@ -352,6 +361,7 @@ const FULL_TRACK: TrackSummary = {
   format: "mp3",
   analysisStatus: "needs_review",
   userRating: 4,
+  energy: 7,
   comments: "Great build, keep for the closing hour.",
   artworkHash: "art1",
   createdAt: "2026-10-01T00:00:00Z",
@@ -381,6 +391,7 @@ test("every column renders the text the table shows", () => {
     "key",
     "time",
     "rating",
+    "energy",
     "comment",
     "path",
     "format",
@@ -398,6 +409,7 @@ test("every column renders the text the table shows", () => {
     key: "8A",
     time: "7:05",
     rating: "★★★★☆",
+    energy: "7",
     comment: "Great build, keep for the closing hour.",
     path: "D:/music/sets/opener.mp3",
     format: "mp3",
@@ -424,21 +436,22 @@ test("missing tags fall back to a dash instead of an empty cell", () => {
 });
 
 test("columns without data in this slice show a placeholder, not a fake value", () => {
-  // Energy bars, tag chips, label, year, LUFS, color, cue counts and file size
-  // need fields the list query does not return yet (later T2.1.x slices).
-  const notYetSourced: ColumnId[] = [
-    "energy",
-    "tags",
-    "label",
-    "year",
-    "lufs",
-    "color",
-    "cues",
-    "size",
-  ];
+  // Tag chips, label, year, LUFS, color, cue counts and file size need fields
+  // the list query does not return yet (later T2.1.x slices).
+  const notYetSourced: ColumnId[] = ["tags", "label", "year", "lufs", "color", "cues", "size"];
   for (const id of notYetSourced) {
     assert.equal(trackColumnText(FULL_TRACK, id), PLACEHOLDER, `${id} has no source field`);
   }
+});
+
+test("the energy column reports the level the meter shows", () => {
+  assert.equal(trackColumnText(FULL_TRACK, "energy"), "7");
+  assert.equal(trackColumnText(BARE_TRACK, "energy"), PLACEHOLDER, "no energy set yet");
+  assert.equal(
+    trackColumnText({ ...FULL_TRACK, energy: null }, "energy"),
+    PLACEHOLDER,
+    "a cleared energy is not a zero"
+  );
 });
 
 test("tooltips keep the details the cells shorten", () => {
@@ -456,10 +469,12 @@ test("tooltips keep the details the cells shorten", () => {
   assert.equal(trackColumnTooltip(track, "fingerprint"), fullHash);
   assert.equal(trackColumnTooltip(track, "key"), "Camelot 8A • Am");
   assert.equal(trackColumnTooltip(FULL_TRACK, "rating"), "4 / 5");
+  assert.equal(trackColumnTooltip(FULL_TRACK, "energy"), "Energy 7 / 10");
 });
 
 test("tooltips are absent when there is no extra detail to show", () => {
   assert.equal(trackColumnTooltip(BARE_TRACK, "rating"), "Unrated");
+  assert.equal(trackColumnTooltip(BARE_TRACK, "energy"), "No energy set");
   assert.equal(trackColumnTooltip(BARE_TRACK, "comment"), undefined);
   assert.equal(trackColumnTooltip(BARE_TRACK, "fingerprint"), undefined);
   // Only one key notation exists, so the cell already shows all of it.

@@ -17,6 +17,7 @@ const MIGRATIONS: &[(i64, &str)] = &[
         include_str!("../migrations/004_enrichment_candidates.sql"),
     ),
     (5, include_str!("../migrations/005_chart_snapshots.sql")),
+    (6, include_str!("../migrations/006_track_energy.sql")),
 ];
 
 impl Database {
@@ -94,6 +95,13 @@ impl Database {
 
     pub fn conn(&self) -> &Connection {
         &self.conn
+    }
+
+    /// Mutable access to the connection. Commands that need a transaction hold
+    /// the `MutexGuard` mutably, so the write and its undo snapshot commit
+    /// together.
+    pub fn conn_mut(&mut self) -> &mut Connection {
+        &mut self.conn
     }
 }
 

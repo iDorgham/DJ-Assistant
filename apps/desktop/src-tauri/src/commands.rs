@@ -9,9 +9,11 @@ use crate::models::{
     AnalyzeLibraryRequest, AnalyzeLibraryResponse, CuePoint, FindSimilarTracksRequest,
     FindSimilarTracksResponse, GenreCount, GetArtworkRequest, GetTrackRequest, GetTrackResponse,
     ListGenresResponse, ListTracksRequest, ListTracksResponse, ProviderAccount, ProviderCapability,
-    ProviderStatusResponse, ScanFolderRequest, ScanFolderResponse, SimilarTrackResult, StoreLink,
-    StoreLinksRequest, StoreLinksResponse, TagHealthRequest, TagHealthResponse, TagHealthTotals,
-    TrackDetail, TrackGaps, TrackSummary,
+    ProviderStatusResponse, ScanFolderRequest, ScanFolderResponse, SetTrackRatingRequest,
+    SetTrackRatingResponse, SimilarTrackResult, StoreLink, StoreLinksRequest, StoreLinksResponse,
+    TagHealthRequest, TagHealthResponse, TagHealthTotals, TrackDetail, TrackGaps, TrackSummary,
+    UndoTrackMetadataRequest, UndoTrackMetadataResponse, UpdateTrackMetadataRequest,
+    UpdateTrackMetadataResponse,
 };
 use crate::scanner::run_scan;
 use crate::security::validate_and_canonicalize_dir;
@@ -21,10 +23,16 @@ use crate::security::validate_and_canonicalize_dir;
 /// whole library in memory.
 const MAX_LIST_LIMIT: i64 = 1000;
 
+/// Highest star rating `tracks.user_rating` stores (`0` clears the rating).
+const MAX_TRACK_RATING: i64 = 5;
+
+/// Highest energy level `tracks.energy` stores (`0` clears the energy).
+const MAX_TRACK_ENERGY: i64 = 10;
+
 /// Summary columns shared by `list_tracks` and `get_track`, in `TrackSummary` order.
 const TRACK_SUMMARY_COLUMNS: &str = "id, file_path, file_hash, title, artist, album, genre, bpm, \
-     key_camelot, key_classical, duration_ms, format, analysis_status, user_rating, comments, \
-     artwork_hash, created_at, updated_at";
+     key_camelot, key_classical, duration_ms, format, analysis_status, user_rating, energy, \
+     comments, artwork_hash, created_at, updated_at";
 
 #[tauri::command]
 pub async fn scan_folder(
@@ -172,10 +180,11 @@ fn map_track_summary_at(row: &rusqlite::Row, base: usize) -> rusqlite::Result<Tr
         format: row.get(base + 11)?,
         analysis_status: row.get(base + 12)?,
         user_rating: row.get(base + 13)?,
-        comments: row.get(base + 14)?,
-        artwork_hash: row.get(base + 15)?,
-        created_at: row.get(base + 16)?,
-        updated_at: row.get(base + 17)?,
+        energy: row.get(base + 14)?,
+        comments: row.get(base + 15)?,
+        artwork_hash: row.get(base + 16)?,
+        created_at: row.get(base + 17)?,
+        updated_at: row.get(base + 18)?,
     })
 }
 
@@ -203,20 +212,20 @@ pub async fn get_track(
         .query_row([&request.track_id], |row| {
             let summary = map_track_summary_at(row, 0)?;
 
-            let vocal_int: Option<i64> = row.get(23)?;
+            let vocal_int: Option<i64> = row.get(24)?;
             let vocal_presence = vocal_int.map(|v| v != 0);
 
             Ok(TrackDetail {
                 summary,
-                file_size: row.get(18)?,
-                sample_rate: row.get(19)?,
-                channels: row.get(20)?,
-                bit_depth: row.get(21)?,
-                loudness_lufs: row.get(22)?,
+                file_size: row.get(19)?,
+                sample_rate: row.get(20)?,
+                channels: row.get(21)?,
+                bit_depth: row.get(22)?,
+                loudness_lufs: row.get(23)?,
                 vocal_presence,
-                phrase_confidence: row.get(24)?,
-                analysis_version: row.get(25)?,
-                notes: row.get(26)?,
+                phrase_confidence: row.get(25)?,
+                analysis_version: row.get(26)?,
+                notes: row.get(27)?,
                 cues: Vec::new(),
             })
         })
@@ -732,4 +741,293 @@ pub async fn provider_status(
             })
             .collect(),
     })
+}
+
+// --- Track metadata write path: rating + energy (T2.1.4 / T2.1.6) ---
+
+/// The metadata columns a write may touch.
+///
+/// `None` leaves a column untouched; `Some(0)` clears it, because both
+/// columns are stored as NULL and 0 is not a valid rating or energy level.
+#[derive(Debug, Clone, Copy, Default)]
+struct MetadataPatch {
+    rating: Option<i64>,
+    energy: Option<i64>,
+}
+
+impl MetadataPatch {
+    /// Rejects values the columns cannot hold, before anything is written.
+    fn validate(&self) -> Result<(), String> {
+        if let Some(rating) = self.rating {
+            if !(0..=MAX_TRACK_RATING).contains(&rating) {
+                return Err(format!("rating must be between 0 and {MAX_TRACK_RATING}"));
+            }
+        }
+        if let Some(energy) = self.energy {
+            if !(0..=MAX_TRACK_ENERGY).contains(&energy) {
+                return Err(format!("energy must be between 0 and {MAX_TRACK_ENERGY}"));
+            }
+        }
+        if self.rating.is_none() && self.energy.is_none() {
+            return Err("nothing to update".to_string());
+        }
+        Ok(())
+    }
+}
+
+/// `0` clears a column, so it is stored as NULL rather than as a zero.
+fn stored_value(value: i64) -> Option<i64> {
+    (value != 0).then_some(value)
+}
+
+/// Writes a rating and/or an energy level to one or more tracks.
+///
+/// The write is reversible: the previous values are snapshotted in a
+/// `skill_runs` row and the returned `undoId` restores them.
+#[tauri::command]
+pub async fn update_track_metadata(
+    db: State<'_, Arc<Mutex<Database>>>,
+    request: UpdateTrackMetadataRequest,
+) -> Result<UpdateTrackMetadataResponse, String> {
+    if request.track_ids.is_empty() {
+        return Err("no tracks selected".to_string());
+    }
+    let patch = MetadataPatch {
+        rating: request.rating,
+        energy: request.energy,
+    };
+    patch.validate()?;
+
+    let mut db_guard = db.lock().map_err(|e| e.to_string())?;
+    let (undo_id, updated) = apply_metadata_patch(
+        db_guard.conn_mut(),
+        "update_track_metadata",
+        &request.track_ids,
+        patch,
+    )?;
+
+    Ok(UpdateTrackMetadataResponse { undo_id, updated })
+}
+
+/// Sets the star rating on one or more tracks.
+///
+/// A thin wrapper over the same write path as [`update_track_metadata`]: the
+/// undo snapshot behaves identically, so a rating can be reverted with the
+/// same `undoId` round-trip.
+#[tauri::command]
+pub async fn set_track_rating(
+    db: State<'_, Arc<Mutex<Database>>>,
+    request: SetTrackRatingRequest,
+) -> Result<SetTrackRatingResponse, String> {
+    if request.track_ids.is_empty() {
+        return Err("no tracks selected".to_string());
+    }
+    let patch = MetadataPatch {
+        rating: Some(request.rating),
+        energy: None,
+    };
+    patch.validate()?;
+
+    let mut db_guard = db.lock().map_err(|e| e.to_string())?;
+    let (undo_id, updated) = apply_metadata_patch(
+        db_guard.conn_mut(),
+        "set_track_rating",
+        &request.track_ids,
+        patch,
+    )?;
+
+    Ok(SetTrackRatingResponse { undo_id, updated })
+}
+
+/// Restores the values a rating/energy write replaced.
+///
+/// The snapshot is marked `undone`, so a second undo of the same id is
+/// refused instead of restoring twice.
+#[tauri::command]
+pub async fn undo_track_metadata(
+    db: State<'_, Arc<Mutex<Database>>>,
+    request: UndoTrackMetadataRequest,
+) -> Result<UndoTrackMetadataResponse, String> {
+    let mut db_guard = db.lock().map_err(|e| e.to_string())?;
+    let tx = db_guard
+        .conn_mut()
+        .transaction()
+        .map_err(|e| e.to_string())?;
+
+    let (status, before_raw): (String, Option<String>) = tx
+        .query_row(
+            "SELECT status, before_state FROM skill_runs WHERE id = ?1",
+            [&request.undo_id],
+            |row| Ok((row.get(0)?, row.get(1)?)),
+        )
+        .map_err(|_| format!("undo snapshot not found: {}", request.undo_id))?;
+
+    if status != "success" {
+        return Err(format!(
+            "undo snapshot {} is {status}, not applied",
+            request.undo_id
+        ));
+    }
+
+    let before_raw =
+        before_raw.ok_or_else(|| format!("undo snapshot {} has no snapshot", request.undo_id))?;
+    let before: serde_json::Value = serde_json::from_str(&before_raw).map_err(|e| e.to_string())?;
+    let snapshot = before
+        .as_object()
+        .ok_or_else(|| format!("undo snapshot {} has a corrupt snapshot", request.undo_id))?;
+
+    let mut restored = 0usize;
+    for (track_id, values) in snapshot {
+        // `?1` is always the track id; only the snapshotted columns are
+        // written back, so an undo never touches anything else.
+        let mut assignments: Vec<String> = Vec::new();
+        let mut params: Vec<rusqlite::types::Value> = vec![track_id.clone().into()];
+        if let Some(rating) = values.get("user_rating") {
+            params.push(json_to_sql_value(rating));
+            assignments.push(format!("user_rating = ?{}", params.len()));
+        }
+        if let Some(energy) = values.get("energy") {
+            params.push(json_to_sql_value(energy));
+            assignments.push(format!("energy = ?{}", params.len()));
+        }
+        if assignments.is_empty() {
+            continue;
+        }
+        let sql = format!(
+            "UPDATE tracks SET {}, updated_at = datetime('now') WHERE id = ?1",
+            assignments.join(", ")
+        );
+        restored += tx
+            .execute(&sql, rusqlite::params_from_iter(params.iter()))
+            .map_err(|e| e.to_string())? as usize;
+    }
+
+    tx.execute(
+        "UPDATE skill_runs SET status = 'undone' WHERE id = ?1",
+        [&request.undo_id],
+    )
+    .map_err(|e| e.to_string())?;
+
+    tx.commit().map_err(|e| e.to_string())?;
+
+    Ok(UndoTrackMetadataResponse { restored })
+}
+
+/// Applies a rating/energy patch and records the undo snapshot.
+///
+/// The track UPDATE and the `skill_runs` INSERT share one transaction: a crash
+/// between them would leave the library changed with no way back. Only the
+/// columns the patch touched are snapshotted, so an undo restores exactly
+/// what the write changed.
+fn apply_metadata_patch(
+    conn: &mut rusqlite::Connection,
+    skill_name: &str,
+    track_ids: &[String],
+    patch: MetadataPatch,
+) -> Result<(String, usize), String> {
+    let tx = conn.transaction().map_err(|e| e.to_string())?;
+
+    // Ids are bound, never interpolated into the SQL text.
+    let placeholders = std::iter::repeat_n("?", track_ids.len())
+        .collect::<Vec<_>>()
+        .join(", ");
+    let select_sql =
+        format!("SELECT id, user_rating, energy FROM tracks WHERE id IN ({placeholders})");
+    let rows: Vec<(String, Option<i64>, Option<i64>)> = {
+        let mut stmt = tx.prepare(&select_sql).map_err(|e| e.to_string())?;
+        // A row that fails to map is an error, not a row to skip.
+        let collected = stmt
+            .query_map(rusqlite::params_from_iter(track_ids.iter()), |row| {
+                Ok((row.get(0)?, row.get(1)?, row.get(2)?))
+            })
+            .map_err(|e| e.to_string())?
+            .collect::<Result<Vec<_>, _>>()
+            .map_err(|e| e.to_string())?;
+        collected
+    };
+
+    let mut before = serde_json::Map::new();
+    let mut after = serde_json::Map::new();
+    let mut updated = 0usize;
+
+    for (track_id, previous_rating, previous_energy) in &rows {
+        let mut assignments: Vec<String> = Vec::new();
+        let mut params: Vec<rusqlite::types::Value> = vec![track_id.clone().into()];
+        let mut before_values = serde_json::Map::new();
+        let mut after_values = serde_json::Map::new();
+
+        if let Some(rating) = patch.rating {
+            params.push(stored_value(rating).into());
+            assignments.push(format!("user_rating = ?{}", params.len()));
+            before_values.insert(
+                "user_rating".to_string(),
+                serde_json::Value::from(*previous_rating),
+            );
+            after_values.insert(
+                "user_rating".to_string(),
+                serde_json::Value::from(stored_value(rating)),
+            );
+        }
+        if let Some(energy) = patch.energy {
+            params.push(stored_value(energy).into());
+            assignments.push(format!("energy = ?{}", params.len()));
+            before_values.insert(
+                "energy".to_string(),
+                serde_json::Value::from(*previous_energy),
+            );
+            after_values.insert(
+                "energy".to_string(),
+                serde_json::Value::from(stored_value(energy)),
+            );
+        }
+
+        let sql = format!(
+            "UPDATE tracks SET {}, updated_at = datetime('now') WHERE id = ?1",
+            assignments.join(", ")
+        );
+        updated += tx
+            .execute(&sql, rusqlite::params_from_iter(params.iter()))
+            .map_err(|e| e.to_string())? as usize;
+
+        before.insert(track_id.clone(), serde_json::Value::Object(before_values));
+        after.insert(track_id.clone(), serde_json::Value::Object(after_values));
+    }
+
+    let undo_id = Uuid::new_v4().to_string();
+    let input_summary = serde_json::json!({
+        "trackIds": track_ids,
+        "rating": patch.rating,
+        "energy": patch.energy,
+    });
+    tx.execute(
+        "INSERT INTO skill_runs (
+            id, workspace_id, skill_name, status, input_summary, before_state, after_state,
+            error, created_at
+        ) VALUES (?1, 'default', ?2, 'success', ?3, ?4, ?5, NULL, datetime('now'))",
+        rusqlite::params![
+            undo_id,
+            skill_name,
+            input_summary.to_string(),
+            serde_json::Value::Object(before).to_string(),
+            serde_json::Value::Object(after).to_string(),
+        ],
+    )
+    .map_err(|e| e.to_string())?;
+
+    tx.commit().map_err(|e| e.to_string())?;
+
+    Ok((undo_id, updated))
+}
+
+/// Converts a snapshot value back into a bound SQL value. Anything that is not
+/// an integer (including JSON `null`) restores as NULL.
+fn json_to_sql_value(value: &serde_json::Value) -> rusqlite::types::Value {
+    match value {
+        serde_json::Value::Null => rusqlite::types::Value::Null,
+        serde_json::Value::Number(number) => number
+            .as_i64()
+            .map(rusqlite::types::Value::Integer)
+            .unwrap_or(rusqlite::types::Value::Null),
+        _ => rusqlite::types::Value::Null,
+    }
 }

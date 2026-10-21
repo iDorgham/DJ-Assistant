@@ -3,6 +3,7 @@ import type { AnalysisStatus, ListTracksSortBy, TrackSummary } from "@dj-assista
 import {
   formatBpm,
   formatDuration,
+  formatEnergy,
   formatKey,
   formatRating,
   shortHash,
@@ -14,9 +15,11 @@ import type { AppView, StorageLike } from "./ui-state.ts";
  * Column model for the Library track table (T2.1.5).
  *
  * The ids and their default visibility follow `docs/ui/03-LIBRARY-VIEW.md` §3.2.
- * The rich cells that spec describes (Energy bars, tag chips, editable stars,
- * artwork hover-play) belong to later slices, so those columns exist here as
- * plain-text placeholders and default to hidden exactly as the table says.
+ * The rich cells the spec describes for later slices (tag chips, cue counts,
+ * file size, …) have no field on `TrackSummary` yet, so those columns exist
+ * here as plain-text placeholders and default to hidden exactly as the table
+ * says. Rating (T2.1.4) and Energy (T2.1.6) now have fields and widgets, but
+ * still default to hidden so the default view stays the documented one.
  *
  * Display order is carried by the array position rather than a separate `order`
  * field — a stored index that contradicts its own position is a second source
@@ -170,7 +173,7 @@ const DEFINITIONS: Record<ColumnId, ColumnDefinition> = {
     label: "Energy",
     defaultWidth: 96,
     align: "center",
-    sortable: null,
+    sortable: "energy",
     identity: false,
     defaultVisible: false,
   },
@@ -188,7 +191,7 @@ const DEFINITIONS: Record<ColumnId, ColumnDefinition> = {
     label: "Rating",
     defaultWidth: 96,
     align: "center",
-    sortable: null,
+    sortable: "rating",
     identity: false,
     defaultVisible: false,
   },
@@ -596,9 +599,9 @@ export function analysisStatusLabel(status: AnalysisStatus): string {
  * and `autoFitWidth`, so a column can never fit a width it does not render.
  *
  * `index` and `artwork` are row-number and image cells and have no text. The
- * columns whose widgets the spec describes for later slices (Energy bars, tag
- * chips, cue counts, file size, …) have no field on `TrackSummary` yet, so they
- * report the placeholder rather than inventing a value.
+ * columns whose widgets the spec describes for later slices (tag chips, cue
+ * counts, file size, …) have no field on `TrackSummary` yet, so they report
+ * the placeholder rather than inventing a value.
  */
 export function trackColumnText(track: TrackSummary, id: ColumnId): string {
   switch (id) {
@@ -632,6 +635,7 @@ export function trackColumnText(track: TrackSummary, id: ColumnId): string {
     case "status":
       return analysisStatusLabel(track.analysisStatus);
     case "energy":
+      return formatEnergy(track.energy);
     case "tags":
     case "label":
     case "year":
@@ -662,6 +666,8 @@ export function trackColumnTooltip(track: TrackSummary, id: ColumnId): string | 
     }
     case "rating":
       return track.userRating != null ? `${track.userRating} / 5` : "Unrated";
+    case "energy":
+      return track.energy != null ? `Energy ${track.energy} / 10` : "No energy set";
     default:
       return undefined;
   }

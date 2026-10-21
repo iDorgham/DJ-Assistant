@@ -154,7 +154,7 @@ Primary actions the user expects on a track (or selection):
 |------|----------|
 | **Play** | Load focused track into player and play |
 | **Analyze** | Queue analysis (BPM, key, energy, peaks, cues as configured) for selection |
-| **Edit tags…** | Open tag editor for title, artist, album, genre, label, year, custom tags |
+| **Edit tags…** | Open tag editor for title, artist, album, genre, label, year, custom tags **and the free-text comment** |
 | **Fix tags** | Run Smart Tag Cleanup / Tag Surgeon on selection (Undo toast) |
 | **Add to playlist ▸** | Submenu of existing playlists + “New playlist…” |
 | **Find in playlists…** | Dialog or popover listing every playlist that includes this track; jump to playlist |
