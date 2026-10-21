@@ -478,7 +478,7 @@ export function moveColumn(
   if (from === -1 || to === -1) return columns.map((column) => ({ ...column }));
   const next = columns.map((column) => ({ ...column }));
   const [moved] = next.splice(from, 1);
-  next.splice(from < to ? to - 1 : to, 0, moved);
+  next.splice(to, 0, moved);
   return next;
 }
 
