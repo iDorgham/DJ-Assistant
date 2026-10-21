@@ -54,6 +54,7 @@ CLAUDE.local.md
 # Local AI agent sessions/cache/state
 .ai-cache/
 .aider/
+.kilo/plans/
 
 # Local tool configs that may contain machine-specific paths
 **/kilo.local.jsonc
