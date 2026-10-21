@@ -90,7 +90,6 @@ export function StarRating({
     // key — Escape, Tab, … — keeps bubbling, so the app-level actions
     // (Escape closes the inspector) still work from this control.
     if (key === "Enter" || key === " ") {
-      event.preventDefault();
       event.stopPropagation();
     }
   };
