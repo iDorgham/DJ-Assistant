@@ -132,7 +132,10 @@ export function parsePorcelain(output) {
   for (let index = 0; index < records.length; index += 1) {
     const record = records[index];
     if (!record) continue;
-    if (/^[RC]/.test(record)) index += 1;
+    // A rename or copy record is followed by a second NUL-separated field
+    // holding the old path. Either status column can carry the letter, so check
+    // both rather than only the index one.
+    if (/[RC]/.test(record.slice(0, 2))) index += 1;
     const file = record.slice(3).replace(/^\.\//, "");
     if (file) files.push(file);
   }
