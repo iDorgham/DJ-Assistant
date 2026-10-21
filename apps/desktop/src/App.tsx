@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, useMemo, useReducer } from "react";
+import type { PointerEvent as ReactPointerEvent } from "react";
 import type {
   TrackSummary,
   ScanProgressEvent,
@@ -55,6 +56,7 @@ import {
   ExternalLink,
   Copy,
   Check,
+  Columns3,
   Activity,
   PlugZap,
   Globe,
@@ -91,16 +93,30 @@ import {
   formatBpm,
   formatDuration,
   formatKey,
-  formatRating,
   formatScore,
   formatMissingField,
   hasFilterValue,
   normalizeFilters,
   scanPercent,
-  shortHash,
   toggleFilterValue,
   truncateComment,
 } from "./lib/library";
+import {
+  analysisStatusLabel,
+  autoFitWidth,
+  clampColumnWidth,
+  columnDefinition,
+  loadLibraryColumns,
+  moveColumn,
+  resetLibraryColumns,
+  saveLibraryColumns,
+  setColumnWidth,
+  toggleColumnVisible,
+  trackColumnText,
+  visibleColumns,
+  type ColumnId,
+  type ColumnState,
+} from "./lib/library-columns";
 import {
   DEFAULT_UI_STATE,
   initUiState,
@@ -112,6 +128,7 @@ import {
 import { nextTheme, resolveTheme, THEME_LABELS } from "./lib/theme";
 import { PreviewPlayer } from "./components/preview-player";
 import { ModalShell } from "./components/ModalShell";
+import { ColumnPicker } from "./components/ColumnPicker";
 import { previewEngine } from "./lib/audio-engine";
 
 const VIEW_ITEMS: { view: AppView; label: string; shortcut: string }[] = [
@@ -148,25 +165,21 @@ const THEME_ICONS = { dark: Moon, light: Sun, system: Monitor } as const;
 /** Real analysis state per track — never render a hardcoded success badge. */
 const ANALYSIS_STATUS_CHIP: Record<
   TrackSummary["analysisStatus"],
-  { label: string; icon: LucideIcon; className: string }
+  { icon: LucideIcon; className: string }
 > = {
   complete: {
-    label: "Analyzed",
     icon: CheckCircle2,
     className: "bg-dj-success/10 text-dj-success border border-dj-success/20",
   },
   pending: {
-    label: "Pending",
     icon: Clock,
     className: "bg-dj-accent/10 text-dj-accent border border-dj-accent/20",
   },
   failed: {
-    label: "Failed",
     icon: XCircle,
     className: "bg-dj-danger/10 text-dj-danger border border-dj-danger/20",
   },
   needs_review: {
-    label: "Needs review",
     icon: AlertTriangle,
     className: "bg-dj-warning/10 text-dj-warning border border-dj-warning/20",
   },
@@ -236,46 +249,268 @@ function ArtworkThumb({
 }
 
 /**
- * Column header that sorts the library server-side (T2.1.2). The active column
- * shows an up/down arrow; inactive ones a muted double arrow.
+ * Header row for the Library table (T2.1.5): one `<col>` and one `<th>` per
+ * configured column, in the configured order. Sort stays server-side (T2.1.2);
+ * the additions here are width, order and the entry point to the picker.
+ *
+ * A dragged width is previewed in local state and committed on release, so
+ * resizing does not write a preference to storage on every pointer move.
+ *
+ * Row height stays constant. Turning Artwork on makes every row 48px — the
+ * 36px thumb plus its padding exceeds the 28–32px density rule in docs/ui/01,
+ * which is exactly the spec's "taller when Artwork column is on".
  */
-function SortHeader({
-  label,
-  sortKey,
+function TrackTableHeader({
+  columns,
   sortBy,
   sortDir,
   onSort,
-  className = "",
-  align = "text-left",
-  title,
+  onResize,
+  onAutoFit,
+  onReorder,
+  onManageColumns,
 }: {
-  label: string;
-  sortKey: ListTracksSortBy;
+  columns: ColumnState[];
   sortBy?: ListTracksSortBy;
   sortDir: SortDirection;
   onSort: (key: ListTracksSortBy) => void;
-  className?: string;
-  align?: string;
-  title?: string;
+  onResize: (id: ColumnId, width: number) => void;
+  onAutoFit: (id: ColumnId) => void;
+  onReorder: (draggedId: ColumnId, targetId: ColumnId) => void;
+  onManageColumns: () => void;
 }) {
-  const active = sortBy === sortKey;
-  const Icon = active ? (sortDir === "asc" ? ArrowUp : ArrowDown) : ArrowUpDown;
-  const ariaSort = active ? (sortDir === "asc" ? "ascending" : "descending") : "none";
+  const [preview, setPreview] = useState<{ id: ColumnId; width: number } | null>(null);
+  const [draggedId, setDraggedId] = useState<ColumnId | null>(null);
+  const resize = useRef<{
+    id: ColumnId;
+    startX: number;
+    startWidth: number;
+    width: number;
+  } | null>(null);
+
+  const beginResize = (event: ReactPointerEvent<HTMLSpanElement>, column: ColumnState) => {
+    event.preventDefault();
+    event.stopPropagation();
+    event.currentTarget.setPointerCapture(event.pointerId);
+    resize.current = {
+      id: column.id,
+      startX: event.clientX,
+      startWidth: column.width,
+      width: column.width,
+    };
+  };
+
+  const dragResize = (event: ReactPointerEvent<HTMLSpanElement>) => {
+    const active = resize.current;
+    if (!active) return;
+    active.width = clampColumnWidth(active.startWidth + (event.clientX - active.startX));
+    setPreview({ id: active.id, width: active.width });
+  };
+
+  const endResize = () => {
+    const active = resize.current;
+    if (!active) return;
+    resize.current = null;
+    setPreview(null);
+    onResize(active.id, active.width);
+  };
 
   return (
-    <th className={`py-2.5 px-4 ${className}`} aria-sort={ariaSort}>
-      <button
-        type="button"
-        onClick={() => onSort(sortKey)}
-        title={title ?? `Sort by ${label.toLowerCase()}`}
-        className={`inline-flex items-center gap-1 uppercase tracking-wider text-[11px] font-semibold transition ${
-          active ? "text-dj-accent" : "text-dj-text-secondary hover:text-dj-text"
-        } ${align === "text-center" ? "justify-center w-full" : ""}`}
+    <>
+      <colgroup>
+        {columns.map((column) => (
+          <col
+            key={column.id}
+            style={{
+              width: preview?.id === column.id ? preview.width : column.width,
+            }}
+          />
+        ))}
+      </colgroup>
+      <thead
+        onContextMenu={(event) => {
+          // docs/ui/03 §3.2: the column checklist opens from the header too.
+          event.preventDefault();
+          onManageColumns();
+        }}
       >
-        <span>{label}</span>
-        <Icon className={`w-3 h-3 ${active ? "text-dj-accent" : "text-dj-text-muted"}`} />
-      </button>
-    </th>
+        <tr className="border-b border-dj-border bg-dj-panel text-dj-text-secondary uppercase tracking-wider text-[11px] font-semibold sticky top-0 z-10">
+          {columns.map((column) => {
+            const definition = columnDefinition(column.id);
+            const sortKey = definition.sortable;
+            const active = sortKey !== null && sortBy === sortKey;
+            const Icon = active ? (sortDir === "asc" ? ArrowUp : ArrowDown) : ArrowUpDown;
+            const centered = definition.align === "center";
+            return (
+              <th
+                key={column.id}
+                scope="col"
+                aria-sort={
+                  sortKey === null
+                    ? undefined
+                    : active
+                      ? sortDir === "asc"
+                        ? "ascending"
+                        : "descending"
+                      : "none"
+                }
+                draggable
+                onDragStart={(event) => {
+                  // A drag that starts on the resize grip is a resize, not a reorder.
+                  if (resize.current) {
+                    event.preventDefault();
+                    return;
+                  }
+                  setDraggedId(column.id);
+                }}
+                onDragEnd={() => setDraggedId(null)}
+                onDragOver={(event) => {
+                  if (draggedId && draggedId !== column.id) event.preventDefault();
+                }}
+                onDrop={(event) => {
+                  event.preventDefault();
+                  if (draggedId) onReorder(draggedId, column.id);
+                  setDraggedId(null);
+                }}
+                title="Drag to reorder · right-click for columns"
+                className={`relative py-2.5 px-4 ${draggedId === column.id ? "bg-dj-active" : ""}`}
+              >
+                {sortKey === null ? (
+                  <span
+                    className={centered ? "flex w-full items-center justify-center" : undefined}
+                  >
+                    {definition.label}
+                  </span>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => onSort(sortKey)}
+                    title={`Sort by ${definition.label.toLowerCase()}`}
+                    className={`inline-flex items-center gap-1 uppercase tracking-wider text-[11px] font-semibold transition ${
+                      active ? "text-dj-accent" : "text-dj-text-secondary hover:text-dj-text"
+                    } ${centered ? "justify-center w-full" : ""}`}
+                  >
+                    <span>{definition.label}</span>
+                    <Icon
+                      className={`w-3 h-3 ${active ? "text-dj-accent" : "text-dj-text-muted"}`}
+                    />
+                  </button>
+                )}
+                <span
+                  role="separator"
+                  aria-orientation="vertical"
+                  title="Drag to resize · double-click to fit"
+                  onPointerDown={(event) => beginResize(event, column)}
+                  onPointerMove={dragResize}
+                  onPointerUp={endResize}
+                  onPointerCancel={endResize}
+                  onDoubleClick={() => onAutoFit(column.id)}
+                  className="absolute right-0 top-0 h-full w-1.5 cursor-col-resize border-r-2 border-transparent hover:border-dj-accent"
+                />
+              </th>
+            );
+          })}
+        </tr>
+      </thead>
+    </>
+  );
+}
+
+/**
+ * Columns whose cells are numbers or fixed-width codes: tabular figures, per
+ * docs/ui/01. Everything else uses the UI font.
+ */
+const MONO_COLUMNS: readonly ColumnId[] = [
+  "index",
+  "bpm",
+  "key",
+  "time",
+  "rating",
+  "year",
+  "lufs",
+  "cues",
+  "size",
+  "fingerprint",
+  "format",
+];
+
+/**
+ * One cell of a Library row. The cells are plain text for this slice (T2.1.5):
+ * the Energy bars, tag chips, editable stars and cue widgets docs/ui/03 describes
+ * come later, and columns with no field on `TrackSummary` yet show the
+ * placeholder rather than an invented value.
+ */
+function TrackCell({
+  id,
+  track,
+  rowNumber,
+}: {
+  id: ColumnId;
+  track: TrackSummary;
+  rowNumber: number;
+}) {
+  const definition = columnDefinition(id);
+  const base = `py-2.5 px-4 overflow-hidden whitespace-nowrap text-ellipsis ${
+    definition.align === "center" ? "text-center" : "text-left"
+  } ${MONO_COLUMNS.includes(id) ? "font-mono" : ""}`;
+  const text = trackColumnText(track, id);
+
+  if (id === "artwork") {
+    return (
+      <td className="py-1.5 px-2 text-center">
+        <div className="mx-auto w-fit">
+          <ArtworkThumb trackId={track.id} hasArtwork={!!track.artworkHash} />
+        </div>
+      </td>
+    );
+  }
+
+  if (id === "index") {
+    return (
+      <td className={`${base} text-dj-text-muted text-[11px]`} title={`Row ${rowNumber}`}>
+        {rowNumber}
+      </td>
+    );
+  }
+
+  if (id === "status") {
+    const chip = ANALYSIS_STATUS_CHIP[track.analysisStatus] ?? ANALYSIS_STATUS_CHIP.pending;
+    const StatusIcon = chip.icon;
+    return (
+      <td className={base}>
+        <span
+          className={`inline-flex items-center space-x-1 px-2 py-0.5 rounded-sm text-[11px] font-medium border ${chip.className}`}
+          title={`Analysis status: ${analysisStatusLabel(track.analysisStatus)}`}
+        >
+          <StatusIcon className="w-3 h-3" />
+          <span>{analysisStatusLabel(track.analysisStatus)}</span>
+        </span>
+      </td>
+    );
+  }
+
+  if (id === "format") {
+    return (
+      <td className={base}>
+        <span className="px-1.5 py-0.5 rounded-sm text-[11px] uppercase font-mono bg-dj-overlay text-dj-text-secondary border border-dj-border">
+          {text}
+        </span>
+      </td>
+    );
+  }
+
+  const isTitle = id === "title";
+  return (
+    <td
+      title={text}
+      className={`${base} ${
+        isTitle
+          ? "font-medium text-dj-text group-hover:text-dj-accent transition"
+          : "text-dj-text-secondary"
+      }`}
+    >
+      {text}
+    </td>
   );
 }
 
@@ -672,6 +907,14 @@ export default function App() {
   const [genres, setGenres] = useState<GenreCount[]>([]);
   const [sortBy, setSortBy] = useState<ListTracksSortBy | undefined>(undefined);
   const [sortDir, setSortDir] = useState<SortDirection>("asc");
+  // Column arrangement (T2.1.5) is a UI preference, not app state: it is read
+  // back from storage on first render and written after every change, exactly
+  // like `persistUiState`. Nothing trusts it for anything but display.
+  const [columns, setColumns] = useState<ColumnState[]>(() => loadLibraryColumns("library"));
+  const [columnsOpen, setColumnsOpen] = useState(false);
+  useEffect(() => {
+    saveLibraryColumns("library", columns);
+  }, [columns]);
   const [reloadToken, setReloadToken] = useState(0);
   const [currentFolder, setCurrentFolder] = useState<string | null>(null);
   const [scanning, setScanning] = useState(false);
@@ -778,6 +1021,7 @@ export default function App() {
   const openFilters = () => {
     setDraftFilters(filters);
     setFilterError(null);
+    setColumnsOpen(false);
     setFiltersOpen(true);
   };
 
@@ -1138,7 +1382,7 @@ export default function App() {
   }, []);
 
   // Esc closes the inspector drawer, the Tag Health/Charts modals and the
-  // filter dropdown.
+  // filter/columns dropdowns.
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
@@ -1146,6 +1390,7 @@ export default function App() {
         setHealthOpen(false);
         setChartsOpen(false);
         setFiltersOpen(false);
+        setColumnsOpen(false);
       }
     };
     window.addEventListener("keydown", onKey);
@@ -1193,6 +1438,27 @@ export default function App() {
   };
 
   const filteredTracks = useMemo(() => filterTracks(tracks, searchQuery), [tracks, searchQuery]);
+
+  // T2.1.5: the table renders exactly this list, in storage order. Resizing is
+  // committed on pointer-up, so a drag writes one preference, not one per move.
+  const shownColumns = visibleColumns(columns);
+  const handleToggleColumn = (id: ColumnId) => {
+    setColumns((current) => toggleColumnVisible(current, id));
+  };
+  const handleMoveColumn = (draggedId: ColumnId, targetId: ColumnId) => {
+    setColumns((current) => moveColumn(current, draggedId, targetId));
+  };
+  const handleResizeColumn = (id: ColumnId, width: number) => {
+    setColumns((current) => setColumnWidth(current, id, width));
+  };
+  const handleAutoFitColumn = (id: ColumnId) => {
+    const definition = columnDefinition(id);
+    const longest = filteredTracks.reduce((text, track) => {
+      const cell = trackColumnText(track, id);
+      return cell.length > text.length ? cell : text;
+    }, "");
+    setColumns((current) => setColumnWidth(current, id, autoFitWidth(longest, definition)));
+  };
   const filterCount = activeFilterCount(filters);
   const filterSummary = describeFilters(filters);
   // True when the (server-side) page behind `filteredTracks` is narrowed either by
@@ -1423,6 +1689,22 @@ export default function App() {
                     <SlidersHorizontal className="h-3.5 w-3.5" />
                     <span>Filters{filterCount > 0 ? ` (${filterCount})` : ""}</span>
                   </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setFiltersOpen(false);
+                      setColumnsOpen((open) => !open);
+                    }}
+                    className={`flex h-6 items-center gap-1 rounded-sm border px-2 text-[11px] transition ${
+                      columnsOpen
+                        ? "border-dj-accent/40 bg-dj-accent/10 text-dj-accent hover:bg-dj-accent/15"
+                        : "border-dj-border bg-dj-elevated text-dj-text-secondary hover:bg-dj-hover"
+                    }`}
+                    title="Show, hide, reorder and resize columns"
+                  >
+                    <Columns3 className="h-3.5 w-3.5" />
+                    <span>Columns</span>
+                  </button>
                   <span className="mx-1 h-4 w-px bg-dj-border" />
                   <button
                     type="button"
@@ -1505,6 +1787,15 @@ export default function App() {
                       onApply={applyFilters}
                       onReset={resetFilters}
                       onClose={() => setFiltersOpen(false)}
+                    />
+                  )}
+                  {columnsOpen && (
+                    <ColumnPicker
+                      columns={columns}
+                      onToggle={handleToggleColumn}
+                      onMove={handleMoveColumn}
+                      onReset={() => setColumns(resetLibraryColumns())}
+                      onClose={() => setColumnsOpen(false)}
                     />
                   )}
                 </div>
@@ -1635,70 +1926,22 @@ export default function App() {
                       )}
                     </div>
                   ) : (
-                    <table className="w-full min-w-[1200px] text-left border-collapse text-xs">
-                      <thead>
-                        <tr className="border-b border-dj-border bg-dj-panel text-dj-text-secondary uppercase tracking-wider text-[11px] font-semibold sticky top-0 z-10">
-                          <SortHeader
-                            label="#"
-                            sortKey="imported_at"
-                            sortBy={sortBy}
-                            sortDir={sortDir}
-                            onSort={toggleSort}
-                            className="w-12 text-center"
-                            align="text-center"
-                            title="Sort by import order (newest first by default)"
-                          />
-                          <th className="py-2.5 px-2 w-14 text-center">Art</th>
-                          <SortHeader
-                            label="Title"
-                            sortKey="title"
-                            sortBy={sortBy}
-                            sortDir={sortDir}
-                            onSort={toggleSort}
-                          />
-                          <SortHeader
-                            label="Artist"
-                            sortKey="artist"
-                            sortBy={sortBy}
-                            sortDir={sortDir}
-                            onSort={toggleSort}
-                          />
-                          <th className="py-2.5 px-4">Album</th>
-                          <SortHeader
-                            label="BPM"
-                            sortKey="bpm"
-                            sortBy={sortBy}
-                            sortDir={sortDir}
-                            onSort={toggleSort}
-                            className="w-16 text-center"
-                            align="text-center"
-                          />
-                          <SortHeader
-                            label="Key"
-                            sortKey="key"
-                            sortBy={sortBy}
-                            sortDir={sortDir}
-                            onSort={toggleSort}
-                            className="w-16 text-center"
-                            align="text-center"
-                          />
-                          <th className="py-2.5 px-4 w-24 text-center">Rating</th>
-                          <SortHeader
-                            label="Time"
-                            sortKey="duration"
-                            sortBy={sortBy}
-                            sortDir={sortDir}
-                            onSort={toggleSort}
-                            className="w-20 text-center"
-                            align="text-center"
-                            title="Sort by duration"
-                          />
-                          <th className="py-2.5 px-4 w-20 text-center">Format</th>
-                          <th className="py-2.5 px-4">Comments</th>
-                          <th className="py-2.5 px-4 w-28 text-center">Fingerprint</th>
-                          <th className="py-2.5 px-4 w-28 text-center">Status</th>
-                        </tr>
-                      </thead>
+                    <table
+                      className="w-full table-fixed text-left border-collapse text-xs"
+                      style={{
+                        minWidth: shownColumns.reduce((sum, column) => sum + column.width, 0),
+                      }}
+                    >
+                      <TrackTableHeader
+                        columns={shownColumns}
+                        sortBy={sortBy}
+                        sortDir={sortDir}
+                        onSort={toggleSort}
+                        onResize={handleResizeColumn}
+                        onAutoFit={handleAutoFitColumn}
+                        onReorder={handleMoveColumn}
+                        onManageColumns={() => setColumnsOpen(true)}
+                      />
                       <tbody className="divide-y divide-dj-border">
                         {filteredTracks.map((track, idx) => (
                           <tr
@@ -1725,85 +1968,14 @@ export default function App() {
                               selectedTrack?.id === track.id ? "bg-dj-active" : ""
                             }`}
                           >
-                            <td className="py-2.5 px-4 text-center text-dj-text-muted font-mono text-[11px]">
-                              {idx + 1}
-                            </td>
-                            <td className="py-1.5 px-2">
-                              <ArtworkThumb trackId={track.id} hasArtwork={!!track.artworkHash} />
-                            </td>
-                            <td
-                              className="py-2.5 px-4 font-medium text-dj-text group-hover:text-dj-accent transition max-w-[300px] truncate"
-                              title={track.title || "Untitled"}
-                            >
-                              {track.title || "Untitled"}
-                            </td>
-                            <td
-                              className="py-2.5 px-4 text-dj-text-secondary max-w-[220px] truncate"
-                              title={track.artist || "Unknown Artist"}
-                            >
-                              {track.artist || "Unknown Artist"}
-                            </td>
-                            <td className="py-2.5 px-4 text-dj-text-secondary">
-                              {track.album || "—"}
-                            </td>
-                            <td className="py-2.5 px-4 text-center font-mono text-dj-text-secondary">
-                              {formatBpm(track.bpm)}
-                            </td>
-                            <td
-                              className="py-2.5 px-4 text-center font-mono text-dj-text-secondary"
-                              title={
-                                track.keyClassical && track.keyCamelot
-                                  ? `Camelot ${track.keyCamelot} • ${track.keyClassical}`
-                                  : undefined
-                              }
-                            >
-                              {formatKey(track.keyCamelot, track.keyClassical)}
-                            </td>
-                            <td
-                              className="py-2.5 px-4 text-center text-dj-warning tracking-tight"
-                              title={
-                                track.userRating != null ? `${track.userRating} / 5` : "Unrated"
-                              }
-                            >
-                              {formatRating(track.userRating)}
-                            </td>
-                            <td className="py-2.5 px-4 text-center font-mono text-dj-text-secondary">
-                              {formatDuration(track.durationMs)}
-                            </td>
-                            <td className="py-2.5 px-4 text-center">
-                              <span className="px-1.5 py-0.5 rounded-sm text-[11px] uppercase font-mono bg-dj-overlay text-dj-text-secondary border border-dj-border">
-                                {track.format || "AUDIO"}
-                              </span>
-                            </td>
-                            <td
-                              className="py-2.5 px-4 text-dj-text-secondary italic"
-                              title={track.comments ?? undefined}
-                            >
-                              {truncateComment(track.comments, 48)}
-                            </td>
-                            <td
-                              className="py-2.5 px-4 text-center font-mono text-[11px] text-dj-text-secondary"
-                              title={track.fileHash}
-                            >
-                              {shortHash(track.fileHash)}
-                            </td>
-                            <td className="py-2.5 px-4 text-center">
-                              {(() => {
-                                const chip =
-                                  ANALYSIS_STATUS_CHIP[track.analysisStatus] ??
-                                  ANALYSIS_STATUS_CHIP.pending;
-                                const StatusIcon = chip.icon;
-                                return (
-                                  <span
-                                    className={`inline-flex items-center space-x-1 px-2 py-0.5 rounded-sm text-[11px] font-medium border ${chip.className}`}
-                                    title={`Analysis status: ${chip.label}`}
-                                  >
-                                    <StatusIcon className="w-3 h-3" />
-                                    <span>{chip.label}</span>
-                                  </span>
-                                );
-                              })()}
-                            </td>
+                            {shownColumns.map((column) => (
+                              <TrackCell
+                                key={column.id}
+                                id={column.id}
+                                track={track}
+                                rowNumber={idx + 1}
+                              />
+                            ))}
                           </tr>
                         ))}
                       </tbody>
