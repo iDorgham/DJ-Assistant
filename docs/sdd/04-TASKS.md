@@ -2,7 +2,7 @@
 
 **SDD Artifact:** Concrete Engineering Tasks  
 **Status:** Living  
-**Last reconciled:** 2026-10-19 (T2.1.0 app shell implemented on `feat/T2.1.0-shell-ui` — three views, collapsible nav, per-view options bar, theme system, persisted UI state, PlayerDock Hidden/Mini/Full layout; playback and waveform remain T2.4. Not merged; checkbox stays open until acceptance. T2.1.2 library multi-filter + sorting implementation shipped — manual running-window QA still pending. The 2026-10-16 reconciliation that corrected an over-optimistic pass, and the 2026-10-14 audit of T1.x / TF.x / TD.3 / TE.x / TM.x, remain current; Phase 3–4 are **not implemented**.)  
+**Last reconciled:** 2026-10-21 (T2.1.5 configurable column framework merged via PR #49 — rebase merge `d037128b`; column visibility/width/order with a picker, edge resize, double-click auto-fit, header-drag reorder, reset and per-view `localStorage` persistence, 29 column tests. Phase 2.1 now runs T2.1.5–T2.1.12 per the [Library+Player plan](../PHASE2_LIBRARY_PLAYER_IMPLEMENTATION_PLAN.md), T2.1.4 is scoped to rating + energy (tags move to T2.1.7), and T2.4.2 records the dual-wave contract. The 2026-10-19 T2.1.0/T2.1.2 entries and the 2026-10-16 correction and 2026-10-14 audit of T1.x / TF.x / TD.3 / TE.x / TM.x remain current; T2.1.2 manual running-window QA is still pending; Phase 3–4 are **not implemented**.)  
 **How to use:** Work top-to-bottom within a phase. Mark tasks `[x]` when Definition of Done is met. Update dependencies as reality changes.
 
 > **Reconciliation note (2026-10-12):** Phase 0 items were checked off against a verified
@@ -20,6 +20,11 @@
 > green CI matrix run (`desktop-build.yml` on `windows-latest` + `macos-latest`). The only
 > remaining non-criterion gap is branch protection on `main` — the untested `.m4a` extension and
 > non-gating audit workflow were both closed on 2026-10-12.
+
+> **Tooling note (2026-10-21):** the AI-tooling work (shared memory store, agent routing, skill
+> policy) was out-of-roadmap and had no entry here at all; it is now recorded once as **T0.1.21**,
+> ticked against the merged code rather than intent. No other Phase 0 checkbox changed; the
+> 2026-10-19 reconciliation above still stands for the app phases.
 
 **Definition of Done (every task):**
 1. Merged to main development branch
@@ -55,6 +60,7 @@
 - [x] **T0.1.18** CODEOWNERS for `.github/workflows/**` and security-sensitive paths
 - [x] **T0.1.19** `pnpm ci:local` script matching CI steps
 - [x] **T0.1.20** Nightly audit workflow + Dependabot/Renovate enabled — *`nightly-audit.yml` live and **gating** (weekly); Dependabot configured (`.github/dependabot.yml`: npm/pnpm, cargo, github-actions, weekly, minor+patch grouped)*
+- [x] **T0.1.21** Shared AI-tooling layer: one canonical memory + automatic routing — *`AGENTS.md` + `docs/ai/memory/{facts,conventions,decisions,feedback,state}.md` read by every AI tool in use (Qoder, OpenCode, Kilo Code, Claude-style, FreeBuff, DeepSeek Harness) through thin adapters that never restate instructions; `agents.registry.json` with `scripts/{memory,agent,skills}/*.mjs` behind `pnpm agent:preflight` / `agent:doctor` / `agent:sync`, `memory:search`, `skills:*`; agent and command files canonical in `.opencode/` and mirrored into each tool directory (mirrors gitignored); tests in `scripts/agent/preflight.test.mjs` via `pnpm test:agent`. Shipped as PR #48 (squash `e348c400`, 2026-10-21) after two automated review rounds. Caveat recorded as D-008 in the memory store: the `permissions:` blocks in the agent files are **declarative** — the installed OpenCode parses only the singular `permission:` key, so none of those rules are enforced today.*
 
 ### 0.2 Desktop Shell & Local Data
 - [x] **T0.2.1** Tauri window boots with React “Hello DJ Assistant”
@@ -105,7 +111,15 @@
 - [ ] **T2.1.1** Search across title/artist/album/tags — *title/artist/album/path search already shipped in the Phase 0 library slice; tag-field search not yet*
 - [ ] **T2.1.2** Multi-filter (BPM, key, genre, rating, analysis status) — *implementation shipped in this PR; manual running-window QA still pending (Definition of Done requires it). Server-side: `crates/core/src/library_query.rs` builds the whole list query (free-text search with `ESCAPE`, BPM range, Camelot key/status/genre `IN` lists, rating floor, allow-listed sort with NULLs last and an `id` pagination tiebreaker; every value is a bound parameter, invalid ranges rejected — 17 unit tests). `list_tracks` now honours `filters`/`sortBy`/`sortDir` and reports a matching `total`; new `list_genres` supplies real genre options. UI: Filters dropdown (tempo range, 24 Camelot keys, the four analysis statuses, genre list with counts, minimum rating) with draft → Apply/Reset, active-filter chips, and sortable column headers. Covered by `tests/schema/tests/persistence.rs` (mirrored filtered SQL against the migrated schema + count/rows agreement) and 7 new TS helper tests.*
 - [ ] **T2.1.3** Bulk select + bulk metadata edit
-- [ ] **T2.1.4** Ratings, tags, comments UI — *rating + comments are displayed read-only from file tags in the Phase 0 list; editing and tag assignment not yet*
+- [ ] **T2.1.4** Ratings + energy UI — *rating + comments are displayed read-only from file tags in the Phase 0 list; editable star rating (1–5, multi-select, undo), energy bars (1–10) and the `ratingMin` / `energyMin`–`energyMax` sort+filter wiring are not built. Tag assignment moved to T2.1.7 per the Library+Player plan (Slice 2).*
+- [x] **T2.1.5** Configurable library columns — *column model with visibility, width and order across all 23 columns, `ColumnPicker` checklist, edge-drag resize (the dragged column moves and the table edge follows it), double-click auto-fit (artwork keeps a content-based minimum), header-drag reorder, reset, and per-view persistence in `localStorage` (`dj-assistant.columns.v1.<view>`); the last identity column (Title/Artist) stays visible. 29 column tests of 77 desktop tests; verified in the dev-server browser (toggle, resize, reorder, auto-fit, reset, reload). Merged via PR #49 (rebase merge `d037128b`, 2026-10-21).*
+- [ ] **T2.1.6** Energy UI — *`EnergyBars` 10-segment display with accent fill and an “Energy N / 10” tooltip, unanalysed → “—” (a plain energy value already renders in the column); inline edit with undo, `energyMin`/`energyMax` filter and energy sort not yet (Slice 2).*
+- [ ] **T2.1.7** Tags UI — *`TagChips` with `+N` overflow, click-through into the filter bar, and a minimal edit dialog; full Tag Surgeon stays T2.2 (Slice 3).*
+- [ ] **T2.1.8** Key pills + harmonic relations — *`KeyPill` relation against the playing track (or selection while idle): same, ±1, relative, wide ±2, incompatible; Camelot / classical / both preference; the compatible-only filter shares the same relation rules (Slice 3).*
+- [ ] **T2.1.9** Artwork column — *cached thumbnail with a missing-art placeholder, hover-play overlay that loads that track, default off, no cross-track art bleed on fast scroll (Slice 4).*
+- [ ] **T2.1.10** Library track context menu — *Play, Analyze, Edit tags, Fix tags (stub → T2.2), Rate, Add to set, Mix suggestions, column toggles, Reveal, Copy path, and Remove from library (soft, with Undo); multi-select rules per `03-LIBRARY-VIEW` §3.5; Preparation/Auto menus stay distinct stubs (Slice 5).*
+- [ ] **T2.1.11** Mix Suggestions dock — *ranked candidates from harmonic distance, BPM delta and energy delta with reason chips; Preview / Add to set / Replace actions; resizable dock with persisted width and a select-a-track empty state (Slice 6).*
+- [ ] **T2.1.12** Left-nav library sources — *All Library · Categories · Playlists · Browser · Flash/Storage driving `list_tracks` `source` / `sourceId`; the collapsed rail keeps icons + tooltips (Slice 5).*
 
 ### 2.2 Tag Surgeon
 - [ ] **T2.2.1** Fuzzy clustering (case, space, accent, punctuation, prefixes)
@@ -124,10 +138,10 @@
 - [ ] **T2.3.6** Cue review / edit UI; AI vs user provenance
 
 ### 2.4 Professional Preview Player (prep-only, single-deck)
-- [ ] **T2.4.1** Peaks cache (offline, per-track, content-addressed; overview + detail resolutions)
-- [ ] **T2.4.2** Waveform UI (zoom, phrase bands, draggable cue/loop markers, color sections; <16ms/frame)
+- [ ] **T2.4.1** Peaks cache (offline, per-track, content-addressed; overview + detail resolutions) — *`get_waveform_peaks` serves both waveform layers from a per-track cache; never one shared peak buffer (Slice 7)*
+- [ ] **T2.4.2** Dual-wave UI (zoom, phrase bands, draggable cue/loop markers, color sections; <16ms/frame) — *acceptance-critical contract: the **top layer is the zoomed detail viewport** (follow-playhead, grid, phrases, cues, zoom −/+/Fit) and the **bottom layer is the full-track overview** (zoom-window highlight + absolute playhead tick); both layers seek, each keeps its own peaks and playhead. Never identical full-track strips stacked, a shared peak buffer, or a static wave while audio plays (Slice 8)*
 - [ ] **T2.4.3** Beat grid overlay (downbeat + bar lines from analysis; confidence display; halve/double + nudge hookup to F-3 beatgrid editor)
-- [ ] **T2.4.4** Transport + beat jump (play/pause, seek-to-cue, grid-quantized ±1/4/8/16/32, temp loop 4/8/16 bars; seek <100ms; gain + limiter)
+- [ ] **T2.4.4** Transport + beat jump (play/pause, seek-to-cue, hot cues A–H set/jump/clear/color, grid-quantized ±1/4/8/16/32, temp loop 4/8/16 bars; seek <100ms; gain + limiter; source-file hash unchanged)
 - [ ] **T2.4.5** Artwork panel (large-format `get_artwork` cache display; missing-art placeholder; high-res upgrade path)
 - [ ] **T2.4.6** Keyboard map S-2 (space, ←/→ ±1, Shift ±4/±16, C cue, Esc stop; remappable) + output device/samplerate settings
 - [ ] **T2.4.7** Player guardrails (local files only; single-deck; no crossfade/FX/record/streaming; audit-safe)
