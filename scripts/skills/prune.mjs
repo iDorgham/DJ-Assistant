@@ -146,24 +146,32 @@ function apply() {
     const backup = path.join(backupRoot(source.dir), stamp);
     fs.mkdirSync(backup, { recursive: true });
 
+    // The manifest is written *before* the first move, with the moves it
+    // intends to make. A run that is interrupted between here and the end
+    // leaves a backup that still says where every skill went, so the restore
+    // can put them back. The manifest is rewritten afterwards with the moves
+    // that actually succeeded.
+    const planned = ids.map((id) => ({
+      id,
+      source: source.name,
+      from: physical.get(id).get(source.name),
+      to: path.join(backup, id),
+    }));
+    const manifestPath = path.join(backup, MANIFEST);
+    writeManifest(manifestPath, source.name, planned);
+
     const entries = [];
-    for (const id of ids) {
-      const from = physical.get(id).get(source.name);
-      const to = path.join(backup, id);
+    for (const entry of planned) {
       try {
-        move(from, to);
-        entries.push({ id, source: source.name, from, to });
+        move(entry.from, entry.to);
+        entries.push(entry);
       } catch (error) {
-        console.error(`  could not move ${id} from ${source.name}: ${error.message}`);
-        failed.push(`${id} (${source.name})`);
+        console.error(`  could not move ${entry.id} from ${source.name}: ${error.message}`);
+        failed.push(`${entry.id} (${source.name})`);
       }
     }
 
-    fs.writeFileSync(
-      path.join(backup, MANIFEST),
-      `${JSON.stringify({ createdAt: new Date().toISOString(), source: source.name, entries }, null, 2)}\n`,
-      "utf8"
-    );
+    writeManifest(manifestPath, source.name, entries);
     backups.push({ dir: backup, source: source.name, moved: entries.length });
   }
 
@@ -240,6 +248,21 @@ function restore(dir) {
 }
 
 /* --------------------------------------------------------------- helpers */
+
+/**
+ * Write the backup's manifest.
+ *
+ * The manifest is the only record of where a pruned skill went, so it is
+ * written before the first move and rewritten with what actually moved. A
+ * restore reads it and skips the entries whose copy is not in the backup.
+ */
+export function writeManifest(manifestPath, source, entries) {
+  fs.writeFileSync(
+    manifestPath,
+    `${JSON.stringify({ createdAt: new Date().toISOString(), source, entries }, null, 2)}\n`,
+    "utf8"
+  );
+}
 
 /**
  * The skills a prune would remove that the policy also marks as a priority.

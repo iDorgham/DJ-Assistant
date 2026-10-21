@@ -44,6 +44,18 @@ const installed = new Set(listSkills().skills.map((skill) => skill.id));
  */
 const has = (...ids) => ids.every((id) => installed.has(id));
 
+/** Whether at least one of these skills is installed. */
+const hasAny = (...ids) => ids.some((id) => installed.has(id));
+
+// The defaults the "no signal" test can reach: the files resolve to the Rust
+// and API areas, and those are the domains whose defaults fill the slots.
+const DOMAIN_DEFAULTS = [
+  "rust-best-practices",
+  "sql-optimization-patterns",
+  "api-design-principles",
+  "nodejs-backend-patterns",
+];
+
 describe("path matching", () => {
   it("matches a directory tree", () => {
     assert.equal(matchPath("apps/desktop/src-tauri/**", "apps/desktop/src-tauri/src/lib.rs"), true);
@@ -345,7 +357,7 @@ describe("domain routing", () => {
 
   it(
     "offers the domain default when the prompt carries no signal",
-    { skip: !has("rust-best-practices", "sql-optimization-patterns") },
+    { skip: hasAny(...DOMAIN_DEFAULTS) ? false : "no domain default skill is installed" },
     () => {
       // "fix this" gives the matcher nothing to score; the files say Rust.
       const brief = buildBrief({

@@ -157,8 +157,17 @@ The tool refuses the whole operation when the policy puts a hot skill on the
 prune list — the check happens *before* anything moves, so the hot set is
 never damaged rather than merely reported afterwards — and a move that fails
 leaves a non-zero exit code, so a partial prune cannot pass for a complete
-one. The list is machine-global state, so it lives in the policy file, not in
-the shared memory.
+one. The manifest is written before the first move, so an interrupted run
+still leaves a record of where every skill went.
+
+Two different scopes meet here, and they are not the same thing. The **prune
+list** is project-scoped: it names the skills *this* project does not use.
+The **library it operates on** is machine-global: the copies live beside
+other projects' work, which is exactly why the tool moves them into a backup
+it can put back, and why it refuses to run at all when a hot skill is caught
+in the list. The list itself lives in the policy file — a tracked, per-project
+file — rather than in the shared memory, because the memory store is re-sent
+to every tool on every session and the list is machine state.
 **Why:** the whole library is advertised to the model on every step in every
 tool, whether or not a skill is ever loaded — that advertising cost, not the
 routing, was the dominant latency and spend. **Reverses if:** hiding a skill

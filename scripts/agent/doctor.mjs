@@ -167,6 +167,14 @@ for (const [id, domain] of Object.entries(domains)) {
       soft.push(`domain "${id}" default skill is not installed: ${skill}`);
     }
   }
+  // A repeated keyword is a copy-paste slip. The domain score counts the
+  // distinct prompt words a domain claims, so the repeat no longer inflates
+  // anything — but it misleads whoever reads the policy next.
+  const seen = new Set();
+  for (const keyword of domain.keywords ?? []) {
+    if (seen.has(keyword)) hard.push(`domain "${id}" repeats the keyword "${keyword}"`);
+    seen.add(keyword);
+  }
 }
 for (const [pattern, ids] of Object.entries(policy.pathDomains ?? {})) {
   for (const id of ids ?? []) {

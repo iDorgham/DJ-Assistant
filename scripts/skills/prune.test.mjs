@@ -14,9 +14,11 @@ import { after, describe, it } from "node:test";
 import { fileURLToPath } from "node:url";
 
 import { copies, hotPruneOverlap, move, pathExists } from "./prune.mjs";
+import { listSkills } from "./lib.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..");
 const scratch = path.join(os.tmpdir(), `dj-assistant-prune-test-${process.pid}`);
+const installed = new Set(listSkills().skills.map((skill) => skill.id));
 
 after(() => {
   fs.rmSync(scratch, { recursive: true, force: true });
@@ -133,26 +135,30 @@ describe("moving a skill keeps what it is", () => {
 });
 
 describe("every installed copy is found", () => {
-  it("sees the copies that listSkills collapses", () => {
-    // listSkills() reports one entry per skill id — the project copy shadows
-    // the global one — so the shadowed copy is invisible to it. The prune
-    // needs it, or the skill keeps being advertised after the prune.
-    const physical = copies();
-    assert.ok(physical.size > 0, "no skills found at all");
+  it(
+    "sees the copies that listSkills collapses",
+    { skip: installed.size ? false : "no skill library is installed" },
+    () => {
+      // listSkills() reports one entry per skill id — the project copy shadows
+      // the global one — so the shadowed copy is invisible to it. The prune
+      // needs it, or the skill keeps being advertised after the prune.
+      const physical = copies();
+      assert.ok(physical.size > 0, "no skills found at all");
 
-    for (const [id, perSource] of physical) {
-      assert.ok(perSource.size >= 1, `${id} has no copy`);
-      for (const [source, dir] of perSource) {
-        assert.ok(fs.existsSync(path.join(dir, "SKILL.md")), `${id} (${source}) has no SKILL.md`);
+      for (const [id, perSource] of physical) {
+        assert.ok(perSource.size >= 1, `${id} has no copy`);
+        for (const [source, dir] of perSource) {
+          assert.ok(fs.existsSync(path.join(dir, "SKILL.md")), `${id} (${source}) has no SKILL.md`);
+        }
       }
-    }
 
-    const shadowed = [...physical.values()].filter((perSource) => perSource.size > 1);
-    assert.ok(
-      shadowed.length > 0,
-      "expected at least one skill installed in more than one source"
-    );
-  });
+      const shadowed = [...physical.values()].filter((perSource) => perSource.size > 1);
+      assert.ok(
+        shadowed.length > 0,
+        "expected at least one skill installed in more than one source"
+      );
+    }
+  );
 });
 
 describe("the project tree is where the policy says", () => {
