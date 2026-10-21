@@ -112,7 +112,9 @@ import {
   saveLibraryColumns,
   setColumnWidth,
   toggleColumnVisible,
+  totalColumnWidth,
   trackColumnText,
+  trackColumnTooltip,
   visibleColumns,
   type ColumnId,
   type ColumnState,
@@ -305,6 +307,13 @@ function TrackTableHeader({
     if (!active) return;
     active.width = clampColumnWidth(active.startWidth + (event.clientX - active.startX));
     setPreview({ id: active.id, width: active.width });
+    // Move the table edge with the drag. Re-rendering every row per pointer move
+    // just to change the table width is unnecessary, and leaving the edge behind
+    // makes the fixed layout spread the leftover pixels across the other columns.
+    const table = event.currentTarget.closest("table");
+    if (table) {
+      table.style.width = `${totalColumnWidth(columns, { id: active.id, width: active.width })}px`;
+    }
   };
 
   const endResize = () => {
@@ -502,7 +511,7 @@ function TrackCell({
   const isTitle = id === "title";
   return (
     <td
-      title={text}
+      title={trackColumnTooltip(track, id)}
       className={`${base} ${
         isTitle
           ? "font-medium text-dj-text group-hover:text-dj-accent transition"
@@ -1927,10 +1936,8 @@ export default function App() {
                     </div>
                   ) : (
                     <table
-                      className="w-full table-fixed text-left border-collapse text-xs"
-                      style={{
-                        minWidth: shownColumns.reduce((sum, column) => sum + column.width, 0),
-                      }}
+                      className="table-fixed text-left border-collapse text-xs"
+                      style={{ width: totalColumnWidth(shownColumns) }}
                     >
                       <TrackTableHeader
                         columns={shownColumns}
