@@ -137,10 +137,14 @@ capability. The only way to stop paying for a skill is to remove it. The
 project therefore keeps an explicit **`prune` list** in
 `skills.policy.json` — one entry per skill, with the reason it is not used
 here — and a **`pnpm skills:prune`** tool that *moves* the listed skills into a
-timestamped backup next to the machine-global library instead of deleting them.
-`--restore <dir>` puts them back, and the tool refuses to leave the hot set
-damaged. The list is machine-global state, so it lives in the policy file, not
-in the shared memory.
+timestamped backup beside the **project mirror** (`.opencode/skills`) instead
+of deleting them. Pruning is project-scoped: only the project mirror is
+touched; the machine-global library (`~/.config/opencode/skills`) and the
+tool's own bundled skills (`~/.agents/skills`) are left alone, because the
+prune list is project-specific. `--restore <dir>` puts them back (reading the
+backup's `manifest.json`), and the tool refuses to leave the hot set damaged.
+The list is machine-global state, so it lives in the policy file, not in the
+shared memory.
 **Why:** the whole library is advertised to the model on every step in every
 tool, whether or not a skill is ever loaded — that advertising cost, not the
 routing, was the dominant latency and spend. **Reverses if:** the shared

@@ -1,4 +1,4 @@
-// Prunes the machine-global skill library down to the skills this project uses.
+// Prunes the skill library this project uses down to the skills it needs.
 //
 //   node scripts/skills/prune.mjs                 # dry run: what would go
 //   node scripts/skills/prune.mjs --apply         # move it to a backup folder
@@ -6,18 +6,29 @@
 //
 // Why this exists: every installed skill is advertised to the model on every
 // step, in every tool. A skill hidden with `metadata.opencode/autoinvoke:false`
-// is *not loadable* here (D-003), so the only way to stop paying for a skill is
-// to remove it. The library is machine-global and shared with other projects,
-// so this tool never deletes: `--apply` moves the skill directories into a
-// timestamped backup next to the library, and `--restore` puts them back.
+// is *not loadable* here (D-003), so the only way to stop paying for a skill
+// is to remove it. The list itself is `prune` in `skills.policy.json`, one entry
+// per skill with the reason it is not used here.
 //
-// The list itself is `prune` in `skills.policy.json`, one entry per skill with
-// the reason it is not used here. The list is the audited part; the tool is
-// the mechanical part.
+// The library lives in three places on a developer machine, and this tool only
+// touches the one this project owns:
+//
+//   <repo>/.opencode/skills   the project mirror — gitignored, and what this
+//                              project's tools actually read. **Pruned.**
+//   ~/.config/opencode/skills the machine-global library, shared with every
+//                              other project on the box. **Left alone.**
+//   ~/.agents/skills          the tool's own bundled skills. **Left alone.**
+//
+// The prune list is project-scoped, so pruning the global library with it would
+// remove skills other projects still need.
+//
+// The tool never deletes: `--apply` moves skill directories into a timestamped
+// backup *beside the source*, and `--restore <dir>` puts them back using the
+// manifest the backup carries.
 
 import fs from "node:fs";
 import path from "node:path";
-import { GLOBAL_SKILLS, SOURCES, isFile, listSkills, loadPolicy } from "./lib.mjs";
+import { PROJECT_SKILLS, isFile, listSkills, loadPolicy } from "./lib.mjs";
 
 const argv = process.argv.slice(2);
 const flags = new Set(argv.filter((arg) => arg.startsWith("--")));
@@ -26,7 +37,10 @@ const value = (name, fallback) => {
   return index !== -1 && argv[index + 1] ? argv[index + 1] : fallback;
 };
 
-const BACKUP_ROOT = path.join(path.dirname(GLOBAL_SKILLS), "skills-backup");
+// Only the project mirror is pruned. The global library is shared with other
+// projects on this machine; the tool's own bundled skills are not ours to move.
+const SOURCE = value("source", "project");
+const MANIFEST = "manifest.json";
 
 /* ------------------------------------------------------------------ modes */
 
@@ -55,22 +69,15 @@ function report() {
   // Same metric the audit uses: the description text is what every skill
   // costs on every step, in every tool, whether or not the skill is ever
   // loaded. The name and the path are on top of that.
-  const advertised = (list) => list.reduce((sum, skill) => sum + skill.description.length, 0);
-  const tokens = (list) => Math.round(advertised(list) / 4);
+  const tokens = (list) => Math.round(list.reduce((s, k) => s + k.description.length, 0) / 4);
 
-  const removedTokens = tokens(removed);
-  const keptTokens = tokens(kept);
-
-  console.log(
-    `Library   : ${skills.length} skills, ~${tokens(skills)} tokens/step advertised (descriptions)`
-  );
+  console.log(`Library   : ${skills.length} skills, ~${tokens(skills)} tokens/step advertised`);
+  console.log(`Source    : ${SOURCE} — ${sourceRoot()}`);
   console.log(`Prune list: ${removable.length} of ${Object.keys(prune).length} present`);
   console.log(
-    `Saving    : ~${removedTokens} tokens/step, ${Math.round((removedTokens / (removedTokens + keptTokens)) * 100)}% of the advertised cost`
+    `Saving    : ~${tokens(removed)} tokens/step, ${Math.round((tokens(removed) / tokens(skills)) * 100)}% of the advertised cost`
   );
-  if (missing.length) {
-    console.log(`Already gone: ${missing.join(", ")}`);
-  }
+  if (missing.length) console.log(`Already gone: ${missing.join(", ")}`);
   console.log("");
   for (const id of removable) {
     console.log(`  ${id.padEnd(38)} ${prune[id]}`);
@@ -94,20 +101,28 @@ function apply() {
   }
 
   const stamp = new Date().toISOString().replace(/[:.]/g, "-");
-  const backup = path.join(BACKUP_ROOT, stamp);
+  const backup = path.join(backupRoot(), stamp);
   fs.mkdirSync(backup, { recursive: true });
 
   const moved = [];
+  const entries = [];
   for (const id of removable) {
     const skill = installed.get(id);
+    if (skill.source !== SOURCE) continue;
     const target = path.join(backup, id);
     try {
-      fs.renameSync(skill.dir, target);
+      move(skill.dir, target);
       moved.push(id);
+      entries.push({ id, source: skill.source, from: skill.dir, to: target });
     } catch (error) {
       console.error(`  could not move ${id}: ${error.message}`);
     }
   }
+  fs.writeFileSync(
+    path.join(backup, MANIFEST),
+    `${JSON.stringify({ createdAt: new Date().toISOString(), source: SOURCE, entries }, null, 2)}\n`,
+    "utf8"
+  );
 
   // The hot set must survive the prune: a skill the policy marks as priority
   // is one the project reaches for, and losing it silently is worse than the
@@ -134,24 +149,56 @@ function restore(dir) {
     process.exit(2);
   }
   const source = path.resolve(dir);
-  if (!fs.existsSync(source)) {
-    console.error(`No such backup folder: ${source}`);
+  const manifestPath = path.join(source, MANIFEST);
+  if (!fs.existsSync(manifestPath)) {
+    console.error(`No manifest in ${source} — is this a prune backup folder?`);
     process.exit(2);
   }
+  const manifest = JSON.parse(fs.readFileSync(manifestPath, "utf8"));
   let restored = 0;
-  for (const entry of fs.readdirSync(source, { withFileTypes: true })) {
-    if (!entry.isDirectory() && !entry.isSymbolicLink()) continue;
-    const target = path.join(GLOBAL_SKILLS, entry.name);
-    if (fs.existsSync(target)) {
-      console.error(`  ${entry.name} is already installed — left alone`);
+  for (const entry of manifest.entries ?? []) {
+    if (!fs.existsSync(entry.to)) continue;
+    if (fs.existsSync(entry.from)) {
+      console.error(`  ${entry.id} is already installed — left alone`);
       continue;
     }
-    fs.renameSync(path.join(source, entry.name), target);
+    fs.mkdirSync(path.dirname(entry.from), { recursive: true });
+    move(entry.to, entry.from);
     restored += 1;
   }
-  console.log(`Restored ${restored} skills into ${GLOBAL_SKILLS}`);
+  console.log(`Restored ${restored} skills into ${sourceRoot()}`);
+}
+
+/* --------------------------------------------------------------- helpers */
+
+/** The directory the pruned source lives in. */
+function sourceRoot() {
+  return SOURCE === "project" ? PROJECT_SKILLS : path.join(process.env.USERPROFILE, ".config", "opencode", "skills");
+}
+
+/**
+ * Where the backup goes: beside the source, so the move is a rename on the
+ * same volume. A backup on another drive cannot be renamed into place, and
+ * copying a skill tree in and out is slower and can half-fail.
+ */
+function backupRoot() {
+  return path.join(path.dirname(sourceRoot()), "skills-backup");
+}
+
+/**
+ * Move a directory, falling back to copy-then-delete when the two paths are
+ * on different volumes (`rename` cannot cross a drive boundary on Windows).
+ */
+function move(from, to) {
+  try {
+    fs.renameSync(from, to);
+    return;
+  } catch (error) {
+    if (error.code !== "EXDEV") throw error;
+  }
+  fs.cpSync(from, to, { recursive: true, verbatimSymlinks: true, force: true });
+  fs.rmSync(from, { recursive: true, force: true });
 }
 
 // Referenced so the module's exports stay honest about what a prune touches.
-void SOURCES;
 void isFile;

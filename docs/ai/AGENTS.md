@@ -169,7 +169,9 @@ is a ranking, not a visibility filter — see §4.
   advertising cost is the dominant spend, not the routing. The `prune` list in
   `skills.policy.json` names the skills this project does not use, each with
   its reason; `pnpm skills:prune` moves them into a **backup**, never a
-  delete, and `--restore <dir>` reverses it. See
+  delete, and `--restore <dir>` reverses it. Pruning is project-scoped: only
+  the project mirror (`.opencode/skills`) is touched — the machine-global
+  library and the tool's own bundled skills are left alone. See
   [D-012](./memory/decisions.md).
 - **One source for the agent layer.** The agent and command files live once, in
   `.opencode/agents` and `.opencode/commands`; every other tool directory is a

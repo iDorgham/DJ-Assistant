@@ -34,8 +34,9 @@ fact, it belongs in [`facts.md`](./facts.md). Delete anything stale.
 - **Speed.** The whole library is advertised to the model on every step in
   every tool whether or not a skill is loaded; that advertising cost, not the
   routing, was the dominant spend. The `prune` list plus **`pnpm skills:prune`**
-  (dry run by default; `--apply` *moves* the skills into a timestamped backup,
-  `--restore <dir>` puts them back) removes it. A parsed-skill cache under
+  (dry run by default; `--apply` *moves* the skills into a timestamped backup
+  beside the project mirror, project-scoped only; `--restore <dir>` puts them
+  back) removes it. A parsed-skill cache under
   `node_modules/.cache/` cut the preflight from ~266 ms to ~179 ms.
 - **The policy had been claiming something untrue**: seventeen duplicates were
   marked "Kept installed, hidden" and `builtinHidden` named `playwright-cli` —
