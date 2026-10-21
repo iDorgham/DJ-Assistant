@@ -92,6 +92,8 @@ import {
   activeFilterCount,
   defaultSortDirection,
   describeFilters,
+  describeMetadataUndo,
+  describeMetadataWrite,
   filterTracks,
   formatBpm,
   formatDuration,
@@ -1604,13 +1606,13 @@ export default function App() {
       // `0` is the backend's "clear the rating" value (docs/ui/03 §3.4).
       const res = await setTrackRating({ trackIds, rating: rating ?? 0 });
       refreshLibrary();
-      offerUndo(
-        res.undoId,
-        trackIds.length > 1
-          ? `Rated ${trackIds.length} tracks`
-          : `Rated “${track.title || "Untitled"}”`
-      );
-      pushStatus(`Rating saved for ${trackIds.length} track${trackIds.length === 1 ? "" : "s"}`);
+      // The backend skips tracks that already hold the requested value, so
+      // `updated` can be smaller than the selection — and zero when nothing
+      // changed. Announce what actually changed and offer Undo only when
+      // there is something to undo.
+      pushStatus(describeMetadataWrite("rating", res.updated));
+      const undoMessage = describeMetadataUndo("rating", res.updated, trackIds.length, track.title);
+      if (undoMessage) offerUndo(res.undoId, undoMessage);
     } catch (err) {
       console.error("Failed to set rating:", err);
       pushStatus("Couldn't save the rating", "error");
@@ -1623,13 +1625,11 @@ export default function App() {
       // `0` is the backend's "clear the energy" value — 0 is outside 1–10.
       const res = await updateTrackMetadata({ trackIds, energy: energy ?? 0 });
       refreshLibrary();
-      offerUndo(
-        res.undoId,
-        trackIds.length > 1
-          ? `Set energy on ${trackIds.length} tracks`
-          : `Set energy on “${track.title || "Untitled"}”`
-      );
-      pushStatus(`Energy saved for ${trackIds.length} track${trackIds.length === 1 ? "" : "s"}`);
+      // Same contract as the rating: `updated` counts only the tracks that
+      // really changed, so the message must not claim the whole selection.
+      pushStatus(describeMetadataWrite("energy", res.updated));
+      const undoMessage = describeMetadataUndo("energy", res.updated, trackIds.length, track.title);
+      if (undoMessage) offerUndo(res.undoId, undoMessage);
     } catch (err) {
       console.error("Failed to set energy:", err);
       pushStatus("Couldn't save the energy level", "error");

@@ -320,3 +320,39 @@ export function scanPercent(scannedFiles: number, totalFiles: number): number {
   if (!totalFiles || totalFiles <= 0) return 25;
   return Math.min(100, Math.round((scannedFiles / totalFiles) * 100));
 }
+
+/**
+ * Status line for a rating or energy write.
+ *
+ * The backend skips tracks that already hold the requested value, so the
+ * number of changed tracks (`updated`) can be smaller than the selection — and
+ * zero when the selection already had that value. The message reports what
+ * actually changed, never the size of the selection.
+ */
+export function describeMetadataWrite(kind: "rating" | "energy", updated: number): string {
+  const label = kind === "rating" ? "Rating" : "Energy";
+  if (updated <= 0) return `${label} unchanged — nothing to save`;
+  return `${label} saved for ${updated} track${updated === 1 ? "" : "s"}`;
+}
+
+/**
+ * Undo-toast message for a rating or energy write, or `null` when the write
+ * changed nothing — there is nothing to undo then, so the toast is skipped.
+ *
+ * The track title is only used when the edit targeted a single track; a
+ * multi-track edit is reported as a count so no wrong track is named.
+ */
+export function describeMetadataUndo(
+  kind: "rating" | "energy",
+  updated: number,
+  targetCount: number,
+  title: string | null | undefined
+): string | null {
+  if (updated <= 0) return null;
+  const label = title?.trim() ? title.trim() : "Untitled";
+  if (targetCount === 1 && updated === 1) {
+    return kind === "rating" ? `Rated “${label}”` : `Set energy on “${label}”`;
+  }
+  const count = `${updated} track${updated === 1 ? "" : "s"}`;
+  return kind === "rating" ? `Rated ${count}` : `Set energy on ${count}`;
+}

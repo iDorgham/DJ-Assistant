@@ -135,11 +135,19 @@
     "dj-db_write_query": false,
     "dj-db_create_table": false,
     "dj-db_append_insight": false
-
     // Optional, for context-cost control: switch a whole server's tools off
     // without touching its "enabled" flag. Uncomment when a server is rarely
     // needed and you want it connected but silent.
-    // "dj-db_*": false,
+    //
+    // To use it, replace the three entries above with this block (the
+    // wildcard entry needs a trailing comma, so it goes first):
+    //
+    //   "tools": {
+    //     "dj-db_*": false,
+    //     "dj-db_write_query": false,
+    //     "dj-db_create_table": false,
+    //     "dj-db_append_insight": false
+    //   }
   }
 }
 

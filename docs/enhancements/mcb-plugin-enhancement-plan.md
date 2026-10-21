@@ -91,7 +91,7 @@ unit.
 | --- | ----------- | ------ | ------- | ---- | ----------- | ------------------- |
 | **MCB-0** · Rust core (no MCP) | — | **local** (`crates/core`, `dj-assistant-core` crate) | `dj-query` CLI over the app's own SQLite using the existing `library_query` builder — read-only by construction, app-identical semantics | **Low** | **Yes** | **Yes** (it is just a binary) — **built 2026-10-21** |
 | **MCB-DB** · Library inspector | `dj-db` | **uvx** (PyPI `mcp-server-sqlite==2025.4.25`) | Ad-hoc SQL over a **snapshot copy** of the app DB when `dj-query` does not model the question | **Low** (writes hard-disabled) | **Yes** | **No** |
-| **MCB-DJ** · Rekordbox reader | — | **local** (`crates/core`, `dj-assistant-core` crate) | `dj-rekordbox` CLI over the DJ's exported `rekordbox.xml` — the authoritative BPM/key/rating/playlist source to reconcile against the app's import | **Low** (read-only file parse) | **Yes** | **Yes** (it is just a binary) — **staged, needs the export** |
+| **MCB-DJ** · Rekordbox reader | — | **local** (`crates/core`, `dj-assistant-core` crate) | `dj-rekordbox` CLI over the DJ's exported `rekordbox.xml` — the authoritative BPM/key/rating/playlist source to reconcile against the app's import | **Low** (read-only file parse) | **Yes** | **No** — **not built yet**; the reader (`crates/core/src/bin/rekordbox.rs`) is **staged, needs the export**, not implemented, and Phase 5 only starts once an XML export exists |
 
 **MCB-UI is gone.** The Playwright MCP was skipped by maintainer decision
 (audit §3.1, F-8): `playwright-cli` and the hot `ui-verification` skill already

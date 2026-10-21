@@ -619,8 +619,18 @@ fn run_list(conn: &Connection, args: &Args) -> Result<(), String> {
         .map_err(|e| format!("query: {e}"))?;
     let tracks: Vec<TrackRow> = rows.flatten().collect();
 
+    // `--check-files` is honoured in the list mode too, not only in `--stats`:
+    // the tracks are still listed, and the files that are gone are reported
+    // alongside them. Same scan as the summary — every track in the library,
+    // with the sample capped at the page size.
+    let missing_files = if args.check_files {
+        Some(missing_files(conn, args.limit)?)
+    } else {
+        None
+    };
+
     if args.json {
-        let payload = serde_json::json!({
+        let mut payload = serde_json::json!({
             "db": args.db.display().to_string(),
             "total": total,
             "returned": tracks.len(),
@@ -643,6 +653,15 @@ fn run_list(conn: &Connection, args: &Args) -> Result<(), String> {
                 }))
                 .collect::<Vec<_>>(),
         });
+        if let Some((missing_total, sample)) = &missing_files {
+            payload["missing_files"] = serde_json::Value::from(*missing_total as u64);
+            payload["missing_file_paths"] = serde_json::Value::Array(
+                sample
+                    .iter()
+                    .map(|path| serde_json::Value::String(path.clone()))
+                    .collect(),
+            );
+        }
         println!("{}", serde_json::to_string_pretty(&payload).unwrap());
         return Ok(());
     }
@@ -665,6 +684,12 @@ fn run_list(conn: &Connection, args: &Args) -> Result<(), String> {
             track.status,
             track.path
         );
+    }
+    if let Some((missing_total, sample)) = &missing_files {
+        println!("missing files       : {missing_total}");
+        for path in sample {
+            println!("  {path}");
+        }
     }
     Ok(())
 }
