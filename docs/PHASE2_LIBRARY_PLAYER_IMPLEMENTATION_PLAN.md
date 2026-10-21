@@ -139,7 +139,7 @@ These get unit tests **first** (TDD-friendly).
 | # | Slice | Tasks | Est. | Parallel |
 |---|--------|--------|------|----------|
 | 0 | Baseline merge | T2.1.0, T2.1.2 | — | — |
-| 1 | Column framework | **T2.1.5** | S | — |
+| 1 | Column framework — **done (PR #49, `d037128b`)** | **T2.1.5** | S | — |
 | 2 | Rating + Energy | **T2.1.4**, **T2.1.6** | S–M | After 1 |
 | 3 | Tags + Key pills | **T2.1.7**, **T2.1.8** | M | After 1; key needs playing id |
 | 4 | Artwork | **T2.1.9** | S | After 1 |
@@ -165,6 +165,8 @@ Slice 7 real audio ──► Slice 8 dual-wave + transport
 
 ### Slice 1 — Column framework (T2.1.5)
 
+**Status:** Done — PR #49, rebase-merged as `d037128b` on 2026-10-21. Framework only; the richer cells ship in Slices 2–4.
+
 **Intent:** Make the table a configurable product surface.
 
 **Work**
@@ -174,17 +176,16 @@ Slice 7 real audio ──► Slice 8 dual-wave + transport
 4. `TrackTable` header + body read config; virtualization still works with variable row height only if Artwork on (document rule: artwork row taller or fixed thumb).
 5. Forbid hiding the last identity column (Title).
 
-**Files (indicative)**
-- `apps/desktop/src/features/library/columns.ts`
-- `apps/desktop/src/components/library/ColumnPicker.tsx`
-- `apps/desktop/src/components/library/TrackTable.tsx`
-- tests: `columns.test.ts`
+**Files (shipped)**
+- `apps/desktop/src/lib/library-columns.ts` (+ `library-columns.test.ts`, 29 tests)
+- `apps/desktop/src/components/ColumnPicker.tsx`
+- `apps/desktop/src/App.tsx` (header + cells render from the configured list)
 
 **DoD**
-- [ ] Toggle any optional column; order + widths survive relaunch
-- [ ] Reset restores defaults
-- [ ] No layout jump that breaks virtualization
-- [ ] Unit tests for merge/validate/persist
+- [x] Toggle any optional column; order + widths survive relaunch
+- [x] Reset restores defaults
+- [ ] No layout jump that breaks virtualization — *the table still renders all rows; virtualization lands with the Slice 9 hardening pass*
+- [x] Unit tests for merge/validate/persist
 
 **Out of scope:** Fancy cell widgets (plain text OK).
 
