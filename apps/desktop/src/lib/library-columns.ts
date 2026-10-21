@@ -663,6 +663,6 @@ export function trackColumnTooltip(track: TrackSummary, id: ColumnId): string | 
     case "rating":
       return track.userRating != null ? `${track.userRating} / 5` : "Unrated";
     default:
-      return undefined;
+      return trackColumnText(track, id);
   }
 }
