@@ -4,21 +4,25 @@ Ephemeral. Newest first. **Rotate aggressively** — if a line would still be tr
 in two weeks, it belongs in [`decisions.md`](./decisions.md); if it is just a
 fact, it belongs in [`facts.md`](./facts.md). Delete anything stale.
 
-## 2026-10-21 · T2.1.5 column framework on its branch
+## 2026-10-21 · T2.1.5 column framework — PR #49
 
-- `feat/T2.1.5-column-framework` carries the Phase 2 plan (docs) and the slice.
-- The column model, persistence and 23 tests are in
+- PR #49 (`feat/T2.1.5-column-framework` → `main`) carries the Phase 2 plan
+  (docs) and the slice. Commit `2ca8f6e3` closed the first greptile round:
+  the table width follows the resize preview (`totalColumnWidth`) instead of
+  stretching in `w-full`; auto-fit counts sort icons, chip/pill chrome and the
+  artwork thumb; cells use `trackColumnTooltip` for the full comment, hash,
+  both key notations and rating. The three threads are replied and resolved;
+  the cubic threads on the plan/diagram/picker are still open.
+- The column model, persistence and 23 column tests are in
   `apps/desktop/src/lib/library-columns.ts`; the checklist is
   `components/ColumnPicker.tsx`; the table header/cells in `App.tsx` render
   from the configured list.
-- Verified in the dev-server browser with three mock tracks: toggle, resize,
-  reorder, double-click auto-fit, reset and reload persistence all work; the
-  last identity column stays pinned. 72 desktop tests, workspace typecheck and
-  lint pass.
-- Not pushed, no PR. T2.1.5 is not yet a row in `docs/sdd/04-TASKS.md` — the
-  plan proposes T2.1.5–T2.1.12 but the tracker still ends at T2.1.4.
-- `README.md` and `kilo.jsonc` are modified in the worktree by another session
-  and were deliberately left out of these commits.
+- Verified in the dev-server browser with mock tracks: toggle, resize,
+  reorder, double-click auto-fit, reset, reload persistence and wide-window
+  widths all hold; the last identity column stays pinned. 77 desktop tests,
+  workspace typecheck and lint pass.
+- T2.1.5 is not yet a row in `docs/sdd/04-TASKS.md` — the plan proposes
+  T2.1.5–T2.1.12 but the tracker still ends at T2.1.4.
 
 ## 2026-10-20 · Automatic agent routing and communication
 
