@@ -39,8 +39,9 @@ standalone and its message described code that was not in it. `git status` did n
 warn: the rewrite had been picked up by the same `git add` that staged my work.
 
 Stage first, then extract **the index** — the tree the commit is about to become
-— and run it: `git archive "$(git write-tree)" scripts | tar -x -C /tmp/x &&
-node /tmp/x/scripts/...`. (`git archive HEAD` exports the *previous* commit, so
+— and run it: `mkdir -p /tmp/x && git archive "$(git write-tree)" scripts |
+tar -x -C /tmp/x && node /tmp/x/scripts/...` (`tar -x -C` needs the directory to
+already exist). (`git archive HEAD` exports the *previous* commit, so
 as originally written this check could not have caught this breakage.) Fix
 forward with a note; do not rewrite published history.
 

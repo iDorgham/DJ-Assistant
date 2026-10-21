@@ -26,8 +26,10 @@ not inferable by reading the code.
   the discovered skills from the model list — that directory is forbidden.
 - A skill hidden with `metadata.opencode/autoinvoke: false` is **not loadable**
   here, so the whole skill library stays advertised.
-- OpenCode permission rules are **last-match-wins**, so a catch-all `"*"` deny
-  must come *before* the allows in every agent `permissions:` block.
+- OpenCode's documented `permissions:` rules are **last-match-wins**, so a
+  catch-all `"*"` deny goes *before* the allows in every agent `permissions:`
+  block. The installed build parses a different singular key and enforces none of
+  these rules — see [D-008](./decisions.md).
 - `agents.registry.json` is the routing data of the agent layer: subagents
   (keywords, owned files, skills), commands, verification groups, and the map of
   tool directories that mirror the agent files.

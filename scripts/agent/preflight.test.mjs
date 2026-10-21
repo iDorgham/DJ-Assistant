@@ -89,6 +89,15 @@ describe("git porcelain parsing", () => {
   it("takes the destination of a rename and drops the origin", () => {
     assert.deepEqual(parsePorcelain("R  newname.md\0oldname.md\0"), ["newname.md"]);
   });
+
+  it("consumes the origin field whichever status column carries the rename", () => {
+    // `XY path`: the letters are columns 0 and 1, so a rename reported in the
+    // worktree column reads "MR" rather than "R ".
+    assert.deepEqual(parsePorcelain("MR newname.md\0oldname.md\0"), ["newname.md"]);
+    // A deleted source plus an untracked destination is what an unstaged move
+    // actually looks like, and neither record carries a second field.
+    assert.deepEqual(parsePorcelain(" D old.md\0?? new.md\0"), ["old.md", "new.md"]);
+  });
 });
 
 describe("keyword matching", () => {
@@ -292,6 +301,10 @@ describe("preflight CLI", () => {
   });
 
   it("rejects an empty stdin instead of routing an empty prompt", () => {
-    assert.throws(() => run(["--stdin"], ""));
+    assert.throws(
+      () => run(["--stdin"], ""),
+      (error) => error.status === 2,
+      "empty input should fail with the usage exit code"
+    );
   });
 });
