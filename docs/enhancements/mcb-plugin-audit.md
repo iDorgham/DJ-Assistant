@@ -228,7 +228,7 @@ only?" means: does the server talk to the network to do its job?
 | `mcp-everything` | `@modelcontextprotocol/server-everything@2.0.0` | Test server | Yes | — | — | **Reject** — it is a protocol test fixture |
 | `dj-setbox` | `tgf-between-your-legs/dj-setbox` (MIT) | rekordbox 7 set planning + cue writing | Yes | **Med-High** (writes cues; unofficial) | Med | **Defer** — the app has its own set builder (`dj-set-architect` skill, `set_architect` product Skill) |
 | `mcp-dj` | `darav-t/mcp-dj` (★6, no license assertion) | Rekordbox 6 via pyrekordbox + a web UI on `:8888` | Yes | Med-High (installer scripts that edit Claude Desktop config) | Med | **Reject** — the installer edits *other tools' global config*; out of bounds for this repo |
-| **Rekordbox XML reader (ours)** | **planned** — `crates/core/src/bin/rekordbox.rs` → `dj-rekordbox` (not built yet) | Parses the DJ's exported `rekordbox.xml` read-only: tracks, BPM, Camelot key, rating, playlists — for reconciliation against the app's import | Yes | **Low** (a `SELECT`-only reader over a file the DJ exports) | **High** (closes G-2/G-4) | **Planned — build it** — see §3.3. No MCP can do this, and the Rust route keeps the project dependency-free |
+| **Rekordbox XML reader (ours)** | **planned** — `crates/core/src/bin/rekordbox.rs` → `dj-rekordbox` (not built yet) | Parses the DJ's exported `rekordbox.xml` read-only: tracks, BPM, Camelot key, rating, playlists — for reconciliation against the app's import | Yes | **Low** (a read-only file parser over an export the DJ provides) | **High** (closes G-2/G-4) | **Planned — build it** — see §3.3. No MCP can do this, and the Rust route keeps the project dependency-free |
 
 ### 3.3 The Rekordbox finding (material)
 
