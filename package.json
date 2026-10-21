@@ -26,6 +26,7 @@
     "skills:inventory": "node scripts/skills/inventory.mjs",
     "skills:match": "node scripts/skills/match.mjs",
     "skills:audit": "node scripts/skills/audit.mjs",
+    "skills:prune": "node scripts/skills/prune.mjs",
     "skills:policy": "node scripts/skills/policy.mjs",
     "skills:policy:restore": "node scripts/skills/policy.mjs --restore",
     "memory:search": "node scripts/memory/search.mjs",

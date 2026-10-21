@@ -14,15 +14,19 @@ import path from "node:path";
 import {
   ROOT,
   buildIndex,
+  globToRegExp,
   isFile,
+  keywordHit,
   listSkills,
   loadPolicy,
   matchSkills,
+  resolveDomains as resolveSkillDomains,
   tokenize,
 } from "../skills/lib.mjs";
 import { searchMemory } from "../memory/lib.mjs";
 
 export const REGISTRY_PATH = path.join(ROOT, "agents.registry.json");
+export { globToRegExp, keywordHit };
 
 /** Load `agents.registry.json`, failing with a clear message when missing. */
 export function loadRegistry() {
@@ -33,41 +37,6 @@ export function loadRegistry() {
 }
 
 /* ------------------------------------------------------------------- paths */
-
-const REGEX_SPECIALS = "\\^$.|+()[]{}";
-
-/**
- * Convert a glob to a regular expression.
- *
- * Supports `**` (any depth), `*` (one segment), and `?` (one character). The
- * `**` rewrites are staged through placeholders so the inserted regex
- * fragments are not themselves escaped.
- */
-export function globToRegExp(pattern) {
-  const fragments = {
-    "@@G1@@": "(?:/.*)?",
-    "@@G2@@": "(?:.*/)?",
-    "@@G3@@": ".*",
-  };
-  let source = pattern;
-  source = source.replace(/\/\*\*\//g, "@@G1@@/");
-  source = source.replace(/\/\*\*$/, "@@G1@@");
-  source = source.replace(/^\*\*\//, "@@G2@@");
-  source = source.replace(/\*\*\//g, "@@G2@@");
-  source = source.replace(/\*\*/g, "@@G3@@");
-
-  let out = "";
-  for (const ch of source) {
-    if (ch === "*") out += "[^/]*";
-    else if (ch === "?") out += "[^/]";
-    else if (REGEX_SPECIALS.includes(ch)) out += `\\${ch}`;
-    else out += ch;
-  }
-  for (const [token, fragment] of Object.entries(fragments)) {
-    out = out.split(token).join(fragment);
-  }
-  return new RegExp(`^${out}$`);
-}
 
 /** True when `file` matches the glob `pattern`. */
 export function matchPath(pattern, file) {
@@ -143,33 +112,6 @@ export function parsePorcelain(output) {
 }
 
 /* ----------------------------------------------------------------- scoring */
-
-/**
- * True when the keyword appears in the prompt.
- *
- * Phrases match as whole phrases; single words match exactly, or by a shared
- * prefix of at least five characters in either direction — so "skill" finds
- * "skills" and "waveform" finds "waveforms", but "set" never finds "settings".
- */
-export function keywordHit(promptTokens, normalizedPrompt, keyword) {
-  const phrase = keyword
-    .toLowerCase()
-    .replace(/[^a-z0-9+#]+/g, " ")
-    .trim();
-  if (!phrase) return false;
-  if (phrase.includes(" ")) return normalizedPrompt.includes(` ${phrase} `);
-  if (promptTokens.has(phrase)) return true;
-  // tokenize() drops every word of two characters or fewer, so `ui` can never
-  // reach the token set; match it against the padded prompt instead of letting
-  // the length guard below discard the keyword.
-  if (phrase.length < 3) return normalizedPrompt.includes(` ${phrase} `);
-  if (phrase.length < 5) return false;
-  for (const token of promptTokens) {
-    if (token.length < 5) continue;
-    if (token.startsWith(phrase) || phrase.startsWith(token)) return true;
-  }
-  return false;
-}
 
 /**
  * Score every registered agent against the prompt and the files in play.
@@ -260,6 +202,28 @@ export function selectVerification(registry, { prompt, files = [] }) {
 /* ------------------------------------------------------------------- misc */
 
 /**
+ * Resolve the domains a task belongs to, adding the routed subagent's own
+ * domains on top of the prompt and file signals.
+ *
+ * The registry records which domains a specialist owns, so the agent that owns
+ * the work also owns the domain — a vague "fix this" over `crates/core/**`
+ * still lands in the Rust and audio areas.
+ */
+export function resolveDomains({ prompt, files = [], registry, policy }) {
+  const hints = [];
+  for (const entry of scoreAgents(registry, { prompt, files })) {
+    for (const id of entry.agent.domains ?? []) hints.push(id);
+  }
+  return resolveSkillDomains({
+    prompt,
+    files,
+    domainHints: hints,
+    domains: policy.domains ?? {},
+    pathDomains: policy.pathDomains ?? {},
+  });
+}
+
+/**
  * Build the full brief for a prompt: memory lines, skills, agents, commands,
  * and the checks the work implies. Pure apart from reading the registry, the
  * policy, the installed skills, and the memory store.
@@ -268,18 +232,59 @@ export function buildBrief({ prompt, files = [], top, memoryLimit, minScore }) {
   const registry = loadRegistry();
   const policy = loadPolicy();
   const { skills } = listSkills();
-  const index = buildIndex(skills, new Set(policy.hot ?? []));
+  const index = buildIndex(skills, new Set(policy.hot ?? []), policy.groups ?? {});
 
   const skillLimit = top ?? policy.inject?.maxInject ?? 3;
   const memoryCap = memoryLimit ?? 4;
   const floor = minScore ?? policy.inject?.minScore ?? 0.55;
+
+  const resolved = resolveDomains({ prompt, files, registry, policy });
 
   const matched = matchSkills(index, prompt, {
     includeHot: true,
     limit: skillLimit,
     minScore: floor,
     triggers: policy.triggers ?? {},
+    activeGroups: resolved.groups,
+    offDomainPenalty: policy.inject?.offDomainPenalty ?? 0.1,
+    genericTokens: new Set(policy.genericTokens ?? []),
   });
+
+  // A vague prompt ("fix this") gives the matcher nothing to score, even when
+  // the files in play say exactly which area the work is in. The domain's
+  // default skills fill those empty slots — and only those, so a prompt with a
+  // real signal is never diluted by them.
+  //
+  // Priority is deliberate: a skill in the active domain, then the domain's
+  // own defaults, and only then a skill from outside the domain. An
+  // off-domain match is a guess; a domain default is a considered one.
+  const inDomain = (entry) =>
+    entry.via === "trigger" || !resolved.groups.size || resolved.groups.has(entry.group);
+  const picked = matched.filter(inDomain);
+  const offDomain = matched.filter((entry) => !inDomain(entry));
+
+  for (const id of resolved.domains) {
+    if (picked.length >= skillLimit) break;
+    for (const skillId of policy.domains?.[id]?.defaultSkills ?? []) {
+      if (picked.length >= skillLimit) break;
+      if (picked.some((entry) => entry.id === skillId)) continue;
+      if (offDomain.some((entry) => entry.id === skillId)) continue;
+      const skill = skills.find((item) => item.id === skillId);
+      if (!skill) continue;
+      picked.push({
+        id: skillId,
+        score: 0,
+        hot: skill.hot ?? (policy.hot ?? []).includes(skillId),
+        via: "domain",
+        group: index.docs.find((doc) => doc.skill.id === skillId)?.group ?? null,
+      });
+    }
+  }
+
+  for (const entry of offDomain) {
+    if (picked.length >= skillLimit) break;
+    picked.push(entry);
+  }
 
   const agents = scoreAgents(registry, { prompt, files }).slice(
     0,
@@ -304,11 +309,14 @@ export function buildBrief({ prompt, files = [], top, memoryLimit, minScore }) {
   return {
     prompt,
     files,
-    skills: matched.map((entry) => ({
+    domains: [...resolved.domains],
+    domainGroups: [...resolved.groups],
+    skills: picked.map((entry) => ({
       id: entry.id,
       score: entry.score,
       hot: entry.hot,
       via: entry.via,
+      group: entry.group ?? null,
       description: skills.find((skill) => skill.id === entry.id)?.description ?? "",
     })),
     memory: searchMemory(prompt, memoryCap).map((entry) => ({
@@ -352,6 +360,9 @@ export function renderBrief(brief) {
 
   lines.push("");
   lines.push("Skills · load with the `skill` tool");
+  if (brief.domains.length) {
+    lines.push(`  domain: ${brief.domains.join(", ")}`);
+  }
   if (brief.skills.length) {
     brief.skills.forEach((skill, index) => {
       const label = skill.hot ? "hot " : "cold";

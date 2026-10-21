@@ -14,22 +14,81 @@
       "commands": ".opencode/commands"
     },
     "mirrors": [
-      { "id": "kilo", "agents": ".kilo/agents", "commands": ".kilo/commands" },
-      { "id": "qoder", "agents": ".qoder/agents", "commands": ".qoder/commands" },
-      { "id": "claude", "agents": ".claude/agents", "commands": ".claude/commands" },
-      { "id": "cline", "agents": ".cline/agents", "commands": ".cline/commands" },
-      { "id": "cursor", "agents": ".cursor/agents", "commands": ".cursor/commands" },
-      { "id": "augment", "agents": ".augment/agents", "commands": ".augment/commands" },
-      { "id": "roo", "agents": ".roo/agents", "commands": ".roo/commands" },
-      { "id": "trae", "agents": ".trae/agents", "commands": ".trae/commands" },
-      { "id": "windsurf", "agents": ".windsurf/agents", "commands": ".windsurf/commands" },
-      { "id": "freebuff", "agents": ".freebuff/agents", "commands": ".freebuff/commands" },
-      { "id": "codex", "commands": ".codex/prompts" },
-      { "id": "continue", "commands": ".continue/prompts" },
-      { "id": "gemini", "commands": ".gemini/commands" },
-      { "id": "kilocode", "commands": ".kilocode/commands" },
-      { "id": "kiro", "agents": ".kiro/agents", "commands": ".kiro/commands" },
-      { "id": "github", "commands": ".github/prompts" }
+      {
+        "id": "kilo",
+        "agents": ".kilo/agents",
+        "commands": ".kilo/commands"
+      },
+      {
+        "id": "qoder",
+        "agents": ".qoder/agents",
+        "commands": ".qoder/commands"
+      },
+      {
+        "id": "claude",
+        "agents": ".claude/agents",
+        "commands": ".claude/commands"
+      },
+      {
+        "id": "cline",
+        "agents": ".cline/agents",
+        "commands": ".cline/commands"
+      },
+      {
+        "id": "cursor",
+        "agents": ".cursor/agents",
+        "commands": ".cursor/commands"
+      },
+      {
+        "id": "augment",
+        "agents": ".augment/agents",
+        "commands": ".augment/commands"
+      },
+      {
+        "id": "roo",
+        "agents": ".roo/agents",
+        "commands": ".roo/commands"
+      },
+      {
+        "id": "trae",
+        "agents": ".trae/agents",
+        "commands": ".trae/commands"
+      },
+      {
+        "id": "windsurf",
+        "agents": ".windsurf/agents",
+        "commands": ".windsurf/commands"
+      },
+      {
+        "id": "freebuff",
+        "agents": ".freebuff/agents",
+        "commands": ".freebuff/commands"
+      },
+      {
+        "id": "codex",
+        "commands": ".codex/prompts"
+      },
+      {
+        "id": "continue",
+        "commands": ".continue/prompts"
+      },
+      {
+        "id": "gemini",
+        "commands": ".gemini/commands"
+      },
+      {
+        "id": "kilocode",
+        "commands": ".kilocode/commands"
+      },
+      {
+        "id": "kiro",
+        "agents": ".kiro/agents",
+        "commands": ".kiro/commands"
+      },
+      {
+        "id": "github",
+        "commands": ".github/prompts"
+      }
     ]
   },
   "noise": [
@@ -105,7 +164,8 @@
       "owns": ["apps/desktop/src-tauri/**", "packages/shared/**"],
       "skills": ["tauri", "tauri-ipc", "tauri-config", "tauri-security"],
       "spawn": "The task touches the Tauri shell: Rust commands, IPC contracts, capabilities, or a desktop build.",
-      "verify": ["rust", "js"]
+      "verify": ["rust", "js"],
+      "domains": ["tauri"]
     },
     {
       "id": "audio-dj-expert",
@@ -155,7 +215,8 @@
         "sql-optimization-patterns"
       ],
       "spawn": "The task touches audio analysis, waveforms, beatgrid/cues, or DJ library metadata.",
-      "verify": ["rust", "js"]
+      "verify": ["rust", "js"],
+      "domains": ["audio"]
     },
     {
       "id": "context-loader",
@@ -165,7 +226,8 @@
       "owns": [],
       "skills": [],
       "spawn": "The task needs prior decisions or conventions and the shared memory has not been searched yet.",
-      "verify": []
+      "verify": [],
+      "domains": ["agent-layer"]
     },
     {
       "id": "skill-router",
@@ -175,7 +237,8 @@
       "owns": [],
       "skills": [],
       "spawn": "The skill match is ambiguous, or the task spans two domains and the right skills are unclear.",
-      "verify": []
+      "verify": [],
+      "domains": ["agent-layer"]
     },
     {
       "id": "skill-maintainer",
@@ -192,7 +255,8 @@
       "owns": [],
       "skills": [],
       "spawn": "The installed skill library changed, or the priority policy needs curation.",
-      "verify": []
+      "verify": [],
+      "domains": ["agent-layer"]
     },
     {
       "id": "memory-keeper",
@@ -209,7 +273,8 @@
       "owns": ["docs/ai/memory/**"],
       "skills": [],
       "spawn": "A session produced something durable worth keeping, or the memory layers need pruning.",
-      "verify": []
+      "verify": [],
+      "domains": ["agent-layer"]
     }
   ],
   "commands": [
@@ -248,6 +313,12 @@
       "kind": "command",
       "summary": "Load the audio-dj-expert subagent with its skill set.",
       "use": "Audio analysis, waveform, beatgrid, rekordbox, beets, and library work."
+    },
+    {
+      "id": "prune",
+      "kind": "command",
+      "summary": "Prune the machine-global skill library down to the skills this project uses.",
+      "use": "When the advertised skill cost is too high, or after installing a large batch of skills."
     }
   ],
   "verify": [

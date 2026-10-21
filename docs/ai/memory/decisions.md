@@ -100,3 +100,48 @@ access to the music library is **strictly read-only**: never write an audio
 file, edit a tag, or write to the primary database.
 **Reverses if:** the DJ switches to Serato, or Rekordbox ships a readable
 `master.db` (or an adoptable MCP) that changes the parsing path.
+
+## D-011 · Skill routing is domain-gated, and a name hit needs a specific word (2026-10-22)
+
+A skill is offered only when it clears three gates, in order of confidence: a
+**curated trigger** in `skills.policy.json` wins outright; otherwise the
+prompt must contain the skill's **own name in a word that is not
+domain-neutral**; otherwise it needs **two independent hits**. A skill outside
+the prompt's **active domains** is scored down, not dropped. The domains come
+from three signals: the prompt vocabulary, the files in play, and the routed
+subagent — so a vague "fix this" over `crates/core/**` still lands in Rust and
+audio. The domain map, the neutral-word list, and the penalty live in
+`skills.policy.json`; the rules live in `scripts/skills/lib.mjs`.
+**Why:** one shared adjective was enough to select a skill, and BM25's inverse
+document frequency then *rewarded* the rarest such word. "speed" picked
+`performance-and-perceived-speed` and "memory" picked `memory-safety-patterns`
+on a task about the agent layer — three wrong skills injected on every such
+prompt, in every tool. **Reverses if:** the domain map drifts far enough from
+the work that a real task is routed to an empty domain; the domain defaults
+(`defaultSkills` per domain) are the safety net, and a prompt with a real
+signal is never diluted by them.
+
+Two rules keep the gate honest. **The strongest prompt domain wins**: a task
+naming two areas ("make the library table prettier") must not activate the
+audio area just because "library" is one of its keywords — the domain with the
+most keyword hits wins, and a tie keeps them all. The files in play and the
+routed subagent are *strong* signals and always count. And the fill order is
+**domain match → domain default → off-domain match**: an off-domain match is a
+guess, a domain default is a considered one.
+
+## D-012 · The skill library is pruned, not hidden (2026-10-22)
+
+A skill hidden with `metadata.opencode/autoinvoke: false` is **not loadable**
+here (D-003), so hiding a skill neither saves the context nor keeps the
+capability. The only way to stop paying for a skill is to remove it. The
+project therefore keeps an explicit **`prune` list** in
+`skills.policy.json` — one entry per skill, with the reason it is not used
+here — and a **`pnpm skills:prune`** tool that *moves* the listed skills into a
+timestamped backup next to the machine-global library instead of deleting them.
+`--restore <dir>` puts them back, and the tool refuses to leave the hot set
+damaged. The list is machine-global state, so it lives in the policy file, not
+in the shared memory.
+**Why:** the whole library is advertised to the model on every step in every
+tool, whether or not a skill is ever loaded — that advertising cost, not the
+routing, was the dominant latency and spend. **Reverses if:** the shared
+library becomes per-project, or hiding a skill becomes loadable here (D-003).
