@@ -167,6 +167,13 @@ const ROADMAP_ITEMS: { label: string; icon: LucideIcon }[] = [
 const errorDetail = (err: unknown): string =>
   err instanceof Error && err.message ? err.message : "unexpected error";
 
+/**
+ * Idle time before the undo toast retires on its own. The timer is paused
+ * while the toast has focus, so a focused toast stays until the user acts on
+ * it or dismisses it.
+ */
+const UNDO_TOAST_IDLE_MS = 10_000;
+
 const THEME_ICONS = { dark: Moon, light: Sun, system: Monitor } as const;
 
 /** Real analysis state per track — never render a hardcoded success badge. */
@@ -1014,11 +1021,16 @@ export default function App() {
   // a track, Shift-click takes the range from the anchor. A rating or energy
   // edit applies to the whole selection when the edited track is part of it.
   const [selection, setSelection] = useState<string[]>([]);
-  const [selectionAnchor, setSelectionAnchor] = useState<number | null>(null);
+  // The anchor is a track id, not a row number: sorting, searching and
+  // metadata reloads reorder the table, so a stored index would point at a
+  // different track by the time the user Shift-clicks.
+  const [selectionAnchor, setSelectionAnchor] = useState<string | null>(null);
   // Undo for the newest metadata write (T2.1.4/T2.1.6). The backend keeps the
   // pre-write values, so the toast restores real data instead of guessing it.
   const [pendingUndo, setPendingUndo] = useState<{ undoId: string; message: string } | null>(null);
   const undoTimerRef = useRef<number | null>(null);
+  // True while the undo toast holds the focus; the idle timer is paused then.
+  const undoFocusedRef = useRef(false);
   const [similar, setSimilar] = useState<SimilarTrackResult[]>([]);
   const [similarLoading, setSimilarLoading] = useState(false);
   const [storeLinks, setStoreLinks] = useState<StoreLinksResponse | null>(null);
@@ -1123,16 +1135,16 @@ export default function App() {
       return;
     }
     // Energy is a 1–10 scale, so an out-of-range bound is a typo, not a value
-    // the backend could answer with. The backend validates the same bounds.
+    // the backend could answer with. The backend validates the same bounds and
+    // expects whole numbers, so a fractional bound is rejected here too.
+    const { energyMin, energyMax } = draftFilters;
     if (
-      (normalized?.energyMin != null && (normalized.energyMin < 1 || normalized.energyMin > 10)) ||
-      (normalized?.energyMax != null && (normalized.energyMax < 1 || normalized.energyMax > 10)) ||
-      (normalized?.energyMin != null &&
-        normalized.energyMax != null &&
-        normalized.energyMin > normalized.energyMax)
+      (energyMin != null && (!Number.isInteger(energyMin) || energyMin < 1 || energyMin > 10)) ||
+      (energyMax != null && (!Number.isInteger(energyMax) || energyMax < 1 || energyMax > 10)) ||
+      (energyMin != null && energyMax != null && energyMin > energyMax)
     ) {
       setFilterError(
-        "Energy bounds must be between 1 and 10, and minimum must not exceed maximum."
+        "Energy bounds must be whole numbers between 1 and 10, and minimum must not exceed maximum."
       );
       return;
     }
@@ -1541,13 +1553,37 @@ export default function App() {
   // --- Rating / energy writes (T2.1.4 rating, T2.1.6 energy) --------------------
   // The undo affordance is offered for the newest write only. Older snapshots
   // stay in the database, but a single toast can only point at one of them.
-  const offerUndo = (undoId: string, message: string) => {
-    if (undoTimerRef.current !== null) window.clearTimeout(undoTimerRef.current);
-    setPendingUndo({ undoId, message });
+  //
+  // The toast holds until the user acts on it: the idle timer is paused while
+  // the toast has focus (the Undo button must never disappear under the
+  // pointer) and the toast can be dismissed explicitly.
+  const clearUndoTimer = () => {
+    if (undoTimerRef.current !== null) {
+      window.clearTimeout(undoTimerRef.current);
+      undoTimerRef.current = null;
+    }
+  };
+
+  const startUndoTimer = () => {
+    clearUndoTimer();
+    // A focused toast stays until the user acts on it or blurs away.
+    if (undoFocusedRef.current) return;
     undoTimerRef.current = window.setTimeout(() => {
       setPendingUndo(null);
       undoTimerRef.current = null;
-    }, 6000);
+    }, UNDO_TOAST_IDLE_MS);
+  };
+
+  const dismissUndo = () => {
+    clearUndoTimer();
+    undoFocusedRef.current = false;
+    setPendingUndo(null);
+  };
+
+  const offerUndo = (undoId: string, message: string) => {
+    clearUndoTimer();
+    setPendingUndo({ undoId, message });
+    startUndoTimer();
   };
 
   useEffect(
@@ -1603,15 +1639,15 @@ export default function App() {
   const handleUndoMetadata = async () => {
     if (!pendingUndo) return;
     const undoId = pendingUndo.undoId;
-    setPendingUndo(null);
-    if (undoTimerRef.current !== null) {
-      window.clearTimeout(undoTimerRef.current);
-      undoTimerRef.current = null;
-    }
+    dismissUndo();
     try {
       const res = await undoTrackMetadata({ undoId });
       refreshLibrary();
-      pushStatus(`Undone — ${res.restored} track${res.restored === 1 ? "" : "s"} restored`);
+      pushStatus(
+        res.skipped > 0
+          ? `Undone — ${res.restored} track${res.restored === 1 ? "" : "s"} restored, ${res.skipped} skipped (changed since)`
+          : `Undone — ${res.restored} track${res.restored === 1 ? "" : "s"} restored`
+      );
     } catch (err) {
       console.error("Failed to undo track metadata:", err);
       pushStatus("Couldn't undo that change", "error");
@@ -1630,20 +1666,30 @@ export default function App() {
           ? current.filter((id) => id !== track.id)
           : [...current, track.id]
       );
-      setSelectionAnchor(index);
+      setSelectionAnchor(track.id);
       setSelectedTrack(track);
       return;
     }
     if (event.shiftKey && selectionAnchor !== null) {
       event.preventDefault();
-      const [from, to] =
-        selectionAnchor < index ? [selectionAnchor, index] : [index, selectionAnchor];
+      // The anchor is resolved against the *current* list, so a re-sort or a
+      // reload between the two clicks cannot shift the range onto other rows.
+      const anchorIndex = filteredTracks.findIndex((entry) => entry.id === selectionAnchor);
+      if (anchorIndex === -1) {
+        // The anchor is no longer in the visible list: fall back to a plain
+        // selection instead of a range built from a stale position.
+        setSelection([track.id]);
+        setSelectionAnchor(track.id);
+        setSelectedTrack(track);
+        return;
+      }
+      const [from, to] = anchorIndex < index ? [anchorIndex, index] : [index, anchorIndex];
       setSelection(filteredTracks.slice(from, to + 1).map((entry) => entry.id));
       setSelectedTrack(track);
       return;
     }
     setSelection([track.id]);
-    setSelectionAnchor(index);
+    setSelectionAnchor(track.id);
     setSelectedTrack((current) => (current?.id === track.id ? null : track));
   };
 
@@ -2090,7 +2136,12 @@ export default function App() {
                     </span>
                     <button
                       type="button"
-                      onClick={() => setSelection([])}
+                      onClick={() => {
+                        // The anchor goes with the selection: a Shift-click must
+                        // not build a range from a dropped selection.
+                        setSelection([]);
+                        setSelectionAnchor(null);
+                      }}
                       className="ml-auto text-dj-text-muted hover:text-dj-text-secondary underline decoration-dotted"
                       title="Drop the multi-selection"
                     >
@@ -2176,11 +2227,16 @@ export default function App() {
                             aria-selected={selection.includes(track.id)}
                             onClick={(event) => handleRowClick(event, track, idx)}
                             onKeyDown={(e) => {
+                              // Only the row itself handles Enter/Space. A child
+                              // control (the rating stars, the energy meter) owns
+                              // its own keyboard interaction, and the row must
+                              // not swallow the activation key.
+                              if (e.target !== e.currentTarget) return;
                               if (e.key === "Enter" || e.key === " ") {
                                 e.preventDefault();
                                 e.stopPropagation();
                                 setSelection([track.id]);
-                                setSelectionAnchor(idx);
+                                setSelectionAnchor(track.id);
                                 setSelectedTrack((current) =>
                                   current?.id === track.id ? null : track
                                 );
@@ -2188,7 +2244,18 @@ export default function App() {
                             }}
                             title="Click or press Enter to inspect: similar tracks, tag gaps, buy-links · Ctrl/Cmd-click to multi-select, Shift-click for a range"
                             className={`hover:bg-dj-hover transition duration-150 group cursor-pointer focus-visible:outline-2 focus-visible:outline-dj-accent focus-visible:-outline-offset-2 ${
-                              selectedTrack?.id === track.id ? "bg-dj-active" : ""
+                              // Selected rows are highlighted: a rating or energy
+                              // edit applies to every one of them, so the user
+                              // must be able to see which.
+                              selection.includes(track.id) ? "bg-dj-active" : ""
+                            } ${
+                              // The inspected row keeps its own marker, so the
+                              // drawer and the selection stay distinguishable.
+                              // It rides on the first cell: a `tr` cannot carry a
+                              // box-shadow, and a border would shift the layout.
+                              selectedTrack?.id === track.id
+                                ? "[&>td:first-child]:bg-dj-accent/25"
+                                : ""
                             }`}
                           >
                             {shownColumns.map((column) => (
@@ -2223,11 +2290,26 @@ export default function App() {
                 )}
 
                 {/* Undo toast (T2.1.4/T2.1.6): the backend kept the pre-write
-                    values, so this restores real data instead of guessing it. */}
+                    values, so this restores real data instead of guessing it.
+                    It holds until the user acts on it: the idle timer is paused
+                    while it has focus, and it can be dismissed outright. */}
                 {pendingUndo && (
                   <div
                     role="status"
                     aria-live="polite"
+                    onFocus={() => {
+                      undoFocusedRef.current = true;
+                      clearUndoTimer();
+                    }}
+                    onBlur={(event) => {
+                      // Focus moved to another control inside the toast: keep
+                      // holding it open.
+                      if (event.currentTarget.contains(event.relatedTarget as Node | null)) {
+                        return;
+                      }
+                      undoFocusedRef.current = false;
+                      if (pendingUndo) startUndoTimer();
+                    }}
                     className="absolute bottom-4 left-5 z-30 flex items-center gap-3 rounded-lg border border-dj-border bg-dj-panel px-3 py-2 text-[11px] text-dj-text-secondary shadow-2xl shadow-black/60"
                   >
                     <span>{pendingUndo.message}</span>
@@ -2239,6 +2321,15 @@ export default function App() {
                     >
                       <Undo2 className="h-3 w-3" />
                       Undo
+                    </button>
+                    <button
+                      type="button"
+                      onClick={dismissUndo}
+                      aria-label="Dismiss the undo notification"
+                      title="Dismiss"
+                      className="inline-flex items-center justify-center rounded-sm p-1 text-dj-text-muted transition hover:bg-dj-hover hover:text-dj-text"
+                    >
+                      <X className="h-3 w-3" />
                     </button>
                   </div>
                 )}

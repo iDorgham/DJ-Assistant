@@ -87,7 +87,7 @@ flowchart LR
 
   subgraph W2["Week 2"]
     direction TB
-    B3[Slice 3 Tags/Key]
+    B3[Slice 3 Tags/Key/Comments]
     B4[Slice 4 Artwork]
     B5s[Slice 5 start]
     B3 --- B4
@@ -120,7 +120,7 @@ flowchart LR
 flowchart TB
   subgraph EngA["Engineer A — Library"]
     A1[S1 Columns] --> A2[S2 Rating/Energy]
-    A1 --> A3[S3 Tags/Key]
+    A1 --> A3[S3 Tags/Key/Comments]
     A1 --> A4[S4 Artwork]
     A2 --> A5[S5 Menu/Nav]
     A3 --> A5
@@ -350,7 +350,7 @@ flowchart LR
   S7 --> S8[S8 Dual-wave]
   S8 --> GATE[P2.1d + P2.1a–c]
 
-  S1 -.-> S3[S3 Key pills]
+  S1 -.-> S3[S3 Tags/Key/Comments]
   S3 -.-> GATE
   S1 -.-> S4[S4 Artwork]
   S4 -.-> GATE

@@ -79,7 +79,7 @@ OpenCode's `tools` map. No project plugin is ever added (D-002), no MCP owns
 analysis or library truth, and the agent reads the app's database through a
 read-only Rust binary rather than a server that could write to it. Template,
 safety envelope and rollback:
-[`docs/enhancements/mcb-plugin-enhancement-plan.md`](../../../enhancements/mcb-plugin-enhancement-plan.md).
+[`docs/enhancements/mcb-plugin-enhancement-plan.md`](../../enhancements/mcb-plugin-enhancement-plan.md).
 **Reverses if:** OpenCode gains a first-class bundle primitive, or the
 tool-disable guarantee proves unenforceable in a shipped build.
 

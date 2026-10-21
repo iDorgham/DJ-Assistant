@@ -13,6 +13,8 @@ import { useState } from "react";
  * Interaction contract:
  * - click a segment → set that energy level;
  * - click the segment that is already set → clear the energy;
+ * - Enter/Space on a focused segment sets (or clears) that level; the keys
+ *   stay inside the meter and never reach the row underneath;
  * - the caller owns persistence and Undo, so the same component works for a
  *   single track and for a multi-track selection.
  */
@@ -58,6 +60,14 @@ export function EnergyBars({
       aria-label={label}
       className={`inline-flex items-end gap-px ${className}`}
       onMouseLeave={() => setHovered(null)}
+      onKeyDown={(event) => {
+        // Enter/Space belong to the focused segment (native button activation).
+        // The row underneath would swallow them and replace the selection
+        // instead, so they must not reach it.
+        if (event.key === "Enter" || event.key === " ") {
+          event.stopPropagation();
+        }
+      }}
     >
       {Array.from({ length: ENERGY_MAX }, (_, index) => {
         const level = index + 1;
@@ -68,7 +78,15 @@ export function EnergyBars({
             key={level}
             type="button"
             disabled={readOnly}
-            aria-label={`Set energy ${level} of ${ENERGY_MAX}`}
+            aria-label={
+              readOnly
+                ? current > 0
+                  ? `Energy ${current} of ${ENERGY_MAX}`
+                  : "No energy set"
+                : isCurrent
+                  ? `Clear energy (currently ${current} of ${ENERGY_MAX})`
+                  : `Set energy ${level} of ${ENERGY_MAX}`
+            }
             aria-pressed={isCurrent}
             title={
               readOnly
@@ -88,12 +106,12 @@ export function EnergyBars({
             onMouseEnter={() => {
               if (!readOnly) setHovered(level);
             }}
-            className={`h-3.5 w-1.5 rounded-[1px] transition focus:outline-hidden ${
+            className={`h-3.5 w-1.5 rounded-[1px] transition focus:outline-hidden focus-visible:ring-1 focus-visible:ring-dj-accent ${
               filled
                 ? "bg-dj-accent"
                 : readOnly
                   ? "bg-dj-elevated"
-                  : "bg-dj-elevated hover:bg-dj-border-strong focus-visible:ring-1 focus-visible:ring-dj-accent"
+                  : "bg-dj-elevated hover:bg-dj-border-strong"
             }`}
           />
         );

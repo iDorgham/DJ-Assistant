@@ -108,7 +108,7 @@ cueCount?: number;
 
 | Command | Purpose |
 |---------|---------|
-| `update_track_metadata` | Patch rating, energy, tags, label, year, notes (logged; undo payload) — `notes` is the free-text `comments` field (T2.1.13) |
+| `update_track_metadata` | Patch rating and energy (shipped — T2.1.4/T2.1.6) and, later, the free-text `comments` field (T2.1.13) (logged; undo payload). `comments` is the tag-sourced column the library table's `comment` column reads; `notes` is a **separate** column (migration 001) and is patched as its own field — it is not an alias for `comments` |
 | `set_track_rating` | Convenience for single/multi rating |
 | `get_waveform_peaks` | `{ trackId, zoomLevel? }` → peaks for detailed + overview |
 | `player_load` | Load track into player engine (path validated server-side) |
@@ -199,11 +199,11 @@ Slice 7 real audio ──► Slice 8 dual-wave + transport
 
 **Data**
 - Migration if `energy` not INTEGER 1–10. — *done: migration `006_track_energy.sql`, `ALTER TABLE tracks ADD COLUMN energy INTEGER;`*
-- `update_track_metadata` / `set_track_rating` with undo snapshot in skill_runs or lightweight undo stack. — *done: the snapshot is a `skill_runs` row (`before_state` / `after_state` JSON, only the touched columns) written in the same transaction as the track UPDATE; `undo_track_metadata` restores it and flips the row to `undone`.*
+- `update_track_metadata` / `set_track_rating` with undo snapshot in skill_runs or lightweight undo stack. — *done: the snapshot is a `skill_runs` row (`before_state` / `after_state` JSON, only the touched columns) written in the same transaction as the track UPDATE; `undo_track_metadata` restores it and flips the row to `undone`. A snapshot only restores what it still describes: a track edited again after the snapshot was taken no longer matches its `after_state`, so it is skipped and counted in the response (`restored` / `skipped`) instead of being overwritten with the older value.*
 
 **UI**
 - `StarRating` (T2.1.4): filled/outline, hover preview, keys `1`–`5` / `0`, multi-select apply.
-- `EnergyBars` (T2.1.6): 10 segments, accent fill, tooltip “Energy N / 10”, unanalyzed → “—”.
+- `EnergyBars` (T2.1.6): 10 segments, accent fill, tooltip “Energy N / 10”. A track with no energy renders as an **empty but still clickable meter** (all segments empty, tooltip “No energy set”) — the cell is the edit affordance, so it is never replaced by text. The `—` form is the plain-text variant used for copy-to-clipboard and column width auto-fit (`formatEnergy`).
 - Sort by `rating` (T2.1.4) and `energy` (T2.1.6); filter `ratingMin` (shipped) and `energyMin/Max` (T2.1.6).
 
 **Files (shipped)**

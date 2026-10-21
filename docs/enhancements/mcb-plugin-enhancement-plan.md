@@ -168,7 +168,11 @@ query builder, plus tests in `crates/core` and `tests/schema`.
    DB even if every guard failed.
 2. **Write tools disabled in the config**, not by convention:
    ```jsonc
-   "tools": { "dj-db_write_query": false, "dj-db_create_table": false }
+   "tools": {
+     "dj-db_write_query": false,
+     "dj-db_create_table": false,
+     "dj-db_append_insight": false
+   }
    ```
 3. **`read_query` only** in practice — `write_query` / `create_table` /
    `append_insight` are the server's mutating surface and all three are off.
@@ -411,8 +415,8 @@ arguments** (the only method that works on every protocol version), and **never*
 
 ### 6.3 Shell allow-lists
 
-The agent permission blocks are the enforcement point for shell access, and they
-already exist in `.opencode/agents/*.md`:
+The agent permission blocks state the **declared intent** for shell access, and
+they already exist in `.opencode/agents/*.md`:
 
 | Agent | Allowed shell | Denied |
 | ----- | -------------- | ------ |
@@ -423,6 +427,8 @@ already exist in `.opencode/agents/*.md`:
 `beets` or `python` shell rights that the agent does not already have. Per
 D-008, permission blocks currently record intent rather than gate — so the
 **config-level** guards in §6.1 layers 1–2 are the ones that actually bind.
+Read the table above as the contract an agent is asked to keep, not as a
+boundary the current binary enforces.
 
 ### 6.4 Read-only, enforced where it matters
 
@@ -479,8 +485,10 @@ pnpm rust:clippy                  # cargo clippy --all-targets -- -D warnings
 pnpm rust:test:portable           # ONNX runtime may be unavailable on this box
 ```
 
-Docs-only changes in this plan are covered by `pnpm lint:root`
-(`prettier --check` over root `*.md` and `*.json`).
+Root-level Markdown is covered by `pnpm lint:root` (`prettier --check` over
+root `*.md` and `*.json`). Nested Markdown — including this file — is **not**
+checked by that gate, so a docs-only change here is verified by reading it,
+not by the formatter.
 
 ### 7.2 Smoke tests (per component, before relying on it)
 
@@ -513,7 +521,7 @@ Each addition is independently reversible, in increasing order of effort.
 | - | ------ | -------- | ---- |
 | R-1 | `opencode.json` added at the repo root | `git rm opencode.json` (or delete the file) | seconds |
 | R-2 | One MCP server enabled | Set `"enabled": false` for it — no file deletion, no restart of the app | seconds |
-| R-3 | `dj-db` write tools disabled | Remove the two `tools` entries — **do not** do this; it is the safety net | seconds |
+| R-3 | `dj-db` write tools disabled | Remove the three `tools` entries — **do not** do this; it is the safety net | seconds |
 | R-4 | A server's tools disabled globally | Remove the `"dj-db_*": false` style entry | seconds |
 | R-5 | Environment variables set | Delete them from the shell profile | seconds |
 | R-6 | `dj-query` Rust binary added | `git rm crates/core/src/bin/query.rs` + drop the `[[bin]]` entry from `crates/core/Cargo.toml` | minutes |

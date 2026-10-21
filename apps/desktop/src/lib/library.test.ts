@@ -279,6 +279,16 @@ test("normalizeFilters keeps the energy bounds", () => {
     { energyMax: 8 },
     "a non-finite bound is not an active filter"
   );
+  assert.deepEqual(
+    normalizeFilters({ energyMin: 3.5, energyMax: 8 }),
+    { energyMax: 8 },
+    "a fractional bound is dropped: the backend reads the bounds as integers"
+  );
+  assert.deepEqual(
+    normalizeFilters({ ratingMin: 3.5 }),
+    undefined,
+    "a fractional rating bound is not forwarded either"
+  );
 });
 
 test("SORT_OPTIONS offers rating and energy next to the other sort keys", () => {

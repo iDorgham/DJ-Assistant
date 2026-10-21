@@ -130,7 +130,7 @@ export async function undoTrackMetadata(
 ): Promise<UndoTrackMetadataResponse> {
   if (!isTauri) {
     console.warn("[Mock API] Tauri not detected, ignoring undo");
-    return { restored: 0 };
+    return { restored: 0, skipped: 0 };
   }
   const { invoke } = await import("@tauri-apps/api/core");
   return invoke<UndoTrackMetadataResponse>("undo_track_metadata", { request: req });

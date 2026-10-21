@@ -197,6 +197,11 @@ export interface UndoTrackMetadataRequest {
 export interface UndoTrackMetadataResponse {
   /** Number of tracks restored to their previous values. */
   restored: number;
+  /**
+   * Number of tracks skipped because they were edited again after the
+   * snapshot was taken, so restoring would overwrite the newer edit.
+   */
+  skipped: number;
 }
 
 // --- Analysis queue (T1.2.1 / T1.2.2): analyze_library + progress events ---
