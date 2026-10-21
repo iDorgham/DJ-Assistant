@@ -103,7 +103,7 @@ never touches `AGENTS.md`, `CLAUDE.md`, `kilo.jsonc`, or the vendor rule files.
 | `scripts/skills/inventory.mjs` | Rebuilds `.opencode/skill-manifest.json` and `SKILL_ROUTING.md` from what is installed |
 | `scripts/skills/audit.mjs` | Integrity and curation report: missing descriptions, duplicate IDs, near-duplicates, oversize, policy drift (`--json`) |
 | `scripts/skills/policy.mjs` | Dry-run report of the priority split; `--restore` clears managed `autoinvoke` flags |
-| `scripts/skills/prune.mjs` | The **prune list** made mechanical: dry run by default, `--apply` moves the listed skills into a timestamped backup, `--restore <dir>` puts them back |
+| `scripts/skills/prune.mjs` | The **prune list** made mechanical: dry run by default, `--apply` moves the listed skills into a timestamped backup beside the **project mirror** (`.opencode/skills` — the global library and the bundled skills are left alone), `--restore <dir>` puts them back from the backup's manifest |
 | `scripts/memory/search.mjs` | Prompt → relevant shared-memory lines across the five `docs/ai/memory/` layers. `--json`, `--limit N` |
 
 Shared logic (discovery, frontmatter parsing, scoring) lives in
