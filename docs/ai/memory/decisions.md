@@ -82,3 +82,20 @@ safety envelope and rollback:
 [`docs/enhancements/mcb-plugin-enhancement-plan.md`](../../../enhancements/mcb-plugin-enhancement-plan.md).
 **Reverses if:** OpenCode gains a first-class bundle primitive, or the
 tool-disable guarantee proves unenforceable in a shipped build.
+
+## D-010 · Rekordbox is the library source of truth; the agent reads it read-only (2026-10-21)
+
+The DJ runs **Rekordbox** on Pioneer CDJs (Little Buddha, Arena Beach Club), so
+Rekordbox — not Serato — is the authoritative library. Serato tooling and the
+Playwright MCP are dropped (the latter: `playwright-cli` + `ui-verification`
+already cover UI checks inside the Tauri/React stack). The primary agent path
+into the library is the Rust **`dj-query`** binary
+(`crates/core/src/bin/query.rs`), which reuses the app's own `library_query`
+builder, opens the DB with `SQLITE_OPEN_READ_ONLY`, and adapts to a schema
+older than the code; the read-only SQLite MCP stays an ad-hoc fallback over a
+**snapshot**. Rekordbox's `master.db` is encrypted, so the DJ's library is read
+through the **exported `rekordbox.xml`** — by our own Rust reader, staged until
+an export exists. Agent access to the music library is **strictly read-only**:
+never write an audio file, edit a tag, or write to the primary database.
+**Reverses if:** the DJ switches to Serato, or Rekordbox ships a readable
+`master.db` (or an adoptable MCP) that changes the parsing path.

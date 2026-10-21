@@ -839,6 +839,7 @@ dependencies = [
 name = "dj-assistant-schema-tests"
 version = "0.1.0"
 dependencies = [
+ "dj-assistant-core",
  "rusqlite",
 ]
 

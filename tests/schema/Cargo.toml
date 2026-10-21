@@ -9,6 +9,9 @@ publish = false
 # WebView2 native stack, which cannot be linked by every Windows toolchain.
 [dependencies]
 rusqlite = { version = "0.40", features = ["bundled"] }
+# The Tauri-free core, for the shared query builder and the library summary
+# statements. It has no default features, so it pulls in no database code.
+dj-assistant-core = { path = "../../crates/core" }
 
 [lib]
 path = "src/lib.rs"
