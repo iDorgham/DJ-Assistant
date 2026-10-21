@@ -4,6 +4,39 @@ Ephemeral. Newest first. **Rotate aggressively** — if a line would still be tr
 in two weeks, it belongs in [`decisions.md`](./decisions.md); if it is just a
 fact, it belongs in [`facts.md`](./facts.md). Delete anything stale.
 
+## 2026-10-21 · Rekordbox pivot — `dj-query` built, MCP plan trimmed
+
+- **The pivot:** the DJ runs **Rekordbox** (Pioneer CDJs), so Serato tooling
+  and the Playwright MCP are **dropped**; `playwright-cli` + `ui-verification`
+  cover UI checks. Recorded as **D-010**.
+- **`dj-query` is built and verified** — `crates/core/src/bin/query.rs`,
+  `[[bin]]` behind the existing `cli` feature. Read-only
+  (`SQLITE_OPEN_READ_ONLY`), shares the app's `library_query` builder, and
+  **adapts to an older schema** (`PRAGMA table_info` → `NULL AS <col>` for a
+  missing optional column; a sort/filter needing a missing column fails with a
+  fix-it message). WAL-safe: `immutable=1` fallback only when the `-wal` is
+  empty. Summary SQL lives in `crates/core/src/library_stats.rs` (no
+  rusqlite dependency in `core`), proven against a migrated schema in
+  `tests/schema/tests/library_stats.rs`. `library_query::sort_column()` was
+  added so the CLI can check a column exists before building a query.
+- **Verified live** against `%APPDATA%\com.djassistant.desktop\dj_assistant.db`:
+  94 tracks, 24 analysed, `complete 24 / failed 2 / needs_review 68`, 2 missing
+  BPM, 2 missing key, 0 missing files. Checks: `cargo test -p
+  dj-assistant-core --features cli` (120), `cargo test -p
+  dj-assistant-schema-tests` (9+7+12), `cargo clippy -D warnings`, `cargo fmt
+  --check`.
+- **Docs rewritten** for the pivot: `docs/enhancements/mcb-plugin-audit.md`
+  (new §3.3 "The Rekordbox finding", F-11…F-15, §7 answered + the one open
+  question), `mcb-plugin-enhancement-plan.md` (§2.4 is now the Rust
+  `dj-rekordbox` reader, not the Playwright MCP), and
+  `mcp.recommended.jsonc` (trimmed to `dj-db` + deferred `dj-docs`; `dj-ui` and
+  `dj-serato` removed).
+- **`dj-rekordbox` is staged, not started** — it needs the DJ's exported
+  `rekordbox.xml`; `master.db` is encrypted, so the export is the only readable
+  interchange format and guessing the mapping would be untestable speculation.
+- **Open:** produce the Rekordbox XML export (audit §7.1). Until then the
+  Rekordbox gap stays open. `dj-docs` (Context7) stays deferred.
+
 ## 2026-10-21 · Phase 2 Slice 2 — rating + energy (T2.1.4 + T2.1.6)
 
 - **PR #51** (`feat/T2.1.4-T2.1.6-rating-energy` → `main`), one commit

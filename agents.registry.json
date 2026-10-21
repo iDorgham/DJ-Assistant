@@ -139,7 +139,10 @@
         "setlist",
         "tempo",
         "key detection",
-        "transient"
+        "transient",
+        "dj-query",
+        "library query",
+        "library stats"
       ],
       "owns": ["crates/analysis/**", "crates/core/**", "fixtures/**"],
       "skills": [

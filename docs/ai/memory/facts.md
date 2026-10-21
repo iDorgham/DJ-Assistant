@@ -43,3 +43,20 @@ not inferable by reading the code.
   entry to `project`/`overridden: global`. That is machine-local state in a
   tracked file — regenerate only from a clean checkout, or commit the global-source
   version.
+- The DJ's DJ software is **Rekordbox 6/7** (Pioneer CDJs). Its
+  `%APPDATA%\Pioneer\Rekordbox\master.db` is **encrypted** (header
+  `77 82 f1 a3 …`, not `SQLite format 3`), so `rusqlite` cannot read it. The
+  readable interchange format is the manual export
+  (*File → Export → XML* → `rekordbox.xml`); `masterPlaylists6.xml` is
+  **playlists only**. No adoptable Rekordbox MCP exists on npm — only
+  libraries.
+- The music library on this workstation is `D:\Music\Music Library` (sets in
+  `D:\Music\My Sets`); the maintainer's stated `D:\Music\DJ_Library` **does not
+  exist here**, so the path stays configurable
+  (`$DJ_ASSISTANT_MUSIC_LIBRARY`).
+- The app's library DB (`%APPDATA%\com.djassistant.desktop\dj_assistant.db`) is
+  in **WAL mode**, so a read-only open can fail once the app is closed —
+  `dj-query` falls back to `immutable=1` only when the `-wal` is empty and
+  refuses when it still holds content. It may also be **older than the code**
+  (a library last opened before the newest migration), so the CLI reads
+  `PRAGMA table_info(tracks)` and adapts.

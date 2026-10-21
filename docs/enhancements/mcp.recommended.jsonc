@@ -3,7 +3,7 @@
 // =============================================================================
 //
 // Document type : Config template (JSONC — comments allowed)
-// Status        : Proposed — 2026-10-21
+// Status        : Approved in part — 2026-10-21
 // Companion     : docs/enhancements/mcb-plugin-enhancement-plan.md
 //                 docs/enhancements/mcb-plugin-audit.md
 //
@@ -12,6 +12,11 @@
 //   that file with the user's global `~/.config/opencode/opencode.json`
 //   (remote -> global -> custom -> project -> .opencode -> inline), so the
 //   user's existing servers are preserved — nothing here replaces anything.
+//
+//   It holds ONE server (`dj-db`) plus one deferred reference entry (`dj-docs`).
+//   That is deliberate: the primary library-query path is the Rust `dj-query`
+//   binary, not an MCP — it shares the app's own query builder, is read-only by
+//   construction, and costs no context tokens. See the plan §2.2.
 //
 // HOW TO USE
 //   1. Copy this file to the repo root as `opencode.json`.
@@ -56,6 +61,11 @@
     //   risk   : low (write tools disabled below; sees a copy, not the live DB)
     //   why    : ad-hoc questions the Rust `dj-query` binary does not model yet.
     //
+    //   Prefer `dj-query` first — it answers the common questions with the
+    //   app's own semantics and needs no MCP at all:
+    //     dj-query --stats --json
+    //     dj-query --bpm-min 122 --bpm-max 126 --key 8A --json
+    //
     //   PREREQUISITE — make a snapshot first (SQLite online backup, or copy
     //   the file while the app is closed; never copy a live WAL database):
     //     python scripts/inspect-db.py            # find the DB and its tables
@@ -75,80 +85,6 @@
       "environment": {},
       "enabled": false,
       "timeout": 20000
-    },
-
-    // -------------------------------------------------------------------------
-    // dj-ui — drive the app's own UI in a browser.
-    //
-    //   source : npm (`@playwright/mcp`, version pinned on purpose)
-    //   local  : yes
-    //   risk   : low (origin-scoped, isolated profile, no state on disk)
-    //   why    : apps/desktop/src-tauri/tauri.conf.json sets
-    //            devUrl http://localhost:1420 and apps/desktop/src/services/api.ts
-    //            falls back to mock IPC outside Tauri — so the real React UI
-    //            runs in a plain browser and can be checked for focus order,
-    //            overflow and empty states.
-    //
-    //   --allowed-origins : trusted-origin list. This is scoping, NOT a
-    //                        sandbox — do not read it as containment.
-    //   --isolated         : browser profile stays in memory; nothing on disk.
-    //   --headless         : no visible window.
-    //
-    //   Start the app first:  pnpm dev:desktop
-    // -------------------------------------------------------------------------
-    "dj-ui": {
-      "type": "local",
-      "command": [
-        "npx",
-        "-y",
-        "@playwright/mcp@0.0.83",
-        "--allowed-origins",
-        "http://localhost:1420",
-        "--isolated",
-        "--headless"
-      ],
-      "environment": {},
-      "enabled": false,
-      "timeout": 60000
-    },
-
-    // -------------------------------------------------------------------------
-    // dj-serato — read the DJ's REAL Serato library (crates, BPM, Camelot key)
-    // so the agent can reconcile it against what DJ Assistant imported.
-    //
-    //   source : npm (`serato-dj-mcp`, version pinned on purpose)
-    //   local  : yes
-    //   risk   : MEDIUM — upstream states Windows is UNTESTED. It has no
-    //            Windows path discovery, its cache/state dirs default to
-    //            macOS-style paths, and its "is Serato running" check uses
-    //            `ps` (absent on Windows). Read-only mode is unaffected.
-    //            Smoke-test before relying on it (plan §7.2).
-    //
-    //   The server is read-only BY DEFAULT: every read goes through a snapshot
-    //   copy in --cache-dir, so a question can never change the library.
-    //
-    //   DO NOT ADD `--allow-writes` or `--allow-raw-sql`. Both widen the tool
-    //   surface; neither is needed for read-only library questions.
-    //
-    //   Point --cache-dir and --state-dir at Windows-friendly locations; they
-    //   are the server's scratch space and are writable.
-    // -------------------------------------------------------------------------
-    "dj-serato": {
-      "type": "local",
-      "command": [
-        "npx",
-        "-y",
-        "serato-dj-mcp@0.1.1",
-        "--library",
-        "{env:DJ_ASSISTANT_SERATO_LIBRARY}",
-        "--cache-dir",
-        "{env:DJ_ASSISTANT_SERATO_CACHE}",
-        "--state-dir",
-        "{env:DJ_ASSISTANT_SERATO_STATE}"
-      ],
-      "environment": {},
-      "enabled": false,
-      "timeout": 30000
     },
 
     // -------------------------------------------------------------------------
@@ -194,8 +130,7 @@
     // Optional, for context-cost control: switch a whole server's tools off
     // without touching its "enabled" flag. Uncomment when a server is rarely
     // needed and you want it connected but silent.
-    // "dj-ui_*": false,
-    // "dj-serato_*": false,
+    // "dj-db_*": false,
   }
 }
 
@@ -207,22 +142,18 @@
 //       Full path to a SNAPSHOT COPY of the app's SQLite database.
 //       Example: %TEMP%\dj-assistant-snapshot.db
 //
-//   DJ_ASSISTANT_SERATO_LIBRARY
-//       The Serato library folder (the one holding master.sqlite).
-//       Example: D:\Music\_Serato_
-//
-//   DJ_ASSISTANT_SERATO_CACHE
-//       Writable scratch dir for the server's library snapshot.
-//       Example: %LOCALAPPDATA%\dj-assistant\serato-cache
-//
-//   DJ_ASSISTANT_SERATO_STATE
-//       Writable scratch dir for staged changes (unused while writes are off).
-//       Example: %LOCALAPPDATA%\dj-assistant\serato-state
-//
 //   DJ_ASSISTANT_MCP_TOKEN   (deferred dj-docs only)
 //       Optional Context7 API key. Not needed by any other server.
 //
 // NOT INCLUDED, ON PURPOSE
+//   - No Serato server: the DJ runs Rekordbox on Pioneer CDJs. `serato-dj-mcp`
+//     reads a library that does not exist here. See audit §3.3.
+//   - No Rekordbox MCP: none is adoptable. npm has only libraries, Rekordbox's
+//     `master.db` is encrypted, and the readable format is the XML export —
+//     which our own Rust `dj-rekordbox` reader will parse. See audit §3.3.
+//   - No Playwright MCP: skipped by maintainer decision. `playwright-cli` and
+//     the hot `ui-verification` skill already run the same checks inside the
+//     Tauri/React stack, without the per-step tool cost and timeout risk.
 //   - No docker-based server: the repo has no Docker artefacts and npx/uvx is
 //     the lower-friction route on Windows.
 //   - No filesystem MCP: it is write-capable and duplicates the built-in file

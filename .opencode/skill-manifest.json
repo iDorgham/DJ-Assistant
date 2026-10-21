@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-10-20T18:14:01.130Z",
+  "generatedAt": "2026-10-21T21:18:08.192Z",
   "policyVersion": 1,
   "project": "DJ Assistant",
   "total": 240,
@@ -13,7 +13,7 @@
   "skills": [
     {
       "id": "3d-web-experience",
-      "source": "global",
+      "source": "project",
       "hot": false,
       "description": "Use when building or debugging web 3D scenes, product configurators or portfolios with Three.js, React Three Fiber or Spline; review assets, loading, controls, fallbacks and performance.",
       "keywords": [
@@ -27,11 +27,11 @@
         "configurators"
       ],
       "lines": 423,
-      "overridden": null
+      "overridden": "global"
     },
     {
       "id": "accessibility-and-inclusive-design",
-      "source": "global",
+      "source": "project",
       "hot": true,
       "description": "Reference-grade guide to shipping WCAG 2.2 AA accessible, inclusively designed interfaces across web, native iOS/Android, and desktop — semantic-first markup, contrast/APCA, keyboard, screen readers, forms, touch/motor, motion/cognition, testing, and the legal floor (EAA/Section 508).",
       "keywords": [
@@ -45,11 +45,11 @@
         "shipping"
       ],
       "lines": 270,
-      "overridden": null
+      "overridden": "global"
     },
     {
       "id": "ai-image-generation",
-      "source": "global",
+      "source": "project",
       "hot": false,
       "description": "Generate AI images with GPT-Image-2, FLUX, Gemini, Grok, Seedream, Reve and 50+ models via inference.sh CLI. Models: GPT-Image-2, FLUX Dev LoRA, FLUX.2 Klein LoRA, Gemini 3 Pro Image, Grok Imagine, Seedream 4.5, Reve, ImagineArt. Capabilities: text-to-image, image-to-image, inpainting, LoRA, image editing, upscaling, text rendering. Use for: AI art, product mockups, concept art, social media graphics, marketing visuals, illustrations. Triggers: flux, image generation, ai image, text to image, stable diffusion, generate image, ai art, midjourney alternative, dall-e alternative, text2img, t2i, image generator, ai picture, create image with ai, generative ai, ai illustration, grok image, gemini image, gpt image, openai image, chatgpt image",
       "keywords": [
@@ -63,11 +63,11 @@
         "grok"
       ],
       "lines": 172,
-      "overridden": null
+      "overridden": "global"
     },
     {
       "id": "api-design-principles",
-      "source": "global",
+      "source": "project",
       "hot": true,
       "description": "Master REST and GraphQL API design principles to build intuitive, scalable, and maintainable APIs that delight developers. Use when designing new APIs, reviewing API specifications, or establishing API design standards.",
       "keywords": [
@@ -81,11 +81,11 @@
         "intuitive"
       ],
       "lines": 111,
-      "overridden": null
+      "overridden": "global"
     },
     {
       "id": "api-gateway-authorizer-security",
-      "source": "global",
+      "source": "project",
       "hot": false,
       "description": "Secure Amazon API Gateway routes when a scanner reports missing authorization, choose Cognito/OIDC JWT or other business authorizers first, and use an always-allow Lambda authorizer only as an explicitly documented fallback for public routes.",
       "keywords": [
@@ -99,11 +99,11 @@
         "when"
       ],
       "lines": 159,
-      "overridden": null
+      "overridden": "global"
     },
     {
       "id": "async-python-patterns",
-      "source": "global",
+      "source": "project",
       "hot": false,
       "description": "Master Python asyncio, concurrent programming, and async/await patterns for high-performance applications. Use when building async APIs, concurrent systems, or I/O-bound applications requiring non-blocking operations.",
       "keywords": [
@@ -117,11 +117,11 @@
         "await"
       ],
       "lines": 296,
-      "overridden": null
+      "overridden": "global"
     },
     {
       "id": "atomic-design",
-      "source": "global",
+      "source": "project",
       "hot": false,
       "description": "Brad Frost's atomic design methodology (atoms → molecules → organisms → templates → pages) for architecting scalable, multi-platform design systems — use when structuring a component library, mapping tokens to components, organizing Figma/code component trees, or deciding the right level of abstraction for a UI element.",
       "keywords": [
@@ -135,11 +135,11 @@
         "organisms"
       ],
       "lines": 182,
-      "overridden": null
+      "overridden": "global"
     },
     {
       "id": "auth-implementation-patterns",
-      "source": "global",
+      "source": "project",
       "hot": true,
       "description": "Master authentication and authorization patterns including JWT, OAuth2, session management, and RBAC to build secure, scalable access control systems. Use when implementing auth systems, securing APIs, or debugging security issues.",
       "keywords": [
@@ -153,11 +153,11 @@
         "oauth2"
       ],
       "lines": 84,
-      "overridden": null
+      "overridden": "global"
     },
     {
       "id": "aws-agentic-ai",
-      "source": "global",
+      "source": "project",
       "hot": false,
       "description": "AWS Bedrock AgentCore comprehensive expert for deploying and managing AI agents at scale. Use when working with any AgentCore service including Gateway, Runtime, Memory, Identity, Code Interpreter, Browser, Observability, Agent Registry, or Evaluations. Covers agent deployment, MCP tool integration, credential management, agent discovery, governance workflows, and automated quality assessment. Essential when user mentions AgentCore, agent runtime, agent registry, agent evaluation, MCP gateway, deploy agent, register MCP server, discover agents, evaluate agent quality, agent credentials, or wants to build, deploy, catalog, or monitor AI agents on AWS.",
       "keywords": [
@@ -171,11 +171,11 @@
         "managing"
       ],
       "lines": 150,
-      "overridden": null
+      "overridden": "global"
     },
     {
       "id": "aws-cdk-development",
-      "source": "global",
+      "source": "project",
       "hot": false,
       "description": "AWS Cloud Development Kit (CDK) expert for building cloud infrastructure with TypeScript/Python. Use when creating CDK stacks, defining CDK constructs, implementing infrastructure as code, or when the user mentions CDK, CloudFormation, IaC, cdk synth, cdk deploy, or wants to define AWS infrastructure programmatically. Covers CDK app structure, construct patterns, stack composition, and deployment workflows.",
       "keywords": [
@@ -189,11 +189,11 @@
         "with"
       ],
       "lines": 282,
-      "overridden": null
+      "overridden": "global"
     },
     {
       "id": "aws-cost-operations",
-      "source": "global",
+      "source": "project",
       "hot": false,
       "description": "AWS cost optimization, monitoring, and operational excellence expert. Use when analyzing AWS bills, estimating costs, setting up CloudWatch alarms, querying logs, auditing CloudTrail activity, or assessing security posture. Essential when user mentions AWS costs, spending, billing, budget, pricing, CloudWatch, observability, monitoring, alerting, CloudTrail, audit, or wants to optimize AWS infrastructure costs and operational efficiency.",
       "keywords": [
@@ -207,11 +207,11 @@
         "expert"
       ],
       "lines": 281,
-      "overridden": null
+      "overridden": "global"
     },
     {
       "id": "aws-mcp-setup",
-      "source": "global",
+      "source": "project",
       "hot": false,
       "description": "Configure AWS MCP servers for documentation search and API access. Use when setting up AWS MCP, configuring AWS documentation tools, troubleshooting MCP connectivity, or when user mentions aws-mcp, awsdocs, uvx setup, or MCP server configuration. Covers both Full AWS MCP Server (with uvx + credentials) and lightweight Documentation MCP (no auth required).",
       "keywords": [
@@ -225,11 +225,11 @@
         "access"
       ],
       "lines": 182,
-      "overridden": null
+      "overridden": "global"
     },
     {
       "id": "beets-music-library-manager-tagger",
-      "source": "global",
+      "source": "project",
       "hot": true,
       "description": "Manage and tag music libraries with beets, the Python-based CLI tool that auto-tags audio files using MusicBrainz metadata. Import, organize, deduplicate, and query your music collection with a powerful plugin system and flexible query language.",
       "keywords": [
@@ -243,11 +243,11 @@
         "with"
       ],
       "lines": 36,
-      "overridden": null
+      "overridden": "global"
     },
     {
       "id": "better-accessibility",
-      "source": "global",
+      "source": "project",
       "hot": true,
       "description": "Reviews and fixes keyboard and focus behavior, ARIA, accessible names, forms, screen-reader announcements, motion and zoom in your project against WCAG 2.2.",
       "keywords": [
@@ -261,11 +261,11 @@
         "aria"
       ],
       "lines": 141,
-      "overridden": null
+      "overridden": "global"
     },
     {
       "id": "better-colors",
-      "source": "global",
+      "source": "project",
       "hot": true,
       "description": "Helps you build and check a color system for your project. It generates palettes, names semantic tokens, converts between formats and measures contrast.",
       "keywords": [
@@ -279,11 +279,11 @@
         "your"
       ],
       "lines": 96,
-      "overridden": null
+      "overridden": "global"
     },
     {
       "id": "better-interface",
-      "source": "global",
+      "source": "project",
       "hot": false,
       "description": "Combines all of the `better-*` skills into a single review across accessibility, layout, writing, typography, color and UI polish.",
       "keywords": [
@@ -297,11 +297,11 @@
         "across"
       ],
       "lines": 135,
-      "overridden": null
+      "overridden": "global"
     },
     {
       "id": "better-layout",
-      "source": "global",
+      "source": "project",
       "hot": true,
       "description": "Helps with grouping, alignment, reading order, responsive structure and room for translated text, so a layout holds up when it is resized, translated or mirrored.",
       "keywords": [
@@ -315,11 +315,11 @@
         "order"
       ],
       "lines": 98,
-      "overridden": null
+      "overridden": "global"
     },
     {
       "id": "better-typography",
-      "source": "global",
+      "source": "project",
       "hot": true,
       "description": "Sets and reviews how text renders in your product, from the type scale and spacing to font features, wrapping, truncation and punctuation.",
       "keywords": [
@@ -333,11 +333,11 @@
         "product"
       ],
       "lines": 166,
-      "overridden": null
+      "overridden": "global"
     },
     {
       "id": "better-ui",
-      "source": "global",
+      "source": "project",
       "hot": true,
       "description": "Polishes the surfaces, icons and motion in your project with exact values for border radius, optical alignment, shadows, icon states and animation.",
       "keywords": [
@@ -351,11 +351,11 @@
         "with"
       ],
       "lines": 134,
-      "overridden": null
+      "overridden": "global"
     },
     {
       "id": "better-writing",
-      "source": "global",
+      "source": "project",
       "hot": true,
       "description": "Writes and reviews your interface copy, from labels and errors to empty states and confirmations, so it matches your product's voice and tells people what to do next.",
       "keywords": [
@@ -369,11 +369,11 @@
         "from"
       ],
       "lines": 152,
-      "overridden": null
+      "overridden": "global"
     },
     {
       "id": "brainstorming",
-      "source": "global",
+      "source": "project",
       "hot": true,
       "description": "You MUST use this before any creative work - creating features, building components, adding functionality, modifying behavior, or planning anything new, in software or out of it (a talk, a business, a renovation).",
       "keywords": [
@@ -387,11 +387,11 @@
         "features"
       ],
       "lines": 226,
-      "overridden": null
+      "overridden": "global"
     },
     {
       "id": "brand-identity-and-design-principles",
-      "source": "global",
+      "source": "project",
       "hot": false,
       "description": "Author opinionated design principles and a flexible brand identity system — name, logo, attributes-to-visuals translation, brand-in-product, the brand→token bridge, guidelines, and rebrands — that stay consistent, accessible, and alive across any surface.",
       "keywords": [
@@ -405,11 +405,11 @@
         "flexible"
       ],
       "lines": 257,
-      "overridden": null
+      "overridden": "global"
     },
     {
       "id": "break",
-      "source": "global",
+      "source": "project",
       "hot": false,
       "description": "Renders a component you choose under every scenario that can reach it on a temporary page and stress tests it.",
       "keywords": [
@@ -423,11 +423,11 @@
         "that"
       ],
       "lines": 86,
-      "overridden": null
+      "overridden": "global"
     },
     {
       "id": "brutalist-skill",
-      "source": "global",
+      "source": "project",
       "hot": false,
       "description": "Classic style skill, opt-in: it runs only when called by name. A hard mechanical look with Swiss type, rigid grids, extreme scale contrast and utilitarian colour.",
       "keywords": [
@@ -441,11 +441,11 @@
         "called"
       ],
       "lines": 94,
-      "overridden": null
+      "overridden": "global"
     },
     {
       "id": "build-design",
-      "source": "global",
+      "source": "project",
       "hot": true,
       "description": "Builds UI from a Figma file or a design image so it matches the design, using your project's existing tokens and components.",
       "keywords": [
@@ -459,11 +459,11 @@
         "matches"
       ],
       "lines": 84,
-      "overridden": null
+      "overridden": "global"
     },
     {
       "id": "carbon",
-      "source": "global",
+      "source": "project",
       "hot": false,
       "description": "Build UIs with the IBM Carbon Design System. Use when working with `@carbon/react` (React components) or `@carbon/web-components` (the `cds-*` custom elements / Lit), styling with `@carbon/styles` Sass (`@use`, Dart Sass, the `cds` class prefix), theming (white/g10/g90/g100, the `<Theme>` component or `$theme` with-config), the 2x Grid (`Grid`/`Column` vs `FlexGrid`), Carbon icons & pictograms (`@carbon/icons-react`), IBM Plex type, design tokens (`@carbon/colors`, `@carbon/themes`, `@carbon/layout`, `@carbon/motion`), feature flags / preview code (`@carbon/feature-flags`, `<FeatureFlags>`, `enable-*`), or migrating to v11. Covers component usage and APIs for both flagship libraries.",
       "keywords": [
@@ -477,11 +477,11 @@
         "react"
       ],
       "lines": 188,
-      "overridden": null
+      "overridden": "global"
     },
     {
       "id": "code-review-excellence",
-      "source": "global",
+      "source": "project",
       "hot": true,
       "description": "Master effective code review practices to provide constructive feedback, catch bugs early, and foster knowledge sharing while maintaining team morale. Use when reviewing pull requests, establishing review standards, or mentoring developers.",
       "keywords": [
@@ -495,11 +495,11 @@
         "constructive"
       ],
       "lines": 267,
-      "overridden": null
+      "overridden": "global"
     },
     {
       "id": "color-and-elevation",
-      "source": "global",
+      "source": "project",
       "hot": false,
       "description": "Build perceptually-uniform color palettes and physically-consistent depth systems with OKLCH ramps, WCAG/APCA contrast, semantic tokens, and elevation-as-lightness dark mode — concrete values and copy-pasteable CSS.",
       "keywords": [
@@ -513,11 +513,11 @@
         "physically"
       ],
       "lines": 282,
-      "overridden": null
+      "overridden": "global"
     },
     {
       "id": "components-and-states",
-      "source": "global",
+      "source": "project",
       "hot": true,
       "description": "Reference-grade guide to designing and building UI components — anatomy, the full interaction-state matrix, variants vs sizes vs states, sizing tokens, per-component anatomy/states/a11y, and modern headless/data-state/CSS patterns across web, iOS, Android, and desktop.",
       "keywords": [
@@ -531,11 +531,11 @@
         "building"
       ],
       "lines": 218,
-      "overridden": null
+      "overridden": "global"
     },
     {
       "id": "cost-estimator",
-      "source": "global",
+      "source": "project",
       "hot": false,
       "description": "Estimate AWS costs for CDK projects using real-time pricing data. Use when calculating infrastructure costs, generating pricing reports, or analyzing CDK resource costs before deployment.",
       "keywords": [
@@ -549,11 +549,11 @@
         "time"
       ],
       "lines": 63,
-      "overridden": null
+      "overridden": "global"
     },
     {
       "id": "create-install-scripts",
-      "source": "global",
+      "source": "project",
       "hot": false,
       "description": "Generate CI/CD installation scripts for AWS CDK projects. Use when setting up deployment pipelines, creating install.sh scripts, configuring GitLab CI, or setting up AWS CodeBuild for CDK deployments.",
       "keywords": [
@@ -567,11 +567,11 @@
         "setting"
       ],
       "lines": 63,
-      "overridden": null
+      "overridden": "global"
     },
     {
       "id": "data-visualization",
-      "source": "global",
+      "source": "project",
       "hot": true,
       "description": "Choose, encode, color, label, and ship accurate accessible charts and dashboards — perceptual encoding ranking, chart-by-intent selection, data color scales, Tufte's data-ink discipline, and interaction patterns with concrete do/don't rules.",
       "keywords": [
@@ -585,11 +585,11 @@
         "accurate"
       ],
       "lines": 241,
-      "overridden": null
+      "overridden": "global"
     },
     {
       "id": "debugging-strategies",
-      "source": "global",
+      "source": "project",
       "hot": true,
       "description": "Master systematic debugging techniques, profiling tools, and root cause analysis to efficiently track down bugs across any codebase or technology stack. Use when investigating bugs, performance issues, or unexpected behavior.",
       "keywords": [
@@ -603,11 +603,11 @@
         "root"
       ],
       "lines": 266,
-      "overridden": null
+      "overridden": "global"
     },
     {
       "id": "dense-no-scroll-layout",
-      "source": "global",
+      "source": "project",
       "hot": false,
       "description": "Designing mobile screens that fit one viewport with minimal vertical scrolling — viewport budgeting per device, above-the-fold prioritization, swapping tall stacks for grids/segmented views/disclosure/detented sheets, compact metric components, and when scrolling IS the right call. Use when a screen scrolls more than it should, or when condensing a feature-heavy phone screen; pairs with layout-and-composition, grid-and-spacing, ios26-hig-patterns.",
       "keywords": [
@@ -621,11 +621,11 @@
         "viewport"
       ],
       "lines": 70,
-      "overridden": null
+      "overridden": "global"
     },
     {
       "id": "deployment-pipeline-design",
-      "source": "global",
+      "source": "project",
       "hot": false,
       "description": "Design multi-stage CI/CD pipelines with approval gates, security checks, and deployment orchestration. Use this skill when designing zero-downtime deployment pipelines, implementing canary rollout strategies, setting up multi-environment promotion workflows, or debugging failed deployment gates in CI/CD.",
       "keywords": [
@@ -639,11 +639,11 @@
         "approval"
       ],
       "lines": 107,
-      "overridden": null
+      "overridden": "global"
     },
     {
       "id": "design",
-      "source": "global",
+      "source": "project",
       "hot": true,
       "description": "Use when the user invokes /design, or asks to design/build/audit/polish a web or cross-platform UI or create a design case study — screen, component, layout, table, chart, form, color system, portfolio narrative — and it's unclear which design reference skills apply. Dispatcher that routes to the right companion skills, delegates case studies to /case-study, and routes native iOS work to /ios.",
       "keywords": [
@@ -657,11 +657,11 @@
         "polish"
       ],
       "lines": 46,
-      "overridden": null
+      "overridden": "global"
     },
     {
       "id": "design-system-frameworks",
-      "source": "global",
+      "source": "project",
       "hot": false,
       "description": "Reference-grade survey of the named design systems (Material 3, Apple HIG, Fluent 2, Carbon, SLDS, Polaris, Atlassian, Primer, Ant, Spectrum) and the modern build stack (Tailwind, shadcn/ui, Radix/React Aria/Ark, MUI/Chakra/Mantine/Base) — each system's actual philosophy and rules, plus how to choose adopt-vs-adapt-vs-build.",
       "keywords": [
@@ -675,11 +675,11 @@
         "systems"
       ],
       "lines": 281,
-      "overridden": null
+      "overridden": "global"
     },
     {
       "id": "design-system-governance",
-      "source": "global",
+      "source": "project",
       "hot": false,
       "description": "Reference-grade operating manual for running a design system as a versioned product — operating models, contribution and release process, Figma↔code token parity, documentation, adoption metrics, and the anti-patterns that kill systems.",
       "keywords": [
@@ -693,11 +693,11 @@
         "running"
       ],
       "lines": 233,
-      "overridden": null
+      "overridden": "global"
     },
     {
       "id": "design-tokens",
-      "source": "global",
+      "source": "project",
       "hot": true,
       "description": "Architect, name, format, and export design tokens as the single source of truth across Figma, code, and multi-platform builds using the W3C DTCG format, a primitive→semantic→component tier model, and a Style Dictionary v4 pipeline.",
       "keywords": [
@@ -711,11 +711,11 @@
         "source"
       ],
       "lines": 271,
-      "overridden": null
+      "overridden": "global"
     },
     {
       "id": "desktop-appkit",
-      "source": "global",
+      "source": "project",
       "hot": false,
       "description": "Use when the user asks about macOS app development with AppKit, Cocoa, Objective-C, Swift AppKit, macOS UI framework, or native Mac application architecture. Do NOT use for: SwiftUI (desktop-swiftui), or cross-platform desktop (desktop-electron, desktop-tauri).",
       "keywords": [
@@ -729,11 +729,11 @@
         "development"
       ],
       "lines": 578,
-      "overridden": null
+      "overridden": "global"
     },
     {
       "id": "desktop-electron",
-      "source": "global",
+      "source": "project",
       "hot": false,
       "description": "Use when the user asks about Electron app development, Chromium-based desktop apps, main/renderer process architecture, IPC communication, or packaging Electron apps. Do NOT use for: Tauri (desktop-tauri), or web app frontend (non-desktop skills).",
       "keywords": [
@@ -747,11 +747,11 @@
         "chromium"
       ],
       "lines": 555,
-      "overridden": null
+      "overridden": "global"
     },
     {
       "id": "desktop-gnome",
-      "source": "global",
+      "source": "project",
       "hot": false,
       "description": "Use when the user asks about GNOME desktop development, GNOME Shell extensions, GTK under GNOME, GNOME Builder, or GNOME platform libraries (GLib, GIO, GSettings, GNOME Settings). Do NOT use for: GTK itself (desktop-gtk), or KDE (desktop-kde).",
       "keywords": [
@@ -765,11 +765,11 @@
         "shell"
       ],
       "lines": 591,
-      "overridden": null
+      "overridden": "global"
     },
     {
       "id": "desktop-gtk",
-      "source": "global",
+      "source": "project",
       "hot": false,
       "description": "Use when the user asks about GTK (GTK3, GTK4) application development, GtkWidget, GtkBuilder UI files, CSS styling for GTK, or cross-platform GTK development. Do NOT use for: GNOME-specific patterns (desktop-gnome), or KDE/Qt (desktop-kde, desktop-qt).",
       "keywords": [
@@ -783,11 +783,11 @@
         "gtk4"
       ],
       "lines": 608,
-      "overridden": null
+      "overridden": "global"
     },
     {
       "id": "desktop-qt",
-      "source": "global",
+      "source": "project",
       "hot": false,
       "description": "Use when the user asks about cross-platform Qt application development with QtWidgets, QtQuick/QML, Qt Creator, signals and slots, or Qt deployment. Do NOT use for: KDE-specific (desktop-kde), or non-Qt desktop frameworks.",
       "keywords": [
@@ -801,11 +801,11 @@
         "application"
       ],
       "lines": 628,
-      "overridden": null
+      "overridden": "global"
     },
     {
       "id": "desktop-swiftui",
-      "source": "global",
+      "source": "project",
       "hot": false,
       "description": "Use when the user asks about SwiftUI for macOS, SwiftUI desktop patterns, AppKit bridging, SwiftUI app lifecycle, or SwiftUI multiplatform apps. Do NOT use for: AppKit-only (desktop-appkit), or iOS SwiftUI (mobile skill).",
       "keywords": [
@@ -819,11 +819,11 @@
         "patterns"
       ],
       "lines": 617,
-      "overridden": null
+      "overridden": "global"
     },
     {
       "id": "desktop-tauri",
-      "source": "global",
+      "source": "project",
       "hot": false,
       "description": "Best practices for building desktop apps with Tauri and secure Native IPC.",
       "keywords": [
@@ -837,11 +837,11 @@
         "secure"
       ],
       "lines": 53,
-      "overridden": null
+      "overridden": "global"
     },
     {
       "id": "desktop-uwp",
-      "source": "global",
+      "source": "project",
       "hot": false,
       "description": "Use when the user asks about Universal Windows Platform (UWP) development, WinRT APIs, XAML UWP, Windows Store apps, or UWP lifecycle. Do NOT use for: WinUI 3 (desktop-winui3), WPF (desktop-wpf), or WinForms (desktop-winforms).",
       "keywords": [
@@ -855,11 +855,11 @@
         "windows"
       ],
       "lines": 571,
-      "overridden": null
+      "overridden": "global"
     },
     {
       "id": "desktop-winforms",
-      "source": "global",
+      "source": "project",
       "hot": false,
       "description": "Use when the user asks about Windows Forms (WinForms) development, .NET desktop UI, WinForms controls, GDI+ drawing, or legacy Windows app maintenance. Do NOT use for: WPF (desktop-wpf), WinUI 3 (desktop-winui3), or UWP (desktop-uwp).",
       "keywords": [
@@ -873,11 +873,11 @@
         "forms"
       ],
       "lines": 557,
-      "overridden": null
+      "overridden": "global"
     },
     {
       "id": "desktop-wpf",
-      "source": "global",
+      "source": "project",
       "hot": false,
       "description": "Use when the user asks about WPF (.NET Framework or .NET Core/5+/6+), XAML desktop apps, MVVM with WPF, XAML data binding, or WPF custom controls. Do NOT use for: WinForms (desktop-winforms), WinUI 3 (desktop-winui3), or UWP (desktop-uwp).",
       "keywords": [
@@ -891,11 +891,11 @@
         "core"
       ],
       "lines": 502,
-      "overridden": null
+      "overridden": "global"
     },
     {
       "id": "devtools",
-      "source": "global",
+      "source": "project",
       "hot": false,
       "description": "Drop-in inspector panel for any json-render app. Use when the user wants to debug a generative UI, inspect the spec tree, edit state at runtime, see dispatched actions, follow stream patches live, browse a catalog, or pick DOM elements to find their spec keys. Triggers include \"add devtools\", \"debug json-render\", \"inspect the spec\", \"why is this element not rendering\", \"see the state at runtime\", or requests to tap streams / capture action logs for `@json-render/devtools`.",
       "keywords": [
@@ -909,11 +909,11 @@
         "user"
       ],
       "lines": 186,
-      "overridden": null
+      "overridden": "global"
     },
     {
       "id": "dj-library-curator",
-      "source": "global",
+      "source": "project",
       "hot": true,
       "description": "Curate, tag, and organize the DJ music library; manage BPM analysis, key detection, genre tagging, and crate/playlist creation for DJ workflows.",
       "keywords": [
@@ -927,11 +927,11 @@
         "detection"
       ],
       "lines": 49,
-      "overridden": null
+      "overridden": "global"
     },
     {
       "id": "dj-library-organizer",
-      "source": "global",
+      "source": "project",
       "hot": true,
       "description": "Organize a DJ library (rekordbox or Serato) by sorting tracks into playlists or crates. Use this skill whenever someone asks to organize, sort, or categorize their rekordbox library, Serato library, DJ collection, or music playlists/crates — or mentions they have tracks that need sorting into genres, vibes, or folders. Also trigger when someone mentions rekordbox XML, Serato crates, DJ library management, playlist/crate organization for DJing, or wants to clean up their DJ music collection. Works with any genre set — the skill learns from the user's existing playlists/crates rather than assuming specific genres.",
       "keywords": [
@@ -945,11 +945,11 @@
         "into"
       ],
       "lines": 354,
-      "overridden": null
+      "overridden": "global"
     },
     {
       "id": "dj-mix-documentarian",
-      "source": "global",
+      "source": "project",
       "hot": true,
       "description": "Documents completed DJ mixes with tracklists, timestamps, notes, and stores them in Obsidian.",
       "keywords": [
@@ -963,11 +963,11 @@
         "timestamps"
       ],
       "lines": 59,
-      "overridden": null
+      "overridden": "global"
     },
     {
       "id": "dj-set-architect",
-      "source": "global",
+      "source": "project",
       "hot": true,
       "description": "Design and sequence DJ sets using harmonic mixing principles, BPM flow analysis, and energy curve planning; generate set plans and tracklists from the curated DJ library.",
       "keywords": [
@@ -981,11 +981,11 @@
         "mixing"
       ],
       "lines": 48,
-      "overridden": null
+      "overridden": "global"
     },
     {
       "id": "docker-build-strategies",
-      "source": "global",
+      "source": "project",
       "hot": false,
       "description": "Use this skill when writing, reviewing, or optimizing Dockerfiles, even if the user just says their image is too large, their build is slow, or they need to harden a container for production. Covers multi-stage builds, layer caching, .dockerignore, non-root users, and image size optimization.",
       "keywords": [
@@ -999,11 +999,11 @@
         "reviewing"
       ],
       "lines": 167,
-      "overridden": null
+      "overridden": "global"
     },
     {
       "id": "docker-compose-patterns",
-      "source": "global",
+      "source": "project",
       "hot": false,
       "description": "Use this skill when creating, modifying, or debugging Docker Compose configurations, even if the user just says they need to wire services together, add a database to their stack, or set up a local development environment with multiple containers. Covers service definitions, health checks, dependency ordering, volumes, networks, environment variables, and development overrides.",
       "keywords": [
@@ -1017,11 +1017,11 @@
         "modifying"
       ],
       "lines": 172,
-      "overridden": null
+      "overridden": "global"
     },
     {
       "id": "docker-destructive-guardrails",
-      "source": "global",
+      "source": "project",
       "hot": false,
       "description": "Use this skill before running, or recommending, any Docker command that deletes, wipes, resets, or otherwise irreversibly changes state — even if the user just says to \"clean up\", \"clear the cache\", \"start fresh\", \"wipe everything\", \"nuke it\", \"reset\", \"force remove\", or \"tear down\" Docker resources. Covers generic Docker CLI destructive operations not owned by a more specific skill — `docker rm`, `docker rm -f`, `docker container prune`, `docker kill`, `docker system prune`, `docker rmi`/`docker image rm`, `docker image prune -a`, `docker network rm`, `docker network prune`, `docker builder prune`, `docker buildx rm`, `docker context rm`, and standalone (non-Compose) `docker volume rm`/`docker volume prune`. Also indexes destructive commands owned by other Docker skills (Compose, sandbox, Desktop). Core rule — state exactly what will be lost and get explicit confirmation first, except narrow, low-friction Tier 1 container cleanup.",
       "keywords": [
@@ -1035,11 +1035,11 @@
         "recommending"
       ],
       "lines": 77,
-      "overridden": null
+      "overridden": "global"
     },
     {
       "id": "docker-docs",
-      "source": "global",
+      "source": "project",
       "hot": false,
       "description": "Use this skill to answer questions about any Docker product from current official Docker documentation instead of memory, even if the user just asks \"how do I…\", \"does Docker support…\", \"what's the flag for…\", or \"is this still the right way\" about Docker. Covers Docker Desktop, Engine, Build/Buildx/Build Cloud, Compose, Hub, Scout, Docker Hardened Images (DHI), Offload, Testcontainers, Docker Sandboxes (`sbx`, local and cloud sandboxes, Sandboxes API/SDK), Docker Agentic Platform, Docker Agent, MCP Catalog/Toolkit/Gateway, Model Runner, Gordon, and account, admin, security, and billing docs. Searches with the `search_docker_docs` MCP tool when available and otherwise falls back to `docs.docker.com/llms.txt` and per-page Markdown.",
       "keywords": [
@@ -1053,11 +1053,11 @@
         "product"
       ],
       "lines": 184,
-      "overridden": null
+      "overridden": "global"
     },
     {
       "id": "docker-project-foundations",
-      "source": "global",
+      "source": "project",
       "hot": false,
       "description": "Use this skill when setting up, initializing, or Dockerizing a project, even if the user doesn't explicitly mention Docker but describes a need for containerized local development, adding a database or cache dependency, or running services without host-level installs. Covers Dockerfile, compose.yaml, and .dockerignore creation with Docker best practices.",
       "keywords": [
@@ -1071,11 +1071,11 @@
         "initializing"
       ],
       "lines": 122,
-      "overridden": null
+      "overridden": "global"
     },
     {
       "id": "e2e-testing-patterns",
-      "source": "global",
+      "source": "project",
       "hot": false,
       "description": "Master end-to-end testing with Playwright and Cypress to build reliable test suites that catch bugs, improve confidence, and enable fast deployment. Use when implementing E2E tests, debugging flaky tests, or establishing testing standards.",
       "keywords": [
@@ -1089,11 +1089,11 @@
         "build"
       ],
       "lines": 129,
-      "overridden": null
+      "overridden": "global"
     },
     {
       "id": "electron",
-      "source": "global",
+      "source": "project",
       "hot": false,
       "description": "Provides comprehensive guidance for Electron framework including main process, renderer process, IPC communication, window management, and desktop app development. Use when the user asks about Electron, needs to create desktop applications, implement Electron features, or build cross-platform desktop apps.",
       "keywords": [
@@ -1107,11 +1107,11 @@
         "process"
       ],
       "lines": 152,
-      "overridden": null
+      "overridden": "global"
     },
     {
       "id": "electron-egg",
-      "source": "global",
+      "source": "project",
       "hot": false,
       "description": "Provides comprehensive guidance for Electron EGG framework including project structure, main/renderer processes, IPC, window management, and desktop app development. Use when the user asks about Electron EGG, needs to create Electron applications with EGG, or work with Electron EGG patterns.",
       "keywords": [
@@ -1125,11 +1125,11 @@
         "project"
       ],
       "lines": 202,
-      "overridden": null
+      "overridden": "global"
     },
     {
       "id": "end-to-end-testing",
-      "source": "global",
+      "source": "project",
       "hot": false,
       "description": "Systematic E2E testing workflow with evidence capture and reporting. Use when running integration tests, validating complete user flows, capturing test evidence, or generating test reports.",
       "keywords": [
@@ -1143,11 +1143,11 @@
         "reporting"
       ],
       "lines": 87,
-      "overridden": null
+      "overridden": "global"
     },
     {
       "id": "error-handling-patterns",
-      "source": "global",
+      "source": "project",
       "hot": true,
       "description": "Master error handling patterns across languages including exceptions, Result types, error propagation, and graceful degradation to build resilient applications. Use when implementing error handling, designing APIs, or improving application reliability.",
       "keywords": [
@@ -1161,11 +1161,11 @@
         "exceptions"
       ],
       "lines": 122,
-      "overridden": null
+      "overridden": "global"
     },
     {
       "id": "ethical-design-and-dark-patterns",
-      "source": "global",
+      "source": "project",
       "hot": false,
       "description": "Reference-grade guide to ethical interface design and the recognized deceptive-pattern taxonomy (Brignull / deceptive.design × Mathur et al.) — every dark pattern with a concrete example and ethical fix, consent and privacy UX, attention ethics, honest-default frameworks, and the FTC/GDPR/DSA legal exposure that turns each pattern into liability.",
       "keywords": [
@@ -1179,11 +1179,11 @@
         "guide"
       ],
       "lines": 242,
-      "overridden": null
+      "overridden": "global"
     },
     {
       "id": "explain-interface",
-      "source": "global",
+      "source": "project",
       "hot": false,
       "description": "Explains how a website, a visual effect or an animation was built, from a live URL or a screenshot.",
       "keywords": [
@@ -1197,11 +1197,11 @@
         "built"
       ],
       "lines": 107,
-      "overridden": null
+      "overridden": "global"
     },
     {
       "id": "fastapi-templates",
-      "source": "global",
+      "source": "project",
       "hot": false,
       "description": "Create production-ready FastAPI projects with async patterns, dependency injection, and comprehensive error handling. Use when building new FastAPI applications or setting up backend API projects.",
       "keywords": [
@@ -1215,11 +1215,11 @@
         "async"
       ],
       "lines": 157,
-      "overridden": null
+      "overridden": "global"
     },
     {
       "id": "feature-arch",
-      "source": "global",
+      "source": "project",
       "hot": true,
       "description": "React feature-based architecture guidelines for scalable applications (formerly feature-architecture). This skill should be used when writing, reviewing, or refactoring React code to ensure proper feature organization. Triggers on tasks involving project structure, feature organization, module boundaries, cross-feature imports, data fetching patterns, or component composition.",
       "keywords": [
@@ -1233,11 +1233,11 @@
         "applications"
       ],
       "lines": 118,
-      "overridden": null
+      "overridden": "global"
     },
     {
       "id": "ffmpeg-waveforms-visualization",
-      "source": "global",
+      "source": "project",
       "hot": true,
       "description": "Complete audio visualization system. PROACTIVELY activate for: (1) Animated waveforms (showwaves), (2) Static waveform images (showwavespic), (3) Spectrum analyzers (showspectrum), (4) Frequency bar visualizations (showfreqs), (5) Stereo vectorscope (avectorscope), (6) Musical note display (showcqt), (7) SoundCloud-style waveforms, (8) Music video visualizers, (9) Podcast waveform videos, (10) Combined visualization dashboards. Provides: Filter parameter tables, color scheme options, scale comparisons, template commands for music videos and podcasts. Ensures: Professional audio visualizations for content creation.",
       "keywords": [
@@ -1251,11 +1251,11 @@
         "activate"
       ],
       "lines": 630,
-      "overridden": null
+      "overridden": "global"
     },
     {
       "id": "forms-and-data-entry",
-      "source": "global",
+      "source": "project",
       "hot": true,
       "description": "Reference-grade guide to forms and data entry — single-column layout, persistent labels, the right input type + mobile keyboard + autocomplete token per field, blur-timed inline validation with :user-invalid and actionable errors, smart defaults, multi-step wizards, and data tables/grids at scale, all keyboard- and screen-reader-accessible across web and mobile.",
       "keywords": [
@@ -1269,11 +1269,11 @@
         "single"
       ],
       "lines": 213,
-      "overridden": null
+      "overridden": "global"
     },
     {
       "id": "git-advanced-workflows",
-      "source": "global",
+      "source": "project",
       "hot": false,
       "description": "Master advanced Git workflows including rebasing, cherry-picking, bisect, worktrees, and reflog to maintain clean history and recover from any situation. Use when managing complex Git histories, collaborating on feature branches, or troubleshooting repository issues.",
       "keywords": [
@@ -1287,11 +1287,11 @@
         "picking"
       ],
       "lines": 204,
-      "overridden": null
+      "overridden": "global"
     },
     {
       "id": "github-actions-templates",
-      "source": "global",
+      "source": "project",
       "hot": true,
       "description": "Create production-ready GitHub Actions workflows for automated testing, building, and deploying applications. Use when setting up CI/CD with GitHub Actions, automating development workflows, or creating reusable workflow templates.",
       "keywords": [
@@ -1305,11 +1305,11 @@
         "automated"
       ],
       "lines": 323,
-      "overridden": null
+      "overridden": "global"
     },
     {
       "id": "gitlab-ci-patterns",
-      "source": "global",
+      "source": "project",
       "hot": false,
       "description": "Build GitLab CI/CD pipelines with multi-stage workflows, caching, and distributed runners for scalable automation. Use when implementing GitLab CI/CD, optimizing pipeline performance, or setting up automated testing and deployment.",
       "keywords": [
@@ -1323,11 +1323,11 @@
         "workflows"
       ],
       "lines": 273,
-      "overridden": null
+      "overridden": "global"
     },
     {
       "id": "gitops-workflow",
-      "source": "global",
+      "source": "project",
       "hot": false,
       "description": "Implement GitOps workflows with ArgoCD and Flux for automated, declarative Kubernetes deployments with continuous reconciliation. Use when implementing GitOps practices, automating Kubernetes deployments, or setting up declarative infrastructure management.",
       "keywords": [
@@ -1341,11 +1341,11 @@
         "automated"
       ],
       "lines": 294,
-      "overridden": null
+      "overridden": "global"
     },
     {
       "id": "go-concurrency-patterns",
-      "source": "global",
+      "source": "project",
       "hot": false,
       "description": "Master Go concurrency with goroutines, channels, sync primitives, and context. Use when building concurrent Go applications, implementing worker pools, or debugging race conditions.",
       "keywords": [
@@ -1359,11 +1359,11 @@
         "primitives"
       ],
       "lines": 108,
-      "overridden": null
+      "overridden": "global"
     },
     {
       "id": "gpt-tasteskill",
-      "source": "global",
+      "source": "project",
       "hot": false,
       "description": "Classic skill for GPT and Codex, opt-in: it runs only when called by name. Layout variance, a strict AIDA page structure and GSAP scroll motion.",
       "keywords": [
@@ -1377,11 +1377,11 @@
         "when"
       ],
       "lines": 77,
-      "overridden": null
+      "overridden": "global"
     },
     {
       "id": "grid-and-spacing",
-      "source": "global",
+      "source": "project",
       "hot": false,
       "description": "Reference-grade system for spacing scales, column/baseline grids, responsive breakpoints, and modern CSS Grid/container-query layout built on an 8pt base with copy-pasteable tokens.",
       "keywords": [
@@ -1395,11 +1395,11 @@
         "column"
       ],
       "lines": 250,
-      "overridden": null
+      "overridden": "global"
     },
     {
       "id": "harness-writing",
-      "source": "global",
+      "source": "project",
       "hot": false,
       "description": "Designs and improves fuzzing harnesses for C/C++ and Rust. Covers mapping raw bytes onto a target API, generating structured inputs, avoiding non-determinism and false crashes, and deciding what to fuzz together. Use when writing a first LLVMFuzzerTestOneInput or fuzz_target! harness, when a campaign finds nothing or reports crashes that will not reproduce, or when the target API needs structured rather than raw input.",
       "keywords": [
@@ -1413,11 +1413,11 @@
         "covers"
       ],
       "lines": 613,
-      "overridden": null
+      "overridden": "global"
     },
     {
       "id": "helm-chart-scaffolding",
-      "source": "global",
+      "source": "project",
       "hot": false,
       "description": "Design, organize, and manage Helm charts for templating and packaging Kubernetes applications with reusable configurations. Use when creating Helm charts, packaging Kubernetes applications, or implementing templated deployments.",
       "keywords": [
@@ -1431,11 +1431,11 @@
         "templating"
       ],
       "lines": 69,
-      "overridden": null
+      "overridden": "global"
     },
     {
       "id": "iconography-and-imagery",
-      "source": "global",
+      "source": "project",
       "hot": false,
       "description": "Reference-grade guide to building and shipping icon systems (grids, optical sizing, variable axes, SVG delivery) and imagery (aspect ratios, art direction, modern formats, performance) with copy-pasteable code, exact numbers, and cross-device rules.",
       "keywords": [
@@ -1449,11 +1449,11 @@
         "shipping"
       ],
       "lines": 242,
-      "overridden": null
+      "overridden": "global"
     },
     {
       "id": "impeccable",
-      "source": "global",
+      "source": "project",
       "hot": true,
       "description": "Use when the user wants to design, redesign, shape, critique, audit, polish, clarify, distill, harden, optimize, adapt, animate, colorize, extract, or otherwise improve a frontend interface. Covers websites, landing pages, dashboards, product UI, app shells, components, forms, settings, onboarding, and empty states. Handles UX review, visual hierarchy, information architecture, cognitive load, accessibility, performance, responsive behavior, theming, anti-patterns, typography, fonts, spacing, layout, alignment, color, motion, micro-interactions, UX copy, error states, edge cases, i18n, and reusable design systems or tokens. Also use for bland designs that need to become bolder or more delightful, loud designs that should become quieter, live browser iteration on UI elements, or ambitious visual effects that should feel technically extraordinary. Not for backend-only or non-UI tasks.",
       "keywords": [
@@ -1467,11 +1467,11 @@
         "critique"
       ],
       "lines": 87,
-      "overridden": null
+      "overridden": "global"
     },
     {
       "id": "inclusive-design",
-      "source": "global",
+      "source": "project",
       "hot": false,
       "description": "The inclusive-design philosophy and practice — Microsoft's 3 principles + Persona Spectrum, the social model of disability as mismatch, and deep cognitive, neurodivergent, sensory, cultural, economic, and age inclusion patterns that go beyond WCAG conformance.",
       "keywords": [
@@ -1485,11 +1485,11 @@
         "spectrum"
       ],
       "lines": 177,
-      "overridden": null
+      "overridden": "global"
     },
     {
       "id": "information-architecture-and-navigation",
-      "source": "global",
+      "source": "project",
       "hot": false,
       "description": "Reference-grade guide to information architecture and navigation — organization/labeling/navigation/search systems, organization schemes, taxonomy and hierarchy depth-vs-breadth, every nav pattern per device, wayfinding, search UX, and the research methods (card sorting, tree testing, first-click) that prove findability.",
       "keywords": [
@@ -1503,11 +1503,11 @@
         "organization"
       ],
       "lines": 241,
-      "overridden": null
+      "overridden": "global"
     },
     {
       "id": "interaction-and-motion",
-      "source": "global",
+      "source": "project",
       "hot": false,
       "description": "Reference-grade motion and micro-interaction system — duration scales, easing tokens, choreography, modern CSS (view transitions, scroll-driven, @starting-style, linear()), performance, and accessibility for any screen on any platform.",
       "keywords": [
@@ -1521,11 +1521,11 @@
         "duration"
       ],
       "lines": 224,
-      "overridden": null
+      "overridden": "global"
     },
     {
       "id": "interface-review",
-      "source": "global",
+      "source": "project",
       "hot": true,
       "description": "Reviews a branch, pull request or uncommitted change for the interface problems it introduced or regressed, across accessibility, layout, writing, typography, color and UI.",
       "keywords": [
@@ -1539,11 +1539,11 @@
         "change"
       ],
       "lines": 152,
-      "overridden": null
+      "overridden": "global"
     },
     {
       "id": "internationalization-and-localization",
-      "source": "global",
+      "source": "project",
       "hot": false,
       "description": "Reference-grade guide to building locale-ready UIs — i18n vs l10n vs translation, text expansion, RTL/bidi with CSS logical properties and :dir(), locale formatting via Intl, ICU MessageFormat pluralization, script typography, cultural imagery, and a real translation workflow with pseudolocalization.",
       "keywords": [
@@ -1557,11 +1557,11 @@
         "locale"
       ],
       "lines": 327,
-      "overridden": null
+      "overridden": "global"
     },
     {
       "id": "ios",
-      "source": "global",
+      "source": "project",
       "hot": false,
       "description": "Use when the user invokes /ios, or when starting ANY native iOS/SwiftUI screen, component, flow, or review and it's unclear which ios-* skills apply. Dispatcher that routes to the right 2-4 companion ios-* reference skills instead of loading the whole family or designing from memory.",
       "keywords": [
@@ -1575,11 +1575,11 @@
         "screen"
       ],
       "lines": 40,
-      "overridden": null
+      "overridden": "global"
     },
     {
       "id": "ios-color-and-materials",
-      "source": "global",
+      "source": "project",
       "hot": false,
       "description": "iOS semantic system colors, dark mode, and material levels per Apple HIG (current iOS 26). Covers why you never hard-code system color values, the system vs grouped background sets, label/separator colors, dark mode base-vs-elevated + the 4.5:1/7:1 contrast floors, the four standard material levels + vibrancy, Liquid Glass color rules, and Display P3. Use when choosing colors, backgrounds, or materials for any native iOS screen.",
       "keywords": [
@@ -1593,11 +1593,11 @@
         "dark"
       ],
       "lines": 62,
-      "overridden": null
+      "overridden": "global"
     },
     {
       "id": "ios-components",
-      "source": "global",
+      "source": "project",
       "hot": false,
       "description": "Apple HIG component rules for native iOS 26 — bars (tab/nav/toolbar/search incl. floating + concentric corners), buttons (44pt hit region, prominence, roles, no destructive-primary), menus/pull-down/pop-up, toggles/pickers/segmented/sliders/steppers/text fields, lists & tables, sheets + detents, alerts vs action sheets vs popovers, modality, progress/gauges, with the SwiftUI mapping. Use when choosing or reviewing any iOS control or presentation.",
       "keywords": [
@@ -1611,11 +1611,11 @@
         "toolbar"
       ],
       "lines": 59,
-      "overridden": null
+      "overridden": "global"
     },
     {
       "id": "ios-flows-and-patterns",
-      "source": "global",
+      "source": "project",
       "hot": false,
       "description": "Apple HIG behavioral patterns for native iOS — onboarding, launch screens, loading, modality decisions, feedback, settings, search, privacy & permission flows (purpose strings, priming screens, ATT), account deletion, in-app purchase, ratings, notifications — plus motion/reduce-motion, haptics (UIFeedbackGenerator patterns), and the accessibility floors (contrast AA, touch targets, Dynamic Type 200%, VoiceOver). Use when designing any flow, permission prompt, empty/loading state, or feedback moment on iOS.",
       "keywords": [
@@ -1629,11 +1629,11 @@
         "onboarding"
       ],
       "lines": 58,
-      "overridden": null
+      "overridden": "global"
     },
     {
       "id": "ios-layout-and-grid",
-      "source": "global",
+      "source": "project",
       "hot": false,
       "description": "iOS layout & spacing for iPhone — the 8pt grid convention + 4pt sub-grid, real Apple layout numbers (16/20pt system margins, safe-area insets, 44/49/50pt bar heights), the 44pt touch target, building dense low-scroll layouts with LazyVGrid/Grid + GridItem (2-up/3-up rules), SwiftUI's adaptive default spacing, and the iOS 26 floating-chrome layout model. Use when laying out any iPhone screen, choosing margins/gutters, or building a grid.",
       "keywords": [
@@ -1647,11 +1647,11 @@
         "real"
       ],
       "lines": 56,
-      "overridden": null
+      "overridden": "global"
     },
     {
       "id": "ios-liquid-glass-swiftui",
-      "source": "global",
+      "source": "project",
       "hot": false,
       "description": "iOS 26 Liquid Glass design language + the SwiftUI APIs that implement it, sourced from Apple's WWDC25 sessions 219/323 and developer.apple.com. Covers the functional-layer-over-content mental model, regular vs clear variants, glass-on-glass/over-tint don'ts, the floating tab bar, scroll edge effects, concentric corners, accessibility behavior, and a verified-vs-community API table. Use when building or reviewing any iOS 26 native screen's chrome, materials, or glass effects.",
       "keywords": [
@@ -1665,11 +1665,11 @@
         "that"
       ],
       "lines": 119,
-      "overridden": null
+      "overridden": "global"
     },
     {
       "id": "ios-sf-symbols-and-icons",
-      "source": "global",
+      "source": "project",
       "hot": false,
       "description": "SF Symbols usage (weights, scales, the four rendering modes, fill-vs-outline variants, animations, SF Symbols 7 gradients/Draw, accessibility labels, version-gating) and iOS 26 app icons (layered design, Icon Composer, square-unmasked layers, the six appearances, specs) per Apple HIG. Use when picking icons, choosing rendering modes, or producing an app icon for a native iOS app.",
       "keywords": [
@@ -1683,11 +1683,11 @@
         "four"
       ],
       "lines": 51,
-      "overridden": null
+      "overridden": "global"
     },
     {
       "id": "ios-typography",
-      "source": "global",
+      "source": "project",
       "hot": false,
       "description": "iOS typography applied — the SF family system (SF Pro / Pro Rounded / Mono / New York), Dynamic Type built-in text styles + their point sizes, weights to prefer/avoid, type pairing and label-vs-value hierarchy for a minimal health/nutrition app, tabular/monospaced digits for data, and the concrete SwiftUI font APIs. Use when setting any type on a native iOS screen or building a type scale.",
       "keywords": [
@@ -1701,11 +1701,11 @@
         "york"
       ],
       "lines": 76,
-      "overridden": null
+      "overridden": "global"
     },
     {
       "id": "ios26-hig-patterns",
-      "source": "global",
+      "source": "project",
       "hot": false,
       "description": "iPhone-specific Apple Human Interface Guidelines for iOS 26 (Liquid Glass) — the floating tab bar and how content scrolls under it, navigation/sheets/presentation detents, SF Symbols + Dynamic Type + safe areas, control styles, 44pt touch targets, and the concrete SwiftUI modifiers that implement each. Use when building or reviewing any native iPhone screen; pairs with platform-conventions (cross-platform) and components-and-states.",
       "keywords": [
@@ -1719,11 +1719,11 @@
         "interface"
       ],
       "lines": 84,
-      "overridden": null
+      "overridden": "global"
     },
     {
       "id": "javascript-testing-patterns",
-      "source": "global",
+      "source": "project",
       "hot": false,
       "description": "Implement comprehensive testing strategies using Jest, Vitest, and Testing Library for unit tests, integration tests, and end-to-end testing with mocking, fixtures, and test-driven development. Use when writing JavaScript/TypeScript tests, setting up test infrastructure, or implementing TDD/BDD workflows.",
       "keywords": [
@@ -1737,11 +1737,11 @@
         "jest"
       ],
       "lines": 538,
-      "overridden": null
+      "overridden": "global"
     },
     {
       "id": "k8s-manifest-generator",
-      "source": "global",
+      "source": "project",
       "hot": false,
       "description": "Create production-ready Kubernetes manifests for Deployments, Services, ConfigMaps, and Secrets following best practices and security standards. Use when generating Kubernetes YAML manifests, creating K8s resources, or implementing production-grade Kubernetes configurations.",
       "keywords": [
@@ -1755,11 +1755,11 @@
         "manifests"
       ],
       "lines": 78,
-      "overridden": null
+      "overridden": "global"
     },
     {
       "id": "k8s-security-policies",
-      "source": "global",
+      "source": "project",
       "hot": false,
       "description": "Implement Kubernetes security policies including NetworkPolicy, PodSecurityPolicy, and RBAC for production-grade security. Use when securing Kubernetes clusters, implementing network isolation, or enforcing pod security standards.",
       "keywords": [
@@ -1773,11 +1773,11 @@
         "podsecuritypolicy"
       ],
       "lines": 348,
-      "overridden": null
+      "overridden": "global"
     },
     {
       "id": "laws-of-ux-and-psychology",
-      "source": "global",
+      "source": "project",
       "hot": false,
       "description": "Reference-grade catalogue of the attributed cognitive laws behind interface design (Fitts, Hick-Hyman, Miller, Jakob, Tesler, Postel, Doherty, Peak-End, and the behavioral-econ cluster) — each with origin, a concrete UI application, the design rule, and the pitfall.",
       "keywords": [
@@ -1791,11 +1791,11 @@
         "cognitive"
       ],
       "lines": 282,
-      "overridden": null
+      "overridden": "global"
     },
     {
       "id": "layout-and-composition",
-      "source": "global",
+      "source": "project",
       "hot": false,
       "description": "Reference-grade system for composing any screen — visual hierarchy, Gestalt grouping, alignment, whitespace, scanning patterns, and modern intrinsic CSS layout (Grid/Flexbox/subgrid/container queries/:has) with copy-pasteable recipes.",
       "keywords": [
@@ -1809,11 +1809,11 @@
         "screen"
       ],
       "lines": 256,
-      "overridden": null
+      "overridden": "global"
     },
     {
       "id": "macro-food-app-ui",
-      "source": "global",
+      "source": "project",
       "hot": false,
       "description": "UI/UX patterns for modern macro + food-tracking apps (MyFitnessPal, Cal AI, Lose It, MacroFactor, Lifesum) — the calorie/macro dashboard, the log→remaining loop, fast multi-modal entry (search/barcode/photo/voice), the food diary, weight trend, daily score, and the anti-patterns that make trackers feel like data entry chores. Use when designing or reviewing a nutrition/calorie app's screens; pairs with dense-no-scroll-layout, ios26-hig-patterns, data-visualization.",
       "keywords": [
@@ -1827,11 +1827,11 @@
         "myfitnesspal"
       ],
       "lines": 83,
-      "overridden": null
+      "overridden": "global"
     },
     {
       "id": "material-3",
-      "source": "global",
+      "source": "project",
       "hot": false,
       "description": "Implement Google's Material Design 3 (Material You) UI system. Primary: Jetpack Compose Material3 (MaterialTheme, components, adaptive layout). Also Flutter and limited web (@material/web, maintenance mode). Covers tokens, 30+ components, layout, theming, M3 Expressive (platform matrix), and accessibility. Use when: \"material design\", \"MD3\", \"material you\", \"Jetpack Compose\", \"MaterialTheme\", \"material component\", \"md3 button\".",
       "keywords": [
@@ -1845,11 +1845,11 @@
         "compose"
       ],
       "lines": 668,
-      "overridden": null
+      "overridden": "global"
     },
     {
       "id": "memory-safety-patterns",
-      "source": "global",
+      "source": "project",
       "hot": false,
       "description": "Implement memory-safe programming with RAII, ownership, smart pointers, and resource management across Rust, C++, and C. Use when writing safe systems code, managing resources, or preventing memory bugs.",
       "keywords": [
@@ -1863,11 +1863,11 @@
         "raii"
       ],
       "lines": 77,
-      "overridden": null
+      "overridden": "global"
     },
     {
       "id": "minimalist-skill",
-      "source": "global",
+      "source": "project",
       "hot": false,
       "description": "Classic style skill, opt-in: it runs only when called by name. Editorial product UI with a warm monochrome palette, typographic contrast and flat bento grids.",
       "keywords": [
@@ -1881,11 +1881,11 @@
         "called"
       ],
       "lines": 88,
-      "overridden": null
+      "overridden": "global"
     },
     {
       "id": "modern-javascript-patterns",
-      "source": "global",
+      "source": "project",
       "hot": false,
       "description": "Master ES6+ features including async/await, destructuring, spread operators, arrow functions, promises, modules, iterators, generators, and functional programming patterns for writing clean, efficient JavaScript code. Use when refactoring legacy code, implementing modern patterns, or optimizing JavaScript applications.",
       "keywords": [
@@ -1899,11 +1899,11 @@
         "async"
       ],
       "lines": 44,
-      "overridden": null
+      "overridden": "global"
     },
     {
       "id": "monorepo-management",
-      "source": "global",
+      "source": "project",
       "hot": true,
       "description": "Master monorepo management with Turborepo, Nx, and pnpm workspaces to build efficient, scalable multi-package repositories with optimized builds and dependency management. Use when setting up monorepos, optimizing builds, or managing shared dependencies.",
       "keywords": [
@@ -1917,11 +1917,11 @@
         "build"
       ],
       "lines": 219,
-      "overridden": null
+      "overridden": "global"
     },
     {
       "id": "msw",
-      "source": "global",
+      "source": "project",
       "hot": false,
       "description": "MSW (Mock Service Worker) best practices for API mocking in tests (formerly test-msw). This skill should be used when setting up MSW, writing request handlers, or mocking HTTP APIs. This skill does NOT cover general testing patterns (use test-vitest or test-tdd skills) or test methodology.",
       "keywords": [
@@ -1935,11 +1935,11 @@
         "tests"
       ],
       "lines": 121,
-      "overridden": null
+      "overridden": "global"
     },
     {
       "id": "multimodal-voice-and-haptics",
-      "source": "global",
+      "source": "project",
       "hot": false,
       "description": "Reference-grade guide to designing beyond the screen — combining touch/visual/voice/audio/haptic modalities, conversational and LLM-agent UX, voice UI principles and error recovery, sound design, iOS/Android haptics, and TV/automotive/wearable/AR contexts.",
       "keywords": [
@@ -1953,11 +1953,11 @@
         "designing"
       ],
       "lines": 226,
-      "overridden": null
+      "overridden": "global"
     },
     {
       "id": "music-analyzer",
-      "source": "global",
+      "source": "project",
       "hot": true,
       "description": "Analyzes music files (MP3, WAV, FLAC, M4A, OGG) and produces a detailed music and lyrics analysis including genre recognition, mood analysis, BPM, key, instrument detection and lyrics interpretation. Uses HDEMUCS for vocal separation, Whisper for lyrics transcription and librosa for audio feature extraction with CUDA GPU acceleration. Use this skill when the user wants to analyze a music file, examine a song, transcribe lyrics, or asks questions like \"analyze this song\", \"what genre is this\", \"transcribe the lyrics\", \"what mood does this song have\", \"what instruments do I hear\", \"how fast is the song\", \"what key is it in\", \"music analysis\", \"song analysis\", \"audio analysis\", \"detect BPM\", \"determine key\", \"detect genre\", \"analyze song\".",
       "keywords": [
@@ -1971,11 +1971,11 @@
         "lyrics"
       ],
       "lines": 247,
-      "overridden": null
+      "overridden": "global"
     },
     {
       "id": "music-library-organizer",
-      "source": "global",
+      "source": "project",
       "hot": true,
       "description": "Import, tag, and organize music files using beets; enforce consistent folder structure, metadata, and MusicBrainz tagging across the local music library.",
       "keywords": [
@@ -1989,11 +1989,11 @@
         "beets"
       ],
       "lines": 92,
-      "overridden": null
+      "overridden": "global"
     },
     {
       "id": "nextjs",
-      "source": "global",
+      "source": "project",
       "hot": false,
       "description": "Next.js 16 App Router performance optimization guidelines (formerly nextjs-16-app-router). This skill should be used when writing Next.js 16 code, configuring caching, implementing Server Components in Next.js, setting up App Router routing, or configuring next.config.js. This skill does NOT cover generic React 19 patterns (use react-19 skill) or non-Next.js server rendering.",
       "keywords": [
@@ -2007,11 +2007,11 @@
         "this"
       ],
       "lines": 116,
-      "overridden": null
+      "overridden": "global"
     },
     {
       "id": "nextjs-developer",
-      "source": "global",
+      "source": "project",
       "hot": false,
       "description": "Use when building Next.js 14+ applications with App Router, server components, or server actions. Invoke to configure route handlers, implement middleware, set up API routes, add streaming SSR, write generateMetadata for SEO, scaffold loading.tsx/error.tsx boundaries, or deploy to Vercel. Triggers on: Next.js, Next.js 14, App Router, RSC, use server, Server Components, Server Actions, React Server Components, generateMetadata, loading.tsx, Next.js deployment, Vercel, Next.js performance.",
       "keywords": [
@@ -2025,11 +2025,11 @@
         "router"
       ],
       "lines": 149,
-      "overridden": null
+      "overridden": "global"
     },
     {
       "id": "nodejs-backend-patterns",
-      "source": "global",
+      "source": "project",
       "hot": true,
       "description": "Build production-ready Node.js backend services with Express/Fastify, implementing middleware patterns, error handling, authentication, database integration, and API design best practices. Use when creating Node.js servers, REST APIs, GraphQL backends, or microservices architectures.",
       "keywords": [
@@ -2043,11 +2043,11 @@
         "services"
       ],
       "lines": 46,
-      "overridden": null
+      "overridden": "global"
     },
     {
       "id": "nuqs",
-      "source": "global",
+      "source": "project",
       "hot": false,
       "description": "nuqs (type-safe URL query state) best practices for Next.js applications. This skill should be used when writing, reviewing, or refactoring code that uses nuqs for URL state management. Triggers on tasks involving useQueryState, useQueryStates, search params, URL state, query parameters, nuqs parsers, or Next.js routing with state.",
       "keywords": [
@@ -2061,11 +2061,11 @@
         "next"
       ],
       "lines": 116,
-      "overridden": null
+      "overridden": "global"
     },
     {
       "id": "onboarding-and-empty-states",
-      "source": "global",
+      "source": "project",
       "hot": true,
       "description": "Reference-grade guide to designing every state a view can be in — ideal, empty (first-use vs cleared vs no-results), loading, partial, error, offline, success, blocked, and zero-results — plus first-run onboarding that drives activation to the aha moment through show-don't-tell, just-in-time guidance, seed data, progress checklists, and contextual permission priming.",
       "keywords": [
@@ -2079,11 +2079,11 @@
         "designing"
       ],
       "lines": 240,
-      "overridden": null
+      "overridden": "global"
     },
     {
       "id": "performance-and-perceived-speed",
-      "source": "global",
+      "source": "project",
       "hot": true,
       "description": "Reference-grade guide to performance as a UX concern — Core Web Vitals (LCP/INP/CLS with concrete budgets and fixes), perceived-performance technique (optimistic UI, skeletons vs spinners, instant feedback, prefetch on intent), loading-state and image/font design, and field-vs-lab measurement at p75.",
       "keywords": [
@@ -2097,11 +2097,11 @@
         "concern"
       ],
       "lines": 231,
-      "overridden": null
+      "overridden": "global"
     },
     {
       "id": "platform-conventions",
-      "source": "global",
+      "source": "project",
       "hot": false,
       "description": "Reference guide to native UI conventions across iOS (Apple HIG), Android (Material 3), macOS, Windows 11 Fluent, and web — with concrete numbers, comparison tables, and when to adapt vs. when to ship a custom cross-platform brand system.",
       "keywords": [
@@ -2115,11 +2115,11 @@
         "android"
       ],
       "lines": 232,
-      "overridden": null
+      "overridden": "global"
     },
     {
       "id": "playwright",
-      "source": "global",
+      "source": "project",
       "hot": true,
       "description": "Playwright testing best practices for Next.js applications (formerly test-playwright). This skill should be used when writing, reviewing, or debugging E2E tests with Playwright. Triggers on tasks involving test selectors, flaky tests, authentication state, API mocking, hydration testing, parallel execution, CI configuration, or debugging test failures.",
       "keywords": [
@@ -2133,11 +2133,11 @@
         "test"
       ],
       "lines": 118,
-      "overridden": null
+      "overridden": "global"
     },
     {
       "id": "postgres-best-practices",
-      "source": "global",
+      "source": "project",
       "hot": false,
       "description": "Best practices and guidelines for working with Postgres. Covers schema design, indexing strategies, query optimization, migrations, and common pitfalls. Use when writing SQL, designing database schemas, optimizing queries, or setting up a Postgres database.",
       "keywords": [
@@ -2151,11 +2151,11 @@
         "schema"
       ],
       "lines": 43,
-      "overridden": null
+      "overridden": "global"
     },
     {
       "id": "prisma-client-api",
-      "source": "global",
+      "source": "project",
       "hot": false,
       "description": "Prisma Client API reference covering model queries, filters, operators, and client methods. Use when writing database queries, using CRUD operations, filtering data, or configuring Prisma Client. Triggers on \"prisma query\", \"findMany\", \"create\", \"update\", \"delete\", \"$transaction\".",
       "keywords": [
@@ -2169,11 +2169,11 @@
         "filters"
       ],
       "lines": 217,
-      "overridden": null
+      "overridden": "global"
     },
     {
       "id": "prisma-database-setup",
-      "source": "global",
+      "source": "project",
       "hot": false,
       "description": "Deprecated compatibility name for prisma-orm-setup. Use only when a user or existing integration explicitly invokes prisma-database-setup; otherwise select prisma-orm-setup.",
       "keywords": [
@@ -2187,11 +2187,11 @@
         "when"
       ],
       "lines": 15,
-      "overridden": null
+      "overridden": "global"
     },
     {
       "id": "prisma-orm-setup",
-      "source": "global",
+      "source": "project",
       "hot": false,
       "description": "Set up Prisma ORM in an application, connect its database, or troubleshoot the connection of an existing Prisma 6, 7, or 8 app. Defaults new applications to Prisma ORM 8 and loads the package-owned prisma-8 skill; keeps existing Prisma 6/7 apps on their version with provider references for PostgreSQL, MySQL, SQLite, SQL Server, CockroachDB, MongoDB, and Prisma Postgres.",
       "keywords": [
@@ -2205,11 +2205,11 @@
         "connection"
       ],
       "lines": 83,
-      "overridden": null
+      "overridden": "global"
     },
     {
       "id": "python-anti-patterns",
-      "source": "global",
+      "source": "project",
       "hot": false,
       "description": "Use this skill when reviewing Python code for common anti-patterns to avoid. Use as a checklist when reviewing code, before finalizing implementations, or when debugging issues that might stem from known bad practices.",
       "keywords": [
@@ -2223,11 +2223,11 @@
         "code"
       ],
       "lines": 350,
-      "overridden": null
+      "overridden": "global"
     },
     {
       "id": "python-background-jobs",
-      "source": "global",
+      "source": "project",
       "hot": false,
       "description": "Python background job patterns including task queues, workers, and event-driven architecture. Use when implementing async task processing, job queues, long-running operations, or decoupling work from request/response cycles.",
       "keywords": [
@@ -2241,11 +2241,11 @@
         "workers"
       ],
       "lines": 242,
-      "overridden": null
+      "overridden": "global"
     },
     {
       "id": "python-code-style",
-      "source": "global",
+      "source": "project",
       "hot": true,
       "description": "Python code style, linting, formatting, naming conventions, and documentation standards. Use when writing new code, reviewing style, configuring linters, writing docstrings, or establishing project standards.",
       "keywords": [
@@ -2259,11 +2259,11 @@
         "documentation"
       ],
       "lines": 361,
-      "overridden": null
+      "overridden": "global"
     },
     {
       "id": "python-configuration",
-      "source": "global",
+      "source": "project",
       "hot": false,
       "description": "Python configuration management via environment variables and typed settings. Use when externalizing config, setting up pydantic-settings, managing secrets, or implementing environment-specific behavior.",
       "keywords": [
@@ -2277,11 +2277,11 @@
         "when"
       ],
       "lines": 212,
-      "overridden": null
+      "overridden": "global"
     },
     {
       "id": "python-design-patterns",
-      "source": "global",
+      "source": "project",
       "hot": false,
       "description": "Python design patterns including KISS, Separation of Concerns, Single Responsibility, and composition over inheritance. Use this skill when designing a new service or component from scratch and choosing how to layer responsibilities, when refactoring a God class or monolithic function that has grown too large, when deciding whether to add a new abstraction or live with duplication, when evaluating a pull request for structural issues like tight coupling or leaking internal types, when choosing between inheritance and composition for a new class hierarchy, or when a codebase is becoming hard to test because of entangled I/O and business logic.",
       "keywords": [
@@ -2295,11 +2295,11 @@
         "single"
       ],
       "lines": 86,
-      "overridden": null
+      "overridden": "global"
     },
     {
       "id": "python-error-handling",
-      "source": "global",
+      "source": "project",
       "hot": false,
       "description": "Python error handling patterns including input validation, exception hierarchies, and partial failure handling. Use when implementing validation logic, designing exception strategies, handling batch processing failures, or building robust APIs.",
       "keywords": [
@@ -2313,11 +2313,11 @@
         "exception"
       ],
       "lines": 194,
-      "overridden": null
+      "overridden": "global"
     },
     {
       "id": "python-observability",
-      "source": "global",
+      "source": "project",
       "hot": false,
       "description": "Python observability patterns including structured logging, metrics, and distributed tracing. Use when adding logging, implementing metrics collection, setting up tracing, or debugging production systems.",
       "keywords": [
@@ -2331,11 +2331,11 @@
         "distributed"
       ],
       "lines": 230,
-      "overridden": null
+      "overridden": "global"
     },
     {
       "id": "python-packaging",
-      "source": "global",
+      "source": "project",
       "hot": false,
       "description": "Create distributable Python packages with proper project structure, setup.py/pyproject.toml, and publishing to PyPI. Use when packaging Python libraries, creating CLI tools, or distributing Python code.",
       "keywords": [
@@ -2349,11 +2349,11 @@
         "project"
       ],
       "lines": 167,
-      "overridden": null
+      "overridden": "global"
     },
     {
       "id": "python-performance-optimization",
-      "source": "global",
+      "source": "project",
       "hot": false,
       "description": "Profile and optimize Python code using cProfile, memory profilers, and performance best practices. Use when debugging slow Python code, optimizing bottlenecks, or improving application performance.",
       "keywords": [
@@ -2367,11 +2367,11 @@
         "cprofile"
       ],
       "lines": 101,
-      "overridden": null
+      "overridden": "global"
     },
     {
       "id": "python-project-structure",
-      "source": "global",
+      "source": "project",
       "hot": false,
       "description": "Python project organization, module architecture, and public API design. Use when setting up new projects, organizing modules, defining public interfaces with __all__, or planning directory layouts.",
       "keywords": [
@@ -2385,11 +2385,11 @@
         "design"
       ],
       "lines": 253,
-      "overridden": null
+      "overridden": "global"
     },
     {
       "id": "python-resilience",
-      "source": "global",
+      "source": "project",
       "hot": false,
       "description": "Python resilience patterns including automatic retries, exponential backoff, timeouts, and fault-tolerant decorators. Use when adding retry logic, implementing timeouts, building fault-tolerant services, or handling transient failures.",
       "keywords": [
@@ -2403,11 +2403,11 @@
         "backoff"
       ],
       "lines": 196,
-      "overridden": null
+      "overridden": "global"
     },
     {
       "id": "python-resource-management",
-      "source": "global",
+      "source": "project",
       "hot": false,
       "description": "Python resource management with context managers, cleanup patterns, and streaming. Use when managing connections, file handles, implementing cleanup logic, or building streaming responses with accumulated state.",
       "keywords": [
@@ -2421,11 +2421,11 @@
         "patterns"
       ],
       "lines": 244,
-      "overridden": null
+      "overridden": "global"
     },
     {
       "id": "python-testing-patterns",
-      "source": "global",
+      "source": "project",
       "hot": false,
       "description": "Implement comprehensive testing strategies with pytest, fixtures, mocking, and test-driven development. Use when writing Python tests, setting up test suites, or implementing testing best practices.",
       "keywords": [
@@ -2439,11 +2439,11 @@
         "pytest"
       ],
       "lines": 279,
-      "overridden": null
+      "overridden": "global"
     },
     {
       "id": "python-type-safety",
-      "source": "global",
+      "source": "project",
       "hot": false,
       "description": "Python type safety with type hints, generics, protocols, and strict type checking. Use when adding type annotations, implementing generic classes, defining structural interfaces, or configuring mypy/pyright.",
       "keywords": [
@@ -2457,11 +2457,11 @@
         "strict"
       ],
       "lines": 201,
-      "overridden": null
+      "overridden": "global"
     },
     {
       "id": "react",
-      "source": "global",
+      "source": "project",
       "hot": false,
       "description": "React renderer for json-render that turns JSON specs into React components. Use when working with @json-render/react, building React UIs from JSON, creating component catalogs, or rendering AI-generated specs.",
       "keywords": [
@@ -2475,11 +2475,11 @@
         "into"
       ],
       "lines": 299,
-      "overridden": null
+      "overridden": "global"
     },
     {
       "id": "react-best-practices",
-      "source": "global",
+      "source": "project",
       "hot": true,
       "description": "React 19 performance optimization guidelines for concurrent rendering, Server Components, actions, hooks, and memoization (formerly react-19). This skill should be used when writing React 19 components, using concurrent features, or optimizing re-renders. This skill does NOT cover Next.js-specific features like App Router, next.config.js, or Next.js caching (use nextjs-16-app-router skill). For client-side form validation with React Hook Form, use react-hook-form skill.",
       "keywords": [
@@ -2493,11 +2493,11 @@
         "rendering"
       ],
       "lines": 74,
-      "overridden": null
+      "overridden": "global"
     },
     {
       "id": "react-hook-form",
-      "source": "global",
+      "source": "project",
       "hot": true,
       "description": "React Hook Form performance optimization for client-side form validation using useForm, useWatch, useController, and useFieldArray. This skill should be used when building client-side controlled forms with React Hook Form library. This skill does NOT cover React 19 Server Actions, useActionState, or server-side form handling (use react-19 skill for those).",
       "keywords": [
@@ -2511,11 +2511,11 @@
         "validation"
       ],
       "lines": 117,
-      "overridden": null
+      "overridden": "global"
     },
     {
       "id": "rekordbox",
-      "source": "global",
+      "source": "project",
       "hot": true,
       "description": "This skill should be used when the user asks to \"check rekordbox tracks\", \"find missing BPM\", \"validate USB export\", \"list tracks on USB\", \"find unanalyzed tracks\", \"check rekordbox library\", \"export playlist data\", or mentions Rekordbox, pyrekordbox, or DJ library management.",
       "keywords": [
@@ -2529,11 +2529,11 @@
         "asks"
       ],
       "lines": 157,
-      "overridden": null
+      "overridden": "global"
     },
     {
       "id": "responsive-and-multi-device",
-      "source": "global",
+      "source": "project",
       "hot": true,
       "description": "Reference-grade playbook for responsive and adaptive design across every screen class — phone, tablet, laptop, desktop, TV, watch, foldable — using mobile-first breakpoints, fluid clamp() type, container queries, logical properties, and dvh/safe-area viewport handling.",
       "keywords": [
@@ -2547,11 +2547,11 @@
         "adaptive"
       ],
       "lines": 214,
-      "overridden": null
+      "overridden": "global"
     },
     {
       "id": "rust-async-patterns",
-      "source": "global",
+      "source": "project",
       "hot": true,
       "description": "Master Rust async programming with Tokio, async traits, error handling, and concurrent patterns. Use when building async Rust applications, implementing concurrent systems, or debugging async code.",
       "keywords": [
@@ -2565,11 +2565,11 @@
         "traits"
       ],
       "lines": 96,
-      "overridden": null
+      "overridden": "global"
     },
     {
       "id": "rust-best-practices",
-      "source": "global",
+      "source": "project",
       "hot": true,
       "description": "Guide for writing idiomatic Rust code based on Apollo GraphQL's best practices handbook. Use this skill when: (1) writing new Rust code or functions, (2) reviewing or refactoring existing Rust code, (3) deciding between borrowing vs cloning or ownership patterns, (4) implementing error handling with Result types, (5) optimizing Rust code for performance, (6) writing tests or documentation for Rust projects.",
       "keywords": [
@@ -2583,11 +2583,11 @@
         "based"
       ],
       "lines": 95,
-      "overridden": null
+      "overridden": "global"
     },
     {
       "id": "rust-call-graph",
-      "source": "global",
+      "source": "project",
       "hot": true,
       "description": "Visualize Rust function call graphs using LSP. Triggers on: /call-graph, call hierarchy, who calls, what calls, 调用图, 调用关系, 谁调用了, 调用了谁",
       "keywords": [
@@ -2601,11 +2601,11 @@
         "triggers"
       ],
       "lines": 207,
-      "overridden": null
+      "overridden": "global"
     },
     {
       "id": "rust-code-navigator",
-      "source": "global",
+      "source": "project",
       "hot": true,
       "description": "Navigate Rust code using LSP. Triggers on: /navigate, go to definition, find references, where is defined, 跳转定义, 查找引用, 定义在哪, 谁用了这个",
       "keywords": [
@@ -2619,11 +2619,11 @@
         "find"
       ],
       "lines": 160,
-      "overridden": null
+      "overridden": "global"
     },
     {
       "id": "rust-deps-visualizer",
-      "source": "global",
+      "source": "project",
       "hot": true,
       "description": "Visualize Rust project dependencies as ASCII art. Triggers on: /deps-viz, dependency graph, show dependencies, visualize deps, 依赖图, 依赖可视化, 显示依赖",
       "keywords": [
@@ -2637,11 +2637,11 @@
         "triggers"
       ],
       "lines": 115,
-      "overridden": null
+      "overridden": "global"
     },
     {
       "id": "secrets-management",
-      "source": "global",
+      "source": "project",
       "hot": true,
       "description": "Implement secure secrets management for CI/CD pipelines using Vault, AWS Secrets Manager, or native platform solutions. Use when handling sensitive credentials, rotating secrets, or securing CI/CD environments.",
       "keywords": [
@@ -2655,11 +2655,11 @@
         "manager"
       ],
       "lines": 350,
-      "overridden": null
+      "overridden": "global"
     },
     {
       "id": "security-scan",
-      "source": "global",
+      "source": "project",
       "hot": false,
       "description": "Comprehensive security and compliance scanning for AWS CDK projects. Use when running security audits, checking license compliance, scanning container vulnerabilities, or running aggregated SAST/IaC/secret analysis before deployment.",
       "keywords": [
@@ -2673,11 +2673,11 @@
         "running"
       ],
       "lines": 78,
-      "overridden": null
+      "overridden": "global"
     },
     {
       "id": "shadcn",
-      "source": "global",
+      "source": "project",
       "hot": false,
       "description": "shadcn/ui component library best practices and patterns (formerly shadcn-ui). This skill should be used when writing, reviewing, or refactoring shadcn/ui components to ensure proper architecture, accessibility, and performance. Triggers on tasks involving Radix primitives, Tailwind styling, form validation with React Hook Form, data tables, theming, or component composition patterns.",
       "keywords": [
@@ -2691,11 +2691,11 @@
         "this"
       ],
       "lines": 119,
-      "overridden": null
+      "overridden": "global"
     },
     {
       "id": "soft-skill",
-      "source": "global",
+      "source": "project",
       "hot": false,
       "description": "Classic style skill, opt-in: it runs only when called by name. A calm, polished look with soft contrast, generous whitespace and spring motion.",
       "keywords": [
@@ -2709,11 +2709,11 @@
         "called"
       ],
       "lines": 100,
-      "overridden": null
+      "overridden": "global"
     },
     {
       "id": "sql-optimization-patterns",
-      "source": "global",
+      "source": "project",
       "hot": true,
       "description": "Master SQL query optimization, indexing strategies, and EXPLAIN analysis to dramatically improve database performance and eliminate slow queries. Use when debugging slow queries, designing database schemas, or optimizing application performance.",
       "keywords": [
@@ -2727,11 +2727,11 @@
         "explain"
       ],
       "lines": 215,
-      "overridden": null
+      "overridden": "global"
     },
     {
       "id": "state-machine",
-      "source": "global",
+      "source": "project",
       "hot": false,
       "description": "Renders every state of a component you choose on a throwaway page, with mock data and a switcher, so you can work on each state.",
       "keywords": [
@@ -2745,11 +2745,11 @@
         "page"
       ],
       "lines": 91,
-      "overridden": null
+      "overridden": "global"
     },
     {
       "id": "stitch-skill",
-      "source": "global",
+      "source": "project",
       "hot": false,
       "description": "Classic skill for Google Stitch, opt-in: it runs only when called by name. Writes an agent-friendly DESIGN.md with strict type, colour and layout rules.",
       "keywords": [
@@ -2763,11 +2763,11 @@
         "called"
       ],
       "lines": 186,
-      "overridden": null
+      "overridden": "global"
     },
     {
       "id": "supabase",
-      "source": "global",
+      "source": "project",
       "hot": false,
       "description": "Use when doing ANY task involving Supabase. Triggers: Supabase products (Database, Auth, Edge Functions, Realtime, Storage, Vectors, Cron, Queues); client libraries and SSR integrations (supabase-js, @supabase/ssr) in Next.js, React, SvelteKit, Astro, Remix; auth issues (login, logout, sessions, JWT, cookies, getSession, getUser, getClaims, RLS); Supabase CLI or MCP server; schema changes, migrations, declarative schemas, security audits, Postgres extensions (pg_graphql, pg_cron, pg_vector); debugging and troubleshooting errors or unexpected behavior on Supabase projects (HTTP errors, Postgres errors, RLS surprises, permission denied, schema cache issues, timeouts, Edge Function crashes, Realtime drops, Storage failures) and reading or querying logs (Logs Explorer, ClickHouse).",
       "keywords": [
@@ -2781,11 +2781,11 @@
         "database"
       ],
       "lines": 156,
-      "overridden": null
+      "overridden": "global"
     },
     {
       "id": "tailwind",
-      "source": "global",
+      "source": "project",
       "hot": true,
       "description": "Tailwind CSS v4 performance optimization and best practices guidelines (formerly tailwindcss-v4-style). This skill should be used when writing, reviewing, or refactoring Tailwind CSS v4 code to ensure optimal build performance, minimal CSS output, and correct usage of v4 features. Triggers on tasks involving Tailwind configuration, @theme directive, utility classes, responsive design, dark mode, container queries, or CSS generation optimization.",
       "keywords": [
@@ -2799,11 +2799,11 @@
         "tailwindcss"
       ],
       "lines": 119,
-      "overridden": null
+      "overridden": "global"
     },
     {
       "id": "tanstack-query",
-      "source": "global",
+      "source": "project",
       "hot": true,
       "description": "TanStack Query v5 performance optimization for data fetching, caching, mutations, and query patterns. This skill should be used when using useQuery, useMutation, queryClient, prefetch patterns, or TanStack Query caching. This skill does NOT cover generating query hooks from OpenAPI (use orval skill) or mocking API responses in tests (use test-msw skill).",
       "keywords": [
@@ -2817,11 +2817,11 @@
         "mutations"
       ],
       "lines": 124,
-      "overridden": null
+      "overridden": "global"
     },
     {
       "id": "taste-skill",
-      "source": "global",
+      "source": "project",
       "hot": false,
       "description": "tasteskill v2, the anti-slop frontend skill. Art direction for websites, distilled from a study of 247 curated gallery sites (One Page Love, Awwwards Sites of the Day). Deals researched directions (idea, composition, type, palette, photographs, section blueprints) from a library, enforces a strict no-slop house style with a real-browser inspector, and runs a look-and-fix loop on screenshots. Use this whenever you build, design, redesign, restyle, polish or review a landing page, marketing site, portfolio, product page, one-pager, hero or any public-facing web page, in any stack (HTML/CSS, React, Next.js, Vue, Svelte, Astro, Tailwind) — also when the user says a page looks generic, templated, \"AI-made\", sloppy, or asks to make it look designed, premium, award-level or less like every other site. Also for app screens: dashboards, admin and analytics views, settings, inboxes and other screens people work in, with their own run and rules.",
       "keywords": [
@@ -2835,11 +2835,11 @@
         "websites"
       ],
       "lines": 530,
-      "overridden": null
+      "overridden": "global"
     },
     {
       "id": "taste-skill-v1",
-      "source": "global",
+      "source": "project",
       "hot": false,
       "description": "The original taste-skill v1, kept for projects that depend on its exact behaviour. Opt-in: it runs only when called by name.",
       "keywords": [
@@ -2853,11 +2853,11 @@
         "exact"
       ],
       "lines": 228,
-      "overridden": null
+      "overridden": "global"
     },
     {
       "id": "taste-skill-v2-experimental",
-      "source": "global",
+      "source": "project",
       "hot": false,
       "description": "The single-file, dial-driven taste-skill that was the default before v2, kept for projects that depend on its exact behaviour. Opt-in: it runs only when called by name.",
       "keywords": [
@@ -2871,11 +2871,11 @@
         "that"
       ],
       "lines": 1230,
-      "overridden": null
+      "overridden": "global"
     },
     {
       "id": "tauri",
-      "source": "global",
+      "source": "project",
       "hot": true,
       "description": "Comprehensive index for Tauri framework development, including Rust backend, frontend integration, and full plugin ecosystem. Acts as a router to specialized sub-skills with local examples and templates.",
       "keywords": [
@@ -2889,11 +2889,11 @@
         "backend"
       ],
       "lines": 81,
-      "overridden": null
+      "overridden": "global"
     },
     {
       "id": "tauri-app-autostart",
-      "source": "global",
+      "source": "project",
       "hot": false,
       "description": "Guidance for Tauri v2 autostart setup with platform differences and rollback.",
       "keywords": [
@@ -2907,11 +2907,11 @@
         "differences"
       ],
       "lines": 70,
-      "overridden": null
+      "overridden": "global"
     },
     {
       "id": "tauri-app-barcode-scanner",
-      "source": "global",
+      "source": "project",
       "hot": false,
       "description": "Guidance for Tauri v2 barcode scanner plugin with permissions and scan lifecycle.",
       "keywords": [
@@ -2925,11 +2925,11 @@
         "permissions"
       ],
       "lines": 70,
-      "overridden": null
+      "overridden": "global"
     },
     {
       "id": "tauri-app-biometric",
-      "source": "global",
+      "source": "project",
       "hot": false,
       "description": "Guidance for Tauri v2 biometric plugin with authentication flow and fallback strategy.",
       "keywords": [
@@ -2943,11 +2943,11 @@
         "flow"
       ],
       "lines": 70,
-      "overridden": null
+      "overridden": "global"
     },
     {
       "id": "tauri-app-cli",
-      "source": "global",
+      "source": "project",
       "hot": false,
       "description": "Guidance for Tauri v2 CLI plugin with argument schema and app command routing.",
       "keywords": [
@@ -2961,11 +2961,11 @@
         "schema"
       ],
       "lines": 70,
-      "overridden": null
+      "overridden": "global"
     },
     {
       "id": "tauri-app-clipboard",
-      "source": "global",
+      "source": "project",
       "hot": false,
       "description": "Guidance for Tauri v2 clipboard plugin with safe copy, paste, and monitoring flows.",
       "keywords": [
@@ -2979,11 +2979,11 @@
         "copy"
       ],
       "lines": 70,
-      "overridden": null
+      "overridden": "global"
     },
     {
       "id": "tauri-app-creator",
-      "source": "global",
+      "source": "project",
       "hot": false,
       "description": "Guidance for creating Tauri v2 projects using official create-tauri-app workflows and minimal run verification.",
       "keywords": [
@@ -2997,11 +2997,11 @@
         "official"
       ],
       "lines": 73,
-      "overridden": null
+      "overridden": "global"
     },
     {
       "id": "tauri-app-deep-linking",
-      "source": "global",
+      "source": "project",
       "hot": false,
       "description": "Guidance for Tauri v2 deep-linking plugin with URL schemes and safe routing.",
       "keywords": [
@@ -3015,11 +3015,11 @@
         "schemes"
       ],
       "lines": 70,
-      "overridden": null
+      "overridden": "global"
     },
     {
       "id": "tauri-app-develop",
-      "source": "global",
+      "source": "project",
       "hot": true,
       "description": "Guidance for Tauri v2 daily development workflow, debugging, resources, sidecar usage, and testing strategies.",
       "keywords": [
@@ -3033,11 +3033,11 @@
         "debugging"
       ],
       "lines": 94,
-      "overridden": null
+      "overridden": "global"
     },
     {
       "id": "tauri-app-dialog",
-      "source": "global",
+      "source": "project",
       "hot": false,
       "description": "Guidance for Tauri v2 dialog plugin with native dialogs and unified API design.",
       "keywords": [
@@ -3051,11 +3051,11 @@
         "dialogs"
       ],
       "lines": 70,
-      "overridden": null
+      "overridden": "global"
     },
     {
       "id": "tauri-app-file-system",
-      "source": "global",
+      "source": "project",
       "hot": false,
       "description": "Guidance for Tauri v2 file-system plugin with scoped access and safe file operations.",
       "keywords": [
@@ -3069,11 +3069,11 @@
         "scoped"
       ],
       "lines": 70,
-      "overridden": null
+      "overridden": "global"
     },
     {
       "id": "tauri-app-frontend-selection",
-      "source": "global",
+      "source": "project",
       "hot": false,
       "description": "Guidance for selecting and configuring frontend frameworks for Tauri v2 with static export compatibility.",
       "keywords": [
@@ -3087,11 +3087,11 @@
         "frameworks"
       ],
       "lines": 76,
-      "overridden": null
+      "overridden": "global"
     },
     {
       "id": "tauri-app-geolocation",
-      "source": "global",
+      "source": "project",
       "hot": false,
       "description": "Guidance for Tauri v2 geolocation plugin with permission handling and privacy controls.",
       "keywords": [
@@ -3105,11 +3105,11 @@
         "handling"
       ],
       "lines": 70,
-      "overridden": null
+      "overridden": "global"
     },
     {
       "id": "tauri-app-global-shortcut",
-      "source": "global",
+      "source": "project",
       "hot": false,
       "description": "Guidance for Tauri v2 global-shortcut plugin with conflict handling and release.",
       "keywords": [
@@ -3123,11 +3123,11 @@
         "conflict"
       ],
       "lines": 70,
-      "overridden": null
+      "overridden": "global"
     },
     {
       "id": "tauri-app-haptics",
-      "source": "global",
+      "source": "project",
       "hot": false,
       "description": "Guidance for Tauri v2 haptics plugin with feedback patterns and graceful fallback.",
       "keywords": [
@@ -3141,11 +3141,11 @@
         "patterns"
       ],
       "lines": 70,
-      "overridden": null
+      "overridden": "global"
     },
     {
       "id": "tauri-app-http-client",
-      "source": "global",
+      "source": "project",
       "hot": false,
       "description": "Guidance for Tauri v2 http-client plugin with allowlisted requests and secure transport.",
       "keywords": [
@@ -3159,11 +3159,11 @@
         "allowlisted"
       ],
       "lines": 70,
-      "overridden": null
+      "overridden": "global"
     },
     {
       "id": "tauri-app-localhost",
-      "source": "global",
+      "source": "project",
       "hot": false,
       "description": "Guidance for Tauri v2 localhost plugin with local service access and minimal exposure.",
       "keywords": [
@@ -3177,11 +3177,11 @@
         "service"
       ],
       "lines": 70,
-      "overridden": null
+      "overridden": "global"
     },
     {
       "id": "tauri-app-logging",
-      "source": "global",
+      "source": "project",
       "hot": false,
       "description": "Guidance for Tauri v2 logging plugin with levels, filtering, and safe diagnostics.",
       "keywords": [
@@ -3195,11 +3195,11 @@
         "filtering"
       ],
       "lines": 70,
-      "overridden": null
+      "overridden": "global"
     },
     {
       "id": "tauri-app-nfc",
-      "source": "global",
+      "source": "project",
       "hot": false,
       "description": "Guidance for Tauri v2 NFC plugin with session handling and data validation.",
       "keywords": [
@@ -3213,11 +3213,11 @@
         "handling"
       ],
       "lines": 70,
-      "overridden": null
+      "overridden": "global"
     },
     {
       "id": "tauri-app-notification",
-      "source": "global",
+      "source": "project",
       "hot": false,
       "description": "Guidance for Tauri v2 notification plugin with permission flow and click handling.",
       "keywords": [
@@ -3231,11 +3231,11 @@
         "flow"
       ],
       "lines": 70,
-      "overridden": null
+      "overridden": "global"
     },
     {
       "id": "tauri-app-opener",
-      "source": "global",
+      "source": "project",
       "hot": false,
       "description": "Guidance for Tauri v2 opener plugin with safe external links and file handling.",
       "keywords": [
@@ -3249,11 +3249,11 @@
         "external"
       ],
       "lines": 70,
-      "overridden": null
+      "overridden": "global"
     },
     {
       "id": "tauri-app-os-info",
-      "source": "global",
+      "source": "project",
       "hot": false,
       "description": "Guidance for Tauri v2 os-info plugin with safe system diagnostics and reporting.",
       "keywords": [
@@ -3267,11 +3267,11 @@
         "system"
       ],
       "lines": 70,
-      "overridden": null
+      "overridden": "global"
     },
     {
       "id": "tauri-app-persisted-scope",
-      "source": "global",
+      "source": "project",
       "hot": false,
       "description": "Guidance for Tauri v2 persisted-scope plugin with expiration and revocation flows.",
       "keywords": [
@@ -3285,11 +3285,11 @@
         "expiration"
       ],
       "lines": 70,
-      "overridden": null
+      "overridden": "global"
     },
     {
       "id": "tauri-app-planning",
-      "source": "global",
+      "source": "project",
       "hot": false,
       "description": "Comprehensive project planning, requirements analysis, and architectural orchestration for Tauri 2.0 applications.",
       "keywords": [
@@ -3303,11 +3303,11 @@
         "architectural"
       ],
       "lines": 40,
-      "overridden": null
+      "overridden": "global"
     },
     {
       "id": "tauri-app-plugin-permissions",
-      "source": "global",
+      "source": "project",
       "hot": false,
       "description": "Guidance for Tauri v2 plugin permission authoring, capability generation, and platform differences.",
       "keywords": [
@@ -3321,11 +3321,11 @@
         "capability"
       ],
       "lines": 76,
-      "overridden": null
+      "overridden": "global"
     },
     {
       "id": "tauri-app-positioner",
-      "source": "global",
+      "source": "project",
       "hot": false,
       "description": "Guidance for Tauri v2 positioner plugin with multi-display alignment strategies.",
       "keywords": [
@@ -3339,11 +3339,11 @@
         "display"
       ],
       "lines": 70,
-      "overridden": null
+      "overridden": "global"
     },
     {
       "id": "tauri-app-process",
-      "source": "global",
+      "source": "project",
       "hot": false,
       "description": "Guidance for Tauri v2 process plugin with controlled process information exposure.",
       "keywords": [
@@ -3357,11 +3357,11 @@
         "information"
       ],
       "lines": 70,
-      "overridden": null
+      "overridden": "global"
     },
     {
       "id": "tauri-app-shell",
-      "source": "global",
+      "source": "project",
       "hot": false,
       "description": "Guidance for Tauri v2 shell plugin with secure command execution and open behavior.",
       "keywords": [
@@ -3375,11 +3375,11 @@
         "command"
       ],
       "lines": 70,
-      "overridden": null
+      "overridden": "global"
     },
     {
       "id": "tauri-app-sidecar-nodejs",
-      "source": "global",
+      "source": "project",
       "hot": false,
       "description": "Guidance for Tauri v2 sidecar Node.js integration with lifecycle and packaging.",
       "keywords": [
@@ -3393,11 +3393,11 @@
         "with"
       ],
       "lines": 70,
-      "overridden": null
+      "overridden": "global"
     },
     {
       "id": "tauri-app-single-instance",
-      "source": "global",
+      "source": "project",
       "hot": false,
       "description": "Guidance for Tauri v2 single-instance behavior and second-launch argument handling.",
       "keywords": [
@@ -3411,11 +3411,11 @@
         "launch"
       ],
       "lines": 70,
-      "overridden": null
+      "overridden": "global"
     },
     {
       "id": "tauri-app-splashscreen",
-      "source": "global",
+      "source": "project",
       "hot": false,
       "description": "Guidance for Tauri v2 splashscreen setup and lifecycle control to avoid white screens.",
       "keywords": [
@@ -3429,11 +3429,11 @@
         "avoid"
       ],
       "lines": 70,
-      "overridden": null
+      "overridden": "global"
     },
     {
       "id": "tauri-app-sql",
-      "source": "global",
+      "source": "project",
       "hot": true,
       "description": "Guidance for Tauri v2 SQL plugin setup, migrations, and safe query access.",
       "keywords": [
@@ -3447,11 +3447,11 @@
         "safe"
       ],
       "lines": 70,
-      "overridden": null
+      "overridden": "global"
     },
     {
       "id": "tauri-app-store",
-      "source": "global",
+      "source": "project",
       "hot": true,
       "description": "Guidance for Tauri v2 store plugin with key-value persistence and lazy loading.",
       "keywords": [
@@ -3465,11 +3465,11 @@
         "persistence"
       ],
       "lines": 70,
-      "overridden": null
+      "overridden": "global"
     },
     {
       "id": "tauri-app-stronghold",
-      "source": "global",
+      "source": "project",
       "hot": false,
       "description": "Guidance for Tauri v2 stronghold plugin with encrypted storage and sensitive data handling.",
       "keywords": [
@@ -3483,11 +3483,11 @@
         "storage"
       ],
       "lines": 70,
-      "overridden": null
+      "overridden": "global"
     },
     {
       "id": "tauri-app-system-tray",
-      "source": "global",
+      "source": "project",
       "hot": false,
       "description": "Guidance for Tauri v2 system tray interactions and platform behavior differences.",
       "keywords": [
@@ -3501,11 +3501,11 @@
         "behavior"
       ],
       "lines": 70,
-      "overridden": null
+      "overridden": "global"
     },
     {
       "id": "tauri-app-updater",
-      "source": "global",
+      "source": "project",
       "hot": false,
       "description": "Guidance for Tauri v2 updater plugin with OTA updates and signing keys.",
       "keywords": [
@@ -3519,11 +3519,11 @@
         "signing"
       ],
       "lines": 70,
-      "overridden": null
+      "overridden": "global"
     },
     {
       "id": "tauri-app-upload",
-      "source": "global",
+      "source": "project",
       "hot": false,
       "description": "Guidance for Tauri v2 upload plugin with file transfer, progress reporting, and headers.",
       "keywords": [
@@ -3537,11 +3537,11 @@
         "transfer"
       ],
       "lines": 70,
-      "overridden": null
+      "overridden": "global"
     },
     {
       "id": "tauri-app-wasm",
-      "source": "global",
+      "source": "project",
       "hot": false,
       "description": "Guidance for running Rust-compiled WASM in the Tauri v2 frontend.",
       "keywords": [
@@ -3555,11 +3555,11 @@
         "frontend"
       ],
       "lines": 73,
-      "overridden": null
+      "overridden": "global"
     },
     {
       "id": "tauri-app-websocket",
-      "source": "global",
+      "source": "project",
       "hot": false,
       "description": "Guidance for Tauri v2 websocket plugin with Rust-managed connections and lifecycle handling.",
       "keywords": [
@@ -3573,11 +3573,11 @@
         "managed"
       ],
       "lines": 70,
-      "overridden": null
+      "overridden": "global"
     },
     {
       "id": "tauri-app-window-menu",
-      "source": "global",
+      "source": "project",
       "hot": false,
       "description": "Guidance for Tauri v2 window menu definition, event handling, and shortcuts.",
       "keywords": [
@@ -3591,11 +3591,11 @@
         "handling"
       ],
       "lines": 70,
-      "overridden": null
+      "overridden": "global"
     },
     {
       "id": "tauri-app-window-state",
-      "source": "global",
+      "source": "project",
       "hot": false,
       "description": "Guidance for Tauri v2 window-state plugin to persist window size and position.",
       "keywords": [
@@ -3609,11 +3609,11 @@
         "size"
       ],
       "lines": 70,
-      "overridden": null
+      "overridden": "global"
     },
     {
       "id": "tauri-build",
-      "source": "global",
+      "source": "project",
       "hot": true,
       "description": "Guidance for Tauri v2 production builds, signing, and distribution artifacts.",
       "keywords": [
@@ -3627,11 +3627,11 @@
         "artifacts"
       ],
       "lines": 89,
-      "overridden": null
+      "overridden": "global"
     },
     {
       "id": "tauri-concept",
-      "source": "global",
+      "source": "project",
       "hot": true,
       "description": "Guidance for Tauri v2 architecture concepts, process model, and IPC isolation patterns.",
       "keywords": [
@@ -3645,11 +3645,11 @@
         "isolation"
       ],
       "lines": 82,
-      "overridden": null
+      "overridden": "global"
     },
     {
       "id": "tauri-config",
-      "source": "global",
+      "source": "project",
       "hot": true,
       "description": "Guidance for Tauri v2 tauri.conf.json structure, lifecycle management, and CSP configuration.",
       "keywords": [
@@ -3663,11 +3663,11 @@
         "management"
       ],
       "lines": 70,
-      "overridden": null
+      "overridden": "global"
     },
     {
       "id": "tauri-framework-security",
-      "source": "global",
+      "source": "project",
       "hot": false,
       "description": "Guidance for Tauri v2 security model, baseline hardening, and runtime authority controls.",
       "keywords": [
@@ -3681,11 +3681,11 @@
         "runtime"
       ],
       "lines": 82,
-      "overridden": null
+      "overridden": "global"
     },
     {
       "id": "tauri-framework-upgrade",
-      "source": "global",
+      "source": "project",
       "hot": false,
       "description": "Guidance for upgrading to stable Tauri v2 from v1 or v2 beta with migration checks.",
       "keywords": [
@@ -3699,11 +3699,11 @@
         "beta"
       ],
       "lines": 74,
-      "overridden": null
+      "overridden": "global"
     },
     {
       "id": "tauri-ipc",
-      "source": "global",
+      "source": "project",
       "hot": true,
       "description": "Guidance for Tauri v2 IPC with frontend invoke calls, Rust commands, and type-safe bindings.",
       "keywords": [
@@ -3717,11 +3717,11 @@
         "rust"
       ],
       "lines": 71,
-      "overridden": null
+      "overridden": "global"
     },
     {
       "id": "tauri-mobile",
-      "source": "global",
+      "source": "project",
       "hot": false,
       "description": "Guidance for Tauri v2 mobile development setup, debugging, and bundle identifiers.",
       "keywords": [
@@ -3735,11 +3735,11 @@
         "identifiers"
       ],
       "lines": 72,
-      "overridden": null
+      "overridden": "global"
     },
     {
       "id": "tauri-scaffold",
-      "source": "global",
+      "source": "project",
       "hot": false,
       "description": "Guidance for Tauri v2 project scaffolding with create-tauri-app, project structure, and frontend static export configuration.",
       "keywords": [
@@ -3753,11 +3753,11 @@
         "structure"
       ],
       "lines": 71,
-      "overridden": null
+      "overridden": "global"
     },
     {
       "id": "tauri-security",
-      "source": "global",
+      "source": "project",
       "hot": true,
       "description": "Guidance for Tauri v2 capabilities, scope configuration, and ACL-based permission control.",
       "keywords": [
@@ -3771,11 +3771,11 @@
         "permission"
       ],
       "lines": 73,
-      "overridden": null
+      "overridden": "global"
     },
     {
       "id": "tauri-setup",
-      "source": "global",
+      "source": "project",
       "hot": false,
       "description": "Guidance for Tauri v2 prerequisites and environment setup across macOS, Windows, Linux, and mobile Android iOS targets.",
       "keywords": [
@@ -3789,11 +3789,11 @@
         "windows"
       ],
       "lines": 70,
-      "overridden": null
+      "overridden": "global"
     },
     {
       "id": "tauri-window",
-      "source": "global",
+      "source": "project",
       "hot": true,
       "description": "Guidance for Tauri v2 window creation, configuration, lifecycle management, and custom titlebar UI.",
       "keywords": [
@@ -3807,11 +3807,11 @@
         "custom"
       ],
       "lines": 71,
-      "overridden": null
+      "overridden": "global"
     },
     {
       "id": "tdd",
-      "source": "global",
+      "source": "project",
       "hot": false,
       "description": "Test-Driven Development methodology and red-green-refactor workflow (formerly test-tdd). This skill should be used when practicing TDD, writing tests first, designing tests before implementation, or reviewing test-first approaches. Triggers on \"write tests first\", \"test before code\", \"red green refactor\", \"test driven development\". This skill does NOT cover Vitest framework specifics (use vitest skill) or API mocking with MSW (use msw skill).",
       "keywords": [
@@ -3825,11 +3825,11 @@
         "workflow"
       ],
       "lines": 124,
-      "overridden": null
+      "overridden": "global"
     },
     {
       "id": "technical-drawing",
-      "source": "global",
+      "source": "project",
       "hot": false,
       "description": "Creates precise static technical drawings of physical objects, with coherent views and fine linework. Delivers a blank-page viewer with zoom, editable colors and SVG, PNG and PDF downloads.",
       "keywords": [
@@ -3843,11 +3843,11 @@
         "objects"
       ],
       "lines": 143,
-      "overridden": null
+      "overridden": "global"
     },
     {
       "id": "typescript",
-      "source": "global",
+      "source": "project",
       "hot": true,
       "description": "This skill should be used when the user asks to \"optimize TypeScript performance\", \"speed up tsc compilation\", \"configure tsconfig.json\", \"fix type errors\", \"improve async patterns\", or encounters TS errors (TS2322, TS2339, \"is not assignable to\"). Also triggers on .ts, .tsx, .d.ts file work involving type definitions, module organization, or memory management. Does NOT cover TypeScript basics, framework-specific patterns, or testing.",
       "keywords": [
@@ -3861,11 +3861,11 @@
         "asks"
       ],
       "lines": 92,
-      "overridden": null
+      "overridden": "global"
     },
     {
       "id": "typescript-advanced-types",
-      "source": "global",
+      "source": "project",
       "hot": true,
       "description": "Master TypeScript's advanced type system including generics, conditional types, mapped types, template literals, and utility types for building type-safe applications. Use when implementing complex type logic, creating reusable type utilities, or ensuring compile-time type safety in TypeScript projects.",
       "keywords": [
@@ -3879,11 +3879,11 @@
         "generics"
       ],
       "lines": 319,
-      "overridden": null
+      "overridden": "global"
     },
     {
       "id": "typography-system",
-      "source": "global",
+      "source": "project",
       "hot": false,
       "description": "Reference-grade guide to building a cross-platform type system — modular/fluid scales, leading & measure, pairing, variable fonts, OpenType, baseline rhythm, accessible ramps, and the tokens that ship it.",
       "keywords": [
@@ -3897,11 +3897,11 @@
         "platform"
       ],
       "lines": 278,
-      "overridden": null
+      "overridden": "global"
     },
     {
       "id": "ui-animation",
-      "source": "global",
+      "source": "project",
       "hot": true,
       "description": "Builds, reviews, and measures UI motion, including springs, gestures, scroll effects, curve fitting from recordings, and sparse interface sound. Use when asked to \"add animation\", \"match this easing\", \"reverse engineer this motion\", \"add a click sound\", or find animation opportunities.",
       "keywords": [
@@ -3915,11 +3915,11 @@
         "gestures"
       ],
       "lines": 226,
-      "overridden": null
+      "overridden": "global"
     },
     {
       "id": "ui-design",
-      "source": "global",
+      "source": "project",
       "hot": true,
       "description": "Designs and builds React/Next/Tailwind UI, audits visual and interaction defects, and stress-tests components with worst-case data. Use when asked to \"build a landing page\", \"extract our design system\", \"add dark mode\", \"make this responsive\", \"remove UI slop\", \"audit this component\", \"stress-test this component\", \"break this UI\", or \"show me the worst case\".",
       "keywords": [
@@ -3933,11 +3933,11 @@
         "visual"
       ],
       "lines": 251,
-      "overridden": null
+      "overridden": "global"
     },
     {
       "id": "ui-verification",
-      "source": "global",
+      "source": "project",
       "hot": true,
       "description": "Runs scoped browser probes for focus, hit targets, overflow, themes, request failures, and performance attribution, with evidence linked to UI rule IDs. Use when asked to \"verify this in the browser\", \"reproduce this UI finding\", \"re-measure after the UI fix\", or \"review before and after screenshots\".",
       "keywords": [
@@ -3951,11 +3951,11 @@
         "overflow"
       ],
       "lines": 157,
-      "overridden": null
+      "overridden": "global"
     },
     {
       "id": "upgrade-link",
-      "source": "global",
+      "source": "project",
       "hot": false,
       "description": "Provides comprehensive guidance for upgrade link management including upgrade link creation, configuration, and upgrade link best practices. Use when the user asks about upgrade links, needs to create upgrade links, configure upgrade processes, or manage upgrade links.",
       "keywords": [
@@ -3969,11 +3969,11 @@
         "creation"
       ],
       "lines": 101,
-      "overridden": null
+      "overridden": "global"
     },
     {
       "id": "upstash-redis-js",
-      "source": "global",
+      "source": "project",
       "hot": false,
       "description": "Work with the @upstash/redis TypeScript/JavaScript SDK, a serverless HTTP-based Redis client for Next.js, Vercel, Cloudflare Workers, edge runtimes, and Node.js. Use when adding a cache (cache-aside, write-through, TTL and expiration strategies), session storage and user sessions, a key-value store, leaderboards and rankings with sorted sets, counters, distributed locks, queues with lists, streams and consumer groups, sparse index-addressed arrays and ring buffers (ARSET, ARINSERT, ARRING, ARGREP, AROP), embeddings and nearest-neighbour vector search stored inside Redis (VECTOR commands via redis.vector, separate from @upstash/vector), JSON documents, pipelines and MULTI/EXEC transactions, Lua scripting, read replicas, or full-text search, typo-tolerant search, facets, aggregations, and search over Redis stream entries with Upstash Redis Search (different from regular FT.SEARCH; also available for TCP clients via @upstash/search-redis and @upstash/search-ioredis). Also use when migrating from ioredis or node-redis, when a Redis connection is needed from a serverless function without connection pooling, when integrating @upstash/ratelimit, or when the user says Redis cache, KV store, session store, serverless Redis, or Upstash Redis. Also use when building AI agents on Redis with Upstash AgentKit (agent memory, chat history, RAG tools, tool caching, chat persistence, resumable streams, distributed locks) for the Vercel AI SDK, TanStack AI, or Vercel Eve. Supports automatic serialization/deserialization of JavaScript types.",
       "keywords": [
@@ -3987,11 +3987,11 @@
         "http"
       ],
       "lines": 205,
-      "overridden": null
+      "overridden": "global"
     },
     {
       "id": "usability-heuristics",
-      "source": "global",
+      "source": "project",
       "hot": false,
       "description": "Reference-grade guide to the canonical usability principles — Nielsen's 10 heuristics, Norman's design fundamentals, Shneiderman's 8 golden rules, Rams' 10 principles — plus how to run a heuristic evaluation across any web, mobile, desktop, TV, or voice screen.",
       "keywords": [
@@ -4005,11 +4005,11 @@
         "nielsen"
       ],
       "lines": 284,
-      "overridden": null
+      "overridden": "global"
     },
     {
       "id": "using-superpowers",
-      "source": "global",
+      "source": "project",
       "hot": true,
       "description": "Use when starting any conversation - establishes how to find and use skills, requiring skill invocation before ANY response including clarifying questions",
       "keywords": [
@@ -4023,11 +4023,11 @@
         "skills"
       ],
       "lines": 66,
-      "overridden": null
+      "overridden": "global"
     },
     {
       "id": "uv-package-manager",
-      "source": "global",
+      "source": "project",
       "hot": true,
       "description": "Master the uv package manager for fast Python dependency management, virtual environments, and modern Python project workflows. Use when setting up Python projects, managing dependencies, or optimizing Python development workflows with uv.",
       "keywords": [
@@ -4041,11 +4041,11 @@
         "virtual"
       ],
       "lines": 346,
-      "overridden": null
+      "overridden": "global"
     },
     {
       "id": "ux-writing-and-content",
-      "source": "global",
+      "source": "project",
       "hot": true,
       "description": "Reference-grade guide to UX writing and content design — voice and tone systems, every UI string type with before/after examples, terminology consistency, inclusive language, and localization readiness for any screen.",
       "keywords": [
@@ -4059,11 +4059,11 @@
         "voice"
       ],
       "lines": 196,
-      "overridden": null
+      "overridden": "global"
     },
     {
       "id": "variant",
-      "source": "global",
+      "source": "project",
       "hot": false,
       "description": "Builds multiple variants of a component you're working on and helps you iterate and pick one.",
       "keywords": [
@@ -4077,11 +4077,11 @@
         "iterate"
       ],
       "lines": 118,
-      "overridden": null
+      "overridden": "global"
     },
     {
       "id": "vercel-composition-patterns",
-      "source": "global",
+      "source": "project",
       "hot": false,
       "description": "React composition patterns that scale. Use when refactoring components with boolean prop proliferation, building flexible component libraries, or designing reusable APIs. Triggers on tasks involving compound components, render props, context providers, or component architecture.",
       "keywords": [
@@ -4095,11 +4095,11 @@
         "refactoring"
       ],
       "lines": 82,
-      "overridden": null
+      "overridden": "global"
     },
     {
       "id": "vercel-react-best-practices",
-      "source": "global",
+      "source": "project",
       "hot": true,
       "description": "React and Next.js performance optimization guidelines from Vercel Engineering. This skill should be used when writing, reviewing, or refactoring React/Next.js code to ensure optimal performance patterns. Triggers on tasks involving React components, Next.js pages, data fetching, bundle optimization, or performance improvements.",
       "keywords": [
@@ -4113,11 +4113,11 @@
         "guidelines"
       ],
       "lines": 137,
-      "overridden": null
+      "overridden": "global"
     },
     {
       "id": "vitest",
-      "source": "global",
+      "source": "project",
       "hot": true,
       "description": "Vitest testing framework patterns for test setup, async testing, mocking with vi.*, snapshots, and test performance (formerly test-vitest). This skill should be used when writing or debugging Vitest tests. This skill does NOT cover TDD methodology (use test-tdd skill), API mocking with MSW (use test-msw skill), or Jest-specific APIs.",
       "keywords": [
@@ -4131,11 +4131,11 @@
         "mocking"
       ],
       "lines": 121,
-      "overridden": null
+      "overridden": "global"
     },
     {
       "id": "web-design-guidelines",
-      "source": "global",
+      "source": "project",
       "hot": false,
       "description": "Review UI code for Web Interface Guidelines compliance. Use when asked to \"review my UI\", \"check accessibility\", \"audit design\", \"review UX\", or \"check my site against best practices\".",
       "keywords": [
@@ -4149,11 +4149,11 @@
         "when"
       ],
       "lines": 40,
-      "overridden": null
+      "overridden": "global"
     },
     {
       "id": "web-ui-design",
-      "source": "global",
+      "source": "project",
       "hot": false,
       "description": "UI/UX and frontend design best practices guidelines (formerly frontend-design). This skill should be used when writing, reviewing, or designing frontend code to ensure accessibility, performance, and usability. Triggers on tasks involving HTML structure, CSS styling, responsive layouts, form design, animations, or accessibility improvements.",
       "keywords": [
@@ -4167,11 +4167,11 @@
         "this"
       ],
       "lines": 111,
-      "overridden": null
+      "overridden": "global"
     },
     {
       "id": "winui-code-review",
-      "source": "global",
+      "source": "project",
       "hot": false,
       "description": "Review WinUI 3 code or changes for quality: MVVM, x:Bind correctness, accessibility, theming, security, performance, and WinUI analyzer findings. Use when asked to review or audit a WinUI app or its pending changes, or before committing. Catches issues the compiler and UI tests miss.",
       "keywords": [
@@ -4185,11 +4185,11 @@
         "correctness"
       ],
       "lines": 95,
-      "overridden": null
+      "overridden": "global"
     },
     {
       "id": "winui-design",
-      "source": "global",
+      "source": "project",
       "hot": false,
       "description": "Read before writing or changing WinUI 3 XAML: choosing controls, pages and navigation, layout, Fluent Design, theming, accessibility, x:Bind, real samples, and checking that APIs exist with winapp find-api. Not for WPF or WinForms UI, even if the app uses the Windows App SDK.",
       "keywords": [
@@ -4203,11 +4203,11 @@
         "choosing"
       ],
       "lines": 190,
-      "overridden": null
+      "overridden": "global"
     },
     {
       "id": "winui-dev-workflow",
-      "source": "global",
+      "source": "project",
       "hot": false,
       "description": "Create, build, run, and fix build errors in WinUI 3 apps (C# or C++) with WinApp CLI 0.7+: winapp new, winapp run, Native AOT, crash diagnosis. Use for a new WinUI app or a WinUI project that fails to build or crashes. Not for WPF, WinForms, or Electron apps that only reference the Windows App SDK.",
       "keywords": [
@@ -4221,11 +4221,11 @@
         "with"
       ],
       "lines": 99,
-      "overridden": null
+      "overridden": "global"
     },
     {
       "id": "winui-packaging",
-      "source": "global",
+      "source": "project",
       "hot": false,
       "description": "MSIX packaging, signing, and Microsoft Store publishing for WinUI 3 apps with WinApp CLI 0.7+: project packaging, Native AOT, certificates, self-contained deployment, CI/CD. Use when releasing or publishing a WinUI app. Not for WPF, WinForms, or Electron apps that only reference the Windows App SDK.",
       "keywords": [
@@ -4239,11 +4239,11 @@
         "apps"
       ],
       "lines": 105,
-      "overridden": null
+      "overridden": "global"
     },
     {
       "id": "winui-setup",
-      "source": "global",
+      "source": "project",
       "hot": false,
       "description": "Install and verify WinUI 3 prerequisites — .NET SDK 8.0.100+, WinApp CLI 0.7+, and Developer Mode; identify additional Native AOT and Windows Sandbox requirements. Use when the user asks to set up or repair the toolchain, or when another WinUI skill finds a missing or outdated prerequisite.",
       "keywords": [
@@ -4257,11 +4257,11 @@
         "developer"
       ],
       "lines": 171,
-      "overridden": null
+      "overridden": "global"
     },
     {
       "id": "winui-ui-testing",
-      "source": "global",
+      "source": "project",
       "hot": false,
       "description": "Write and run automated UI tests for Windows desktop apps (WinUI 3, WPF, WinForms, Win32) with the winapp ui harness: one batch script, assertions, input, file pickers, dialogs, screenshots, locally or in Windows Sandbox. Use when asked for UI tests or to verify a feature end to end.",
       "keywords": [
@@ -4275,11 +4275,11 @@
         "apps"
       ],
       "lines": 342,
-      "overridden": null
+      "overridden": "global"
     },
     {
       "id": "winui-wpf-migration",
-      "source": "global",
+      "source": "project",
       "hot": false,
       "description": "Migrate or port a WPF app to WinUI 3: namespaces (System.Windows to Microsoft.UI.Xaml), control mapping (DataGrid, WrapPanel, TabControl), Dispatcher to DispatcherQueue, imaging, MVVM with CommunityToolkit.Mvvm, ThemeResource. Use when converting WPF code or fixing migration build errors.",
       "keywords": [
@@ -4293,11 +4293,11 @@
         "windows"
       ],
       "lines": 112,
-      "overridden": null
+      "overridden": "global"
     },
     {
       "id": "wireframe",
-      "source": "global",
+      "source": "project",
       "hot": true,
       "description": "Progressive UX generation — Phase 1 generates 5 B&W wireframe options instantly (1 safe + 4 exploratory), then Phase 2 renders Clean + Polished color variants via 5 parallel Task agents (one per option). Supports wireframes-only or wireframes+visuals. Extracts optimization intent from arguments when present. Maintains persistent design context. Use when user says \"wireframe\", \"prototype\", \"UX options\", or \"layout exploration\".",
       "keywords": [
@@ -4311,11 +4311,11 @@
         "safe"
       ],
       "lines": 405,
-      "overridden": null
+      "overridden": "global"
     },
     {
       "id": "zod",
-      "source": "global",
+      "source": "project",
       "hot": true,
       "description": "Zod schema validation best practices for type safety, parsing, and error handling. This skill should be used when defining z.object schemas, using z.string validations, safeParse, or z.infer. This skill does NOT cover React Hook Form integration patterns (use react-hook-form skill) or OpenAPI client generation (use orval skill).",
       "keywords": [
@@ -4329,7 +4329,7 @@
         "parsing"
       ],
       "lines": 128,
-      "overridden": null
+      "overridden": "global"
     }
   ]
 }

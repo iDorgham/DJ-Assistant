@@ -13,6 +13,7 @@ pub mod dedup;
 pub mod enrichment;
 pub mod fingerprint;
 pub mod library_query;
+pub mod library_stats;
 pub mod metadata;
 pub mod mp3;
 pub mod providers;
@@ -31,7 +32,10 @@ pub use enrichment::{
     tag_health_score, EnrichmentProvider, FieldProposal, LocalTrack, ProviderCandidate,
 };
 pub use fingerprint::{compute_file_fingerprint, FINGERPRINT_WINDOW};
-pub use library_query::{BuiltQuery, QueryError, QueryParam, TrackFilters, TrackQuery, SORT_KEYS};
+pub use library_query::{
+    sort_column, BuiltQuery, QueryError, QueryParam, TrackFilters, TrackQuery, SORT_KEYS,
+};
+pub use library_stats::{stat_queries, StatQuery, STATUS_BREAKDOWN_SQL};
 pub use metadata::{
     cache_artwork, camelot_from_key, extract_metadata, CachedArtwork, EmbeddedArtwork,
     ExtractedMetadata,

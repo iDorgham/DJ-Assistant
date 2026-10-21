@@ -178,6 +178,27 @@ pub const SORT_KEYS: [&str; 8] = [
     "energy",
 ];
 
+/// The column a sort key orders by.
+///
+/// Exposed so a caller that runs against one specific database schema — the
+/// headless `dj-query` CLI, which may be pointed at a library that predates
+/// the newest migration — can check the column exists *before* building a
+/// query, instead of letting SQLite fail with "no such column".
+///
+/// The default order (`imported_at` / newest first) maps to `created_at`.
+pub fn sort_column(sort_by: Option<&str>) -> &'static str {
+    match sort_by {
+        Some("title") => "title",
+        Some("artist") => "artist",
+        Some("bpm") => "bpm",
+        Some("key") => "key_camelot",
+        Some("duration") => "duration_ms",
+        Some("rating") => "user_rating",
+        Some("energy") => "energy",
+        _ => "created_at",
+    }
+}
+
 /// A fully rendered query: WHERE/ORDER text plus the parameters to bind.
 #[derive(Debug, Clone, PartialEq)]
 pub struct BuiltQuery {
@@ -574,6 +595,31 @@ mod tests {
                 built.select_sql
             );
         }
+    }
+
+    #[test]
+    fn sort_column_agrees_with_the_rendered_order_by() {
+        // `sort_column` is what a schema-aware caller uses to check a column
+        // exists before building a query, so it must not drift from the
+        // ORDER BY the builder actually renders.
+        for sort_by in SORT_KEYS {
+            let column = sort_column(Some(sort_by));
+            let built = build(TrackQuery {
+                sort_by: Some(sort_by.into()),
+                ..Default::default()
+            });
+            assert!(
+                built.select_sql.contains(column),
+                "sort {sort_by} should order by {column}: {}",
+                built.select_sql
+            );
+        }
+        // An unknown key falls back to the default (newest first) order.
+        assert_eq!(sort_column(None), "created_at");
+        assert_eq!(
+            sort_column(Some("file_path; DROP TABLE tracks")),
+            "created_at"
+        );
     }
 
     #[test]

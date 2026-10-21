@@ -27,12 +27,18 @@ rusqlite = { version = "0.40", features = ["bundled"], optional = true }
 
 [features]
 default = []
-# Enables the `scan` binary.
+# Enables the `scan` and `query` binaries.
 cli = ["dep:rusqlite"]
 
 [[bin]]
 name = "dj-scan"
 path = "src/bin/scan.rs"
+required-features = ["cli"]
+
+# Read-only queries against the app's own library database.
+[[bin]]
+name = "dj-query"
+path = "src/bin/query.rs"
 required-features = ["cli"]
 
 [dev-dependencies]
