@@ -15,6 +15,8 @@ does not have yet.
 | Where the user's comment lives | It **overwrites** `tracks.comments` | The file's original comment is replaced by the first edit. The reversible write path snapshots the previous value, so the first edit stays undoable. `tracks.notes` remains unused. |
 | Where tags live | A **`track_tags` table** | Rows per tag: plain-SQL filtering, an index on the tag, and the natural base for the Tag Surgeon (T2.2) later. |
 | How the slice is cut | **3A = T2.1.7 + T2.1.13**, 3B = T2.1.8 | 3B is deferred because a Settings surface for the key preference does not exist yet. |
+| Where the editor is reached | A **row context menu** (right-click), per docs/ui/03 §3.5 | The menu ships only the actions that exist — "Edit tags…" — so the other spec items can be plugged in later. It is a new surface: positioning, Escape, focus return, keyboard access. |
+| Which fields the editor covers | Title, artist, album, genre, **label**, **year**, custom tags, comment | `year` is already in the schema and populated for 90 of 94 tracks, so it costs a `TrackSummary` change only. `label` needs a one-line `ALTER` and has **no import source** — it is a field the user types. |
 
 ## 2. Where the code stands today
 
@@ -50,6 +52,8 @@ stay clear of `002_track_tags.sql`, which only adds the comment and artwork
 columns).
 
 ```sql
+ALTER TABLE tracks ADD COLUMN label TEXT;
+
 CREATE TABLE IF NOT EXISTS track_tags (
     track_id TEXT NOT NULL REFERENCES tracks(id) ON DELETE CASCADE,
     tag TEXT NOT NULL,
@@ -59,17 +63,22 @@ CREATE TABLE IF NOT EXISTS track_tags (
 CREATE INDEX IF NOT EXISTS idx_track_tags_tag ON track_tags(tag);
 ```
 
-No `ALTER TABLE` is involved, so the single-line-`ALTER` constraint in
-`db.rs::without_applied_alters` is not triggered. If `label` is added for the
-editor, it must stay **one physical line** (`ALTER TABLE tracks ADD COLUMN
-label TEXT;`).
+The `ALTER` must stay **one physical line** — `db.rs::without_applied_alters`
+parses only single-line `ALTER TABLE … ADD COLUMN` statements, and the energy
+migration had to be written that way for the same reason.
+
+`label` has **no import source**: the file-tag extractor never reads a
+label/publisher tag, and no track in the live library carries one. It is a
+user-typed field, so the editor must show an empty state rather than pretend
+it is synced.
 
 ## 4. Backend work
 
 1. **`db.rs`** — register migration 007 next to 006.
-2. **`models.rs`** — `TrackSummary.tags: Vec<String>` (plus `label` / `year` if
-   the editor needs them); `UpdateTrackMetadataRequest` gains the editable
-   fields and `tags: Option<Vec<String>>`.
+2. **`models.rs`** — `TrackSummary` gains `tags: Vec<String>`,
+   `label: Option<String>` and `year: Option<i64>` (the two columns exist by
+   007); `UpdateTrackMetadataRequest` gains the editable fields and
+   `tags: Option<Vec<String>>`. The TS mirror in `packages/shared` follows.
 3. **`commands.rs`** — generalise `MetadataPatch` from two numeric columns to
    the metadata set (title, artist, album, genre, label, year, comments) plus a
    tag list. The Slice 2 rules carry over unchanged: only a value that really
@@ -104,11 +113,16 @@ label TEXT;`).
    **comment**. It writes through `update_track_metadata`, so it inherits the
    same Undo toast. A multi-selection applies to the whole selection (the
    table subset; the BulkActionBar stays T2.1.3).
-5. **The entry point** — docs/ui §3.5 wants a row context menu carrying
-   "Edit tags…". No row context menu exists yet, so 3A either builds a small
-   one (positioning, Escape, focus return) or takes a lighter entry point (a
-   row action button, or double-click). Pick one and record it — the context
-   menu is the spec-faithful option but is its own piece of work.
+5. **The entry point — a row context menu** (decided 2026-10-22) — a new
+   `components/RowContextMenu.tsx`, opened by right-clicking a row. It
+   positions itself at the cursor, closes on Escape and on an outside click,
+   returns focus to the row, and is reachable by keyboard. It ships **only**
+   "Edit tags…" — the other items docs/ui §3.5 lists (Fix tags, Add to
+   playlist, Find in playlists, Mix suggestions, online find, Remove from
+   library) act on features that do not exist yet and are added later rather
+   than shipped as disabled clutter. The spec's selection semantics carry
+   over: an action either applies to the whole selection or acts on the
+   focused row.
 6. **The Undo toast** — reuse the Slice 2 pattern: the same message shape,
    the same timer, focus pauses it, the dismiss button closes it.
 
@@ -135,6 +149,9 @@ label TEXT;`).
 - [ ] Undo restores a removed tag set, and skips a track that changed since
       the snapshot.
 - [ ] The `tags` column is off by default and the table layout survives it.
+- [ ] Right-clicking a row opens the context menu, Escape closes it, focus
+      returns to the row, and "Edit tags…" opens the editor for the focused
+      row.
 - [ ] No console errors, and the table still renders every row (row
       virtualization stays Slice 9).
 - [ ] The running-window QA pass is recorded — the same "observation **and**
@@ -142,11 +159,12 @@ label TEXT;`).
 
 ## 8. Risks
 
-- **`year` / `label` are missing from the schema and from `TrackSummary`.** The
-  editor spec lists both. Either add `label` (one-line `ALTER`) and `year` to
-  the summary, or leave those two fields out of 3A and say so.
+- **`label` is a field nothing can fill.** It has no import source and no data in
+  the live library, so the editor shows it empty and the user types it. If a
+  label source appears later (enrichment, T2.2), the column is already there.
 - **The row context menu is a second UI surface** — budget for positioning,
-  keyboard access and focus handling.
+  keyboard access and focus handling, and for the focus return the table
+  already has to do for the column picker.
 - **The first non-scalar undo snapshot.** A set restore must be atomic, or an
   interrupted undo leaves a half-restored tag set.
 - **The tag filter must not disturb the pagination tiebreaker (`id`) or the
@@ -165,6 +183,6 @@ label TEXT;`).
 | T3A.4 | Query path: the tag filter, `comments` and tag search |
 | T3A.5 | Write path: the generalised patch, the snapshot, the undo |
 | T3A.6 | `TagChips` + the `tags` column |
-| T3A.7 | The metadata editor + its entry point |
+| T3A.7 | The row context menu + the metadata editor |
 | T3A.8 | Tests (Rust unit, schema, `node --test`) |
 | T3A.9 | Docs: the task entries, the memory layers, the QA checklist |

@@ -18,6 +18,14 @@ fact, it belongs in [`facts.md`](./facts.md). Delete anything stale.
   editor stub and **no** row context menu (only the column-header one). The
   editor and its entry point are 3A work, and the `label` / `year` fields the
   editor names are not in the schema or in `TrackSummary`.
+- **The two open 3A choices are settled:** the editor is reached through a
+  **right-click row context menu** (shipping only “Edit tags…”, so the other
+  spec items can be added later), and the editor covers **label and year** as
+  well — `year` is already in the schema and populated for 90 of 94 tracks
+  (a `TrackSummary` change only), while `label` needs a one-line `ALTER` and
+  has **no import source**, so it is a user-typed field with an empty state.
+- **The `comments` overwrite costs nothing in this library:** 0 of 94 tracks
+  carry an import-sourced comment, and `notes` is confirmed unused (0 rows).
 - **Tags are the first non-scalar undo snapshot** — a set restore has to be
   transactional, and the snapshot records the previous tag set per track.
 - The plan is [`docs/engineering/SLICE3A_PLAN.md`](../../engineering/SLICE3A_PLAN.md):

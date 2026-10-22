@@ -243,12 +243,16 @@ decisions (a `track_tags` table; the user comment **overwrites**
   filter in `library_query.rs`.
 - Edit via a minimal metadata editor (the “Edit tags…” action in
   `docs/ui/03-LIBRARY-VIEW.md` §3.5) — **there is no editor stub today**, and
-  no row context menu either, so 3A builds both or takes a lighter entry
-  point. The full Tag Surgeon remains T2.2.
+  no row context menu either, so 3A builds both: a right-click row context
+  menu that ships only “Edit tags…”, and the editor behind it. The full Tag
+  Surgeon remains T2.2.
 
 **Comments (3A, T2.1.13)**
 - The metadata editor gains a **Comment** field — `docs/ui/03-LIBRARY-VIEW.md`
-  §3.5 lists it, and the editor it names does not exist yet.
+  §3.5 lists it, and the editor it names does not exist yet. The editor also
+  covers **label** and **year** (decided 2026-10-22): `year` is already in the
+  schema, `label` needs a one-line `ALTER` and has no import source, so it is
+  a user-typed field.
 - Written through `update_track_metadata` with the same undo path as
   rating/energy, so the write stays reversible. The user comment **overwrites
   `tracks.comments`** (the import-sourced value); `tracks.notes` stays unused.
