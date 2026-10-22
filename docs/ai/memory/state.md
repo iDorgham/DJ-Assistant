@@ -100,4 +100,4 @@ fact, it belongs in [`facts.md`](./facts.md). Delete anything stale.
   candidates are in `skills.policy.json` → `candidates`.
 - The Rekordbox XML export (audit §7.1) — the whole `dj-rekordbox` reader is
   staged behind it.
-- T2.1.2 / T2.1.4 / T2.1.6 manual running-window QA, and the PR #51 merge.
+- T2.1.2 / T2.1.4 / T2.1.6 manual running-window QA (PR #51 merged 2026-10-21).
