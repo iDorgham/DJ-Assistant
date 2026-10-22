@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-10-21T21:18:08.192Z",
+  "generatedAt": "2026-10-21T23:49:02.566Z",
   "policyVersion": 1,
   "project": "DJ Assistant",
   "total": 240,
@@ -8,7 +8,8 @@
   "inject": {
     "maxInject": 3,
     "minScore": 0.55,
-    "enabled": true
+    "enabled": true,
+    "offDomainPenalty": 0.1
   },
   "skills": [
     {

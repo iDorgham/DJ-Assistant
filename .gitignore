@@ -41,7 +41,10 @@ pnpm-debug.log*
 # Project skill library synced from the global OpenCode skills dir
 # (`npx skills add`); vendored third-party code, so kept out of git and
 # paired with the matching eslint ignore in eslint.config.mjs.
+# The backup folder holds the same vendored code, parked by
+# `pnpm skills:prune --apply` before it is restored.
 .opencode/skills/
+.opencode/skills-backup/
 .playwright-cli/
 
 # Machine-local AI memory overlays — never commit (AGENTS.local.example.md)
@@ -54,6 +57,7 @@ CLAUDE.local.md
 # Local AI agent sessions/cache/state
 .ai-cache/
 .aider/
+.kilo/plans/
 
 # Local tool configs that may contain machine-specific paths
 **/kilo.local.jsonc

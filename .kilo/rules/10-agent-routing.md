@@ -36,3 +36,6 @@ Never hand-edit a mirror; the next sync will overwrite it.
 The delegation contract, the `RESULT` handoff block, the board semantics, and
 the file-ownership rules are in `docs/ai/COMMUNICATION.md`. Subagents in this
 workspace return that block — read it before integrating their work.
+
+Skills provide specialized instructions and workflows for specific tasks.
+Use the skill tool to load a skill when a task matches its description.

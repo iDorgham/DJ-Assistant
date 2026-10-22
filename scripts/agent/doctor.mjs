@@ -16,7 +16,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { execFileSync } from "node:child_process";
-import { ROOT, listSkills } from "../skills/lib.mjs";
+import { ROOT, listSkills, loadPolicy } from "../skills/lib.mjs";
 import { readMemory } from "../memory/lib.mjs";
 import { loadRegistry, registrySources } from "./lib.mjs";
 const argv = process.argv.slice(2);
@@ -148,6 +148,57 @@ for (const agent of registry.agents ?? []) {
 }
 for (const line of [...unknownSkills].sort()) {
   soft.push(`registry references a skill that is not installed: ${line}`);
+}
+
+/* --------------------------------------------------------- routing coherence */
+
+const policy = loadPolicy();
+const domains = policy.domains ?? {};
+const groups = policy.groups ?? {};
+const hot = new Set(policy.hot ?? []);
+const prune = policy.prune ?? {};
+
+for (const [id, domain] of Object.entries(domains)) {
+  for (const group of domain.groups ?? []) {
+    if (!groups[group]) hard.push(`domain "${id}" points at a group that does not exist: ${group}`);
+  }
+  for (const skill of domain.defaultSkills ?? []) {
+    if (!installedIds.has(skill)) {
+      soft.push(`domain "${id}" default skill is not installed: ${skill}`);
+    }
+  }
+  // A repeated keyword is a copy-paste slip. The domain score counts the
+  // distinct prompt words a domain claims, so the repeat no longer inflates
+  // anything — but it misleads whoever reads the policy next.
+  const seen = new Set();
+  for (const keyword of domain.keywords ?? []) {
+    if (seen.has(keyword)) hard.push(`domain "${id}" repeats the keyword "${keyword}"`);
+    seen.add(keyword);
+  }
+}
+for (const [pattern, ids] of Object.entries(policy.pathDomains ?? {})) {
+  for (const id of ids ?? []) {
+    if (!domains[id]) hard.push(`pathDomains "${pattern}" points at an unknown domain: ${id}`);
+  }
+}
+for (const agent of registry.agents ?? []) {
+  for (const id of agent.domains ?? []) {
+    if (!domains[id]) hard.push(`agent "${agent.id}" points at an unknown domain: ${id}`);
+  }
+}
+
+// A skill cannot be both a priority and a removal: the policy would reach for
+// it on one prompt and delete it on the next. A prune entry that is not
+// installed is *expected* — that is what a completed prune looks like — so the
+// diagnostic is reserved for the contradictory references below.
+for (const id of Object.keys(prune)) {
+  if (hot.has(id)) hard.push(`"${id}" is in the hot set and on the prune list`);
+}
+for (const [id, domain] of Object.entries(domains)) {
+  for (const skill of domain.defaultSkills ?? []) {
+    if (skill in prune)
+      hard.push(`domain "${id}" defaults to "${skill}", which is on the prune list`);
+  }
 }
 
 /* ------------------------------------------------------------ memory weight */

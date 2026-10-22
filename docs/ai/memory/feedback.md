@@ -62,3 +62,35 @@ shell grants let a "read-only" agent run `sync.mjs --write` and `policy.mjs
 agreeing a finding is live; and prefer named-script shell grants over wildcards,
 because a wildcard grant quietly outranks the deny it sits next to. See
 [D-008](./decisions.md).
+
+## F-007 · One shared word is enough to pick a skill — and BM25 rewards it (2026-10-22)
+
+The skill matcher let a single **skill-ID hit** qualify a skill, and the ID
+tokens earned a 3× weight. Inverse document frequency then made the *rarest*
+such word the most valuable one, so the rarest generic adjective won: on a
+task about the agent layer and shared memory, the preflight offered
+`performance-and-perceived-speed` (from "speed"), `memory-safety-patterns`
+(from "memory"), and `upstash-redis-js` (from "agents" + "memory" + "tools") —
+three skills with nothing to do with the work, injected on every such prompt
+in every tool. The library already carried the domain grouping the fix needed;
+the matcher simply never read it.
+**Rule:** a lexical matcher needs a **negative signal**, not just a score.
+Give it the project's own domain structure, require a name hit to use a word
+that is not domain-neutral, and require two independent hits otherwise. A
+matcher that can only say "yes" will always say yes to the wrong thing — and
+BM25 makes the rarest wrong answer the most confident one. See
+[D-011](./decisions.md).
+
+## F-008 · "Kept installed, hidden" is not a state that exists here (2026-10-22)
+
+`skills.policy.json` recorded seventeen known duplicates, most of them with a
+hidden-related reason — two of them with exactly "Kept installed, hidden" — and
+`builtinHidden` named `playwright-cli` as
+hidden. Nothing in the library was hidden: all 240 skills were advertised,
+duplicate or not, and were paid for on every step. A reason field that
+describes an action nobody took is worse than no reason at all — it reads as
+"already handled" and stops anyone from noticing the cost. The duplicates now
+carry a real `prune` list and a tool that moves them out.
+**Rule:** a note in a policy file must describe something that is actually
+true of the system it governs. Verify the state before recording it. See
+[D-003](./decisions.md) and [D-012](./decisions.md).

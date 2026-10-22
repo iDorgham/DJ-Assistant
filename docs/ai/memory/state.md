@@ -4,6 +4,49 @@ Ephemeral. Newest first. **Rotate aggressively** — if a line would still be tr
 in two weeks, it belongs in [`decisions.md`](./decisions.md); if it is just a
 fact, it belongs in [`facts.md`](./facts.md). Delete anything stale.
 
+## 2026-10-22 · Routing is domain-gated; the skill library is pruned, not hidden
+
+- **The problem was measured, not guessed.** One shared adjective was enough to
+  select a skill, and BM25's inverse document frequency made the *rarest* such
+  word the most valuable. On a task about the agent layer and shared memory
+  the preflight offered `performance-and-perceived-speed` ("speed"),
+  `memory-safety-patterns` ("memory") and `upstash-redis-js` ("agents",
+  "memory", "tools") — three wrong skills injected on every such prompt, in
+  every tool. The library already carried the domain grouping the fix needed;
+  the matcher never read it. See F-007.
+- **Three gates now decide what is offered** (D-011): a curated trigger wins
+  outright; otherwise the prompt must name the skill in a word that is not
+  domain-neutral; otherwise two independent hits are required. A skill outside
+  the prompt's **active domains** is scored down, not dropped, so a
+  mis-resolved domain still leaves the right answer reachable.
+- **Domains come from three signals, ranked**: the **files in play** say where
+  the work *is* and always win; the **prompt vocabulary** is a weak signal and
+  the domain with the most distinct prompt *words* wins (a tie keeps them all);
+  the **routed subagent** is the last resort, because it owns a whole tree and
+  is coarser than the paths. A vague "fix this" over `crates/core/**` resolves
+  to Rust + API and offers that domain's defaults. "library" is deliberately
+  *not* an audio keyword — it names the whole app, so it would pull every
+  library task into the music domain.
+- **The policy is the place the judgement lives**: `domains`, `pathDomains`,
+  `genericTokens`, `inject.offDomainPenalty` and `prune` (one entry per skill,
+  each with its reason) are all in `skills.policy.json` — not in the shared
+  memory, because they are machine-global state.
+- **Speed.** The whole library is advertised to the model on every step in
+  every tool whether or not a skill is loaded; that advertising cost, not the
+  routing, was the dominant spend. The `prune` list plus **`pnpm skills:prune`**
+  (dry run by default; `--apply` *moves* every installed copy of the listed
+  skills into a timestamped backup — a copy left anywhere would still be
+  advertised — and `--restore <dir>` puts each copy back from the backup's
+  manifest) removes it. A parsed-skill cache under
+  `node_modules/.cache/` cut the preflight time noticeably.
+- **The policy had been claiming something untrue**: the duplicates were
+  marked with a hidden-related reason and `builtinHidden` named
+  `playwright-cli` as hidden — but nothing was hidden, the whole library was
+  advertised and paid for. See F-008; the duplicates now carry a real prune
+  list.
+- Checks: `pnpm test:agent` passes; `pnpm agent:doctor` is clean; the audit
+  reports no hard problems.
+
 ## 2026-10-21 · Rekordbox pivot — `dj-query` built, MCP plan trimmed
 
 - **The pivot:** the DJ runs **Rekordbox** (Pioneer CDJs), so Serato tooling
@@ -21,16 +64,7 @@ fact, it belongs in [`facts.md`](./facts.md). Delete anything stale.
   added so the CLI can check a column exists before building a query.
 - **Verified live** against `%APPDATA%\com.djassistant.desktop\dj_assistant.db`:
   94 tracks, 24 analysed, `complete 24 / failed 2 / needs_review 68`, 2 missing
-  BPM, 2 missing key, 0 missing files. Checks: `cargo test -p
-  dj-assistant-core --features cli` (120), `cargo test -p
-  dj-assistant-schema-tests` (9+7+12), `cargo clippy -D warnings`, `cargo fmt
-  --check`.
-- **Docs rewritten** for the pivot: `docs/enhancements/mcb-plugin-audit.md`
-  (new §3.3 "The Rekordbox finding", F-11…F-15, §7 answered + the one open
-  question), `mcb-plugin-enhancement-plan.md` (§2.4 is now the Rust
-  `dj-rekordbox` reader, not the Playwright MCP), and
-  `mcp.recommended.jsonc` (trimmed to `dj-db` + deferred `dj-docs`; `dj-ui` and
-  `dj-serato` removed).
+  BPM, 2 missing key, 0 missing files.
 - **`dj-rekordbox` is staged, not started** — it needs the DJ's exported
   `rekordbox.xml`; `master.db` is encrypted, so the export is the only readable
   interchange format and guessing the mapping would be untestable speculation.
@@ -42,117 +76,28 @@ fact, it belongs in [`facts.md`](./facts.md). Delete anything stale.
 - New `tracks.energy INTEGER` column (migration `006_track_energy.sql`).
   `db.rs::without_applied_alters` only parses **single-line**
   `ALTER TABLE … ADD COLUMN`, so the migration must stay one physical line.
-  `user_rating` already existed (nullable INTEGER).
-- Reversible write path: `update_track_metadata({trackIds, rating?, energy?})`,
-  `set_track_rating({trackIds, rating})`, `undo_track_metadata({undoId})`.
-  `0` clears (stores NULL), an omitted field is untouched. The undo snapshot is
-  a `skill_runs` row (`before_state`/`after_state` JSON, only the touched
-  columns) written **in the same transaction** as the track UPDATE — hence
-  `Database::conn_mut()` and `MutexGuard`'s `DerefMut` (`db_guard.conn_mut()`;
-  `MutexGuard::get_mut()` does not exist on this toolchain).
-- `updated` counts the tracks whose value **actually changed**: a track that
-  already held the requested value is not written, not counted and not
-  snapshotted (there is nothing to restore).
-- The undo restores only what its snapshot still describes: the current values
-  are compared with the recorded `after_state`, and a track edited again since
-  then is **skipped** (counted in `skipped`), never overwritten with an older
-  value.
-- Sort: `rating`/`energy` are nullable → `ORDER BY <col> IS NULL, <col> DESC,
-  id ASC`, default direction descending, `SORT_KEYS` is now 8 entries.
-  `energyMin`/`energyMax` count as **one** filter group (1–10, inverted bounds
-  rejected on both sides).
-- Front end: `StarRating.tsx` + `EnergyBars.tsx` (new), the `energy`/`rating`
-  column model entries, energy bounds in the filter panel, table multi-select
-  (Ctrl/Cmd-click toggles, Shift-click takes a range) and an Undo toast inside
-  the library view's `relative` container (10 s, paused while the toast has
-  focus, with an explicit dismiss). The widgets own their keys: the number
-  keys and Enter/Space never reach the row or the preview player, Escape still
-  does. The selection anchor is a **track id**, not a row index, so sorting or
-  reloading cannot move it. Logic lives in pure `lib/*.ts` helpers tested with
-  `node --test` — **there is no React component test harness in this repo**
-  and the three Tauri commands have no handler test.
+- Reversible write path: `update_track_metadata`, `set_track_rating`,
+  `undo_track_metadata` — the undo snapshot is a `skill_runs` row written **in
+  the same transaction** as the track UPDATE, hence `Database::conn_mut()`.
+- `updated` counts the tracks whose value **actually changed**; the undo
+  restores only what its snapshot still describes and **skips** a track edited
+  again since (counted in `skipped`).
+- Front end: `StarRating.tsx` + `EnergyBars.tsx`, the `energy`/`rating` column
+  model entries, energy bounds in the filter panel, table multi-select and an
+  Undo toast inside the library view's `relative` container. The widgets own
+  their keys; the selection anchor is a **track id**, not a row index. Logic
+  lives in pure `lib/*.ts` helpers tested with `node --test` — **there is no
+  React component test harness in this repo**.
 - **Open gap:** the full bulk-metadata flow (BulkActionBar, select-all) is
   still **T2.1.3**; Slice 2 ships only the table multi-select subset.
-- Checks: `pnpm ci:local:portable` green (lint, typecheck, desktop + agent
-  tests, `cargo fmt`, `cargo clippy -D warnings`, `cargo test -p
-  dj-assistant-schema-tests` 9 + 7 + 13). `cargo test -p dj-assistant-desktop`
-  cannot run here — the Tauri-linked test binary does not start on this
-  machine; use `pnpm rust:test:portable`.
+- `cargo test -p dj-assistant-desktop` cannot run here — the Tauri-linked test
+  binary does not start on this machine; use `pnpm rust:test:portable`.
 
-## 2026-10-21 · Phase 2 roadmap reconciliation (docs only)
+## Still open
 
-- `docs/sdd/04-TASKS.md` + the Library+Player plan were reconciled: T2.1.4 =
-  rating only, T2.1.6 = all energy work, **T2.1.13 = comment editing** (it
-  was dropped when T2.1.4 was rewritten; the `Edit tags…` editor now lists a
-  Comment field in `docs/ui/03-LIBRARY-VIEW.md` §3.5).
-- Row virtualization **does not exist** — `App.tsx` maps every row and no
-  virtualizer is in `apps/desktop`. The plan’s Slice 0 no longer claims it,
-  Slice 9 owns implementing it, and the T2.1.5 entry carries the caveat.
-
-## 2026-10-21 · T2.1.5 column framework — PR #49
-
-- PR #49 (`feat/T2.1.5-column-framework` → `main`) carries the Phase 2 plan
-  (docs) and the slice. Commit `2ca8f6e3` closed the first greptile round:
-  the table width follows the resize preview (`totalColumnWidth`) instead of
-  stretching in `w-full`; auto-fit counts sort icons, chip/pill chrome and the
-  artwork thumb; cells use `trackColumnTooltip` for the full comment, hash,
-  both key notations and rating. The three threads are replied and resolved;
-  the remaining review threads on the plan/diagram/picker are still open.
-- The column model and persistence are in
-  `apps/desktop/src/lib/library-columns.ts`; its 29 tests are in
-  `apps/desktop/src/lib/library-columns.test.ts`; the checklist is
-  `components/ColumnPicker.tsx`; the table header/cells in `App.tsx`
-  render from the configured list.
-- Verified in the dev-server browser with mock tracks: toggle, resize,
-  reorder, double-click auto-fit, reset, reload persistence and wide-window
-  widths all hold; the last identity column stays pinned. 77 desktop tests,
-  workspace typecheck and lint pass.
-- T2.1.5 is now a ticked row in `docs/sdd/04-TASKS.md`; the tracker runs
-  T2.1.0–T2.1.13.
-
-## 2026-10-20 · Automatic agent routing and communication
-
-- `pnpm agent:preflight '<prompt>'` is now the entry point for every prompt:
-  it returns memory lines, skills, the agent to delegate to, and the checks.
-- `agents.registry.json` holds the routing data (agents, commands, verification
-  groups, mirror map); `scripts/agent/` holds the tooling — `preflight.mjs`,
-  `doctor.mjs`, `sync.mjs`, `lib.mjs`, plus `preflight.test.mjs`, run by
-  `pnpm test:agent` (read the count from that command, not from here).
-- The agent/command files are canonical in `.opencode/` and mirrored into every
-  other tool directory by `pnpm agent:sync --write`; `pnpm agent:doctor` reports
-  drift. The `/preflight` command was added to the same set.
-- `docs/ai/COMMUNICATION.md` documents the delegation contract, the `RESULT`
-  handoff, the board protocol, and file ownership.
-- The memory reader now skips each file's intro paragraph, and generic verbs
-  are dropped from memory queries — both were matching almost every prompt.
-
-## 2026-10-20 · AI memory layers added
-
-- Created `docs/ai/` (agents, skills, routing, memory) and consolidated the
-  existing AI docs into it.
-- Built the shared memory store: `AGENTS.md` + `docs/ai/memory/*`, with thin
-  adapters for Qoder, Kilo Code, DeepSeek/Claude-style readers. FreeBuff and
-  OpenCode read `AGENTS.md` directly.
-- Enhanced the `skill-router` and `skill-maintainer` subagents for memory
-  awareness; added `memory-keeper` and the `/remember` command.
-- Implemented `scripts/memory/search.mjs` (`pnpm memory:search`), the contract
-  `context-loader` and the `/audio`, `/tauri` commands already called — it did
-  not exist before, so those calls silently failed.
-- Skill library at **240 installed / 72 priority**, all advertised, ~15.4k
-  tokens/step; audit clean (0 hard problems).
-
-**Open questions from the library review — still unanswered:**
-
-1. Install `sqlite-best-practices` and/or `rust-skills`? (SQLite/`rusqlite` has
-   no coverage today.)
-2. Prune the library to cut the ~15.4k tokens/step advertised cost? Candidates:
-   Electron/Next.js/AWS/CI/Docker/desktop frameworks this repo does not use.
-3. Clean overlaps? Remove exact-duplicate aliases (e.g.
-   `prisma-database-setup`), merge design/E2E overlaps
-   (`e2e-testing-patterns`/`end-to-end-testing` vs `playwright`;
-   `better-interface` vs the six `better-*`; the taste-skill style variants).
-
-**Status:** the skill-routing docs and review evidence landed in PR #47 (squash
-`859b18c6`, 2026-10-20). The memory store described above was authored after
-that merge and is tracked separately — do not record commit state here, since
-this file ships in the very commits it would be describing.
+- The library review's question 1 — install `sqlite-best-practices` and/or
+  `rust-skills`? SQLite/`rusqlite` still has no dedicated coverage; the two
+  candidates are in `skills.policy.json` → `candidates`.
+- The Rekordbox XML export (audit §7.1) — the whole `dj-rekordbox` reader is
+  staged behind it.
+- T2.1.2 / T2.1.4 / T2.1.6 manual running-window QA, and the PR #51 merge.

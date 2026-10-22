@@ -36,6 +36,39 @@ const STOPWORDS = new Set(
   ).split(" ")
 );
 
+/**
+ * Glob → regular expression, shared with the agent layer.
+ *
+ * Supports `**` (any depth), `*` (one segment), and `?` (one character). The
+ * `**` rewrites are staged through placeholders so the inserted regex
+ * fragments are not themselves escaped.
+ */
+export function globToRegExp(pattern) {
+  const fragments = {
+    "@@G1@@": "(?:/.*)?",
+    "@@G2@@": "(?:.*/)?",
+    "@@G3@@": ".*",
+  };
+  let source = pattern;
+  source = source.replace(/\/\*\*\//g, "@@G1@@/");
+  source = source.replace(/\/\*\*$/, "@@G1@@");
+  source = source.replace(/^\*\*\//, "@@G2@@");
+  source = source.replace(/\*\*\//g, "@@G2@@");
+  source = source.replace(/\*\*/g, "@@G3@@");
+
+  let out = "";
+  for (const ch of source) {
+    if (ch === "*") out += "[^/]*";
+    else if (ch === "?") out += "[^/]";
+    else if ("\\^$.|+()[]{}".includes(ch)) out += `\\${ch}`;
+    else out += ch;
+  }
+  for (const [token, fragment] of Object.entries(fragments)) {
+    out = out.split(token).join(fragment);
+  }
+  return new RegExp(`^${out}$`);
+}
+
 /** True when the file exists and is a regular file. */
 export function isFile(target) {
   try {
@@ -191,10 +224,22 @@ export function isAutoinvokeDisabled(data) {
   return value === false || value === "false";
 }
 
-/** List skills from every source, with later sources overriding earlier IDs. */
-export function listSkills() {
+/**
+ * List skills from every source, with later sources overriding earlier IDs.
+ * Returns `{ skills, overrides }`, with skills sorted by ID and overrides
+ * recording which source won each duplicate.
+ *
+ * Parsed metadata is reused when a file's modification time and size match.
+ * `cache: false` or a nonempty `DJ_ASSISTANT_NO_CACHE` bypasses cache reads and
+ * writes. Cache read/write failures are ignored; directory-listing and skill-read errors
+ * propagate. Missing sources and files that cannot be statted are skipped.
+ */
+export function listSkills({ cache = true } = {}) {
   const byId = new Map();
   const overrides = [];
+  const stored = cache ? readSkillCache() : new Map();
+  const next = new Map();
+
   for (const source of SOURCES) {
     if (!fs.existsSync(source.dir)) continue;
     for (const entry of fs.readdirSync(source.dir, { withFileTypes: true })) {
@@ -203,22 +248,21 @@ export function listSkills() {
       if (!entry.isDirectory() && !entry.isSymbolicLink()) continue;
       const file = path.join(source.dir, entry.name, "SKILL.md");
       if (!isFile(file)) continue;
-      const text = fs.readFileSync(file, "utf8");
-      const { data, hadFrontmatter } = parseFrontmatter(text);
-      const skill = {
-        id: entry.name,
-        source: source.name,
-        file,
-        dir: path.join(source.dir, entry.name),
-        symlink: entry.isSymbolicLink(),
-        name: typeof data.name === "string" ? data.name : entry.name,
-        hasName: Object.prototype.hasOwnProperty.call(data, "name"),
-        description: typeof data.description === "string" ? data.description : "",
-        autoinvoke: !isAutoinvokeDisabled(data),
-        hadFrontmatter,
-        lines: text.split("\n").length,
-        bytes: Buffer.byteLength(text),
-      };
+
+      let stat;
+      try {
+        stat = fs.statSync(file);
+      } catch {
+        continue;
+      }
+      const fingerprint = `${stat.mtimeMs}:${stat.size}`;
+      const cached = stored.get(file);
+      const skill =
+        cached && cached.fingerprint === fingerprint
+          ? { ...cached.skill, symlink: entry.isSymbolicLink() }
+          : readSkill(file, entry, source);
+
+      next.set(file, { fingerprint, skill });
       if (byId.has(skill.id)) {
         const previous = byId.get(skill.id);
         overrides.push({
@@ -232,7 +276,68 @@ export function listSkills() {
       byId.set(skill.id, skill);
     }
   }
+
+  if (cache) writeSkillCache(next);
   return { skills: [...byId.values()].sort((a, b) => a.id.localeCompare(b.id)), overrides };
+}
+
+/**
+ * Parse one `SKILL.md` into metadata, using the directory name as its ID and
+ * as the fallback name when frontmatter has no string name. Read errors propagate.
+ */
+function readSkill(file, entry, source) {
+  const text = fs.readFileSync(file, "utf8");
+  const { data, hadFrontmatter } = parseFrontmatter(text);
+  return {
+    id: entry.name,
+    source: source.name,
+    file,
+    dir: path.join(source.dir, entry.name),
+    symlink: entry.isSymbolicLink(),
+    name: typeof data.name === "string" ? data.name : entry.name,
+    hasName: Object.prototype.hasOwnProperty.call(data, "name"),
+    description: typeof data.description === "string" ? data.description : "",
+    autoinvoke: !isAutoinvokeDisabled(data),
+    hadFrontmatter,
+    lines: text.split("\n").length,
+    bytes: Buffer.byteLength(text),
+  };
+}
+
+/* --------------------------------------------------------------- index cache */
+
+const CACHE_DIR = path.join(ROOT, "node_modules", ".cache", "dj-assistant");
+const CACHE_PATH = path.join(CACHE_DIR, "skills-index.json");
+
+/**
+ * Read the parsed-skill cache.
+ *
+ * Returns a map keyed by skill file path, or an empty map when
+ * `DJ_ASSISTANT_NO_CACHE` is nonempty or reading/parsing the cache fails.
+ */
+function readSkillCache() {
+  if (process.env.DJ_ASSISTANT_NO_CACHE) return new Map();
+  try {
+    const parsed = JSON.parse(fs.readFileSync(CACHE_PATH, "utf8"));
+    return new Map(parsed.entries ?? []);
+  } catch {
+    return new Map();
+  }
+}
+
+/**
+ * Persist the parsed metadata map, creating the cache directory as needed.
+ * A nonempty `DJ_ASSISTANT_NO_CACHE` disables writes; write failures are ignored.
+ */
+function writeSkillCache(entries) {
+  if (process.env.DJ_ASSISTANT_NO_CACHE) return;
+  try {
+    fs.mkdirSync(CACHE_DIR, { recursive: true });
+    const payload = [...entries].map(([file, value]) => [file, value]);
+    fs.writeFileSync(CACHE_PATH, `${JSON.stringify({ entries: payload })}\n`, "utf8");
+  } catch {
+    // A read-only or missing node_modules is not a reason to fail the brief.
+  }
 }
 
 /** Load `skills.policy.json`, failing with a clear message when missing. */
@@ -265,12 +370,38 @@ export function skillTokens(skill) {
 }
 
 /**
+ * Resolve the policy group a skill belongs to.
+ *
+ * `skills.policy.json` groups the library by the kind of work a skill serves
+ * ("Rust core", "Tauri shell", "Music & DJ domain", …). A skill that matches
+ * no group is outside every domain the project recognises.
+ * Returns the first group with a matching skill ID or glob pattern, or `null`.
+ */
+export function skillGroup(skillId, groups = {}) {
+  for (const [group, members] of Object.entries(groups)) {
+    if (!Array.isArray(members)) continue;
+    for (const member of members) {
+      if (member === skillId || globToRegExp(member).test(skillId)) return group;
+    }
+  }
+  return null;
+}
+
+/**
  * BM25-flavoured scoring: ID tokens count 3x, description tokens 1x, weighted
  * by inverse document frequency so common words ("design", "code") do not
  * dominate. Length-normalized to keep long descriptions from winning on bulk.
+ *
+ * Each document also carries its policy group, so the matcher can tell a
+ * domain-relevant skill from one that merely shares a word with the prompt.
  */
-export function buildIndex(skills, hot = new Set()) {
-  const docs = skills.map((skill) => ({ skill, hot: hot.has(skill.id), ...skillTokens(skill) }));
+export function buildIndex(skills, hot = new Set(), groups = {}) {
+  const docs = skills.map((skill) => ({
+    skill,
+    hot: hot.has(skill.id),
+    group: skillGroup(skill.id, groups),
+    ...skillTokens(skill),
+  }));
   const df = new Map();
   for (const doc of docs) {
     for (const token of new Set([...doc.idTokens, ...doc.descTokens])) {
@@ -283,10 +414,168 @@ export function buildIndex(skills, hot = new Set()) {
   return { docs, idf };
 }
 
+/**
+ * Resolve which project domains a task belongs to, and therefore which
+ * policy groups of skills are in play.
+ *
+ * Three signals, strongest first:
+ *
+ * 1. **The files in play** — `pathDomains` maps a path prefix to a domain, so
+ *    a vague "fix this" still lands in the right area. The files say where the
+ *    work *is*, not only what the prompt mentions, so they win outright: when
+ *    a file matches, the prompt does not get to add a second opinion.
+ * 2. **Prompt vocabulary** — the curated `domains` map in the policy, used only
+ *    when no file matched. The domain with the *most* distinct prompt words
+ *    wins, so a task that names two areas ("make the library table prettier")
+ *    does not activate the audio area just because "library" is one of its
+ *    keywords. Ties keep every candidate.
+ * 3. **`domainHints`** — domains contributed by the caller, which is how the
+ *    agent layer passes in the domain of the subagent that owns the work. The
+ *    routed subagent owns a whole tree, so it is the last resort: it only
+ *    speaks when neither the files nor the prompt did.
+ *
+ * Returns `{ domains, groups }` as sets; groups are the union of the active
+ * domains' policy groups. Both sets are empty when no signal resolves a domain.
+ */
+export function resolveDomains({
+  prompt,
+  files = [],
+  domainHints = [],
+  domains = {},
+  pathDomains = {},
+}) {
+  const active = new Set();
+
+  const normalized = ` ${String(prompt ?? "")
+    .toLowerCase()
+    .replace(/[^a-z0-9+#]+/g, " ")
+    .trim()} `;
+  const tokens = new Set(tokenize(prompt));
+  const scored = [];
+  for (const [id, domain] of Object.entries(domains)) {
+    // Count the distinct prompt *words* the domain claims, not the keyword
+    // entries it happens to match: "waveform" and "waveforms" are two entries
+    // but one word, and counting both let one alias out-vote a real signal.
+    const words = new Set();
+    for (const keyword of domain.keywords ?? []) {
+      for (const word of matchedWords(tokens, normalized, keyword)) words.add(word);
+    }
+    if (words.size) scored.push({ id, hits: words.size });
+  }
+  const best = scored.reduce((max, entry) => Math.max(max, entry.hits), 0);
+
+  // The files in play are the strongest signal: they say where the work *is*,
+  // not only what the prompt mentions. When a file matches, the prompt does
+  // not get to add a second opinion — an unrelated word in the prompt would
+  // otherwise make off-domain skills eligible at full score.
+  let pathMatched = false;
+  for (const file of files) {
+    for (const [pattern, ids] of Object.entries(pathDomains)) {
+      if (globToRegExp(pattern).test(file.replace(/\\/g, "/").replace(/^\.\//, ""))) {
+        pathMatched = true;
+        for (const id of ids ?? []) active.add(id);
+      }
+    }
+  }
+
+  if (!pathMatched) {
+    for (const entry of scored) {
+      if (entry.hits === best) active.add(entry.id);
+    }
+  }
+
+  // The routed subagent is the last resort: it knows the area, but it owns a
+  // whole tree, so it is coarser than the file paths and never overrides them.
+  if (!active.size) for (const id of domainHints) active.add(id);
+
+  const groups = new Set();
+  for (const id of active) for (const group of domains[id]?.groups ?? []) groups.add(group);
+
+  return { domains: active, groups };
+}
+
+/**
+ * The prompt words a keyword matches.
+ *
+ * Phrases match as whole phrases and claim each of their words; single words
+ * match exactly, or by a shared prefix of at least five characters in either
+ * direction — so "skill" finds "skills" and "waveform" finds "waveforms", but
+ * "set" never finds "settings".
+ *
+ * The result is a list of *prompt words*, so two alias keywords — "waveform"
+ * and "waveforms" — claim the same word, and a domain's score counts the
+ * words it actually claims rather than the entries it happens to match.
+ */
+export function matchedWords(promptTokens, normalizedPrompt, keyword) {
+  const phrase = keyword
+    .toLowerCase()
+    .replace(/[^a-z0-9+#]+/g, " ")
+    .trim();
+  if (!phrase) return [];
+  if (phrase.includes(" ")) {
+    if (!normalizedPrompt.includes(` ${phrase} `)) return [];
+    return phrase.split(" ");
+  }
+  if (promptTokens.has(phrase)) return [phrase];
+  // tokenize() drops every word of two characters or fewer, so `ui` can never
+  // reach the token set; match it against the padded prompt instead of letting
+  // the length guard below discard the keyword.
+  if (phrase.length < 3) return normalizedPrompt.includes(` ${phrase} `) ? [phrase] : [];
+  if (phrase.length < 5) return [];
+  const matched = [];
+  for (const token of promptTokens) {
+    if (token.length < 5) continue;
+    if (token.startsWith(phrase) || phrase.startsWith(token)) matched.push(token);
+  }
+  return matched;
+}
+
+/**
+ * True when the keyword appears in the prompt.
+ *
+ * Phrases match as whole phrases; single words match exactly, or by a shared
+ * prefix of at least five characters in either direction — so "skill" finds
+ * "skills" and "waveform" finds "waveforms", but "set" never finds "settings".
+ */
+export function keywordHit(promptTokens, normalizedPrompt, keyword) {
+  return matchedWords(promptTokens, normalizedPrompt, keyword).length > 0;
+}
+
+/**
+ * Score a prompt against the skill index.
+ *
+ * Three gates decide whether a skill qualifies for scoring:
+ *
+ * 1. **A curated trigger** qualifies the skill. `skills.policy.json` maps project
+ *    vocabulary onto skill IDs by hand. Each matching trigger adds 10 to the
+ *    score and bypasses lexical qualification and domain penalties.
+ * 2. **A specific ID hit** — a token from the skill's ID is in the prompt. The token
+ *    must not be one of the domain-neutral words in `genericTokens`; "speed"
+ *    alone used to select `performance-and-perceived-speed` and "memory" alone
+ *    selected `memory-safety-patterns`, both on unrelated tasks.
+ * 3. **Two independent hits**, so one shared adjective cannot pick a skill.
+ *
+ * When `activeGroups` is nonempty, lexical matches outside those groups have
+ * their score multiplied by `offDomainPenalty` before filtering.
+ *
+ * Returns up to `limit` entries with ID, score, hits, hot flag, and `via` match
+ * source; lexical entries also carry their group. `minScore` is inclusive and
+ * applied before rounding scores to four decimals. Results sort by descending
+ * rounded score, then ID; `includeHot: false` excludes hot skills.
+ * Returns an empty array when the prompt has no tokens, even if a trigger matches.
+ */
 export function matchSkills(
   index,
   prompt,
-  { includeHot = true, limit = 5, minScore = 0, triggers = {} } = {}
+  {
+    includeHot = true,
+    limit = 5,
+    minScore = 0,
+    triggers = {},
+    activeGroups = null,
+    offDomainPenalty = 0.1,
+    genericTokens = new Set(),
+  } = {}
 ) {
   const queryTokens = tokenize(prompt);
   if (queryTokens.length === 0) return [];
@@ -321,16 +610,22 @@ export function matchSkills(
     let idHit = false;
     const hits = [];
     for (const token of query) {
-      if (doc.idTokens.has(token)) {
+      const generic = genericTokens.has(token);
+      if (doc.idTokens.has(token) && !generic) {
         sum += 3 * index.idf(token);
         idHit = true;
         hits.push(token);
       } else if (doc.descTokens.has(token)) {
         sum += index.idf(token);
         hits.push(token);
+      } else if (doc.idTokens.has(token)) {
+        // A domain-neutral word that happens to be part of the skill's name
+        // earns description-level weight, never the 3x name bonus.
+        sum += index.idf(token);
+        hits.push(token);
       }
     }
-    // A single generic description word is noise; require an ID match or two words.
+    // A single generic description word is noise: require a name hit or two words.
     if (!idHit && hits.length < 2) continue;
     const length = doc.idTokens.size + doc.descTokens.size || 1;
     const coverage = hits.length / query.size;
@@ -338,14 +633,20 @@ export function matchSkills(
     if (normalized <= 0) continue;
     const existing = results.get(doc.skill.id);
     if (existing) {
+      // A triggered skill is curated by hand; it is never penalised.
       existing.score += normalized;
     } else {
+      const gated =
+        activeGroups && activeGroups.size && !activeGroups.has(doc.group)
+          ? normalized * offDomainPenalty
+          : normalized;
       results.set(doc.skill.id, {
         id: doc.skill.id,
-        score: normalized,
+        score: gated,
         hits,
         hot: doc.hot,
         via: "lexical",
+        group: doc.group,
       });
     }
   }
