@@ -4,6 +4,35 @@ Ephemeral. Newest first. **Rotate aggressively** — if a line would still be tr
 in two weeks, it belongs in [`decisions.md`](./decisions.md); if it is just a
 fact, it belongs in [`facts.md`](./facts.md). Delete anything stale.
 
+## 2026-10-22 · Slice 2 QA session — baseline established, blocked on human clicks
+
+- **The app runs; the QA did not happen.** The real Tauri app was launched
+  (`tauri dev`, real database, 94 tracks / 24 analysed) and the baseline was
+  verified, but **Sections A, B and C of the running-window checklist were not
+  executed** — no PASS/FAIL exists in either direction, so T2.1.2 / T2.1.4 /
+  T2.1.6 stay **unticked**.
+- **One exploratory write landed during the session and was cleared again:**
+  *Just Just (Extended Mix)* (`756d2d12…`) was set to **energy 8** and then
+  cleared back to `NULL` — the library is back to 0 rated / 0 energy, a
+  pristine baseline. It is a database fact, not a QA result: no human
+  observation exists, so it cannot close B2.
+- **The blocker is structural, not a bug:** the DoD gate needs a human in the
+  native window, and the agent cannot click it. The split that works is
+  *human clicks, agent verifies the database read-only* with `dj-query`
+  (`--rating-min`, `--energy-min/--energy-max`, `--sort rating|energy`).
+- **A browser session would have been a false pass** — `pnpm dev:desktop` is
+  Vite only and `api.ts` serves **mock** rows without the Tauri IPC. The QA
+  must run in the `tauri dev` window; see F-009.
+- The runnable checklist now lives in
+  [`docs/engineering/SLICE2_MANUAL_QA_CHECKLIST.md`](../../engineering/SLICE2_MANUAL_QA_CHECKLIST.md)
+  with the exact shipped strings (`Rated 3 tracks`, `Set energy on 3 tracks`,
+  `Undone — 3 tracks restored, 1 skipped (changed since)`,
+  `Rating unchanged — nothing to save`, `Energy 7 / 10`, `No energy set`).
+- **Recommendation:** move to Slice 3 (T2.1.7 tags + T2.1.13 comments) rather
+  than stall — both are per-track inline metadata edits on the same reversible
+  write path, the same Undo UX and the same column framework, and doing them
+  before the QA means the QA session later exercises the final table shape.
+
 ## 2026-10-22 · Routing is domain-gated; the skill library is pruned, not hidden
 
 - **The problem was measured, not guessed.** One shared adjective was enough to
@@ -100,4 +129,7 @@ fact, it belongs in [`facts.md`](./facts.md). Delete anything stale.
   candidates are in `skills.policy.json` → `candidates`.
 - The Rekordbox XML export (audit §7.1) — the whole `dj-rekordbox` reader is
   staged behind it.
-- T2.1.2 / T2.1.4 / T2.1.6 manual running-window QA (PR #51 merged 2026-10-21).
+- T2.1.2 / T2.1.4 / T2.1.6 manual running-window QA (PR #51 merged 2026-10-21) —
+  **not executed**; baseline done, checklist in
+  [`docs/engineering/SLICE2_MANUAL_QA_CHECKLIST.md`](../../engineering/SLICE2_MANUAL_QA_CHECKLIST.md),
+  needs a human in the Tauri window.

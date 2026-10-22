@@ -53,6 +53,12 @@ not inferable by reading the code.
 - The music library path is **configurable**
   (`$DJ_ASSISTANT_MUSIC_LIBRARY`); the concrete folders differ per workstation,
   so no absolute path belongs in this shared memory.
+- A **browser-only** desktop session is a mock: `pnpm dev:desktop` starts just
+  the Vite server, and without the Tauri IPC (`__TAURI_INTERNALS__`)
+  `apps/desktop/src/services/api.ts` falls back to mock rows and no-op writes —
+  so QA that must touch the real library has to run in the `tauri dev` window.
+- A first `tauri dev` run cold-compiles the desktop Rust stack (minutes); later
+  runs rebuild only what changed.
 - The app's library DB (`%APPDATA%\com.djassistant.desktop\dj_assistant.db`) is
   in **WAL mode**, so a read-only open can fail once the app is closed —
   `dj-query` falls back to `immutable=1` only when the `-wal` is empty and

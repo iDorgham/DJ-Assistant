@@ -94,3 +94,20 @@ carry a real `prune` list and a tool that moves them out.
 **Rule:** a note in a policy file must describe something that is actually
 true of the system it governs. Verify the state before recording it. See
 [D-003](./decisions.md) and [D-012](./decisions.md).
+
+## F-009 · A QA session that cannot reach the real system proves nothing (2026-10-22)
+
+The Slice 2 running-window QA (T2.1.2 / T2.1.4 / T2.1.6) was nearly run in a
+browser tab. `pnpm dev:desktop` starts **only** the Vite server, and without the
+Tauri IPC (`__TAURI_INTERNALS__`) `apps/desktop/src/services/api.ts` falls back
+to a **mock** API: the table shows mock rows, the writes are no-ops and the
+console even says `[Mock API] Tauri not detected`. A checklist executed there
+would have produced a clean sheet of PASSes for a system that was never
+touched.
+**Rule:** before recording a QA result, prove the session reaches the real
+system — here: the window is the `tauri dev` shell, the database is
+`%APPDATA%\com.djassistant.desktop\dj_assistant.db`, and a read-only CLI
+(`dj-query`) confirms the rows the UI claims to have written. A PASS needs the
+observation **and** the independent check; a mock-backed session is not
+evidence. See F-009 in [`state.md`](./state.md) and the checklist in
+[`docs/engineering/SLICE2_MANUAL_QA_CHECKLIST.md`](../../engineering/SLICE2_MANUAL_QA_CHECKLIST.md).
