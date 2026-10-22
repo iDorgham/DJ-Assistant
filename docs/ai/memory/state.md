@@ -4,6 +4,27 @@ Ephemeral. Newest first. **Rotate aggressively** — if a line would still be tr
 in two weeks, it belongs in [`decisions.md`](./decisions.md); if it is just a
 fact, it belongs in [`facts.md`](./facts.md). Delete anything stale.
 
+## 2026-10-22 · Slice 3A planned — tags + comments (T2.1.7, T2.1.13)
+
+- **Slice 3 is cut in two:** 3A = tags + comments, 3B = key pills (T2.1.8).
+  3B waits because the key-format preference needs a Settings surface the app
+  does not have (the router knows only import/library/analysis/studio/backup/
+  sync).
+- **Three decisions locked by the human:** the user comment **overwrites**
+  `tracks.comments` (the imported comment is lost, Undo keeps it recoverable);
+  tags live in a new **`track_tags` table** (plain-SQL filtering, the base for
+  the Tag Surgeon); 3A = T2.1.7 + T2.1.13.
+- **Two assumptions in the slice text were false:** there is **no** “Edit tags…”
+  editor stub and **no** row context menu (only the column-header one). The
+  editor and its entry point are 3A work, and the `label` / `year` fields the
+  editor names are not in the schema or in `TrackSummary`.
+- **Tags are the first non-scalar undo snapshot** — a set restore has to be
+  transactional, and the snapshot records the previous tag set per track.
+- The plan is [`docs/engineering/SLICE3A_PLAN.md`](../../engineering/SLICE3A_PLAN.md):
+  migration 007, the read/query/write paths, `TagChips`, the editor, the tests
+  and the DoD. The QA gate stays the Slice 2 discipline — the human clicks in
+  the `tauri dev` window, the agent verifies the database read-only.
+
 ## 2026-10-22 · Slice 2 QA session — baseline established, blocked on human clicks
 
 - **The app runs; the QA did not happen.** The real Tauri app was launched
