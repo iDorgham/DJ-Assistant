@@ -16,9 +16,9 @@ export function ArtworkThumb({
   const [src, setSrc] = useState<string | null>(null);
 
   useEffect(() => {
+    setSrc(null);
     let cancelled = false;
     if (!hasArtwork) {
-      setSrc(null);
       return;
     }
     getArtwork({ trackId })

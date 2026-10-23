@@ -7,6 +7,7 @@ import { TagChips } from "../TagChips";
 
 interface TagsTabProps {
   track: TrackDetail;
+  targetCount: number;
   onEditMetadata: () => void;
   onRate: (rating: number | null) => void;
   onSetEnergy: (energy: number | null) => void;
@@ -17,7 +18,16 @@ interface TagsTabProps {
  * Shows tags and metadata, delegating edits and tag selection to the supplied callbacks.
  * Rating callbacks receive 1–5 and energy callbacks 1–10, or null when cleared.
  */
-export function TagsTab({ track, onEditMetadata, onRate, onSetEnergy, onSelectTag }: TagsTabProps) {
+export function TagsTab({
+  track,
+  targetCount,
+  onEditMetadata,
+  onRate,
+  onSetEnergy,
+  onSelectTag,
+}: TagsTabProps) {
+  const targetLabel =
+    targetCount > 1 ? `${targetCount} selected tracks` : track.title || "Untitled";
   return (
     <div className="space-y-5">
       <section>
@@ -47,7 +57,7 @@ export function TagsTab({ track, onEditMetadata, onRate, onSetEnergy, onSelectTa
             <StarRating
               value={track.userRating}
               onChange={onRate}
-              label={`Rating for ${track.title || "Untitled"}`}
+              label={`Rating for ${targetLabel}`}
             />
           </div>
           <div>
@@ -55,10 +65,12 @@ export function TagsTab({ track, onEditMetadata, onRate, onSetEnergy, onSelectTa
             <EnergyBars
               value={track.energy}
               onChange={onSetEnergy}
-              label={`Energy for ${track.title || "Untitled"}`}
+              label={`Energy for ${targetLabel}`}
             />
           </div>
           <p className="text-[11px] text-dj-text-muted">
+            {targetCount > 1 &&
+              `Rating and energy changes apply to ${targetCount} selected tracks. `}
             Saves immediately. Undo is offered in the library.
           </p>
         </div>

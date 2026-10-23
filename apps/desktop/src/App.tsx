@@ -165,6 +165,7 @@ const errorDetail = (err: unknown): string =>
  * it or dismisses it.
  */
 const UNDO_TOAST_IDLE_MS = 10_000;
+const ROW_DOUBLE_CLICK_MS = 350;
 
 const THEME_ICONS = { dark: Moon, light: Sun, system: Monitor } as const;
 
@@ -939,9 +940,9 @@ export default function App() {
           target.tagName === "TEXTAREA" ||
           target.tagName === "SELECT" ||
           target.isContentEditable ||
-          // Tab movement and panel actions own the keys while the focus is
-          // inside the shared panel.
-          target.closest("[data-track-panel]"))
+          // Unmodified keys belong to the panel; Ctrl/Cmd view shortcuts
+          // still reach the shell when a panel control has focus.
+          (!event.ctrlKey && !event.metaKey && target.closest("[data-track-panel]")))
       ) {
         return;
       }
@@ -1031,6 +1032,18 @@ export default function App() {
   // metadata reloads reorder the table, so a stored index would point at a
   // different track by the time the user Shift-clicks.
   const [selectionAnchor, setSelectionAnchor] = useState<string | null>(null);
+  const pendingRowClickRef = useRef<{
+    timer: number;
+    trackId: string;
+    run: () => void;
+  } | null>(null);
+  const cancelPendingRowClick = useCallback(() => {
+    if (pendingRowClickRef.current) {
+      window.clearTimeout(pendingRowClickRef.current.timer);
+      pendingRowClickRef.current = null;
+    }
+  }, []);
+  useEffect(() => cancelPendingRowClick, [cancelPendingRowClick, ui.view]);
   // Undo for the newest metadata write (T2.1.4/T2.1.6). The backend keeps the
   // pre-write values, so the toast restores real data instead of guessing it.
   const [pendingUndo, setPendingUndo] = useState<{ undoId: string; message: string } | null>(null);
@@ -1634,6 +1647,7 @@ export default function App() {
     event: ReactMouseEvent<HTMLTableRowElement>,
     track: TrackSummary
   ) => {
+    cancelPendingRowClick();
     event.preventDefault();
     contextRowRef.current = event.currentTarget;
     setContextMenu({ track, x: event.clientX, y: event.clientY });
@@ -1683,19 +1697,22 @@ export default function App() {
   // Ctrl/Cmd-click toggles one track, Shift-click takes the range from the
   // anchor. Inspecting and multi-selecting stay separate on purpose — the panel
   // must never depend on how the row was selected. A double-click loads the
-  // player; it never closes the panel the first click opened.
+  // player without inspecting first; an already open panel stays open.
   /**
    * Inspects the clicked row and updates selection: Ctrl/Cmd toggles, Shift selects an inclusive
    * range, and a plain click replaces it. index is the row position in filteredTracks; a missing
    * Shift anchor falls back to selecting only this track. Records the row for focus return.
    */
   const handleRowClick = (
-    event: ReactMouseEvent<HTMLTableRowElement>,
+    event: Pick<
+      ReactMouseEvent<HTMLTableRowElement>,
+      "ctrlKey" | "metaKey" | "shiftKey" | "currentTarget"
+    >,
     track: TrackSummary,
-    index: number
+    index: number,
+    anchor = selectionAnchor
   ) => {
     if (event.ctrlKey || event.metaKey) {
-      event.preventDefault();
       setSelection((current) =>
         current.includes(track.id)
           ? current.filter((id) => id !== track.id)
@@ -1705,11 +1722,10 @@ export default function App() {
       openTrackPanel(track, event.currentTarget);
       return;
     }
-    if (event.shiftKey && selectionAnchor !== null) {
-      event.preventDefault();
+    if (event.shiftKey && anchor !== null) {
       // The anchor is resolved against the *current* list, so a re-sort or a
       // reload between the two clicks cannot shift the range onto other rows.
-      const anchorIndex = filteredTracks.findIndex((entry) => entry.id === selectionAnchor);
+      const anchorIndex = filteredTracks.findIndex((entry) => entry.id === anchor);
       if (anchorIndex === -1) {
         // The anchor is no longer in the visible list: fall back to a plain
         // selection instead of a range built from a stale position.
@@ -1726,6 +1742,32 @@ export default function App() {
     setSelection([track.id]);
     setSelectionAnchor(track.id);
     openTrackPanel(track, event.currentTarget);
+  };
+
+  const arbitrateRowClick = (
+    event: ReactMouseEvent<HTMLTableRowElement>,
+    track: TrackSummary,
+    index: number
+  ) => {
+    const pending = pendingRowClickRef.current;
+    cancelPendingRowClick();
+    if (event.ctrlKey || event.metaKey || event.shiftKey) {
+      event.preventDefault();
+      // Commit an earlier plain click before extending its selection. Its
+      // anchor has not reached this render yet, so pass that track explicitly.
+      pending?.run();
+      handleRowClick(event, track, index, pending?.trackId ?? selectionAnchor);
+      return;
+    }
+    if (event.detail > 1) return;
+    // React clears currentTarget after dispatch; retain the row for focus return.
+    const { ctrlKey, metaKey, shiftKey, currentTarget } = event;
+    const run = () => handleRowClick({ ctrlKey, metaKey, shiftKey, currentTarget }, track, index);
+    const timer = window.setTimeout(() => {
+      pendingRowClickRef.current = null;
+      run();
+    }, ROW_DOUBLE_CLICK_MS);
+    pendingRowClickRef.current = { timer, trackId: track.id, run };
   };
 
   // T2.1.5: the table renders exactly this list, in storage order. Resizing is
@@ -2322,8 +2364,9 @@ export default function App() {
                             tabIndex={0}
                             aria-label={`Inspect ${track.title || "Untitled"} by ${track.artist || "Unknown Artist"}`}
                             aria-selected={selection.includes(track.id)}
-                            onClick={(event) => handleRowClick(event, track, idx)}
+                            onClick={(event) => arbitrateRowClick(event, track, idx)}
                             onDoubleClick={(event) => {
+                              cancelPendingRowClick();
                               // The rating stars and energy meter live inside the
                               // row; double-clicking them must not load the player.
                               if (
@@ -2343,6 +2386,7 @@ export default function App() {
                               // not swallow the activation key.
                               if (e.target !== e.currentTarget) return;
                               if (e.key === "Enter" || e.key === " ") {
+                                cancelPendingRowClick();
                                 e.preventDefault();
                                 e.stopPropagation();
                                 setSelection([track.id]);
@@ -2927,6 +2971,7 @@ export default function App() {
           {inspectedTrack && (
             <TrackPanel
               track={inspectedTrack}
+              targetCount={editTargets(inspectedTrack).length}
               refreshToken={reloadToken}
               onClose={closeTrackPanel}
               onPlay={handlePlayTrack}

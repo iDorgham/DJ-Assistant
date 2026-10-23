@@ -42,6 +42,8 @@ const STATUS_META: Record<AnalysisStatus, { label: string; className: string }> 
 interface TrackPanelProps {
   /** The inspected track. Opening the panel never changes what the dock plays. */
   track: TrackSummary;
+  /** Number of tracks affected by rating and energy edits. */
+  targetCount: number;
   /** Bumped when the library reloads after a write, scan or analysis. */
   refreshToken: number;
   onClose: () => void;
@@ -60,6 +62,7 @@ interface TrackPanelProps {
  */
 export function TrackPanel({
   track,
+  targetCount,
   refreshToken,
   onClose,
   onPlay,
@@ -253,6 +256,7 @@ export function TrackPanel({
             {tab === "tags" && (
               <TagsTab
                 track={activeDetail}
+                targetCount={targetCount}
                 onEditMetadata={() => onEditMetadata(activeDetail)}
                 onRate={(rating) => onRate(activeDetail, rating)}
                 onSetEnergy={(energy) => onSetEnergy(activeDetail, energy)}
