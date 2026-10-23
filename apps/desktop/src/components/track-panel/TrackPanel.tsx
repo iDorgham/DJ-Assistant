@@ -225,6 +225,7 @@ export function TrackPanel({
 
       <div
         role="tabpanel"
+        tabIndex={0}
         id={`track-panel-panel-${tab}`}
         aria-labelledby={`track-panel-tab-${tab}`}
         className="min-h-0 flex-1 overflow-y-auto p-4"
