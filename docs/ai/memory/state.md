@@ -4,6 +4,37 @@ Ephemeral. Newest first. **Rotate aggressively** — if a line would still be tr
 in two weeks, it belongs in [`decisions.md`](./decisions.md); if it is just a
 fact, it belongs in [`facts.md`](./facts.md). Delete anything stale.
 
+## 2026-10-23 · Player dock rebuilt; Extended retired; Stage 1 + 3A in PR #53
+
+- **Player redesign is committed** as `9247a389` on local
+  `feat/player-presentations` (not pushed, no PR yet). Three presentations:
+  Mini / Full / Player view. Full owns the **Hot cues ↔ Grid & beat** segmented
+  panel; hot cues are one compact 30px pad style; dock heights are 96–139
+  (default 104) and 230–440 (default 246) with the 140–229px gap snapped at
+  184.5; BPM fine-tune drives the grid, bar counter and beat jump.
+- **New pure helpers are tested:** `resolvePlayerHeight` (`lib/ui-state.ts`),
+  `clampZoomLevel` / `getFollowViewOffset` / `snapToGrid`
+  (`lib/waveform-generator.ts`) and the Camelot palette (`lib/camelot.ts`).
+  Desktop `node --test` is now **126 tests**.
+- **Docs reconciled to three presentations:** `docs/ui/06A` v1.4, `06-PLAYER`
+  v1.5, the plan docs, component tables and wireframes. The decision and its
+  rejected alternatives are recorded in
+  [`docs/plan/06-delivery/discussions.md`](../../plan/06-delivery/discussions.md).
+- **The six local commits are pushed as PR #53** on
+  `feat/stage1-shell-and-slice3a` (head `8a41e6ac`): Stage 1 shell, Slice 3A,
+  the v1 plan mirror, the Slice 3 cut and the Slice 2 QA checklist. The
+  annotated tag **`slice-3a-code-complete`** (`ec2b191f`) is pushed.
+- **Pruned 20 merge-equivalent local branches.** Kept
+  `feat/analysis-decoder-and-golden-corpus` and
+  `feat/t2.1.2-library-multi-filter` (unique commits, awaiting review), plus
+  `fix/analysis-decode-truncation` and `fix/rustfmt-ci` — their PRs were
+  **closed, not merged**, and they still carry unique commits.
+- **Checks:** desktop typecheck, Prettier and 126 tests pass; `pnpm lint:eslint`
+  is 0 errors / 2 pre-existing Player `exhaustive-deps` warnings;
+  `pnpm lint:root` passes.
+- **Open:** native running-window QA for Stage 1, Slice 3A and the new player
+  heights; the player branch still needs a PR.
+
 ## 2026-10-23 · Stage 1 shell implemented; native acceptance pending
 
 - **The Stage 1 foundation and shell is now in the working tree.** It has the six
@@ -31,11 +62,10 @@ fact, it belongs in [`facts.md`](./facts.md). Delete anything stale.
   navigation. The **30,000-track fixture** criterion is also unverified; a
   browser mock session is not acceptance evidence. The checklist is
   [`docs/engineering/STAGE1_MANUAL_QA_CHECKLIST.md`](../../engineering/STAGE1_MANUAL_QA_CHECKLIST.md).
-- **Working tree:** Stage 1 changes and the plan-doc corrections are uncommitted
-  at the time of this entry. No Stage 1 tag exists.
-- **Next:** commit the shell, run the native acceptance pass, then start Stage 2
-  (Library and Track panel). Keep Slice 3A manual QA open; T2.1.7 and T2.1.13
-  stay unticked.
+- **Working tree:** committed as `8a41e6ac`; pushed with Slice 3A as PR #53.
+  No Stage 1 tag exists.
+- **Next:** run the native acceptance pass, then start Stage 2 (Library and
+  Track panel). Keep Slice 3A manual QA open; T2.1.7 and T2.1.13 stay unticked.
 
 ## 2026-10-23 · v1 plan mirrored; Slice 3A secured; Stage 1 next
 
