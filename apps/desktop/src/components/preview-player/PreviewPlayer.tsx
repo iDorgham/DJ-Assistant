@@ -36,6 +36,8 @@ export interface PreviewPlayerProps {
   track: TrackSummary | null;
   onModeChange: (mode: PlayerMode) => void;
   onHide: () => void;
+  /** Opens the shared track panel without interrupting playback. */
+  onInspectTrack?: (track: TrackSummary, trigger?: HTMLElement | null) => void;
   activeView?: string;
   isDarkTheme?: boolean;
 }
@@ -47,6 +49,7 @@ export function PreviewPlayer({
   track,
   onModeChange,
   onHide,
+  onInspectTrack,
   activeView = "library",
   isDarkTheme = true,
 }: PreviewPlayerProps) {
@@ -506,6 +509,9 @@ export function PreviewPlayer({
                 bpm={effectiveBpm}
                 gridOffsetMs={gridOffsetMs}
                 isDarkTheme={isDarkTheme}
+                onInspect={
+                  track && onInspectTrack ? (trigger) => onInspectTrack(track, trigger) : undefined
+                }
               />
 
               {/* Full-track Overview Map (the rail) */}
@@ -657,6 +663,9 @@ export function PreviewPlayer({
               durationMs={playback.durationMs}
               bpm={effectiveBpm}
               isDarkTheme={isDarkTheme}
+              onInspect={
+                track && onInspectTrack ? (trigger) => onInspectTrack(track, trigger) : undefined
+              }
             />
 
             {/* Compact Waveform Strip = the progress rail */}

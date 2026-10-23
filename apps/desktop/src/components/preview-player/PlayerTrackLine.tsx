@@ -1,5 +1,6 @@
 import { useState } from "react";
 import type { TrackSummary } from "@dj-assistant/shared";
+import { PanelRight } from "lucide-react";
 import { formatTimecode, getBeatPosition } from "../../lib/waveform-generator";
 import { formatBpm, formatKey } from "../../lib/library";
 import { camelotColor } from "../../lib/camelot";
@@ -13,6 +14,8 @@ interface PlayerTrackLineProps {
   /** Full uses the 24px line with hundredths; Mini uses the 20px line. */
   large?: boolean;
   isDarkTheme?: boolean;
+  /** Opens the shared track panel for the loaded track. */
+  onInspect?: (trigger: HTMLElement) => void;
 }
 
 /**
@@ -28,6 +31,7 @@ export function PlayerTrackLine({
   gridOffsetMs = 0,
   large = false,
   isDarkTheme = true,
+  onInspect,
 }: PlayerTrackLineProps) {
   const [showRemaining, setShowRemaining] = useState(false);
 
@@ -109,6 +113,18 @@ export function PlayerTrackLine({
       )}
 
       <div className="flex-1" />
+
+      {track && onInspect && (
+        <button
+          type="button"
+          onClick={(event) => onInspect(event.currentTarget)}
+          aria-label={`Open the track panel for ${track.title || "Untitled"}`}
+          title="Open track panel"
+          className="shrink-0 rounded-sm p-0.5 text-dj-text-muted transition hover:bg-dj-elevated hover:text-dj-text focus-visible:outline-2 focus-visible:outline-dj-accent"
+        >
+          <PanelRight className="h-3.5 w-3.5" />
+        </button>
+      )}
 
       {/* Time: elapsed / total — click toggles remaining */}
       <button
