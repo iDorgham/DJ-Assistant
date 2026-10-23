@@ -4,9 +4,42 @@ Ephemeral. Newest first. **Rotate aggressively** — if a line would still be tr
 in two weeks, it belongs in [`decisions.md`](./decisions.md); if it is just a
 fact, it belongs in [`facts.md`](./facts.md). Delete anything stale.
 
+## 2026-10-23 · Stage 1 shell implemented; native acceptance pending
+
+- **The Stage 1 foundation and shell is now in the working tree.** It has the six
+  primary tabs (Library, Playlists, Discover, Statistics, Publish, Settings),
+  a typed primary/utility view registry, persisted navigation, the top-bar
+  library search / Import Center / Inbox / backup status, the persistent player
+  dock, inbox empty state, Settings skeleton, app error boundary and redacted
+  renderer logging.
+- **The old working surfaces were not deleted.** Import, Analysis, Studio,
+  Backup and Sync are now utility views; Import/Inbox/Backup are top-bar actions
+  and Analysis/Studio/Sync are linked from Settings. All `AppView` values render
+  a route, so there are no dead values.
+- **Keyboard shortcuts are now `Ctrl/Cmd+1..6`** for the primary tabs,
+  `Ctrl/Cmd+I` for Import Center and `Ctrl/Cmd+,` for Settings. The shell also
+  has a skip-to-main-content link and native-button focus order.
+- **Top-bar search is honestly labeled “Search library”** and filters the loaded
+  library; playlist/tag-wide global search and virtualization belong to Stage 2,
+  not this shell.
+- **Checks:** `pnpm typecheck`, `pnpm build:desktop`, desktop Prettier, the
+  desktop `node --test` suite (**114 tests**) and `pnpm lint:root` pass.
+  `pnpm lint:eslint` has 0 errors and 3 pre-existing Player
+  `exhaustive-deps` warnings.
+- **Not acceptance-complete yet.** Native Tauri running-window QA is pending:
+  six tabs, player persistence, navigation restore, no dead routes and keyboard
+  navigation. The **30,000-track fixture** criterion is also unverified; a
+  browser mock session is not acceptance evidence. The checklist is
+  [`docs/engineering/STAGE1_MANUAL_QA_CHECKLIST.md`](../../engineering/STAGE1_MANUAL_QA_CHECKLIST.md).
+- **Working tree:** Stage 1 changes and the plan-doc corrections are uncommitted
+  at the time of this entry. No Stage 1 tag exists.
+- **Next:** commit the shell, run the native acceptance pass, then start Stage 2
+  (Library and Track panel). Keep Slice 3A manual QA open; T2.1.7 and T2.1.13
+  stay unticked.
+
 ## 2026-10-23 · v1 plan mirrored; Slice 3A secured; Stage 1 next
 
-- **The approved v1 plan is now in the repo** at `docs/plan/` (29 files). The
+- **The approved v1 plan is now in the repo** at `docs/plan/` (30 files). The
   discussion log is `docs/plan/06-delivery/discussions.md`; it records the
   rationale, rejected alternatives, UI/UX rules and open items. Plan decision
   IDs **D-001–D-052** are scoped to that tree and are separate from this
@@ -23,7 +56,7 @@ fact, it belongs in [`facts.md`](./facts.md). Delete anything stale.
   authoritative for the canonical product spec and shipped UI tokens;
   `docs/plan/` is the approved v1 scope and delivery reference. Resolve a
   conflict as a decision, not by silently mixing both.
-- **Next implementation step is Stage 1 — Foundation and shell** in
+- **From that baseline, Stage 1 — Foundation and shell was the next step** in
   `docs/plan/06-delivery/implementation-slices.md`. Stage 0 is complete: the
   current library DB/WAL/SHM was copied to
   `C:\Users\User\AppData\Local\Temp\opencode\dj-assistant-backups\2026-10-23-slice3a`.

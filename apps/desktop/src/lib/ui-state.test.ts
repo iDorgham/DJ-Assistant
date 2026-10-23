@@ -164,23 +164,40 @@ test("unknown action leaves state untouched", () => {
   assert.deepEqual(reduceUiState(DEFAULT_UI_STATE, { type: "explode" }), DEFAULT_UI_STATE);
 });
 
-test("Ctrl/Cmd+1..4 map to views; other keys do not", () => {
-  assert.deepEqual(shortcutToAction({ key: "1", ctrlKey: true, metaKey: false }), {
+test("Ctrl/Cmd+1..6 map to the six primary views", () => {
+  const expected = [
+    ["1", "library"],
+    ["2", "playlists"],
+    ["3", "discover"],
+    ["4", "statistics"],
+    ["5", "publish"],
+    ["6", "settings"],
+  ] as const;
+
+  for (const [key, view] of expected) {
+    assert.deepEqual(shortcutToAction({ key, ctrlKey: true, metaKey: false }), {
+      type: "setView",
+      view,
+    });
+  }
+
+  assert.deepEqual(shortcutToAction({ key: "i", ctrlKey: false, metaKey: true }), {
     type: "setView",
     view: "import",
   });
-  assert.deepEqual(shortcutToAction({ key: "2", ctrlKey: false, metaKey: true }), {
+  assert.deepEqual(shortcutToAction({ key: ",", ctrlKey: true, metaKey: false }), {
     type: "setView",
-    view: "library",
-  });
-  assert.deepEqual(shortcutToAction({ key: "3", ctrlKey: true, metaKey: true }), {
-    type: "setView",
-    view: "analysis",
-  });
-  assert.deepEqual(shortcutToAction({ key: "4", ctrlKey: true, metaKey: true }), {
-    type: "setView",
-    view: "studio",
+    view: "settings",
   });
   assert.equal(shortcutToAction({ key: "1", ctrlKey: false, metaKey: false }), null);
   assert.equal(shortcutToAction({ key: "k", ctrlKey: true, metaKey: false }), null);
+});
+
+test("utility and primary views survive a persistence round-trip", () => {
+  const views = ["playlists", "discover", "statistics", "publish", "settings", "inbox"] as const;
+  for (const view of views) {
+    const storage = fakeStorage();
+    persistUiState(reduceUiState(DEFAULT_UI_STATE, { type: "setView", view }), storage);
+    assert.equal(initUiState(storage).view, view);
+  }
 });

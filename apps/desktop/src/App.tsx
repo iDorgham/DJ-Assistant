@@ -1,5 +1,9 @@
 import { useEffect, useRef, useState, useMemo, useReducer } from "react";
-import type { MouseEvent as ReactMouseEvent, PointerEvent as ReactPointerEvent } from "react";
+import type {
+  MouseEvent as ReactMouseEvent,
+  PointerEvent as ReactPointerEvent,
+  FormEvent,
+} from "react";
 import type {
   TrackSummary,
   ScanProgressEvent,
@@ -84,6 +88,9 @@ import {
   Usb,
   Volume2,
   XCircle,
+  Compass,
+  Inbox,
+  Settings,
   type LucideIcon,
 } from "lucide-react";
 import {
@@ -132,6 +139,7 @@ import {
   reduceUiState,
   shortcutToAction,
   type AppView,
+  type PrimaryView,
 } from "./lib/ui-state";
 import { nextTheme, resolveTheme, THEME_LABELS } from "./lib/theme";
 import { PreviewPlayer } from "./components/preview-player";
@@ -142,32 +150,17 @@ import { StarRating } from "./components/StarRating";
 import { TagChips } from "./components/TagChips";
 import { RowContextMenu } from "./components/RowContextMenu";
 import { MetadataEditor } from "./components/MetadataEditor";
+import { SettingsView } from "./components/SettingsView";
 import { buildMetadataUpdatePayload, type MetadataEditorValues } from "./lib/tags";
 import { previewEngine } from "./lib/audio-engine";
 
-const VIEW_ITEMS: { view: AppView; label: string; shortcut: string }[] = [
-  { view: "import", label: "Import", shortcut: "1" },
-  { view: "library", label: "Library", shortcut: "2" },
-  { view: "analysis", label: "Analysis", shortcut: "3" },
-  { view: "studio", label: "Studio", shortcut: "4" },
-  { view: "backup", label: "Backup", shortcut: "5" },
-  { view: "sync", label: "Sync", shortcut: "6" },
-];
-
-const NAV_ITEMS: { label: string; icon: LucideIcon; view: AppView }[] = [
-  { label: "Library", icon: Library, view: "library" },
-  { label: "Studio", icon: Play, view: "studio" },
-];
-
-/**
- * Roadmap items are shown as a read-only strip, not disabled buttons — they
- * are planned surfaces, not broken controls (docs/ui/02: no dead ends).
- */
-const ROADMAP_ITEMS: { label: string; icon: LucideIcon }[] = [
-  { label: "Playlists", icon: ListMusic },
-  { label: "Browser", icon: FolderTree },
-  { label: "Flash / USB", icon: Usb },
-  { label: "Skills", icon: Sparkles },
+const NAV_ITEMS: { label: string; icon: LucideIcon; view: PrimaryView; shortcut: string }[] = [
+  { label: "Library", icon: Library, view: "library", shortcut: "1" },
+  { label: "Playlists", icon: ListMusic, view: "playlists", shortcut: "2" },
+  { label: "Discover", icon: Compass, view: "discover", shortcut: "3" },
+  { label: "Statistics", icon: BarChart3, view: "statistics", shortcut: "4" },
+  { label: "Publish", icon: Usb, view: "publish", shortcut: "5" },
+  { label: "Settings", icon: Settings, view: "settings", shortcut: "6" },
 ];
 
 /** User-facing failure detail — never surface raw serialized errors. */
@@ -921,6 +914,39 @@ function ViewPlaceholder({
   );
 }
 
+function InboxEmptyState({ onGoToLibrary }: { onGoToLibrary: () => void }) {
+  return (
+    <div className="flex h-full min-h-0 flex-col">
+      <div className="flex h-8 shrink-0 items-center gap-1.5 border-b border-dj-border bg-dj-panel px-3">
+        <span className="rounded-sm border border-dj-border bg-dj-elevated px-2 py-0.5 text-[11px] text-dj-text-secondary">
+          Needs Attention
+        </span>
+        <span className="rounded-sm border border-dj-border bg-dj-elevated px-2 py-0.5 text-[11px] text-dj-text-secondary">
+          Updates
+        </span>
+      </div>
+      <div className="flex flex-1 flex-col items-center justify-center gap-3 p-8 text-center">
+        <div className="flex h-14 w-14 items-center justify-center rounded-xl border border-dj-border bg-dj-elevated">
+          <Inbox className="h-7 w-7 text-dj-text-muted" aria-hidden="true" />
+        </div>
+        <p className="text-lg font-semibold text-dj-text">Inbox is clear</p>
+        <p className="max-w-md text-xs leading-relaxed text-dj-text-secondary">
+          Import warnings, analysis failures and update notices will appear here. Nothing is waiting
+          for you right now.
+        </p>
+        <button
+          type="button"
+          onClick={onGoToLibrary}
+          className="mt-2 inline-flex items-center gap-1.5 rounded-md border border-dj-border bg-dj-panel px-3 py-1.5 text-xs font-medium text-dj-text transition hover:bg-dj-hover focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-dj-accent"
+        >
+          <Library className="h-3.5 w-3.5 text-dj-accent" aria-hidden="true" />
+          <span>Go to Library</span>
+        </button>
+      </div>
+    </div>
+  );
+}
+
 export default function App() {
   const [ui, dispatch] = useReducer(reduceUiState, DEFAULT_UI_STATE, () => initUiState());
   const [systemPrefersDark, setSystemPrefersDark] = useState(
@@ -1001,7 +1027,19 @@ export default function App() {
   const [visibleLimit, setVisibleLimit] = useState(200);
   const [loading, setLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const [globalSearch, setGlobalSearch] = useState("");
   const [libraryTotal, setLibraryTotal] = useState(0);
+
+  const submitGlobalSearch = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setSearchQuery(globalSearch.trim());
+    handleViewChange("library");
+  };
+
+  const clearGlobalSearch = () => {
+    setGlobalSearch("");
+    setSearchQuery("");
+  };
 
   // Library filters + sorting (T2.1.2). Applied server-side in SQL so the view
   // stays correct past the 200-row page instead of filtering a partial window.
@@ -1814,6 +1852,12 @@ export default function App() {
 
   return (
     <div className="relative flex h-screen flex-col bg-dj-bg font-sans text-dj-text">
+      <a
+        href="#main-workspace"
+        className="sr-only z-50 rounded-sm bg-dj-accent px-3 py-2 text-xs font-medium text-dj-on-accent focus:not-sr-only focus:absolute focus:left-2 focus:top-2"
+      >
+        Skip to main content
+      </a>
       <header className="flex h-10 shrink-0 items-center gap-2 border-b border-dj-border bg-dj-panel px-3">
         <div className="flex items-center gap-2">
           <div className="flex h-6 w-6 items-center justify-center rounded-md bg-linear-to-tr from-dj-accent-strong to-dj-accent shadow-sm shadow-dj-accent/20">
@@ -1824,27 +1868,88 @@ export default function App() {
           </span>
         </div>
 
-        <nav
-          aria-label="Views"
-          className="ml-2 flex items-center gap-0.5 rounded-md border border-dj-border bg-dj-bg p-0.5"
-        >
-          {VIEW_ITEMS.map((item) => (
-            <button
-              key={item.view}
-              type="button"
-              onClick={() => handleViewChange(item.view)}
-              aria-pressed={ui.view === item.view}
-              title={`${item.label} (Ctrl/Cmd+${item.shortcut})`}
-              className={`rounded-sm px-2.5 py-1 text-xs font-medium transition ${
-                ui.view === item.view
-                  ? "bg-dj-active text-dj-text"
-                  : "text-dj-text-secondary hover:bg-dj-hover hover:text-dj-text"
-              }`}
-            >
-              {item.label}
-            </button>
-          ))}
-        </nav>
+        <div className="ml-2 flex min-w-0 items-center gap-1.5">
+          <form
+            role="search"
+            onSubmit={submitGlobalSearch}
+            className="relative w-44 min-w-0 sm:w-56 xl:w-72"
+          >
+            <Search
+              className="pointer-events-none absolute left-2 top-1.5 h-3 w-3 text-dj-text-muted"
+              aria-hidden="true"
+            />
+            <input
+              id="global-search"
+              name="global-search"
+              type="search"
+              value={globalSearch}
+              onChange={(event) => setGlobalSearch(event.target.value)}
+              placeholder="Search library..."
+              aria-label="Search library"
+              title="Search the library. Playlist and tag-wide search arrives with Stage 2."
+              className="h-6 w-full rounded-sm border border-dj-border bg-dj-bg pl-7 pr-7 text-[11px] text-dj-text placeholder:text-dj-text-muted transition focus:border-dj-accent focus:outline-hidden"
+            />
+            {globalSearch && (
+              <button
+                type="button"
+                onClick={clearGlobalSearch}
+                aria-label="Clear library search"
+                title="Clear search"
+                className="absolute right-0.5 top-0.5 flex h-5 w-5 items-center justify-center rounded-sm text-dj-text-muted transition hover:bg-dj-hover hover:text-dj-text focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-dj-accent"
+              >
+                <X className="h-3 w-3" aria-hidden="true" />
+              </button>
+            )}
+          </form>
+
+          <button
+            type="button"
+            onClick={() => handleViewChange("import")}
+            aria-pressed={ui.view === "import"}
+            aria-label="Import Center"
+            title="Import Center — import folders, watch folders and the analysis queue"
+            className={`flex h-6 items-center gap-1 rounded-sm border px-2 text-[11px] transition focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-dj-accent ${
+              ui.view === "import"
+                ? "border-dj-accent/40 bg-dj-accent/10 text-dj-accent"
+                : "border-dj-border bg-dj-elevated text-dj-text-secondary hover:bg-dj-hover hover:text-dj-text"
+            }`}
+          >
+            <FolderOpen className="h-3.5 w-3.5" aria-hidden="true" />
+            <span className="hidden lg:inline">Import Center</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => handleViewChange("inbox")}
+            aria-pressed={ui.view === "inbox"}
+            aria-label="Inbox"
+            title="Inbox — Needs Attention and Updates"
+            className={`flex h-6 items-center gap-1 rounded-sm border px-2 text-[11px] transition focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-dj-accent ${
+              ui.view === "inbox"
+                ? "border-dj-accent/40 bg-dj-accent/10 text-dj-accent"
+                : "border-dj-border bg-dj-elevated text-dj-text-secondary hover:bg-dj-hover hover:text-dj-text"
+            }`}
+          >
+            <Inbox className="h-3.5 w-3.5" aria-hidden="true" />
+            <span className="hidden md:inline">Inbox</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => handleViewChange("backup")}
+            aria-pressed={ui.view === "backup"}
+            aria-label="Open backup settings. Backup is not configured yet."
+            title="Backup is not configured yet — open backup settings"
+            className={`flex h-6 items-center gap-1 rounded-sm border px-2 text-[11px] transition focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-dj-accent ${
+              ui.view === "backup"
+                ? "border-dj-warning/40 bg-dj-warning/10 text-dj-warning"
+                : "border-dj-border bg-dj-elevated text-dj-text-secondary hover:bg-dj-hover hover:text-dj-text"
+            }`}
+          >
+            <ShieldCheck className="h-3.5 w-3.5" aria-hidden="true" />
+            <span className="hidden xl:inline">Backup not set up</span>
+          </button>
+        </div>
 
         <div
           className="flex min-w-0 flex-1 items-center gap-1.5 px-2"
@@ -1937,16 +2042,17 @@ export default function App() {
                 <button
                   key={item.label}
                   type="button"
-                  onClick={() => dispatch({ type: "setView", view: item.view })}
+                  onClick={() => handleViewChange(item.view)}
                   aria-current={active ? "page" : undefined}
-                  title={item.label}
-                  className={`flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-xs transition ${
+                  aria-label={`${item.label} (Ctrl/Cmd+${item.shortcut})`}
+                  title={`${item.label} (Ctrl/Cmd+${item.shortcut})`}
+                  className={`flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-xs transition focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-dj-accent ${
                     active
                       ? "bg-dj-active font-medium text-dj-text"
                       : "text-dj-text-secondary hover:bg-dj-hover hover:text-dj-text"
                   }`}
                 >
-                  <Icon className="h-4 w-4 shrink-0" />
+                  <Icon className="h-4 w-4 shrink-0" aria-hidden="true" />
                   {!ui.navCollapsed && (
                     <span className="min-w-0 flex-1 truncate">{item.label}</span>
                   )}
@@ -1955,29 +2061,6 @@ export default function App() {
             })}
           </nav>
 
-          {/* Roadmap strip: planned surfaces, honestly labeled and read-only */}
-          <div className="border-t border-dj-border space-y-0.5 p-2">
-            {!ui.navCollapsed && (
-              <p className="px-2 pb-1 text-[11px] font-semibold uppercase tracking-wider text-dj-text-muted">
-                Roadmap
-              </p>
-            )}
-            {ROADMAP_ITEMS.map((item) => {
-              const Icon = item.icon;
-              return (
-                <div
-                  key={item.label}
-                  title={`${item.label} — planned, not available yet`}
-                  className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-xs text-dj-text-secondary"
-                >
-                  <Icon className="h-4 w-4 shrink-0 text-dj-text-muted" />
-                  {!ui.navCollapsed && (
-                    <span className="min-w-0 flex-1 truncate">{item.label}</span>
-                  )}
-                </div>
-              );
-            })}
-          </div>
           <div className="border-t border-dj-border p-2">
             <button
               type="button"
@@ -1996,11 +2079,17 @@ export default function App() {
           </div>
         </aside>
 
-        <main className="relative flex min-w-0 flex-1 flex-col overflow-hidden">
+        <main
+          id="main-workspace"
+          tabIndex={-1}
+          className="relative flex min-w-0 flex-1 flex-col overflow-hidden focus:outline-hidden"
+        >
           {ui.view === "import" ? (
             <ViewPlaceholder
-              title="Import"
-              description="Ingest new downloaded tracks, validate tags, assess quality, rate, comment, and tag before importing them into your library."
+              icon={FolderOpen}
+              title="Import Center"
+              description="Ingest new downloaded tracks, validate tags, assess quality, rate, comment, and tag before importing them into your library. The import workflow arrives in Stage 3."
+              options={["Folder scan", "Watch folders", "Duplicate detection"]}
             />
           ) : ui.view === "library" ? (
             <>
@@ -3050,6 +3139,61 @@ export default function App() {
                 </ModalShell>
               )}
             </>
+          ) : ui.view === "playlists" ? (
+            <ViewPlaceholder
+              icon={ListMusic}
+              title="Playlists"
+              description="Build and save sets, then score them with Set Score. Playlist editing, save recovery and Set Score arrive in Stage 5."
+              options={["Playlist Tracks", "Set Score", "Set Check"]}
+              onGoToLibrary={() => handleViewChange("library")}
+            />
+          ) : ui.view === "discover" ? (
+            <ViewPlaceholder
+              icon={Compass}
+              title="Discover"
+              description="Local-first recommendations and free downloads from Bandcamp, SoundCloud and label promos. Discover arrives in Stage 7; downloads land in the Inbox for review."
+              options={["Recommendations", "Free downloads", "Watchlist"]}
+              onGoToLibrary={() => handleViewChange("library")}
+            />
+          ) : ui.view === "statistics" ? (
+            <ViewPlaceholder
+              icon={BarChart3}
+              title="Statistics"
+              description="Whole-library statistics with drill-down. Date ranges apply only to Play History and Additions. Statistics arrives in Stage 8."
+              options={["Overview", "Play History", "Additions"]}
+              onGoToLibrary={() => handleViewChange("library")}
+            />
+          ) : ui.view === "publish" ? (
+            <ViewPlaceholder
+              icon={Usb}
+              title="Publish"
+              description="Export to USB and DJ applications. rekordbox sync arrives in Stage 9; playlist-only USB export in Stage 11. OneLibrary stays experimental until certified."
+              options={["rekordbox", "Traktor", "USB export"]}
+              onGoToLibrary={() => handleViewChange("library")}
+            />
+          ) : ui.view === "inbox" ? (
+            <InboxEmptyState onGoToLibrary={() => handleViewChange("library")} />
+          ) : ui.view === "settings" ? (
+            <SettingsView
+              theme={ui.theme}
+              navCollapsed={ui.navCollapsed}
+              playerVisible={ui.playerMode !== "hidden"}
+              onCycleTheme={() => dispatch({ type: "setTheme", theme: nextTheme(ui.theme) })}
+              onToggleNav={() => dispatch({ type: "toggleNav" })}
+              onTogglePlayer={() => dispatch({ type: "togglePlayer" })}
+              onOpenImport={() => handleViewChange("import")}
+              onOpenAnalysis={() => handleViewChange("analysis")}
+              onOpenBackup={() => handleViewChange("backup")}
+              onOpenSync={() => handleViewChange("sync")}
+              onOpenStudio={() => handleViewChange("studio")}
+            />
+          ) : ui.view === "analysis" ? (
+            <ViewPlaceholder
+              icon={Activity}
+              title="Analysis queue"
+              description="Pending, running and failed analysis jobs. This queue is part of the import pipeline and moves into Import Center in Stage 3."
+              onGoToLibrary={() => handleViewChange("library")}
+            />
           ) : ui.view === "studio" ? (
             <ViewPlaceholder
               icon={Play}

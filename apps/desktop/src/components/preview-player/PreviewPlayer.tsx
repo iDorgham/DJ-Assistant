@@ -22,15 +22,7 @@ export interface PreviewPlayerProps {
   track: TrackSummary | null;
   onModeChange: (mode: PlayerMode) => void;
   onHide: () => void;
-  activeView?:
-    | "import"
-    | "library"
-    | "analysis"
-    | "preparation"
-    | "studio"
-    | "maintenance"
-    | "backup"
-    | "sync";
+  activeView?: string;
   isDarkTheme?: boolean;
 }
 

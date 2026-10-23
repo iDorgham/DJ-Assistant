@@ -279,14 +279,15 @@ If a feature needs its own vocabulary, inspector or status model, it is not read
 
 ## 10. Next gate
 
-The plan and baseline are secured. Implementation starts with **Stage 1 — Foundation and shell** in `06-delivery/implementation-slices.md`.
+The plan and baseline are secured. The **Stage 1 shell is implemented**; native acceptance QA is pending before Stage 2 begins.
 
 1. ~~Confirm the hybrid tag model (D-026).~~ Locked.
 2. ~~Resolve the remaining decisions.~~ Locked as D-043–D-052; non-blocking items remain in `06-delivery/open-questions.md`.
 3. ~~Secure Slice 3A with a commit/tag.~~ Done: `ec2b191f`, tag `slice-3a-code-complete`.
 4. ~~Mirror the plan into `docs/plan/`.~~ Done.
 5. Run the Slice 3A manual QA in the Tauri window; keep T2.1.7 and T2.1.13 unticked until it passes.
-6. Implement Stage 1 without reopening locked decisions.
+6. Run the Stage 1 native acceptance pass: six tabs, player persistence, navigation restore, no dead routes, keyboard navigation and the 30,000-track fixture.
+7. Start Stage 2 — Library and Track panel after Stage 1 acceptance.
 
 ---
 

@@ -9,7 +9,7 @@ Status: Active
 - Slice 3A manual running-window QA is still pending; T2.1.7 and T2.1.13 stay unticked.
 - The approved plan is mirrored at `docs/plan/`; the discussion log is `docs/plan/06-delivery/discussions.md`.
 - The factory repository is a separate workstream and must not be mixed into DJ Assistant delivery.
-- Implementation starts at Stage 1; Stage 0 is complete except the optional current-library backup.
+- Stage 0 is complete, including the current-library backup. The Stage 1 shell is implemented; native acceptance QA is pending.
 
 ## 2. Delivery principles
 
@@ -24,7 +24,7 @@ Status: Active
 
 ## 3. Stage 0 — Secure the baseline
 
-Status: **complete 2026-10-23**, except the optional current-library backup.
+Status: **complete 2026-10-23**.
 
 Scope:
 
@@ -47,6 +47,9 @@ Done:
 
 ## 4. Stage 1 — Foundation and shell
 
+Status: **in progress 2026-10-23** — shell implemented in the working tree;
+running-window acceptance QA is pending.
+
 Scope:
 
 - Tauri shell.
@@ -60,14 +63,27 @@ Scope:
 - Error boundary.
 - Logging with redaction.
 
-Done:
+Implemented:
 
-- All six tabs open.
-- Player dock persists.
-- Navigation state restores.
-- No dead routes.
-- Keyboard navigation works.
-- 30,000-track fixture loads without freezing.
+- [x] Six primary tabs with typed view registry and persisted navigation.
+- [x] Top-bar library search, Import Center, Inbox and backup-status actions.
+- [x] Honest placeholders for Playlists, Discover, Statistics and Publish.
+- [x] Inbox empty state and Settings skeleton with utility links.
+- [x] Player dock persists across tabs.
+- [x] Keyboard shortcuts (`Ctrl/Cmd+1..6`, `Ctrl/Cmd+I`, `Ctrl/Cmd+,`)
+      and skip-to-main-content.
+- [x] App error boundary and redacted renderer logging.
+- [x] Automated checks: typecheck, build, Prettier, ESLint and desktop tests.
+
+Acceptance (native Tauri window, not browser mock mode):
+
+- Checklist: [`docs/engineering/STAGE1_MANUAL_QA_CHECKLIST.md`](../../engineering/STAGE1_MANUAL_QA_CHECKLIST.md).
+- [ ] All six tabs open.
+- [ ] Player dock persists.
+- [ ] Navigation state restores.
+- [ ] No dead routes.
+- [ ] Keyboard navigation works.
+- [ ] 30,000-track fixture loads without freezing.
 
 ## 5. Stage 2 — Library and Track panel
 

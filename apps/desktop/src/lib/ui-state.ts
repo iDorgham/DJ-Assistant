@@ -1,4 +1,49 @@
-export type AppView = "import" | "library" | "analysis" | "studio" | "backup" | "sync";
+export type PrimaryView =
+  "library" | "playlists" | "discover" | "statistics" | "publish" | "settings";
+
+/**
+ * Surfaces that are reachable from the shell but are not primary tabs:
+ * Import Center, Inbox, the player workspace, backup and DJ-app sync.
+ */
+export type UtilityView = "import" | "analysis" | "studio" | "backup" | "sync" | "inbox";
+
+export type AppView = PrimaryView | UtilityView;
+
+export const PRIMARY_VIEWS: readonly PrimaryView[] = [
+  "library",
+  "playlists",
+  "discover",
+  "statistics",
+  "publish",
+  "settings",
+];
+
+export const UTILITY_VIEWS: readonly UtilityView[] = [
+  "import",
+  "analysis",
+  "studio",
+  "backup",
+  "sync",
+  "inbox",
+];
+
+export const ALL_VIEWS: readonly AppView[] = [...PRIMARY_VIEWS, ...UTILITY_VIEWS];
+
+export const VIEW_LABELS: Record<AppView, string> = {
+  library: "Library",
+  playlists: "Playlists",
+  discover: "Discover",
+  statistics: "Statistics",
+  publish: "Publish",
+  settings: "Settings",
+  import: "Import Center",
+  analysis: "Analysis",
+  studio: "Studio",
+  backup: "Backup",
+  sync: "DJ app sync",
+  inbox: "Inbox",
+};
+
 export type ThemeMode = "dark" | "light" | "system";
 export type PlayerMode = "hidden" | "mini" | "full";
 export type VisiblePlayerMode = Exclude<PlayerMode, "hidden">;
@@ -34,7 +79,7 @@ export const DEFAULT_UI_STATE: UiState = {
   lastVisiblePlayerMode: "mini",
 };
 
-const VIEWS: readonly AppView[] = ["import", "library", "analysis", "studio", "backup", "sync"];
+const VIEWS: readonly AppView[] = ALL_VIEWS;
 const THEMES: readonly ThemeMode[] = ["dark", "light", "system"];
 const PLAYER_MODES: readonly PlayerMode[] = ["hidden", "mini", "full"];
 const VISIBLE_PLAYER_MODES: readonly VisiblePlayerMode[] = ["mini", "full"];
@@ -133,13 +178,21 @@ export function shortcutToAction(event: ShortcutEvent): UiAction | null {
   if (!event.ctrlKey && !event.metaKey) return null;
   switch (event.key) {
     case "1":
-      return { type: "setView", view: "import" };
-    case "2":
       return { type: "setView", view: "library" };
+    case "2":
+      return { type: "setView", view: "playlists" };
     case "3":
-      return { type: "setView", view: "analysis" };
+      return { type: "setView", view: "discover" };
     case "4":
-      return { type: "setView", view: "studio" };
+      return { type: "setView", view: "statistics" };
+    case "5":
+      return { type: "setView", view: "publish" };
+    case "6":
+      return { type: "setView", view: "settings" };
+    case "i":
+      return { type: "setView", view: "import" };
+    case ",":
+      return { type: "setView", view: "settings" };
     default:
       return null;
   }

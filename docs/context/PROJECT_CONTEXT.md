@@ -14,7 +14,7 @@
 ## 0. Current planning baseline — 2026-10-23
 
 - **The approved v1 plan is mirrored at [`docs/plan/`](../plan/README.md).** It
-  contains 29 documents and 52 locked decisions (`D-001–D-052`). Those IDs are
+  contains 30 documents and 52 locked decisions (`D-001–D-052`). Those IDs are
   scoped to the plan tree; they are separate from the repository memory ledger
   (`docs/ai/memory/decisions.md`, D-001–D-014).
 - **Product shape is locked:** six tabs — Library, Playlists, Discover,
@@ -43,7 +43,12 @@
   transactionally; undo skips a track changed since the snapshot. Automated
   checks pass; manual running-window QA is still pending, so T2.1.7 and T2.1.13
   remain unticked.
-- **Next implementation step is Stage 1 — Foundation and shell** in
+- **The Stage 1 shell is implemented** in the working tree: six primary tabs,
+  typed view registry, top-bar library search/Import Center/Inbox/backup status,
+  persistent player dock, Settings skeleton, error boundary and redacted
+  renderer logging. Native acceptance QA is pending, including the 30,000-track
+  fixture check. The top-bar search is labeled “Search library” until Stage 2
+  adds playlist/tag-wide global search. See
   [`docs/plan/06-delivery/implementation-slices.md`](../plan/06-delivery/implementation-slices.md).
 - **Discussion and decision rationale** lives in
   [`docs/plan/06-delivery/discussions.md`](../plan/06-delivery/discussions.md),

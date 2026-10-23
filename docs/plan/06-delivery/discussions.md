@@ -27,6 +27,85 @@ separate from the repository's agent-memory decision ledger
 
 ---
 
+## 2026-10-23 — Stage 1 shell implemented
+
+### Context
+
+Stage 0 secured Slice 3A and the plan baseline. The next delivery slice is the
+foundation and shell: six primary tabs, a top bar, a persistent player dock, a
+settings skeleton, an error boundary and redacted logging. The current app had
+only a Library/Studio rail and an older six-view header switcher, so the shell
+had to be reshaped without throwing away the working import, analysis, player,
+backup and sync surfaces.
+
+### Decision
+
+- The typed `AppView` registry now has six **primary** views (Library,
+  Playlists, Discover, Statistics, Publish, Settings) plus **utility** views
+  (Import Center, Inbox, Analysis, Studio, Backup, DJ-app sync).
+- Primary navigation uses the six plan tabs. Import Center, Inbox and backup
+  status live in the top bar. Analysis, Studio and Sync remain reachable from
+  Settings; no existing route was deleted.
+- Playlists, Discover, Statistics and Publish open to explicit stage placeholders
+  rather than fake content. Inbox has a real empty state.
+- The top-bar search is labeled **Search library** and filters the library. It is
+  not presented as playlist/tag-wide global search until Stage 2.
+- Keyboard shortcuts are `Ctrl/Cmd+1..6` for the six tabs, `Ctrl/Cmd+I` for
+  Import Center and `Ctrl/Cmd+,` for Settings. A skip link and native button
+  focus order keep keyboard navigation usable.
+- The renderer is wrapped in an error boundary. The boundary shows a generic
+  recovery surface; the raw error and component stack go through a logger that
+  redacts credentials, bearer tokens, email addresses and user-home paths.
+- The Settings skeleton is real navigation and status, not decorative buttons:
+  it reports the active theme, navigation and player state and links to the
+  existing import, analysis, player, backup and sync surfaces.
+
+### Alternatives rejected
+
+- **Keep the old six-view header switcher and add a second nav.** Rejected: two
+  competing navigation models make the six-tab product shape unclear.
+- **Delete the legacy views until their stages.** Rejected: import, analysis,
+  player, backup and sync already contain working backend/UI pieces; hiding them
+  would regress the baseline and create dead ends.
+- **Fill the new tabs with sample playlists, charts or recommendations.**
+  Rejected: the plan forbids fake data and a dashboard.
+- **Call library-only search “global search.”** Rejected: it would promise
+  playlist/tag results that do not exist yet.
+- **Show raw error text or stack traces in the fallback.** Rejected: paths and
+  tokens could leak; the redacted console log is the diagnostic surface.
+
+### Consequences
+
+- The shell is consistent across all six tabs and keeps the player dock.
+- Legacy surfaces remain reachable, so the route table has no dead values.
+- Global search, real playlist/discover/statistics/publish content and the full
+  settings editors remain later-stage work.
+- The 30,000-track fixture and native running-window acceptance are still
+  unverified; browser mock mode cannot substitute.
+
+### Open items
+
+- Run the native Tauri acceptance pass: all six tabs, player persistence,
+  navigation restore, no dead routes, keyboard navigation and the 30,000-track
+  fixture. Checklist:
+  [`docs/engineering/STAGE1_MANUAL_QA_CHECKLIST.md`](../../engineering/STAGE1_MANUAL_QA_CHECKLIST.md).
+- The 30,000-track fixture has no safe app-data-dir override yet; Stage 2 owns
+  the virtualized table and the real performance proof.
+- Start Stage 2 after Stage 1 acceptance; global search and virtualization are
+  part of that work.
+- Keep Slice 3A manual QA open; T2.1.7 and T2.1.13 stay unticked.
+
+### Verification for this entry
+
+- `pnpm typecheck`, `pnpm build:desktop`, desktop Prettier, desktop tests and
+  `pnpm lint:root` pass.
+- `pnpm lint:eslint` has 0 errors and 3 pre-existing Player `exhaustive-deps`
+  warnings.
+- `docs/plan/` contains 30 files.
+- No factory repository files were touched.
+
+---
+
 ## 2026-10-23 — v1 plan locked, mirrored and ready for implementation
 
 ### Context
@@ -216,7 +295,7 @@ implementation reference; the original plan-mode copy remains an archive.
 
 ### Verification for this entry
 
-- Plan mirrored: `docs/plan/` contains 29 files.
+- Plan mirrored: `docs/plan/` contains 30 files.
 - Slice 3A protected: commit `ec2b191f`, tag `slice-3a-code-complete`.
 - Working tree clean after the baseline commit.
 - No factory repository files were touched.
