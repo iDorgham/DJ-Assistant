@@ -12,6 +12,13 @@ Standing rules. Every session, in every tool, follows these.
 
 ## Boundaries
 
+- **Put the rules in `crates/core`, not in the desktop crate.** The desktop
+  crate's test harness does not load on `stable-x86_64-pc-windows-gnu`
+  (`STATUS_ENTRYPOINT_NOT_FOUND`), so a rule that lives only in
+  `apps/desktop/src-tauri` is a rule that is never executed. Pure logic —
+  the write rules, the query builder, the normalisation — belongs in
+  `crates/core` (Tauri-free, as its own crate docstring says); the desktop
+  crate stays the thin IPC adapter over it.
 - Keep UI tokens and components aligned with `docs/ui/` — never invent a second
   palette or spacing scale.
 - Do not commit generated artefacts (`target/`, `dist/`, model binaries) or the

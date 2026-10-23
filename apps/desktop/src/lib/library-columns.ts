@@ -637,8 +637,11 @@ export function trackColumnText(track: TrackSummary, id: ColumnId): string {
     case "energy":
       return formatEnergy(track.energy);
     case "tags":
+      return track.tags?.length ? track.tags.join(", ") : PLACEHOLDER;
     case "label":
+      return track.label?.trim() || PLACEHOLDER;
     case "year":
+      return track.year != null ? String(track.year) : PLACEHOLDER;
     case "lufs":
     case "color":
     case "cues":
@@ -668,6 +671,10 @@ export function trackColumnTooltip(track: TrackSummary, id: ColumnId): string | 
       return track.userRating != null ? `${track.userRating} / 5` : "Unrated";
     case "energy":
       return track.energy != null ? `Energy ${track.energy} / 10` : "No energy set";
+    case "tags":
+      // The cell shows a couple of chips and a `+N` overflow, so the tooltip
+      // carries the whole list.
+      return track.tags?.length ? track.tags.join(", ") : undefined;
     default:
       return undefined;
   }

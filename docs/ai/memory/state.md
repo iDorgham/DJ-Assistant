@@ -4,6 +4,40 @@ Ephemeral. Newest first. **Rotate aggressively** — if a line would still be tr
 in two weeks, it belongs in [`decisions.md`](./decisions.md); if it is just a
 fact, it belongs in [`facts.md`](./facts.md). Delete anything stale.
 
+## 2026-10-22 · Slice 3A implemented — tags + comments (T2.1.7, T2.1.13)
+
+- **The slice is code-complete; the QA gate is still open.** Migration 007
+  (`track_tags` + `tracks.label`), the read path (`TrackSummary.tags`), the
+  `tag` filter, the `comments`/tag search, the generalised write path, the
+  `tags` column, `TagChips`, the row context menu and the metadata editor are
+  all in the tree. The running-window QA is **not executed**, so T2.1.7 and
+  T2.1.13 stay **unticked**; the checklist is
+  [`docs/engineering/SLICE3A_MANUAL_QA_CHECKLIST.md`](../../engineering/SLICE3A_MANUAL_QA_CHECKLIST.md).
+- **The write path now snapshots a whole tag set** — the first non-scalar
+  snapshot in the reversible path. The delete and the re-insert share one
+  transaction with the scalar restore, and an undo skips a track whose set
+  changed since the snapshot (a set is not a scalar).
+- **The desktop crate’s test harness links but cannot load on this Windows
+  toolchain** (`STATUS_ENTRYPOINT_NOT_FOUND`), so its unit tests are only
+  type-checked here (`cargo clippy --all-targets`) and run in CI. The pure
+  write rules therefore live in **`crates/core/src/patch.rs`** (the closed
+  column allow-list, the text/number clearing rules, the tag-set comparison)
+  — where they actually run — and the desktop crate calls them.
+  `crates/core` and `tests/schema` run fine locally.
+- **The D: drive was at 100%** while the slice was being verified: the Rust
+  build failed with “No space left on device”. The cargo caches
+  (`D:\cargo-target\debug\incremental`, the scratch `D:\cargo-target-3a`) were
+  cleared to make room; a full workspace `cargo test` still needs several GB,
+  and the `dj-assistant-analysis` golden corpus test is a multi-minute ONNX
+  run — test the crates you touched, not the world.
+- **`dj-query` learned `--tag`** — the QA cross-check needs it. The free-text
+  search and the tag filter both read `track_tags`, so the CLI refuses a tag
+  search against a library that predates migration 007 instead of failing
+  inside SQLite.
+- **The next session should run the QA, not write more code:** open the app
+  once (migration 007), walk the checklist, then record the results in
+  `docs/sdd/04-TASKS.md`.
+
 ## 2026-10-22 · Slice 3A planned — tags + comments (T2.1.7, T2.1.13)
 
 - **Slice 3 is cut in two:** 3A = tags + comments, 3B = key pills (T2.1.8).

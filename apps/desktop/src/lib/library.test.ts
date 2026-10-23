@@ -7,7 +7,9 @@ import {
   activeFilterCount,
   clampEnergy,
   clampRating,
+  clearFilterGroup,
   defaultSortDirection,
+  describeFilterParts,
   describeFilters,
   describeMetadataUndo,
   describeMetadataWrite,
@@ -45,6 +47,7 @@ function track(over: Partial<TrackSummary> = {}): TrackSummary {
     userRating: null,
     energy: null,
     comments: null,
+    tags: [],
     artworkHash: null,
     createdAt: "2026-01-01T00:00:00Z",
     updatedAt: "2026-01-01T00:00:00Z",
@@ -227,6 +230,59 @@ test("activeFilterCount counts groups, not individual values", () => {
     2,
     "rating and energy are separate groups"
   );
+});
+
+test("describeFilters summarizes the tag filter for the toolbar", () => {
+  assert.deepEqual(describeFilters({ tag: ["peak"] }), ["Tag peak"]);
+  assert.deepEqual(describeFilters({ tag: ["peak", "warmup"] }), ["Tag peak, warmup"]);
+  assert.equal(
+    activeFilterCount({ tag: ["peak"] }),
+    1,
+    "the tag filter is one group (matches the Rust counter)"
+  );
+});
+
+test("describeFilterParts names the group each chip clears", () => {
+  const parts = describeFilterParts({ tag: ["peak"], genre: ["Techno"], bpmMin: 120 });
+  assert.deepEqual(
+    parts.map((part) => part.group),
+    ["bpm", "genre", "tag"]
+  );
+  assert.deepEqual(
+    parts.map((part) => part.label),
+    ["BPM ≥ 120", "Genre Techno", "Tag peak"]
+  );
+});
+
+test("clearFilterGroup drops one group and leaves the others alone", () => {
+  const filters = {
+    bpmMin: 120,
+    genre: ["Techno"],
+    tag: ["peak"],
+    ratingMin: 3,
+    energyMin: 2,
+  };
+  assert.deepEqual(clearFilterGroup(filters, "tag"), {
+    bpmMin: 120,
+    genre: ["Techno"],
+    ratingMin: 3,
+    energyMin: 2,
+  });
+  assert.deepEqual(clearFilterGroup(filters, "bpm"), {
+    genre: ["Techno"],
+    tag: ["peak"],
+    ratingMin: 3,
+    energyMin: 2,
+  });
+  assert.deepEqual(clearFilterGroup(undefined, "tag"), {});
+});
+
+test("the free-text search covers the comment and the custom tags", () => {
+  const tagged = track({ tags: ["peak", "warmup"], comments: "Closing hour" });
+  assert.equal(matchesQuery(tagged, "peak"), true);
+  assert.equal(matchesQuery(tagged, "closing"), true);
+  assert.equal(matchesQuery(tagged, "nothing"), false);
+  assert.equal(matchesQuery(track(), "peak"), false, "a track without tags does not match");
 });
 
 test("describeFilters summarizes active filters for the toolbar", () => {

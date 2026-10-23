@@ -18,6 +18,7 @@ const MIGRATIONS: &[(i64, &str)] = &[
     ),
     (5, include_str!("../migrations/005_chart_snapshots.sql")),
     (6, include_str!("../migrations/006_track_energy.sql")),
+    (7, include_str!("../migrations/007_track_tags_table.sql")),
 ];
 
 impl Database {
@@ -203,6 +204,7 @@ mod tests {
             "streaming_accounts",
             "streaming_exports",
             "streaming_matches",
+            "track_tags",
         ] {
             assert!(
                 present.contains(&table.to_string()),
@@ -210,6 +212,12 @@ mod tests {
             );
         }
         assert!(table_columns(conn, "tracks").contains(&"isrc".to_string()));
+        // Slice 3A: the user-typed label and the tag table.
+        assert!(table_columns(conn, "tracks").contains(&"label".to_string()));
+        let tag_cols = table_columns(conn, "track_tags");
+        for col in ["track_id", "tag"] {
+            assert!(tag_cols.contains(&col.to_string()), "missing column {col}");
+        }
         let run_cols = table_columns(conn, "enrichment_runs");
         assert!(run_cols.contains(&"before_state".to_string()));
         assert!(run_cols.contains(&"after_state".to_string()));

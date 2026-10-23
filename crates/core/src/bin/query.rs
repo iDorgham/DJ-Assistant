@@ -19,11 +19,12 @@
 //! | `--db PATH` | Database to read. Defaults to `%APPDATA%\com.djassistant.desktop\dj_assistant.db`, or `$DJ_ASSISTANT_DB`. |
 //! | `--stats` | Print the library summary instead of a track list. |
 //! | `--check-files` | Also report tracks whose audio file is no longer on disk. |
-//! | `--query TEXT` | Free-text search across title, artist, album and path. |
+//! | `--query TEXT` | Free-text search across title, artist, album, path, comment and tags. |
 //! | `--bpm-min` / `--bpm-max` | Inclusive BPM bounds. |
 //! | `--key CODE` | Camelot key. Repeatable. |
 //! | `--status S` | Analysis status. Repeatable. |
 //! | `--genre G` | Genre. Repeatable. |
+//! | `--tag T` | Custom tag. Repeatable; matches a track that carries **any** of the tags. |
 //! | `--rating-min N` | Inclusive minimum star rating (0–5). |
 //! | `--energy-min` / `--energy-max` | Inclusive energy bounds (1–10). |
 //! | `--sort KEY` | One of the allow-listed sort keys. |
@@ -42,7 +43,7 @@ use std::process::ExitCode;
 use dj_assistant_core::library_query::{sort_column, QueryParam, TrackFilters, TrackQuery};
 use dj_assistant_core::library_stats::{stat_queries, STATUS_BREAKDOWN_SQL};
 use rusqlite::types::Value;
-use rusqlite::{Connection, OpenFlags};
+use rusqlite::{params, Connection, OpenFlags};
 
 /// The columns the list query selects, in row order.
 ///
@@ -113,6 +114,7 @@ fn parse_args() -> Result<Args, String> {
                 .analysis_status
                 .push(next_value(&mut it, "--status")?),
             "--genre" => filters.genre.push(next_value(&mut it, "--genre")?),
+            "--tag" => filters.tag.push(next_value(&mut it, "--tag")?),
             "--rating-min" => {
                 filters.rating_min = Some(parse_i64(
                     &next_value(&mut it, "--rating-min")?,
@@ -274,6 +276,21 @@ fn to_sql_value(param: &QueryParam) -> Value {
     }
 }
 
+/// True when the database has the given table.
+///
+/// The custom tags live in their own table (migration 007), so a library
+/// that was last opened before that migration has none.
+fn table_exists(conn: &Connection, table: &str) -> Result<bool, String> {
+    let count: i64 = conn
+        .query_row(
+            "SELECT COUNT(*) FROM sqlite_master WHERE type = 'table' AND name = ?1",
+            params![table],
+            |row| row.get(0),
+        )
+        .map_err(|e| format!("cannot read the schema of {table}: {e}"))?;
+    Ok(count > 0)
+}
+
 /// The columns the `tracks` table actually has.
 ///
 /// The library database is migrated by the desktop app on startup, so it can
@@ -318,7 +335,7 @@ fn select_columns(available: &HashSet<String>) -> String {
 
 /// Fails with a clear message when the request needs a column the database
 /// does not have.
-fn check_schema(args: &Args, available: &HashSet<String>) -> Result<(), String> {
+fn check_schema(conn: &Connection, args: &Args, available: &HashSet<String>) -> Result<(), String> {
     for column in REQUIRED_COLUMNS {
         if !available.contains(column) {
             return Err(format!(
@@ -326,6 +343,23 @@ fn check_schema(args: &Args, available: &HashSet<String>) -> Result<(), String> 
                  it is not a DJ Assistant library"
             ));
         }
+    }
+
+    // The free-text search and the tag filter both read `track_tags`, which
+    // only exists since migration 007. A library last opened before that
+    // migration has no such table, so the request is refused with a clear
+    // message instead of failing inside SQLite.
+    let searches_tags = args
+        .query
+        .as_deref()
+        .is_some_and(|query| !query.trim().is_empty())
+        || !args.filters.tag.is_empty();
+    if searches_tags && !table_exists(conn, "track_tags")? {
+        return Err(
+            "the library database has no `track_tags` table, so it cannot be searched or \
+             filtered by tag. Open the desktop app once to apply the newest migration."
+                .to_string(),
+        );
     }
 
     let sort_column = sort_column(args.sort_by.as_deref());
@@ -440,6 +474,7 @@ fn usage() {
     println!("  --key <CODE>         Camelot key, repeatable");
     println!("  --status <S>         analysis status, repeatable");
     println!("  --genre <G>          genre, repeatable");
+    println!("  --tag <T>            custom tag, repeatable");
     println!("  --rating-min <N>     inclusive minimum star rating (0-5)");
     println!("  --energy-min <N>     inclusive minimum energy (1-10)");
     println!("  --energy-max <N>     inclusive maximum energy (1-10)");
@@ -587,7 +622,7 @@ fn missing_files(conn: &Connection, limit: i64) -> Result<(usize, Vec<String>), 
 /// The track list, using the app's own query builder.
 fn run_list(conn: &Connection, args: &Args) -> Result<(), String> {
     let available = table_columns(conn, "tracks")?;
-    check_schema(args, &available)?;
+    check_schema(conn, args, &available)?;
 
     let query = TrackQuery {
         query: args.query.clone(),

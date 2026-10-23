@@ -104,6 +104,12 @@ export function normalizeFilters(
   const genres = normalizeStringList(filters.genre);
   if (genres.length > 0) normalized.genre = genres;
 
+  // Tags are stored lower-cased, and the backend folds its filter values the
+  // same way, so the casing the user sees in the chip is harmless — but a
+  // blank tag would be a filter the backend ignores.
+  const tags = normalizeStringList(filters.tag);
+  if (tags.length > 0) normalized.tag = tags;
+
   // The backend reads the rating and energy bounds as integers (`i64`), so a
   // fractional bound would fail to deserialize at the IPC boundary. Only whole
   // numbers are forwarded.
@@ -129,51 +135,128 @@ export function activeFilterCount(filters: ListTracksFilters | undefined): numbe
     normalizeStringList(filters.keyCamelot).length > 0,
     normalizeStringList(filters.analysisStatus).length > 0,
     normalizeStringList(filters.genre).length > 0,
+    normalizeStringList(filters.tag).length > 0,
     filters.ratingMin != null,
     filters.energyMin != null || filters.energyMax != null,
   ].filter(Boolean).length;
 }
 
-/** Human-readable summary lines for the active filters, shown under the toolbar. */
+/**
+ * Human-readable summary lines for the active filters, shown under the toolbar.
+ *
+ * A thin wrapper over {@link describeFilterParts}: the chip labels and the
+ * removable chips must never disagree about what a filter is called.
+ */
 export function describeFilters(filters: ListTracksFilters | undefined): string[] {
+  return describeFilterParts(filters).map((part) => part.label);
+}
+
+/**
+ * The filter groups the toolbar can show as a chip.
+ *
+ * A chip names one group, so removing it clears exactly that group and
+ * leaves the others alone.
+ */
+export type FilterGroup = "bpm" | "key" | "status" | "genre" | "tag" | "rating" | "energy";
+
+/** One removable chip in the active-filter summary. */
+export interface FilterPart {
+  /** The chip label, e.g. `Tag peak`. */
+  label: string;
+  /** The group the chip clears when it is removed. */
+  group: FilterGroup;
+}
+
+/**
+ * The active filters as removable chips.
+ *
+ * `describeFilters` is the flat label list; this keeps the group each label
+ * belongs to, so the toolbar can drop one group without guessing from the
+ * text.
+ */
+export function describeFilterParts(filters: ListTracksFilters | undefined): FilterPart[] {
   if (!filters) return [];
-  const parts: string[] = [];
+  const parts: FilterPart[] = [];
 
   const { bpmMin, bpmMax } = filters;
   if (bpmMin != null && bpmMax != null) {
-    parts.push(`BPM ${formatBpm(bpmMin)}–${formatBpm(bpmMax)}`);
+    parts.push({ label: `BPM ${formatBpm(bpmMin)}–${formatBpm(bpmMax)}`, group: "bpm" });
   } else if (bpmMin != null) {
-    parts.push(`BPM ≥ ${formatBpm(bpmMin)}`);
+    parts.push({ label: `BPM ≥ ${formatBpm(bpmMin)}`, group: "bpm" });
   } else if (bpmMax != null) {
-    parts.push(`BPM ≤ ${formatBpm(bpmMax)}`);
+    parts.push({ label: `BPM ≤ ${formatBpm(bpmMax)}`, group: "bpm" });
   }
 
   const keys = normalizeStringList(filters.keyCamelot);
-  if (keys.length > 0) parts.push(`Key ${keys.join(", ")}`);
+  if (keys.length > 0) parts.push({ label: `Key ${keys.join(", ")}`, group: "key" });
 
   const statuses = normalizeStringList(filters.analysisStatus);
   if (statuses.length > 0) {
     const labels = statuses.map(
       (status) => ANALYSIS_STATUS_OPTIONS.find((option) => option.value === status)?.label ?? status
     );
-    parts.push(`Status ${labels.join(", ")}`);
+    parts.push({ label: `Status ${labels.join(", ")}`, group: "status" });
   }
 
   const genres = normalizeStringList(filters.genre);
-  if (genres.length > 0) parts.push(`Genre ${genres.join(", ")}`);
+  if (genres.length > 0) parts.push({ label: `Genre ${genres.join(", ")}`, group: "genre" });
 
-  if (filters.ratingMin != null) parts.push(`Rating ≥ ${filters.ratingMin}★`);
+  const tags = normalizeStringList(filters.tag);
+  if (tags.length > 0) parts.push({ label: `Tag ${tags.join(", ")}`, group: "tag" });
+
+  if (filters.ratingMin != null) {
+    parts.push({ label: `Rating ≥ ${filters.ratingMin}★`, group: "rating" });
+  }
 
   const { energyMin, energyMax } = filters;
   if (energyMin != null && energyMax != null) {
-    parts.push(`Energy ${energyMin}–${energyMax}`);
+    parts.push({ label: `Energy ${energyMin}–${energyMax}`, group: "energy" });
   } else if (energyMin != null) {
-    parts.push(`Energy ≥ ${energyMin}`);
+    parts.push({ label: `Energy ≥ ${energyMin}`, group: "energy" });
   } else if (energyMax != null) {
-    parts.push(`Energy ≤ ${energyMax}`);
+    parts.push({ label: `Energy ≤ ${energyMax}`, group: "energy" });
   }
 
   return parts;
+}
+
+/**
+ * Drops one filter group, leaving the others untouched.
+ *
+ * This is what the chip's × button calls: removing the tag filter must not
+ * also drop the genre or the tempo.
+ */
+export function clearFilterGroup(
+  filters: ListTracksFilters | undefined,
+  group: FilterGroup
+): ListTracksFilters {
+  const next: ListTracksFilters = { ...(filters ?? {}) };
+  switch (group) {
+    case "bpm":
+      delete next.bpmMin;
+      delete next.bpmMax;
+      break;
+    case "key":
+      delete next.keyCamelot;
+      break;
+    case "status":
+      delete next.analysisStatus;
+      break;
+    case "genre":
+      delete next.genre;
+      break;
+    case "tag":
+      delete next.tag;
+      break;
+    case "rating":
+      delete next.ratingMin;
+      break;
+    case "energy":
+      delete next.energyMin;
+      delete next.energyMax;
+      break;
+  }
+  return next;
 }
 
 /** Adds `value` to a filter list, or removes it when already selected. */
@@ -209,7 +292,13 @@ export function formatDuration(ms: number): string {
   return `${minutes}:${seconds.toString().padStart(2, "0")}`;
 }
 
-/** Case-insensitive match across title, artist, album and file path. */
+/**
+ * Case-insensitive match across title, artist, album, file path, the custom
+ * tags and the free-text comment.
+ *
+ * The backend searches the same fields, so the loaded page and the whole
+ * library answer the same question.
+ */
 export function matchesQuery(track: TrackSummary, query: string): boolean {
   const q = query.trim().toLowerCase();
   if (!q) return true;
@@ -217,7 +306,9 @@ export function matchesQuery(track: TrackSummary, query: string): boolean {
     (track.title?.toLowerCase().includes(q) ?? false) ||
     (track.artist?.toLowerCase().includes(q) ?? false) ||
     (track.album?.toLowerCase().includes(q) ?? false) ||
-    (track.filePath?.toLowerCase().includes(q) ?? false)
+    (track.filePath?.toLowerCase().includes(q) ?? false) ||
+    (track.comments?.toLowerCase().includes(q) ?? false) ||
+    (track.tags ?? []).some((tag) => tag.toLowerCase().includes(q))
   );
 }
 
@@ -329,8 +420,11 @@ export function scanPercent(scannedFiles: number, totalFiles: number): number {
  * zero when the selection already had that value. The message reports what
  * actually changed, never the size of the selection.
  */
-export function describeMetadataWrite(kind: "rating" | "energy", updated: number): string {
-  const label = kind === "rating" ? "Rating" : "Energy";
+export function describeMetadataWrite(
+  kind: "rating" | "energy" | "metadata",
+  updated: number
+): string {
+  const label = kind === "rating" ? "Rating" : kind === "energy" ? "Energy" : "Metadata";
   if (updated <= 0) return `${label} unchanged — nothing to save`;
   return `${label} saved for ${updated} track${updated === 1 ? "" : "s"}`;
 }
@@ -343,7 +437,7 @@ export function describeMetadataWrite(kind: "rating" | "energy", updated: number
  * multi-track edit is reported as a count so no wrong track is named.
  */
 export function describeMetadataUndo(
-  kind: "rating" | "energy",
+  kind: "rating" | "energy" | "metadata",
   updated: number,
   targetCount: number,
   title: string | null | undefined
@@ -351,8 +445,12 @@ export function describeMetadataUndo(
   if (updated <= 0) return null;
   const label = title?.trim() ? title.trim() : "Untitled";
   if (targetCount === 1 && updated === 1) {
-    return kind === "rating" ? `Rated “${label}”` : `Set energy on “${label}”`;
+    if (kind === "rating") return `Rated “${label}”`;
+    if (kind === "energy") return `Set energy on “${label}”`;
+    return `Edited “${label}”`;
   }
   const count = `${updated} track${updated === 1 ? "" : "s"}`;
-  return kind === "rating" ? `Rated ${count}` : `Set energy on ${count}`;
+  if (kind === "rating") return `Rated ${count}`;
+  if (kind === "energy") return `Set energy on ${count}`;
+  return `Edited ${count}`;
 }

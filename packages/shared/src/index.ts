@@ -13,6 +13,10 @@ export interface TrackSummary {
   artist: string;
   album?: string | null;
   genre?: string | null;
+  /** Record label / publisher (migration 007). User-typed — no import source. */
+  label?: string | null;
+  /** Release year. Present in the schema since migration 001. */
+  year?: number | null;
   bpm?: number | null;
   keyCamelot?: string | null;
   keyClassical?: string | null;
@@ -23,6 +27,8 @@ export interface TrackSummary {
   /** Energy level 1–10 (migration 006); `null` when the user never set one. */
   energy?: number | null;
   comments?: string | null;
+  /** Custom tags (migration 007). Empty when the track carries no tags. */
+  tags: string[];
   artworkHash?: string | null;
   createdAt: string;
   updatedAt: string;
@@ -96,6 +102,8 @@ export interface ListTracksFilters {
   keyCamelot?: string[];
   analysisStatus?: AnalysisStatus[];
   genre?: string[];
+  /** Custom tags (T2.1.7). Matched case-insensitively. */
+  tag?: string[];
   /** Inclusive minimum star rating (0–5). */
   ratingMin?: number;
   /** Inclusive minimum energy level (1–10). */
@@ -159,7 +167,8 @@ export type GetArtworkResponse = string | null;
 
 /**
  * Patch applied to one or more tracks. An omitted field is left untouched;
- * `0` clears the value (the column is stored as NULL).
+ * `0` clears a numeric value and `""` clears a text value (the column is
+ * stored as NULL).
  */
 export interface UpdateTrackMetadataRequest {
   /** Tracks to patch. Unknown ids are ignored. */
@@ -168,6 +177,25 @@ export interface UpdateTrackMetadataRequest {
   rating?: number;
   /** Energy level 1–10. `0` clears the energy (0 is outside the valid range). */
   energy?: number;
+  /** Title. `""` is rejected — a track has to stay nameable. */
+  title?: string;
+  /** Artist. `""` is rejected, for the same reason as the title. */
+  artist?: string;
+  /** Album. `""` clears the album. */
+  album?: string;
+  /** Genre. `""` clears the genre. */
+  genre?: string;
+  /** Record label. `""` clears the label. */
+  label?: string;
+  /** Release year. `0` clears the year. */
+  year?: number;
+  /** Free-text comment. `""` clears the comment. */
+  comments?: string;
+  /**
+   * The **complete** set of custom tags. `[]` removes every tag; omitting
+   * the field leaves the tags untouched.
+   */
+  tags?: string[];
 }
 
 export interface UpdateTrackMetadataResponse {

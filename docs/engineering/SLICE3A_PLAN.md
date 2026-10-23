@@ -1,6 +1,6 @@
 # Slice 3A — Tags + Comments (T2.1.7, T2.1.13)
 
-**Status:** planned, not started (2026-10-22)  
+**Status:** implemented, QA pending (2026-10-22)  
 **Scope:** 3A = tag chips, the tag filter and the comment edit surface.  
 **3B = T2.1.8** (key pills, harmonic relations, the key-format preference) is a
 separate increment — it needs new key modules and a Settings surface the app
@@ -98,6 +98,11 @@ it is synced.
    tt.tag IN (…))`, with the same bound-parameter and invalid-value rules as
    the other list filters. Free-text search gains `comments` (T2.1.13) and tag
    values (the tag-field half of T2.1.1) through the existing `ESCAPE` path.
+6. **`crates/core/src/patch.rs`** — the pure write rules (the closed column
+   allow-list, the text/number clearing rules, the tag-set comparison) and
+   the tag normalisation (`crates/core/src/tags.rs`). They live in the core
+   crate because the desktop crate’s test harness does not load on this
+   toolchain; the desktop crate stays the thin IPC adapter over them.
 
 ## 5. Front-end work
 
@@ -130,7 +135,11 @@ it is synced.
 
 - **Rust unit tests** — the tag filter (in / out), the `ESCAPE` path with a tag
   containing `%` or `_`, the patch and skip semantics (a track changed since
-  the snapshot is skipped, not overwritten).
+  the snapshot is skipped, not overwritten). The pure write rules — the
+  closed column allow-list, the text/number clearing rules, the tag-set
+  comparison — live in **`crates/core/src/patch.rs`**, not in the desktop
+  crate: the desktop crate’s test harness does not load on
+  `stable-x86_64-pc-windows-gnu`, so a rule kept there would never run.
 - **Schema tests** (`tests/schema`) — the mirrored SQL against a migrated
   schema, the tag rows and their cascade on track delete, count/rows
   agreement.
@@ -142,13 +151,30 @@ it is synced.
 
 ## 7. Definition of Done (3A)
 
-- [ ] A tag chip in the table filters the list by that tag, and the resulting
-      filter chip can be removed.
-- [ ] A comment edited in the metadata editor persists, is found by the search
-      field, and comes back through Undo.
-- [ ] Undo restores a removed tag set, and skips a track that changed since
-      the snapshot.
-- [ ] The `tags` column is off by default and the table layout survives it.
+The slice is split in two: what the automated checks can prove, and what only
+the **running window** can. The second list is the checklist
+([`SLICE3A_MANUAL_QA_CHECKLIST.md`](SLICE3A_MANUAL_QA_CHECKLIST.md)) — a
+browser tab is a mock (F-009) and proves nothing.
+
+**Proved by the automated checks**
+
+- [x] A tag chip in the table filters the list by that tag, and the resulting
+      filter chip can be removed (`library.ts` filter parts, the `tag` filter
+      in `library_query.rs`, the schema contract test).
+- [x] A comment edited in the metadata editor persists and is found by the
+      search field (the search path covers `comments` and the tag rows; the
+      schema contract test proves both).
+- [x] Undo restores a removed tag set, and skips a track that changed since
+      the snapshot (the set rule in `crates/core/src/patch.rs`, the schema
+      contract test for the tag round trip and the skip).
+- [x] The `tags` column is **off** by default (`library-columns.test.ts`).
+- [x] The tag set is normalised the same way on both sides — trimmed,
+      ASCII-lowercased, de-duplicated, sorted (`crates/core/src/tags.rs` and
+      the TypeScript mirror in `apps/desktop/src/lib/tags.ts`).
+
+**Proved only in the running window**
+
+- [ ] The table layout survives the `tags` column.
 - [ ] Right-clicking a row opens the context menu, Escape closes it, focus
       returns to the row, and "Edit tags…" opens the editor for the focused
       row.
@@ -175,14 +201,14 @@ it is synced.
 
 ## 9. Sequence
 
-| # | Task |
-| --- | --- |
-| T3A.1 | Migration 007 + registration in `db.rs` |
-| T3A.2 | Shared + Rust types (`tags`, the extended request) |
-| T3A.3 | Read path: the tags of a page in `list_tracks` |
-| T3A.4 | Query path: the tag filter, `comments` and tag search |
-| T3A.5 | Write path: the generalised patch, the snapshot, the undo |
-| T3A.6 | `TagChips` + the `tags` column |
-| T3A.7 | The row context menu + the metadata editor |
-| T3A.8 | Tests (Rust unit, schema, `node --test`) |
-| T3A.9 | Docs: the task entries, the memory layers, the QA checklist |
+| # | Task | State |
+| --- | --- | --- |
+| T3A.1 | Migration 007 + registration in `db.rs` | done |
+| T3A.2 | Shared + Rust types (`tags`, the extended request) | done |
+| T3A.3 | Read path: the tags of a page in `list_tracks` | done |
+| T3A.4 | Query path: the tag filter, `comments` and tag search | done |
+| T3A.5 | Write path: the generalised patch, the snapshot, the undo | done |
+| T3A.6 | `TagChips` + the `tags` column | done |
+| T3A.7 | The row context menu + the metadata editor | done |
+| T3A.8 | Tests (Rust unit, schema, `node --test`) | done |
+| T3A.9 | Docs: the task entries, the memory layers, the QA checklist | done |

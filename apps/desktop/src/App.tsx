@@ -90,8 +90,9 @@ import {
   ANALYSIS_STATUS_OPTIONS,
   CAMELOT_KEYS,
   activeFilterCount,
+  clearFilterGroup,
   defaultSortDirection,
-  describeFilters,
+  describeFilterParts,
   describeMetadataUndo,
   describeMetadataWrite,
   filterTracks,
@@ -138,6 +139,10 @@ import { ModalShell } from "./components/ModalShell";
 import { ColumnPicker } from "./components/ColumnPicker";
 import { EnergyBars } from "./components/EnergyBars";
 import { StarRating } from "./components/StarRating";
+import { TagChips } from "./components/TagChips";
+import { RowContextMenu } from "./components/RowContextMenu";
+import { MetadataEditor } from "./components/MetadataEditor";
+import { buildMetadataUpdatePayload, type MetadataEditorValues } from "./lib/tags";
 import { previewEngine } from "./lib/audio-engine";
 
 const VIEW_ITEMS: { view: AppView; label: string; shortcut: string }[] = [
@@ -471,6 +476,7 @@ function TrackCell({
   rowNumber,
   onRate,
   onSetEnergy,
+  onSelectTag,
 }: {
   id: ColumnId;
   track: TrackSummary;
@@ -479,6 +485,8 @@ function TrackCell({
   onRate?: (track: TrackSummary, rating: number | null) => void;
   /** Applies an energy level (1–10) or clears it when `null`. */
   onSetEnergy?: (track: TrackSummary, energy: number | null) => void;
+  /** Filters the library by the clicked tag (T2.1.7). */
+  onSelectTag?: (tag: string) => void;
 }) {
   const definition = columnDefinition(id);
   const base = `py-2.5 px-4 overflow-hidden whitespace-nowrap text-ellipsis ${
@@ -523,6 +531,18 @@ function TrackCell({
           value={track.energy}
           label={`Energy for ${track.title || "Untitled"}`}
           onChange={(energy) => onSetEnergy?.(track, energy)}
+        />
+      </td>
+    );
+  }
+
+  if (id === "tags") {
+    return (
+      <td className="py-2.5 px-4">
+        <TagChips
+          tags={track.tags}
+          label={`Tags for ${track.title || "Untitled"}`}
+          onSelect={onSelectTag}
         />
       </td>
     );
@@ -1033,6 +1053,17 @@ export default function App() {
   const undoTimerRef = useRef<number | null>(null);
   // True while the undo toast holds the focus; the idle timer is paused then.
   const undoFocusedRef = useRef(false);
+  // The row context menu (T2.1.7) and the metadata editor it opens. The menu
+  // is anchored to the cursor; the editor is anchored to the focused track.
+  const [contextMenu, setContextMenu] = useState<{
+    track: TrackSummary;
+    x: number;
+    y: number;
+  } | null>(null);
+  const [editorTrackId, setEditorTrackId] = useState<string | null>(null);
+  // The row the context menu was opened from, so the focus can go back to it
+  // when the menu closes.
+  const contextRowRef = useRef<HTMLTableRowElement | null>(null);
   const [similar, setSimilar] = useState<SimilarTrackResult[]>([]);
   const [similarLoading, setSimilarLoading] = useState(false);
   const [storeLinks, setStoreLinks] = useState<StoreLinksResponse | null>(null);
@@ -1060,7 +1091,7 @@ export default function App() {
 
   // Chart snapshots Tier 1 (TD.3): versioned data with local taste filtering.
   const [chartsOpen, setChartsOpen] = useState(false);
-  dialogsOpenRef.current = healthOpen || chartsOpen;
+  dialogsOpenRef.current = healthOpen || chartsOpen || editorTrackId !== null;
   const [chartGenre, setChartGenre] = useState("techno");
   const [chartKind, setChartKind] = useState("top100");
   const [chartData, setChartData] = useState<ChartListResponse | null>(null);
@@ -1494,8 +1525,8 @@ export default function App() {
     // through `refreshLibrary`, which reloads with the *current* view state.
   }, []);
 
-  // Esc closes the inspector drawer, the Tag Health/Charts modals and the
-  // filter/columns dropdowns.
+  // Esc closes the inspector drawer, the Tag Health/Charts modals, the
+  // filter/columns dropdowns, the row context menu and the metadata editor.
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
@@ -1504,6 +1535,8 @@ export default function App() {
         setChartsOpen(false);
         setFiltersOpen(false);
         setColumnsOpen(false);
+        setContextMenu(null);
+        setEditorTrackId(null);
       }
     };
     window.addEventListener("keydown", onKey);
@@ -1654,6 +1687,63 @@ export default function App() {
     }
   };
 
+  // --- Tags and the metadata editor (T2.1.7 / T2.1.13) ----------------------
+  // A tag chip filters the library by that tag. The filter is a normal filter
+  // group, so it shows up in the summary strip and can be removed from there.
+  const handleFilterByTag = (tag: string) => {
+    setFilters((current) => {
+      const existing = current.tag ?? [];
+      if (existing.some((entry) => entry.toLowerCase() === tag.toLowerCase())) return current;
+      return { ...current, tag: [...existing, tag] };
+    });
+  };
+
+  // Right-click a row: open the context menu at the cursor. The menu closes
+  // on Escape, on an outside click and after an action, and hands the focus
+  // back to the row it came from.
+  const handleRowContextMenu = (
+    event: ReactMouseEvent<HTMLTableRowElement>,
+    track: TrackSummary
+  ) => {
+    event.preventDefault();
+    contextRowRef.current = event.currentTarget;
+    setContextMenu({ track, x: event.clientX, y: event.clientY });
+  };
+
+  const openMetadataEditor = (track: TrackSummary) => {
+    setEditorTrackId(track.id);
+  };
+
+  // The editor saves through the same write path as the rating and the energy
+  // level, so it inherits the same "nothing changed" rule and the same Undo
+  // toast — including the undo of a whole tag set.
+  const handleSaveMetadata = async (values: MetadataEditorValues) => {
+    const track = tracks.find((entry) => entry.id === editorTrackId);
+    if (!track) {
+      setEditorTrackId(null);
+      return;
+    }
+    // A multi-selection applies to the whole selection; a single row applies
+    // to that row alone. Same rule as the rating and the energy level.
+    const trackIds = selection.includes(track.id) ? selection : [track.id];
+    setEditorTrackId(null);
+    try {
+      const res = await updateTrackMetadata(buildMetadataUpdatePayload(trackIds, values));
+      refreshLibrary();
+      pushStatus(describeMetadataWrite("metadata", res.updated));
+      const undoMessage = describeMetadataUndo(
+        "metadata",
+        res.updated,
+        trackIds.length,
+        track.title
+      );
+      if (undoMessage) offerUndo(res.undoId, undoMessage);
+    } catch (err) {
+      console.error("Failed to save track metadata:", err);
+      pushStatus("Couldn't save the metadata", "error");
+    }
+  };
+
   // Row selection: a plain click inspects a track (and replaces the selection),
   // Ctrl/Cmd-click toggles one track, Shift-click takes the range from the
   // anchor. Inspecting and multi-selecting stay separate on purpose — the
@@ -1714,7 +1804,7 @@ export default function App() {
     setColumns((current) => setColumnWidth(current, id, autoFitWidth(longest, definition)));
   };
   const filterCount = activeFilterCount(filters);
-  const filterSummary = describeFilters(filters);
+  const filterSummary = describeFilterParts(filters);
   // True when the (server-side) page behind `filteredTracks` is narrowed either by
   // the filter panel or by the live search box; used to tell "no tracks" apart
   // from "no matches for the current query".
@@ -2110,10 +2200,21 @@ export default function App() {
                     <SlidersHorizontal className="w-3 h-3 text-dj-accent" />
                     {filterSummary.map((part) => (
                       <span
-                        key={part}
-                        className="px-2 py-0.5 rounded-sm bg-dj-accent/10 text-dj-accent border border-dj-accent/20 font-mono"
+                        key={part.group}
+                        className="inline-flex items-center gap-1 px-2 py-0.5 rounded-sm bg-dj-accent/10 text-dj-accent border border-dj-accent/20 font-mono"
                       >
-                        {part}
+                        {part.label}
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setFilters((current) => clearFilterGroup(current, part.group))
+                          }
+                          title={`Remove the ${part.group} filter`}
+                          aria-label={`Remove the ${part.group} filter`}
+                          className="rounded-sm p-px text-dj-accent/70 transition hover:text-dj-accent"
+                        >
+                          <X className="h-2.5 w-2.5" />
+                        </button>
                       </span>
                     ))}
                     <button
@@ -2226,6 +2327,7 @@ export default function App() {
                             aria-label={`Inspect ${track.title || "Untitled"} by ${track.artist || "Unknown Artist"}`}
                             aria-selected={selection.includes(track.id)}
                             onClick={(event) => handleRowClick(event, track, idx)}
+                            onContextMenu={(event) => handleRowContextMenu(event, track)}
                             onKeyDown={(e) => {
                               // Only the row itself handles Enter/Space. A child
                               // control (the rating stars, the energy meter) owns
@@ -2266,6 +2368,7 @@ export default function App() {
                                 rowNumber={idx + 1}
                                 onRate={handleSetRating}
                                 onSetEnergy={handleSetEnergy}
+                                onSelectTag={handleFilterByTag}
                               />
                             ))}
                           </tr>
@@ -2979,6 +3082,38 @@ export default function App() {
           )}
         </main>
       </div>
+
+      {contextMenu && (
+        <RowContextMenu
+          x={contextMenu.x}
+          y={contextMenu.y}
+          trackTitle={contextMenu.track.title || "Untitled"}
+          onEditTags={() => openMetadataEditor(contextMenu.track)}
+          onClose={() => setContextMenu(null)}
+          restoreFocus={() => contextRowRef.current?.focus()}
+        />
+      )}
+
+      {editorTrackId && (
+        <MetadataEditor
+          track={
+            tracks.find((entry) => entry.id === editorTrackId) ?? {
+              id: editorTrackId,
+              title: "",
+              artist: "",
+              album: null,
+              genre: null,
+              label: null,
+              year: null,
+              tags: [],
+              comments: null,
+            }
+          }
+          targetCount={selection.includes(editorTrackId) ? selection.length : 1}
+          onSave={handleSaveMetadata}
+          onClose={() => setEditorTrackId(null)}
+        />
+      )}
 
       {ui.playerMode !== "hidden" && (
         <PreviewPlayer

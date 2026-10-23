@@ -354,6 +354,8 @@ const FULL_TRACK: TrackSummary = {
   artist: "Vela",
   album: "Afterhours",
   genre: "Melodic House",
+  label: "Night Records",
+  year: 2026,
   bpm: 124.5,
   keyCamelot: "8A",
   keyClassical: "Am",
@@ -363,6 +365,7 @@ const FULL_TRACK: TrackSummary = {
   userRating: 4,
   energy: 7,
   comments: "Great build, keep for the closing hour.",
+  tags: ["peak", "warmup"],
   artworkHash: "art1",
   createdAt: "2026-10-01T00:00:00Z",
   updatedAt: "2026-10-01T00:00:00Z",
@@ -376,6 +379,7 @@ const BARE_TRACK: TrackSummary = {
   artist: "",
   durationMs: 0,
   analysisStatus: "pending",
+  tags: [],
   createdAt: "2026-10-01T00:00:00Z",
   updatedAt: "2026-10-01T00:00:00Z",
 };
@@ -436,12 +440,28 @@ test("missing tags fall back to a dash instead of an empty cell", () => {
 });
 
 test("columns without data in this slice show a placeholder, not a fake value", () => {
-  // Tag chips, label, year, LUFS, color, cue counts and file size need fields
-  // the list query does not return yet (later T2.1.x slices).
-  const notYetSourced: ColumnId[] = ["tags", "label", "year", "lufs", "color", "cues", "size"];
+  // LUFS, color, cue counts and file size still need fields the list query
+  // does not return (later T2.1.x slices). Tags, label and year landed in 3A.
+  const notYetSourced: ColumnId[] = ["lufs", "color", "cues", "size"];
   for (const id of notYetSourced) {
     assert.equal(trackColumnText(FULL_TRACK, id), PLACEHOLDER, `${id} has no source field`);
   }
+});
+
+test("the tags, label and year columns render their own field", () => {
+  // Slice 3A: the tags, the label and the year reached `TrackSummary`.
+  assert.equal(trackColumnText(FULL_TRACK, "tags"), "peak, warmup");
+  assert.equal(trackColumnText(FULL_TRACK, "label"), "Night Records");
+  assert.equal(trackColumnText(FULL_TRACK, "year"), "2026");
+  // A track without them shows the placeholder, never a fake value.
+  assert.equal(trackColumnText(BARE_TRACK, "tags"), PLACEHOLDER);
+  assert.equal(trackColumnText(BARE_TRACK, "label"), PLACEHOLDER);
+  assert.equal(trackColumnText(BARE_TRACK, "year"), PLACEHOLDER);
+});
+
+test("the tags tooltip names every tag, not just the visible chips", () => {
+  assert.equal(trackColumnTooltip(FULL_TRACK, "tags"), "peak, warmup");
+  assert.equal(trackColumnTooltip(BARE_TRACK, "tags"), undefined);
 });
 
 test("the energy column reports the level the meter shows", () => {

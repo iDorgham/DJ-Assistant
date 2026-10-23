@@ -16,9 +16,11 @@ pub mod library_query;
 pub mod library_stats;
 pub mod metadata;
 pub mod mp3;
+pub mod patch;
 pub mod providers;
 pub mod riff;
 pub mod similarity;
+pub mod tags;
 
 pub use aiff::aiff_duration_ms;
 pub use audio::{discover_audio_files, is_supported_audio, SUPPORTED_EXTENSIONS};
@@ -41,12 +43,14 @@ pub use metadata::{
     ExtractedMetadata,
 };
 pub use mp3::mp3_duration_ms;
+pub use patch::{number_value, tags_match, text_value, PATCH_COLUMNS};
 pub use providers::{
     store_links_for_track, store_search_url, ProviderCapabilities, StoreLink, StoreProvider,
     StreamingProvider,
 };
 pub use riff::wav_duration_ms;
 pub use similarity::{bpm_similarity, camelot_distance, find_similar, ScoredTrack, TrackFeatures};
+pub use tags::normalize_tags;
 
 use std::path::Path;
 
