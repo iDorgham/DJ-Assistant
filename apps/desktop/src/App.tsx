@@ -1032,11 +1032,10 @@ export default function App() {
   // metadata reloads reorder the table, so a stored index would point at a
   // different track by the time the user Shift-clicks.
   const [selectionAnchor, setSelectionAnchor] = useState<string | null>(null);
-  const pendingRowClickRef = useRef<{
-    timer: number;
-    trackId: string;
-    run: () => void;
-  } | null>(null);
+  // The pending *panel open* of a plain row click. The selection applies
+  // immediately; only the open waits out the double-click window, so a quick
+  // edit after selecting a row cannot still target the previous selection.
+  const pendingRowClickRef = useRef<{ timer: number; trackId: string } | null>(null);
   const cancelPendingRowClick = useCallback(() => {
     if (pendingRowClickRef.current) {
       window.clearTimeout(pendingRowClickRef.current.timer);
@@ -1150,10 +1149,13 @@ export default function App() {
   // keyboard user lands where they left off instead of at the top of the page.
   /** Closes an open panel and focuses its remembered trigger; does nothing if already closed. */
   const closeTrackPanel = useCallback(() => {
+    // Dropping the panel must also drop a click that is still waiting out the
+    // double-click window; otherwise it reopens the panel right after Escape.
+    cancelPendingRowClick();
     if (!panelOpenRef.current) return;
     setInspectedTrack(null);
     panelTriggerRef.current?.focus();
-  }, []);
+  }, [cancelPendingRowClick]);
 
   /** Sets the player track, revealing the Mini dock if the player is hidden. */
   const handlePlayTrack = (track: TrackSummary) => {
@@ -1699,15 +1701,12 @@ export default function App() {
   // must never depend on how the row was selected. A double-click loads the
   // player without inspecting first; an already open panel stays open.
   /**
-   * Inspects the clicked row and updates selection: Ctrl/Cmd toggles, Shift selects an inclusive
-   * range, and a plain click replaces it. index is the row position in filteredTracks; a missing
-   * Shift anchor falls back to selecting only this track. Records the row for focus return.
+   * Updates the selection for a row click: Ctrl/Cmd toggles, Shift selects an inclusive range, and
+   * a plain click replaces it. index is the row position in filteredTracks; a missing Shift anchor
+   * falls back to selecting only this track.
    */
-  const handleRowClick = (
-    event: Pick<
-      ReactMouseEvent<HTMLTableRowElement>,
-      "ctrlKey" | "metaKey" | "shiftKey" | "currentTarget"
-    >,
+  const applyRowSelection = (
+    event: Pick<ReactMouseEvent<HTMLTableRowElement>, "ctrlKey" | "metaKey" | "shiftKey">,
     track: TrackSummary,
     index: number,
     anchor = selectionAnchor
@@ -1719,7 +1718,6 @@ export default function App() {
           : [...current, track.id]
       );
       setSelectionAnchor(track.id);
-      openTrackPanel(track, event.currentTarget);
       return;
     }
     if (event.shiftKey && anchor !== null) {
@@ -1731,16 +1729,27 @@ export default function App() {
         // selection instead of a range built from a stale position.
         setSelection([track.id]);
         setSelectionAnchor(track.id);
-        openTrackPanel(track, event.currentTarget);
         return;
       }
       const [from, to] = anchorIndex < index ? [anchorIndex, index] : [index, anchorIndex];
       setSelection(filteredTracks.slice(from, to + 1).map((entry) => entry.id));
-      openTrackPanel(track, event.currentTarget);
       return;
     }
     setSelection([track.id]);
     setSelectionAnchor(track.id);
+  };
+
+  /** Selects the clicked row and inspects it, remembering the row for focus return. */
+  const handleRowClick = (
+    event: Pick<
+      ReactMouseEvent<HTMLTableRowElement>,
+      "ctrlKey" | "metaKey" | "shiftKey" | "currentTarget"
+    >,
+    track: TrackSummary,
+    index: number,
+    anchor = selectionAnchor
+  ) => {
+    applyRowSelection(event, track, index, anchor);
     openTrackPanel(track, event.currentTarget);
   };
 
@@ -1753,21 +1762,22 @@ export default function App() {
     cancelPendingRowClick();
     if (event.ctrlKey || event.metaKey || event.shiftKey) {
       event.preventDefault();
-      // Commit an earlier plain click before extending its selection. Its
-      // anchor has not reached this render yet, so pass that track explicitly.
-      pending?.run();
+      // The previous plain click has already applied its selection; its anchor
+      // has not reached this render yet, so pass that track explicitly.
       handleRowClick(event, track, index, pending?.trackId ?? selectionAnchor);
       return;
     }
     if (event.detail > 1) return;
-    // React clears currentTarget after dispatch; retain the row for focus return.
-    const { ctrlKey, metaKey, shiftKey, currentTarget } = event;
-    const run = () => handleRowClick({ ctrlKey, metaKey, shiftKey, currentTarget }, track, index);
+    // Selection follows the click at once; only the panel open waits for the
+    // double-click window. React clears currentTarget after dispatch, so retain
+    // the row for the deferred open and the focus return.
+    applyRowSelection({ ctrlKey: false, metaKey: false, shiftKey: false }, track, index);
+    const { currentTarget } = event;
     const timer = window.setTimeout(() => {
       pendingRowClickRef.current = null;
-      run();
+      openTrackPanel(track, currentTarget);
     }, ROW_DOUBLE_CLICK_MS);
-    pendingRowClickRef.current = { timer, trackId: track.id, run };
+    pendingRowClickRef.current = { timer, trackId: track.id };
   };
 
   // T2.1.5: the table renders exactly this list, in storage order. Resizing is
