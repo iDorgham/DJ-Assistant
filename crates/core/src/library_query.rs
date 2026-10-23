@@ -28,6 +28,8 @@ pub struct TrackFilters {
     pub analysis_status: Vec<String>,
     /// Genre names, matched case-insensitively.
     pub genre: Vec<String>,
+    /// Custom tags, matched case-insensitively against `track_tags` (T2.1.7).
+    pub tag: Vec<String>,
     /// Inclusive minimum star rating (0–5).
     pub rating_min: Option<i64>,
     /// Inclusive minimum energy level (1–10).
@@ -47,6 +49,7 @@ impl TrackFilters {
             && self.key_camelot.iter().all(|k| k.trim().is_empty())
             && self.analysis_status.iter().all(|s| s.trim().is_empty())
             && self.genre.iter().all(|g| g.trim().is_empty())
+            && self.tag.iter().all(|t| t.trim().is_empty())
     }
 
     /// Number of distinct active filter groups (for UI badges/tests).
@@ -56,6 +59,7 @@ impl TrackFilters {
             !self.normalized_keys().is_empty(),
             !self.normalized_statuses().is_empty(),
             !self.normalized_genres().is_empty(),
+            !self.normalized_tags().is_empty(),
             self.rating_min.is_some(),
             self.energy_min.is_some() || self.energy_max.is_some(),
         ]
@@ -123,6 +127,11 @@ impl TrackFilters {
     fn normalized_genres(&self) -> Vec<String> {
         // See `normalized_statuses`: keep this ASCII-only to mirror SQLite.
         normalize_list(&self.genre, str::to_ascii_lowercase)
+    }
+
+    fn normalized_tags(&self) -> Vec<String> {
+        // Tags are stored lower-cased, so the filter folds the same way.
+        normalize_list(&self.tag, str::to_ascii_lowercase)
     }
 }
 
@@ -220,15 +229,22 @@ impl TrackQuery {
         let mut params: Vec<QueryParam> = Vec::new();
 
         if let Some(search) = self.search_pattern() {
-            // One placeholder reused by all four columns keeps the parameter
-            // list short and the intent obvious. `ESCAPE` makes `%`/`_` from
-            // the search box match literally instead of acting as wildcards.
+            // One placeholder reused by every searched column keeps the
+            // parameter list short and the intent obvious. `ESCAPE` makes
+            // `%`/`_` from the search box match literally instead of acting as
+            // wildcards. The comment (T2.1.13) and the custom tags (T2.1.7)
+            // are searched too, so a tag or a note is findable from the one
+            // search box.
             let index = params.len() + 1;
             conditions.push(format!(
                 "(LOWER(title) LIKE ?{index} ESCAPE '\\' \
                  OR LOWER(artist) LIKE ?{index} ESCAPE '\\' \
                  OR LOWER(album) LIKE ?{index} ESCAPE '\\' \
-                 OR LOWER(file_path) LIKE ?{index} ESCAPE '\\')"
+                 OR LOWER(file_path) LIKE ?{index} ESCAPE '\\' \
+                 OR LOWER(comments) LIKE ?{index} ESCAPE '\\' \
+                 OR EXISTS (SELECT 1 FROM track_tags tt \
+                            WHERE tt.track_id = tracks.id \
+                              AND LOWER(tt.tag) LIKE ?{index} ESCAPE '\\'))"
             ));
             params.push(QueryParam::Text(search));
         }
@@ -260,6 +276,25 @@ impl TrackQuery {
             "LOWER(TRIM(genre)) IN",
             self.filters.normalized_genres(),
         );
+
+        // The tag filter is an `EXISTS`, not a join: a track can carry several
+        // tags, and a join would multiply the rows and break the one-row-per-
+        // track shape the pagination and the NULLs-last sort rely on.
+        if !self.filters.normalized_tags().is_empty() {
+            let placeholders: Vec<String> = self
+                .filters
+                .normalized_tags()
+                .into_iter()
+                .map(|tag| {
+                    params.push(QueryParam::Text(tag));
+                    format!("?{}", params.len())
+                })
+                .collect();
+            conditions.push(format!(
+                "EXISTS (SELECT 1 FROM track_tags tt WHERE tt.track_id = tracks.id AND LOWER(tt.tag) IN ({}))",
+                placeholders.join(", ")
+            ));
+        }
 
         if let Some(rating) = self.filters.rating_min {
             params.push(QueryParam::Int(rating));
@@ -442,7 +477,7 @@ mod tests {
     }
 
     #[test]
-    fn search_matches_four_columns_with_one_shared_placeholder() {
+    fn search_matches_every_searchable_field_with_one_shared_placeholder() {
         let built = build(TrackQuery {
             query: Some("  Deep House  ".into()),
             ..Default::default()
@@ -451,7 +486,9 @@ mod tests {
             built.count_sql,
             "SELECT COUNT(*) FROM tracks WHERE (LOWER(title) LIKE ?1 ESCAPE '\\' \
              OR LOWER(artist) LIKE ?1 ESCAPE '\\' OR LOWER(album) LIKE ?1 ESCAPE '\\' \
-             OR LOWER(file_path) LIKE ?1 ESCAPE '\\')"
+             OR LOWER(file_path) LIKE ?1 ESCAPE '\\' OR LOWER(comments) LIKE ?1 ESCAPE '\\' \
+             OR EXISTS (SELECT 1 FROM track_tags tt WHERE tt.track_id = tracks.id \
+             AND LOWER(tt.tag) LIKE ?1 ESCAPE '\\'))"
         );
         assert_eq!(
             built.params,
@@ -558,12 +595,74 @@ mod tests {
             built.count_sql,
             "SELECT COUNT(*) FROM tracks WHERE (LOWER(title) LIKE ?1 ESCAPE '\\' \
              OR LOWER(artist) LIKE ?1 ESCAPE '\\' OR LOWER(album) LIKE ?1 ESCAPE '\\' \
-             OR LOWER(file_path) LIKE ?1 ESCAPE '\\') AND bpm <= ?2 AND LOWER(TRIM(genre)) IN (?3)"
+             OR LOWER(file_path) LIKE ?1 ESCAPE '\\' OR LOWER(comments) LIKE ?1 ESCAPE '\\' \
+             OR EXISTS (SELECT 1 FROM track_tags tt WHERE tt.track_id = tracks.id \
+             AND LOWER(tt.tag) LIKE ?1 ESCAPE '\\')) AND bpm <= ?2 \
+             AND LOWER(TRIM(genre)) IN (?3)"
         );
         assert!(built
             .select_sql
             .ends_with("ORDER BY created_at DESC, id ASC LIMIT ?4 OFFSET ?5"));
         assert_eq!(built.params.len(), 5);
+    }
+
+    #[test]
+    fn tag_filter_binds_one_parameter_per_tag() {
+        let built = build(TrackQuery {
+            filters: TrackFilters {
+                tag: vec!["Peak".into(), "warm".into()],
+                ..Default::default()
+            },
+            ..Default::default()
+        });
+        assert_eq!(
+            built.count_sql,
+            "SELECT COUNT(*) FROM tracks WHERE EXISTS (SELECT 1 FROM track_tags tt \
+             WHERE tt.track_id = tracks.id AND LOWER(tt.tag) IN (?1, ?2))"
+        );
+        assert_eq!(
+            built.params,
+            vec![
+                QueryParam::Text("peak".into()),
+                QueryParam::Text("warm".into()),
+                QueryParam::Int(50),
+                QueryParam::Int(0)
+            ]
+        );
+    }
+
+    #[test]
+    fn a_blank_tag_is_not_a_filter() {
+        let built = build(TrackQuery {
+            filters: TrackFilters {
+                tag: vec!["  ".into()],
+                ..Default::default()
+            },
+            ..Default::default()
+        });
+        assert!(!built.count_sql.contains("WHERE"));
+        assert_eq!(built.params.len(), 2);
+        assert!(TrackFilters {
+            tag: vec![" ".into()],
+            ..Default::default()
+        }
+        .is_empty());
+    }
+
+    #[test]
+    fn the_tag_filter_keeps_the_row_shape_one_row_per_track() {
+        // A track with three tags must still match once, not three times: the
+        // filter is an `EXISTS`, so the pagination tiebreaker and the
+        // NULLs-last sort keep working.
+        let built = build(TrackQuery {
+            filters: TrackFilters {
+                tag: vec!["peak".into()],
+                ..Default::default()
+            },
+            ..Default::default()
+        });
+        assert!(!built.count_sql.contains("JOIN"));
+        assert!(!built.select_sql.contains("JOIN"));
     }
 
     #[test]
@@ -718,6 +817,8 @@ mod tests {
         assert_eq!(filters.active_count(), 2);
         filters.bpm_min = Some(120.0);
         assert_eq!(filters.active_count(), 3);
+        filters.tag = vec!["peak".into()];
+        assert_eq!(filters.active_count(), 4);
         assert!(!filters.is_empty());
         assert!(TrackFilters::default().is_empty());
     }
@@ -817,6 +918,7 @@ mod tests {
                 "keyCamelot": ["8A"],
                 "analysisStatus": ["complete"],
                 "genre": ["House"],
+                "tag": ["Peak"],
                 "ratingMin": 3,
                 "energyMin": 2,
                 "energyMax": 8
@@ -830,9 +932,11 @@ mod tests {
         assert_eq!(query.filters.rating_min, Some(3));
         assert_eq!(query.filters.energy_min, Some(2));
         assert_eq!(query.filters.energy_max, Some(8));
+        assert_eq!(query.filters.tag, vec!["Peak".to_string()]);
         assert_eq!(query.sort_by.as_deref(), Some("bpm"));
         let built = query.build(COLUMNS, 200, 0).expect("must build");
         assert!(built.select_sql.contains("bpm IS NULL, bpm DESC"));
+        assert!(built.count_sql.contains("track_tags"));
     }
 
     #[test]

@@ -229,15 +229,34 @@ Slice 7 real audio ──► Slice 8 dual-wave + transport
 
 ### Slice 3 — Tags + Key pills + Comments (T2.1.7, T2.1.8, T2.1.13)
 
-**Tags**
-- Read tags into `TrackSummary.tags`.
-- `TagChips` + `+N` overflow; click → push tag into `FilterBar`.
-- Edit via existing “Edit tags…” stub or minimal dialog; full Tag Surgeon remains T2.2.
+**Split (decided 2026-10-22):** **3A = tags + comments** (T2.1.7, T2.1.13),
+**3B = key pills** (T2.1.8). 3B is deferred because the key-format preference
+needs a Settings surface the app does not have yet. The implementation plan for
+3A is [`SLICE3A_PLAN.md`](engineering/SLICE3A_PLAN.md) — it records the locked
+decisions (a `track_tags` table; the user comment **overwrites**
+`tracks.comments`) and the exact work list.
 
-**Comments (T2.1.13)**
-- The metadata editor opened by “Edit tags…” gains a **Comment** field — `docs/ui/03-LIBRARY-VIEW.md` §3.5 now lists it; the implementation must add it (the editor currently covers title/artist/album/genre/label/year/custom tags only).
-- Written through `update_track_metadata` (`notes`) with the same undo path as rating/energy; bulk comment edit lands with T2.1.3.
-- `comment` joins the T2.1.1 search fields.
+**Tags (3A)**
+- Tags live in a new `track_tags` table (decided 2026-10-22); they are read
+  into `TrackSummary.tags`.
+- `TagChips` + `+N` overflow; click → push tag into the filter bar; a `tag`
+  filter in `library_query.rs`.
+- Edit via a minimal metadata editor (the “Edit tags…” action in
+  `docs/ui/03-LIBRARY-VIEW.md` §3.5) — **there is no editor stub today**, and
+  no row context menu either, so 3A builds both: a right-click row context
+  menu that ships only “Edit tags…”, and the editor behind it. The full Tag
+  Surgeon remains T2.2.
+
+**Comments (3A, T2.1.13)**
+- The metadata editor gains a **Comment** field — `docs/ui/03-LIBRARY-VIEW.md`
+  §3.5 lists it, and the editor it names does not exist yet. The editor also
+  covers **label** and **year** (decided 2026-10-22): `year` is already in the
+  schema, `label` needs a one-line `ALTER` and has no import source, so it is
+  a user-typed field.
+- Written through `update_track_metadata` with the same undo path as
+  rating/energy, so the write stays reversible. The user comment **overwrites
+  `tracks.comments`** (the import-sourced value); `tracks.notes` stays unused.
+- `comment` joins the T2.1.1 search fields, and so do the tag values.
 
 **Key**
 - `key-format` + `harmonic` modules.

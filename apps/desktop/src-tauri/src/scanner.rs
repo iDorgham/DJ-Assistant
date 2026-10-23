@@ -152,6 +152,10 @@ pub fn run_scan(
                 artist: meta.artist.clone(),
                 album: meta.album.clone(),
                 genre: meta.genre.clone(),
+                // The file-tag extractor has no label/publisher source, so a
+                // freshly scanned file has no label (the user types it).
+                label: None,
+                year: meta.year.map(|year| year as i64),
                 bpm: meta.bpm,
                 key_camelot: meta.key_camelot.clone(),
                 key_classical: meta.key_classical.clone(),
@@ -162,6 +166,9 @@ pub fn run_scan(
                 // Energy is user-assigned (T2.1.6); a freshly scanned file has none.
                 energy: None,
                 comments: meta.comments.clone(),
+                // A scanned file carries no custom tags; the user adds them
+                // in the metadata editor.
+                tags: Vec::new(),
                 artwork_hash: artwork_hash.clone(),
                 created_at: now.clone(),
                 updated_at: now.clone(),

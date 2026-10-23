@@ -5,6 +5,8 @@ workspace. The deeper docs under `docs/` stay authoritative — this file is a
 map, not a replacement.
 
 Canonical spec: [`docs/product/CANONICAL_DOCUMENTATION.md`](docs/product/CANONICAL_DOCUMENTATION.md).
+Approved v1 plan: [`docs/plan/README.md`](docs/plan/README.md) (plan decisions
+`D-001–D-052` are scoped to that tree; the repository memory ledger is separate).
 UI source of truth: [`docs/ui/01-DESIGN-SYSTEM.md`](docs/ui/01-DESIGN-SYSTEM.md).
 
 ## What this is

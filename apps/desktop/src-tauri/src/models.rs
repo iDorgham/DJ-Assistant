@@ -12,6 +12,11 @@ pub struct TrackSummary {
     pub artist: String,
     pub album: Option<String>,
     pub genre: Option<String>,
+    /// Record label / publisher (migration 007). User-typed — the file tag
+    /// extractor has no label source.
+    pub label: Option<String>,
+    /// Release year. Already in the schema since migration 001.
+    pub year: Option<i64>,
     pub bpm: Option<f64>,
     pub key_camelot: Option<String>,
     pub key_classical: Option<String>,
@@ -21,6 +26,9 @@ pub struct TrackSummary {
     pub user_rating: Option<i64>,
     pub energy: Option<i64>,
     pub comments: Option<String>,
+    /// Custom tags (migration 007). Stored in `track_tags`, one row per tag;
+    /// always a list here, empty when the track has no tags.
+    pub tags: Vec<String>,
     pub artwork_hash: Option<String>,
     pub created_at: String,
     pub updated_at: String,
@@ -558,7 +566,8 @@ pub struct ChartListResponse {
 // --- Track metadata write path: rating + energy (T2.1.4 / T2.1.6) ---
 
 /// Patch applied to one or more tracks. An absent field is left untouched;
-/// `0` clears the value (the column is stored as NULL).
+/// `0` clears a numeric value and `""` clears a text value (the column is
+/// stored as NULL).
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct UpdateTrackMetadataRequest {
@@ -568,6 +577,24 @@ pub struct UpdateTrackMetadataRequest {
     pub rating: Option<i64>,
     /// Energy level 1–10. `0` clears the energy (0 is outside the valid range).
     pub energy: Option<i64>,
+    /// Title. `""` is rejected: the column is NOT NULL and a track has to
+    /// stay nameable in the table.
+    pub title: Option<String>,
+    /// Artist. `""` is rejected, for the same reason as the title.
+    pub artist: Option<String>,
+    /// Album. `""` clears the album.
+    pub album: Option<String>,
+    /// Genre. `""` clears the genre.
+    pub genre: Option<String>,
+    /// Record label. `""` clears the label.
+    pub label: Option<String>,
+    /// Release year. `0` clears the year.
+    pub year: Option<i64>,
+    /// Free-text comment. `""` clears the comment.
+    pub comments: Option<String>,
+    /// The **complete** set of custom tags for the track. `Some([])` removes
+    /// every tag; `None` leaves the tags untouched.
+    pub tags: Option<Vec<String>>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

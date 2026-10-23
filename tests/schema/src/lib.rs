@@ -15,12 +15,20 @@ pub const MIGRATION_002: &str =
     include_str!("../../../apps/desktop/src-tauri/migrations/002_track_tags.sql");
 pub const MIGRATION_006: &str =
     include_str!("../../../apps/desktop/src-tauri/migrations/006_track_energy.sql");
+pub const MIGRATION_007: &str =
+    include_str!("../../../apps/desktop/src-tauri/migrations/007_track_tags_table.sql");
 
 /// The migrations this crate's contract tests need, in the order `db.rs`
-/// applies them: the base schema, the tag columns and the energy column.
+/// applies them: the base schema, the tag columns, the energy column and the
+/// custom-tag table.
 /// Migrations 003-005 (enrichment, charts) are deliberately left out - no
 /// contract here reads those tables.
-const MIGRATIONS: &[(i64, &str)] = &[(1, MIGRATION_001), (2, MIGRATION_002), (6, MIGRATION_006)];
+const MIGRATIONS: &[(i64, &str)] = &[
+    (1, MIGRATION_001),
+    (2, MIGRATION_002),
+    (6, MIGRATION_006),
+    (7, MIGRATION_007),
+];
 
 /// Opens (or creates) a **file-backed** database at `path`, applies the pragmas and
 /// migration exactly as `Database::new` does, and returns the connection.
@@ -148,14 +156,14 @@ fn without_applied_alters(conn: &Connection, sql: &str) -> rusqlite::Result<Stri
 
 /// Column list must match `get_track`'s tracks SELECT in commands.rs.
 pub const TRACK_DETAIL_COLUMNS: &str =
-    "id, file_path, file_hash, title, artist, album, genre, bpm, key_camelot, key_classical, \
+    "id, file_path, file_hash, title, artist, album, genre, label, year, bpm, key_camelot, key_classical, \
      duration_ms, format, analysis_status, user_rating, energy, comments, artwork_hash, created_at, updated_at, \
      file_size, sample_rate, channels, bit_depth, loudness_lufs, \
      vocal_presence, phrase_confidence, analysis_version, notes";
 
 /// Column list must match `list_tracks`'s SELECT in commands.rs.
 pub const TRACK_SUMMARY_COLUMNS: &str =
-    "id, file_path, file_hash, title, artist, album, genre, bpm, key_camelot, key_classical, \
+    "id, file_path, file_hash, title, artist, album, genre, label, year, bpm, key_camelot, key_classical, \
      duration_ms, format, analysis_status, user_rating, energy, comments, artwork_hash, created_at, updated_at";
 
 /// Column list must match the cue SELECT in `get_track`.
@@ -268,7 +276,7 @@ mod tests {
 
         let (title, duration, file_size): (String, i64, i64) = stmt
             .query_row([&track_id], |row| {
-                Ok((row.get(3)?, row.get(10)?, row.get(19)?))
+                Ok((row.get(3)?, row.get(12)?, row.get(21)?))
             })
             .expect("row mapping must succeed");
 

@@ -173,3 +173,42 @@ tool, whether or not a skill is ever loaded — that advertising cost, not the
 routing, was the dominant latency and spend. **Reverses if:** hiding a skill
 becomes loadable here (D-003), or the tool gains a way to exclude a skill
 from the advertised list without removing it from disk.
+
+## D-013 · The user comment overwrites `tracks.comments`; tags live in their own table (2026-10-22)
+
+Slice 3A edits the free-text comment in the metadata editor and writes it
+through the reversible `update_track_metadata` path. The write **overwrites**
+`tracks.comments`: the import-sourced comment of the file is replaced by the
+first edit, and the previous value survives only as the undo snapshot.
+`tracks.notes` stays unused — it is a separate column, not an alias.
+
+Custom tags live in their own **`track_tags` table** (one row per tag, a
+`(track_id, tag)` primary key, an index on the tag) rather than in a
+delimited string on `tracks`. That keeps the filter a plain `EXISTS`, keeps
+the row shape one row per track, and gives the Tag Surgeon (T2.2) its base.
+
+Slice 3 was cut in two: **3A = tags + comments (T2.1.7, T2.1.13)** and
+**3B = key pills (T2.1.8)**. 3B waits because the key-format preference
+needs a Settings surface the app does not have yet.
+
+**Why:** the spec names an “Edit tags…” action that never existed, so the
+slice had to build its own entry point (a right-click row context menu) and
+its own editor; the tag set is the first **non-scalar** undo snapshot, which
+forces the restore to be transactional.
+**Reverses if:** the DJ wants the file's original comment kept next to the
+own note — that is a second column and a second editor field, not a change of
+this decision.
+
+## D-014 · The approved v1 plan is mirrored under `docs/plan/` (2026-10-23)
+
+The product plan approved on 2026-10-23 is mirrored at `docs/plan/`; it is the
+implementation reference for v1. Its **D-001–D-052** IDs are scoped to that
+tree and are not the same namespace as this repository's agent-memory ledger
+(this entry is the repo's D-014). `docs/product` and `docs/ui/` remain
+authoritative for the canonical product spec and shipped UI tokens; the plan
+is the approved v1 scope and delivery order. A conflict between them is a
+decision to record, not something to resolve by silently mixing both.
+**Why:** the plan had been developed outside the repo, and without a mirrored,
+versioned copy the implementation would have no stable reference.
+**Reverses if:** the plan is superseded, retired, or merged into the canonical
+product documentation.

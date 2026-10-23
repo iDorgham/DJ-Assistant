@@ -23,19 +23,23 @@ use dj_assistant_schema_tests::open_migrated_at;
 /// `crates/core/src/library_query.rs`: newest first, with `id` as the stable
 /// tiebreaker and LIMIT/OFFSET bound as parameters.
 const LIST_TRACKS_SQL: &str =
-    "SELECT id, file_path, file_hash, title, artist, album, genre, bpm, key_camelot, key_classical, \
+    "SELECT id, file_path, file_hash, title, artist, album, genre, label, year, bpm, key_camelot, key_classical, \
      duration_ms, format, analysis_status, user_rating, energy, comments, artwork_hash, created_at, updated_at \
      FROM tracks ORDER BY created_at DESC, id ASC LIMIT ?1 OFFSET ?2";
 
-/// Mirrors the search SELECT (four repeated `?1` binds plus `ESCAPE` so `%`/`_`
-/// in the search box match literally).
-const SEARCH_TRACKS_SQL: &str = "SELECT id, file_path, file_hash, title, artist, album, genre, bpm, key_camelot, key_classical, \
+/// Mirrors the search SELECT (one repeated `?1` bind plus `ESCAPE` so `%`/`_`
+/// in the search box match literally). The searched fields are the title, the
+/// artist, the album, the file path, the comment and the custom tags.
+const SEARCH_TRACKS_SQL: &str = "SELECT id, file_path, file_hash, title, artist, album, genre, label, year, bpm, key_camelot, key_classical, \
      duration_ms, format, analysis_status, user_rating, energy, comments, artwork_hash, created_at, updated_at \
      FROM tracks \
      WHERE (LOWER(title) LIKE ?1 ESCAPE '\\' \
         OR LOWER(artist) LIKE ?1 ESCAPE '\\' \
         OR LOWER(album) LIKE ?1 ESCAPE '\\' \
-        OR LOWER(file_path) LIKE ?1 ESCAPE '\\') \
+        OR LOWER(file_path) LIKE ?1 ESCAPE '\\' \
+        OR LOWER(comments) LIKE ?1 ESCAPE '\\' \
+        OR EXISTS (SELECT 1 FROM track_tags tt WHERE tt.track_id = tracks.id \
+                   AND LOWER(tt.tag) LIKE ?1 ESCAPE '\\')) \
      ORDER BY created_at DESC, id ASC LIMIT ?2 OFFSET ?3";
 
 /// Mirrors the count queries emitted by the query builder.
@@ -44,7 +48,22 @@ const COUNT_SEARCH_SQL: &str = "SELECT COUNT(*) FROM tracks \
      WHERE (LOWER(title) LIKE ?1 ESCAPE '\\' \
         OR LOWER(artist) LIKE ?1 ESCAPE '\\' \
         OR LOWER(album) LIKE ?1 ESCAPE '\\' \
-        OR LOWER(file_path) LIKE ?1 ESCAPE '\\')";
+        OR LOWER(file_path) LIKE ?1 ESCAPE '\\' \
+        OR LOWER(comments) LIKE ?1 ESCAPE '\\' \
+        OR EXISTS (SELECT 1 FROM track_tags tt WHERE tt.track_id = tracks.id \
+                   AND LOWER(tt.tag) LIKE ?1 ESCAPE '\\'))";
+
+/// Mirrors the tag filter the query builder emits: an `EXISTS` over
+/// `track_tags`, so a track with several tags still matches exactly once.
+const TAG_FILTER_SQL: &str = "SELECT id, title FROM tracks \
+     WHERE EXISTS (SELECT 1 FROM track_tags tt \
+                   WHERE tt.track_id = tracks.id AND LOWER(tt.tag) IN (?1)) \
+     ORDER BY created_at DESC, id ASC LIMIT ?2 OFFSET ?3";
+
+/// Count half of the tag filter (no LIMIT/OFFSET placeholders).
+const COUNT_TAG_FILTER_SQL: &str = "SELECT COUNT(*) FROM tracks \
+     WHERE EXISTS (SELECT 1 FROM track_tags tt \
+                   WHERE tt.track_id = tracks.id AND LOWER(tt.tag) IN (?1))";
 
 /// Mirrors the builder's filtered SELECT for
 /// `{bpmMin: 120, bpmMax: 130, keyCamelot: ["8a"], analysisStatus: ["complete"],
@@ -101,7 +120,7 @@ fn like_pattern(term: &str) -> String {
     format!("%{escaped}%")
 }
 
-/// The 19 columns `map_track_summary` reads, in order.
+/// The 21 columns `map_track_summary` reads, in order.
 #[derive(Debug, PartialEq)]
 struct TrackRow {
     id: String,
@@ -111,6 +130,8 @@ struct TrackRow {
     artist: String,
     album: Option<String>,
     genre: Option<String>,
+    label: Option<String>,
+    year: Option<i64>,
     bpm: Option<f64>,
     key_camelot: Option<String>,
     key_classical: Option<String>,
@@ -134,18 +155,20 @@ fn map_row(row: &rusqlite::Row) -> rusqlite::Result<TrackRow> {
         artist: row.get(4)?,
         album: row.get(5)?,
         genre: row.get(6)?,
-        bpm: row.get(7)?,
-        key_camelot: row.get(8)?,
-        key_classical: row.get(9)?,
-        duration_ms: row.get(10)?,
-        format: row.get(11)?,
-        analysis_status: row.get(12)?,
-        user_rating: row.get(13)?,
-        energy: row.get(14)?,
-        comments: row.get(15)?,
-        artwork_hash: row.get(16)?,
-        created_at: row.get(17)?,
-        updated_at: row.get(18)?,
+        label: row.get(7)?,
+        year: row.get(8)?,
+        bpm: row.get(9)?,
+        key_camelot: row.get(10)?,
+        key_classical: row.get(11)?,
+        duration_ms: row.get(12)?,
+        format: row.get(13)?,
+        analysis_status: row.get(14)?,
+        user_rating: row.get(15)?,
+        energy: row.get(16)?,
+        comments: row.get(17)?,
+        artwork_hash: row.get(18)?,
+        created_at: row.get(19)?,
+        updated_at: row.get(20)?,
     })
 }
 
@@ -292,6 +315,10 @@ fn list_tracks_returns_every_ui_field_with_correct_values() {
     assert_eq!(row.duration_ms, 937, "duration must be a real value, not 0");
     assert_eq!(row.analysis_status, "pending");
     assert!(row.file_path.ends_with("Midnight Groove.flac"));
+    // The label is user-typed (migration 007): a scanned file has none.
+    assert_eq!(row.label, None);
+    // The year comes from the file tags, so it is filled in by the scanner.
+    assert_eq!(row.year, Some(2024));
 
     // Not-yet-analysed fields are NULL rather than fabricated.
     assert_eq!(row.bpm, None);
@@ -456,7 +483,8 @@ fn get_track_returns_a_detail_row_and_its_cues() {
     // (`TRACK_SUMMARY_COLUMNS`) followed by the detail-only columns. The
     // summary part carries `energy`, so the detail row cannot drift from the
     // new summary contract without breaking this test.
-    let detail_sql = "SELECT id, file_path, file_hash, title, artist, album, genre, bpm, \
+    let detail_sql =
+        "SELECT id, file_path, file_hash, title, artist, album, genre, label, year, bpm, \
          key_camelot, key_classical, duration_ms, format, analysis_status, \
          user_rating, energy, comments, artwork_hash, created_at, updated_at, \
          file_size, sample_rate, channels, bit_depth, loudness_lufs, \
@@ -465,7 +493,7 @@ fn get_track_returns_a_detail_row_and_its_cues() {
 
     let (title, file_size, energy): (String, i64, Option<i64>) = conn
         .query_row(detail_sql, params!["t1"], |r| {
-            Ok((r.get(3)?, r.get(19)?, r.get(14)?))
+            Ok((r.get(3)?, r.get(21)?, r.get(16)?))
         })
         .expect("detail query must match the schema");
     assert_eq!(title, "Midnight Groove");
@@ -1146,6 +1174,437 @@ fn a_stale_metadata_snapshot_is_detectable_against_the_current_row() {
         current,
         (Some(2), Some(7)),
         "the current rating no longer matches after_state, so the snapshot is stale"
+    );
+
+    let _ = std::fs::remove_file(&db_path);
+}
+
+#[test]
+fn the_tag_table_stores_a_set_and_cascades_with_its_track() {
+    // T2.1.7: the custom tags live in their own table (migration 007). The
+    // table is a set — the primary key is (track_id, tag), so the same tag
+    // cannot be stored twice — and a track's rows die with the track.
+    let db_path = temp_db("tag-table.db");
+    let conn = open_migrated_at(&db_path);
+
+    insert_filterable_track(
+        &conn,
+        "g1",
+        "House",
+        Some(120.0),
+        Some("8A"),
+        "complete",
+        Some(3),
+        Some(5),
+    );
+
+    conn.execute(
+        "INSERT INTO track_tags (track_id, tag) VALUES ('g1', 'peak')",
+        [],
+    )
+    .expect("a tag row must be insertable");
+    conn.execute(
+        "INSERT INTO track_tags (track_id, tag) VALUES ('g1', 'warmup')",
+        [],
+    )
+    .expect("a second tag row must be insertable");
+
+    // The same tag twice is a set violation, not a second row.
+    let duplicate = conn.execute(
+        "INSERT INTO track_tags (track_id, tag) VALUES ('g1', 'peak')",
+        [],
+    );
+    assert!(
+        duplicate.is_err(),
+        "the same tag must not be stored twice for one track"
+    );
+
+    let tags: Vec<String> = conn
+        .prepare("SELECT tag FROM track_tags WHERE track_id = 'g1' ORDER BY tag ASC")
+        .unwrap()
+        .query_map([], |r| r.get(0))
+        .unwrap()
+        .map(Result::unwrap)
+        .collect();
+    assert_eq!(
+        tags,
+        vec!["peak".to_string(), "warmup".to_string()],
+        "the tags come back sorted, so a track's chips have one stable order"
+    );
+
+    // Deleting the track deletes its tag rows.
+    conn.execute("DELETE FROM tracks WHERE id = 'g1'", [])
+        .expect("the track must be deletable");
+    let remaining: i64 = conn
+        .query_row("SELECT COUNT(*) FROM track_tags", [], |r| r.get(0))
+        .unwrap();
+    assert_eq!(remaining, 0, "tags must cascade-delete with their track");
+
+    let _ = std::fs::remove_file(&db_path);
+}
+
+#[test]
+fn the_tag_filter_narrows_the_library_without_duplicating_rows() {
+    // T2.1.7: the tag filter is an `EXISTS` over `track_tags`. A track with
+    // three tags must still come back exactly once, or the pagination and the
+    // row count would lie.
+    let db_path = temp_db("tag-filter.db");
+    let conn = open_migrated_at(&db_path);
+
+    // `g1` carries a mixed-case tag on purpose: the write path folds every
+    // tag it stores, but the filter has to find a row that predates the
+    // folding (or was written by hand), so the SQL lower-cases the column.
+    for (id, tags) in [
+        ("g1", vec!["Peak", "warmup"]),
+        ("g2", vec!["peak"]),
+        ("g3", vec!["warmup"]),
+    ] {
+        insert_filterable_track(
+            &conn,
+            id,
+            "House",
+            Some(120.0),
+            Some("8A"),
+            "complete",
+            Some(3),
+            Some(5),
+        );
+        for tag in tags {
+            conn.execute(
+                "INSERT INTO track_tags (track_id, tag) VALUES (?1, ?2)",
+                params![id, tag],
+            )
+            .expect("a tag row must be insertable");
+        }
+    }
+
+    let ids: Vec<String> = conn
+        .prepare(TAG_FILTER_SQL)
+        .unwrap()
+        .query_map(params!["peak", 200i64, 0i64], |r| r.get(0))
+        .unwrap()
+        .map(Result::unwrap)
+        .collect();
+    assert_eq!(
+        ids,
+        vec!["g1".to_string(), "g2".to_string()],
+        "a track with several matching tags must appear once, not twice"
+    );
+
+    let total: i64 = conn
+        .query_row(COUNT_TAG_FILTER_SQL, params!["peak"], |r| r.get(0))
+        .unwrap();
+    assert_eq!(total as usize, ids.len(), "count/rows must agree");
+
+    // The filter folds the case of the stored tag, so the lower-cased value
+    // finds the mixed-case row.
+    let folded: Vec<String> = conn
+        .prepare(TAG_FILTER_SQL)
+        .unwrap()
+        .query_map(params!["peak", 200i64, 0i64], |r| r.get(0))
+        .unwrap()
+        .map(Result::unwrap)
+        .collect();
+    assert_eq!(
+        folded, ids,
+        "the tag filter finds a tag stored with a different case"
+    );
+
+    let _ = std::fs::remove_file(&db_path);
+}
+
+#[test]
+fn the_search_box_finds_a_track_by_its_tag_and_its_comment() {
+    // T2.1.7 / T2.1.13: the one search box also searches the custom tags and
+    // the comment, so a note or a tag is findable without another input.
+    let db_path = temp_db("search-tags.db");
+    let conn = open_migrated_at(&db_path);
+
+    insert_filterable_track(
+        &conn,
+        "s1",
+        "House",
+        Some(120.0),
+        Some("8A"),
+        "complete",
+        Some(3),
+        Some(5),
+    );
+    conn.execute(
+        "UPDATE tracks SET comments = 'Opener for the closing set' WHERE id = 's1'",
+        [],
+    )
+    .expect("the comment must be writable");
+    conn.execute(
+        "INSERT INTO track_tags (track_id, tag) VALUES ('s1', 'opener')",
+        [],
+    )
+    .expect("a tag row must be insertable");
+
+    let search = |term: &str| -> Vec<String> {
+        let like = like_pattern(term);
+        conn.prepare(SEARCH_TRACKS_SQL)
+            .unwrap()
+            .query_map(params![like, 200i64, 0i64], |r| r.get::<_, String>(3))
+            .unwrap()
+            .map(Result::unwrap)
+            .collect()
+    };
+
+    assert_eq!(
+        search("opener"),
+        vec!["s1".to_string()],
+        "the search box must find a track by its tag"
+    );
+    assert_eq!(
+        search("closing set"),
+        vec!["s1".to_string()],
+        "the search box must find a track by its comment"
+    );
+
+    // The count query must agree with the row query.
+    let like = like_pattern("opener");
+    let total: i64 = conn
+        .query_row(COUNT_SEARCH_SQL, params![like], |r| r.get(0))
+        .unwrap();
+    assert_eq!(
+        total as usize,
+        search("opener").len(),
+        "count/rows disagree"
+    );
+
+    let _ = std::fs::remove_file(&db_path);
+}
+
+#[test]
+fn the_tag_set_round_trips_through_the_undo_snapshot() {
+    // T2.1.7 — SCHEMA-LEVEL SQL COVERAGE ONLY.
+    //
+    // The tag set is not a column, so the undo path stores it as a JSON array
+    // in `before_state` and restores it by dropping the current rows and
+    // re-inserting the snapshot's rows. This test proves that SQL shape works
+    // against the real schema.
+    let db_path = temp_db("tag-undo.db");
+    let conn = open_migrated_at(&db_path);
+
+    insert_filterable_track(
+        &conn,
+        "w1",
+        "House",
+        Some(120.0),
+        Some("8A"),
+        "complete",
+        Some(3),
+        None,
+    );
+    conn.execute(
+        "INSERT INTO track_tags (track_id, tag) VALUES ('w1', 'peak')",
+        [],
+    )
+    .expect("a tag row must be insertable");
+
+    // --- The write: the tag set is replaced. ---
+    conn.execute("DELETE FROM track_tags WHERE track_id = 'w1'", [])
+        .expect("the old tag rows must be deletable");
+    conn.execute(
+        "INSERT INTO track_tags (track_id, tag) VALUES ('w1', 'warmup')",
+        [],
+    )
+    .expect("the new tag row must be insertable");
+
+    // --- The snapshot: the tag set the write replaced. ---
+    let undo_id = "33333333-4444-5555-6666-777777777777";
+    conn.execute(
+        "INSERT INTO skill_runs (
+            id, workspace_id, skill_name, status, input_summary, before_state, after_state,
+            error, created_at
+        ) VALUES (?1, 'default', 'update_track_metadata', 'success', ?2, ?3, ?4, NULL, datetime('now'))",
+        params![
+            undo_id,
+            r#"{"trackIds":["w1"],"tags":["warmup"]}"#,
+            r#"{"w1":{"tags":["peak"]}}"#,
+            r#"{"w1":{"tags":["warmup"]}}"#,
+        ],
+    )
+    .expect("the undo snapshot must be insertable");
+
+    let before_state: String = conn
+        .query_row(
+            "SELECT before_state FROM skill_runs WHERE id = ?1",
+            params![undo_id],
+            |r| r.get(0),
+        )
+        .expect("the snapshot must be readable");
+    assert_eq!(
+        before_state, r#"{"w1":{"tags":["peak"]}}"#,
+        "the snapshot holds the previous tag set, not the new one"
+    );
+
+    // --- The undo: the current rows are dropped, the snapshot's rows return. ---
+    conn.execute("DELETE FROM track_tags WHERE track_id = 'w1'", [])
+        .expect("the current tag rows must be deletable");
+    conn.execute(
+        "INSERT INTO track_tags (track_id, tag) VALUES ('w1', 'peak')",
+        [],
+    )
+    .expect("the restored tag row must be insertable");
+
+    let tags: Vec<String> = conn
+        .prepare("SELECT tag FROM track_tags WHERE track_id = 'w1' ORDER BY tag ASC")
+        .unwrap()
+        .query_map([], |r| r.get(0))
+        .unwrap()
+        .map(Result::unwrap)
+        .collect();
+    assert_eq!(
+        tags,
+        vec!["peak".to_string()],
+        "the previous tag set must come back"
+    );
+
+    let _ = std::fs::remove_file(&db_path);
+}
+
+#[test]
+fn a_track_edited_since_the_tag_snapshot_is_skipped() {
+    // T2.1.7 — the undo restores a tag set only while the set still matches
+    // the state the snapshot recorded *after* its write. A track edited again
+    // after the snapshot was taken is skipped, not overwritten.
+    let db_path = temp_db("tag-skip.db");
+    let conn = open_migrated_at(&db_path);
+
+    for id in ["k1", "k2"] {
+        insert_filterable_track(
+            &conn,
+            id,
+            "House",
+            Some(120.0),
+            Some("8A"),
+            "complete",
+            Some(3),
+            None,
+        );
+        conn.execute(
+            "INSERT INTO track_tags (track_id, tag) VALUES (?1, 'warmup')",
+            params![id],
+        )
+        .expect("a tag row must be insertable");
+    }
+
+    // The snapshot of the write that replaced the set: before = ["peak"],
+    // after = ["warmup"].
+    let before: Vec<String> = vec!["peak".to_string()];
+    let after: Vec<String> = vec!["warmup".to_string()];
+
+    // `k2` was edited again after the snapshot was taken.
+    conn.execute(
+        "INSERT INTO track_tags (track_id, tag) VALUES ('k2', 'build')",
+        [],
+    )
+    .expect("the later tag row must be insertable");
+
+    let tags_of = |conn: &Connection, id: &str| -> Vec<String> {
+        conn.prepare("SELECT tag FROM track_tags WHERE track_id = ?1 ORDER BY tag ASC")
+            .unwrap()
+            .query_map(params![id], |r| r.get(0))
+            .unwrap()
+            .map(Result::unwrap)
+            .collect()
+    };
+
+    let mut restored = 0usize;
+    let mut skipped = 0usize;
+    for id in ["k1", "k2"] {
+        let current = tags_of(&conn, id);
+        if current != after {
+            // A newer edit won: the snapshot no longer describes the set, so
+            // it must not overwrite it.
+            skipped += 1;
+            continue;
+        }
+        // The restore: drop the current rows, re-insert the snapshot's rows.
+        conn.execute("DELETE FROM track_tags WHERE track_id = ?1", params![id])
+            .expect("the current tag rows must be deletable");
+        for tag in &before {
+            conn.execute(
+                "INSERT OR IGNORE INTO track_tags (track_id, tag) VALUES (?1, ?2)",
+                params![id, tag],
+            )
+            .expect("the restored tag row must be insertable");
+        }
+        restored += 1;
+    }
+
+    assert_eq!(restored, 1, "the unchanged track is restored");
+    assert_eq!(skipped, 1, "the track edited since the snapshot is skipped");
+    assert_eq!(
+        tags_of(&conn, "k1"),
+        vec!["peak".to_string()],
+        "the previous set comes back"
+    );
+    assert_eq!(
+        tags_of(&conn, "k2"),
+        vec!["build".to_string(), "warmup".to_string()],
+        "the newer edit survives the undo"
+    );
+
+    let _ = std::fs::remove_file(&db_path);
+}
+
+#[test]
+fn a_tag_with_a_wildcard_is_searched_literally() {
+    // The search box escapes `%` and `_`, so a tag that contains one is found
+    // by its literal text and never matches by accident.
+    let db_path = temp_db("tag-wildcard.db");
+    let conn = open_migrated_at(&db_path);
+
+    for (id, tag) in [("w1", "100%_pure"), ("w2", "100Xpure")] {
+        insert_filterable_track(
+            &conn,
+            id,
+            "House",
+            Some(120.0),
+            Some("8A"),
+            "complete",
+            Some(3),
+            None,
+        );
+        conn.execute(
+            "INSERT INTO track_tags (track_id, tag) VALUES (?1, ?2)",
+            params![id, tag],
+        )
+        .expect("a tag row must be insertable");
+    }
+
+    let search = |term: &str| -> Vec<String> {
+        let like = like_pattern(term);
+        conn.prepare(SEARCH_TRACKS_SQL)
+            .unwrap()
+            .query_map(params![like, 200i64, 0i64], |r| r.get::<_, String>(3))
+            .unwrap()
+            .map(Result::unwrap)
+            .collect()
+    };
+
+    assert_eq!(
+        search("100%_pure"),
+        vec!["w1".to_string()],
+        "a tag with a wildcard is found by its literal text"
+    );
+    assert_eq!(
+        search("100%pure"),
+        Vec::<String>::new(),
+        "a % in the search box matches literally, not as a wildcard"
+    );
+    assert_eq!(
+        search("100Xpure"),
+        vec!["w2".to_string()],
+        "the second track is found by its own tag"
+    );
+    assert_eq!(
+        search("100"),
+        vec!["w1".to_string(), "w2".to_string()],
+        "a plain prefix still matches both tags"
     );
 
     let _ = std::fs::remove_file(&db_path);

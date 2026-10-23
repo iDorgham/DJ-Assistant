@@ -1,5 +1,9 @@
 import { useEffect, useRef, useState, useMemo, useReducer } from "react";
-import type { MouseEvent as ReactMouseEvent, PointerEvent as ReactPointerEvent } from "react";
+import type {
+  MouseEvent as ReactMouseEvent,
+  PointerEvent as ReactPointerEvent,
+  FormEvent,
+} from "react";
 import type {
   TrackSummary,
   ScanProgressEvent,
@@ -84,14 +88,18 @@ import {
   Usb,
   Volume2,
   XCircle,
+  Compass,
+  Inbox,
+  Settings,
   type LucideIcon,
 } from "lucide-react";
 import {
   ANALYSIS_STATUS_OPTIONS,
   CAMELOT_KEYS,
   activeFilterCount,
+  clearFilterGroup,
   defaultSortDirection,
-  describeFilters,
+  describeFilterParts,
   describeMetadataUndo,
   describeMetadataWrite,
   filterTracks,
@@ -131,6 +139,7 @@ import {
   reduceUiState,
   shortcutToAction,
   type AppView,
+  type PrimaryView,
 } from "./lib/ui-state";
 import { nextTheme, resolveTheme, THEME_LABELS } from "./lib/theme";
 import { PreviewPlayer } from "./components/preview-player";
@@ -138,31 +147,20 @@ import { ModalShell } from "./components/ModalShell";
 import { ColumnPicker } from "./components/ColumnPicker";
 import { EnergyBars } from "./components/EnergyBars";
 import { StarRating } from "./components/StarRating";
+import { TagChips } from "./components/TagChips";
+import { RowContextMenu } from "./components/RowContextMenu";
+import { MetadataEditor } from "./components/MetadataEditor";
+import { SettingsView } from "./components/SettingsView";
+import { buildMetadataUpdatePayload, type MetadataEditorValues } from "./lib/tags";
 import { previewEngine } from "./lib/audio-engine";
 
-const VIEW_ITEMS: { view: AppView; label: string; shortcut: string }[] = [
-  { view: "import", label: "Import", shortcut: "1" },
-  { view: "library", label: "Library", shortcut: "2" },
-  { view: "analysis", label: "Analysis", shortcut: "3" },
-  { view: "studio", label: "Studio", shortcut: "4" },
-  { view: "backup", label: "Backup", shortcut: "5" },
-  { view: "sync", label: "Sync", shortcut: "6" },
-];
-
-const NAV_ITEMS: { label: string; icon: LucideIcon; view: AppView }[] = [
-  { label: "Library", icon: Library, view: "library" },
-  { label: "Studio", icon: Play, view: "studio" },
-];
-
-/**
- * Roadmap items are shown as a read-only strip, not disabled buttons — they
- * are planned surfaces, not broken controls (docs/ui/02: no dead ends).
- */
-const ROADMAP_ITEMS: { label: string; icon: LucideIcon }[] = [
-  { label: "Playlists", icon: ListMusic },
-  { label: "Browser", icon: FolderTree },
-  { label: "Flash / USB", icon: Usb },
-  { label: "Skills", icon: Sparkles },
+const NAV_ITEMS: { label: string; icon: LucideIcon; view: PrimaryView; shortcut: string }[] = [
+  { label: "Library", icon: Library, view: "library", shortcut: "1" },
+  { label: "Playlists", icon: ListMusic, view: "playlists", shortcut: "2" },
+  { label: "Discover", icon: Compass, view: "discover", shortcut: "3" },
+  { label: "Statistics", icon: BarChart3, view: "statistics", shortcut: "4" },
+  { label: "Publish", icon: Usb, view: "publish", shortcut: "5" },
+  { label: "Settings", icon: Settings, view: "settings", shortcut: "6" },
 ];
 
 /** User-facing failure detail — never surface raw serialized errors. */
@@ -471,6 +469,7 @@ function TrackCell({
   rowNumber,
   onRate,
   onSetEnergy,
+  onSelectTag,
 }: {
   id: ColumnId;
   track: TrackSummary;
@@ -479,6 +478,8 @@ function TrackCell({
   onRate?: (track: TrackSummary, rating: number | null) => void;
   /** Applies an energy level (1–10) or clears it when `null`. */
   onSetEnergy?: (track: TrackSummary, energy: number | null) => void;
+  /** Filters the library by the clicked tag (T2.1.7). */
+  onSelectTag?: (tag: string) => void;
 }) {
   const definition = columnDefinition(id);
   const base = `py-2.5 px-4 overflow-hidden whitespace-nowrap text-ellipsis ${
@@ -523,6 +524,18 @@ function TrackCell({
           value={track.energy}
           label={`Energy for ${track.title || "Untitled"}`}
           onChange={(energy) => onSetEnergy?.(track, energy)}
+        />
+      </td>
+    );
+  }
+
+  if (id === "tags") {
+    return (
+      <td className="py-2.5 px-4">
+        <TagChips
+          tags={track.tags}
+          label={`Tags for ${track.title || "Untitled"}`}
+          onSelect={onSelectTag}
         />
       </td>
     );
@@ -901,6 +914,39 @@ function ViewPlaceholder({
   );
 }
 
+function InboxEmptyState({ onGoToLibrary }: { onGoToLibrary: () => void }) {
+  return (
+    <div className="flex h-full min-h-0 flex-col">
+      <div className="flex h-8 shrink-0 items-center gap-1.5 border-b border-dj-border bg-dj-panel px-3">
+        <span className="rounded-sm border border-dj-border bg-dj-elevated px-2 py-0.5 text-[11px] text-dj-text-secondary">
+          Needs Attention
+        </span>
+        <span className="rounded-sm border border-dj-border bg-dj-elevated px-2 py-0.5 text-[11px] text-dj-text-secondary">
+          Updates
+        </span>
+      </div>
+      <div className="flex flex-1 flex-col items-center justify-center gap-3 p-8 text-center">
+        <div className="flex h-14 w-14 items-center justify-center rounded-xl border border-dj-border bg-dj-elevated">
+          <Inbox className="h-7 w-7 text-dj-text-muted" aria-hidden="true" />
+        </div>
+        <p className="text-lg font-semibold text-dj-text">Inbox is clear</p>
+        <p className="max-w-md text-xs leading-relaxed text-dj-text-secondary">
+          Import warnings, analysis failures and update notices will appear here. Nothing is waiting
+          for you right now.
+        </p>
+        <button
+          type="button"
+          onClick={onGoToLibrary}
+          className="mt-2 inline-flex items-center gap-1.5 rounded-md border border-dj-border bg-dj-panel px-3 py-1.5 text-xs font-medium text-dj-text transition hover:bg-dj-hover focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-dj-accent"
+        >
+          <Library className="h-3.5 w-3.5 text-dj-accent" aria-hidden="true" />
+          <span>Go to Library</span>
+        </button>
+      </div>
+    </div>
+  );
+}
+
 export default function App() {
   const [ui, dispatch] = useReducer(reduceUiState, DEFAULT_UI_STATE, () => initUiState());
   const [systemPrefersDark, setSystemPrefersDark] = useState(
@@ -981,7 +1027,19 @@ export default function App() {
   const [visibleLimit, setVisibleLimit] = useState(200);
   const [loading, setLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const [globalSearch, setGlobalSearch] = useState("");
   const [libraryTotal, setLibraryTotal] = useState(0);
+
+  const submitGlobalSearch = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setSearchQuery(globalSearch.trim());
+    handleViewChange("library");
+  };
+
+  const clearGlobalSearch = () => {
+    setGlobalSearch("");
+    setSearchQuery("");
+  };
 
   // Library filters + sorting (T2.1.2). Applied server-side in SQL so the view
   // stays correct past the 200-row page instead of filtering a partial window.
@@ -1033,6 +1091,17 @@ export default function App() {
   const undoTimerRef = useRef<number | null>(null);
   // True while the undo toast holds the focus; the idle timer is paused then.
   const undoFocusedRef = useRef(false);
+  // The row context menu (T2.1.7) and the metadata editor it opens. The menu
+  // is anchored to the cursor; the editor is anchored to the focused track.
+  const [contextMenu, setContextMenu] = useState<{
+    track: TrackSummary;
+    x: number;
+    y: number;
+  } | null>(null);
+  const [editorTrackId, setEditorTrackId] = useState<string | null>(null);
+  // The row the context menu was opened from, so the focus can go back to it
+  // when the menu closes.
+  const contextRowRef = useRef<HTMLTableRowElement | null>(null);
   const [similar, setSimilar] = useState<SimilarTrackResult[]>([]);
   const [similarLoading, setSimilarLoading] = useState(false);
   const [storeLinks, setStoreLinks] = useState<StoreLinksResponse | null>(null);
@@ -1060,7 +1129,7 @@ export default function App() {
 
   // Chart snapshots Tier 1 (TD.3): versioned data with local taste filtering.
   const [chartsOpen, setChartsOpen] = useState(false);
-  dialogsOpenRef.current = healthOpen || chartsOpen;
+  dialogsOpenRef.current = healthOpen || chartsOpen || editorTrackId !== null;
   const [chartGenre, setChartGenre] = useState("techno");
   const [chartKind, setChartKind] = useState("top100");
   const [chartData, setChartData] = useState<ChartListResponse | null>(null);
@@ -1494,8 +1563,8 @@ export default function App() {
     // through `refreshLibrary`, which reloads with the *current* view state.
   }, []);
 
-  // Esc closes the inspector drawer, the Tag Health/Charts modals and the
-  // filter/columns dropdowns.
+  // Esc closes the inspector drawer, the Tag Health/Charts modals, the
+  // filter/columns dropdowns, the row context menu and the metadata editor.
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
@@ -1504,6 +1573,8 @@ export default function App() {
         setChartsOpen(false);
         setFiltersOpen(false);
         setColumnsOpen(false);
+        setContextMenu(null);
+        setEditorTrackId(null);
       }
     };
     window.addEventListener("keydown", onKey);
@@ -1654,6 +1725,63 @@ export default function App() {
     }
   };
 
+  // --- Tags and the metadata editor (T2.1.7 / T2.1.13) ----------------------
+  // A tag chip filters the library by that tag. The filter is a normal filter
+  // group, so it shows up in the summary strip and can be removed from there.
+  const handleFilterByTag = (tag: string) => {
+    setFilters((current) => {
+      const existing = current.tag ?? [];
+      if (existing.some((entry) => entry.toLowerCase() === tag.toLowerCase())) return current;
+      return { ...current, tag: [...existing, tag] };
+    });
+  };
+
+  // Right-click a row: open the context menu at the cursor. The menu closes
+  // on Escape, on an outside click and after an action, and hands the focus
+  // back to the row it came from.
+  const handleRowContextMenu = (
+    event: ReactMouseEvent<HTMLTableRowElement>,
+    track: TrackSummary
+  ) => {
+    event.preventDefault();
+    contextRowRef.current = event.currentTarget;
+    setContextMenu({ track, x: event.clientX, y: event.clientY });
+  };
+
+  const openMetadataEditor = (track: TrackSummary) => {
+    setEditorTrackId(track.id);
+  };
+
+  // The editor saves through the same write path as the rating and the energy
+  // level, so it inherits the same "nothing changed" rule and the same Undo
+  // toast — including the undo of a whole tag set.
+  const handleSaveMetadata = async (values: MetadataEditorValues) => {
+    const track = tracks.find((entry) => entry.id === editorTrackId);
+    if (!track) {
+      setEditorTrackId(null);
+      return;
+    }
+    // A multi-selection applies to the whole selection; a single row applies
+    // to that row alone. Same rule as the rating and the energy level.
+    const trackIds = selection.includes(track.id) ? selection : [track.id];
+    setEditorTrackId(null);
+    try {
+      const res = await updateTrackMetadata(buildMetadataUpdatePayload(trackIds, values));
+      refreshLibrary();
+      pushStatus(describeMetadataWrite("metadata", res.updated));
+      const undoMessage = describeMetadataUndo(
+        "metadata",
+        res.updated,
+        trackIds.length,
+        track.title
+      );
+      if (undoMessage) offerUndo(res.undoId, undoMessage);
+    } catch (err) {
+      console.error("Failed to save track metadata:", err);
+      pushStatus("Couldn't save the metadata", "error");
+    }
+  };
+
   // Row selection: a plain click inspects a track (and replaces the selection),
   // Ctrl/Cmd-click toggles one track, Shift-click takes the range from the
   // anchor. Inspecting and multi-selecting stay separate on purpose — the
@@ -1714,7 +1842,7 @@ export default function App() {
     setColumns((current) => setColumnWidth(current, id, autoFitWidth(longest, definition)));
   };
   const filterCount = activeFilterCount(filters);
-  const filterSummary = describeFilters(filters);
+  const filterSummary = describeFilterParts(filters);
   // True when the (server-side) page behind `filteredTracks` is narrowed either by
   // the filter panel or by the live search box; used to tell "no tracks" apart
   // from "no matches for the current query".
@@ -1724,6 +1852,12 @@ export default function App() {
 
   return (
     <div className="relative flex h-screen flex-col bg-dj-bg font-sans text-dj-text">
+      <a
+        href="#main-workspace"
+        className="sr-only z-50 rounded-sm bg-dj-accent px-3 py-2 text-xs font-medium text-dj-on-accent focus:not-sr-only focus:absolute focus:left-2 focus:top-2"
+      >
+        Skip to main content
+      </a>
       <header className="flex h-10 shrink-0 items-center gap-2 border-b border-dj-border bg-dj-panel px-3">
         <div className="flex items-center gap-2">
           <div className="flex h-6 w-6 items-center justify-center rounded-md bg-linear-to-tr from-dj-accent-strong to-dj-accent shadow-sm shadow-dj-accent/20">
@@ -1734,27 +1868,88 @@ export default function App() {
           </span>
         </div>
 
-        <nav
-          aria-label="Views"
-          className="ml-2 flex items-center gap-0.5 rounded-md border border-dj-border bg-dj-bg p-0.5"
-        >
-          {VIEW_ITEMS.map((item) => (
-            <button
-              key={item.view}
-              type="button"
-              onClick={() => handleViewChange(item.view)}
-              aria-pressed={ui.view === item.view}
-              title={`${item.label} (Ctrl/Cmd+${item.shortcut})`}
-              className={`rounded-sm px-2.5 py-1 text-xs font-medium transition ${
-                ui.view === item.view
-                  ? "bg-dj-active text-dj-text"
-                  : "text-dj-text-secondary hover:bg-dj-hover hover:text-dj-text"
-              }`}
-            >
-              {item.label}
-            </button>
-          ))}
-        </nav>
+        <div className="ml-2 flex min-w-0 items-center gap-1.5">
+          <form
+            role="search"
+            onSubmit={submitGlobalSearch}
+            className="relative w-44 min-w-0 sm:w-56 xl:w-72"
+          >
+            <Search
+              className="pointer-events-none absolute left-2 top-1.5 h-3 w-3 text-dj-text-muted"
+              aria-hidden="true"
+            />
+            <input
+              id="global-search"
+              name="global-search"
+              type="search"
+              value={globalSearch}
+              onChange={(event) => setGlobalSearch(event.target.value)}
+              placeholder="Search library..."
+              aria-label="Search library"
+              title="Search the library. Playlist and tag-wide search arrives with Stage 2."
+              className="h-6 w-full rounded-sm border border-dj-border bg-dj-bg pl-7 pr-7 text-[11px] text-dj-text placeholder:text-dj-text-muted transition focus:border-dj-accent focus:outline-hidden"
+            />
+            {globalSearch && (
+              <button
+                type="button"
+                onClick={clearGlobalSearch}
+                aria-label="Clear library search"
+                title="Clear search"
+                className="absolute right-0.5 top-0.5 flex h-5 w-5 items-center justify-center rounded-sm text-dj-text-muted transition hover:bg-dj-hover hover:text-dj-text focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-dj-accent"
+              >
+                <X className="h-3 w-3" aria-hidden="true" />
+              </button>
+            )}
+          </form>
+
+          <button
+            type="button"
+            onClick={() => handleViewChange("import")}
+            aria-pressed={ui.view === "import"}
+            aria-label="Import Center"
+            title="Import Center — import folders, watch folders and the analysis queue"
+            className={`flex h-6 items-center gap-1 rounded-sm border px-2 text-[11px] transition focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-dj-accent ${
+              ui.view === "import"
+                ? "border-dj-accent/40 bg-dj-accent/10 text-dj-accent"
+                : "border-dj-border bg-dj-elevated text-dj-text-secondary hover:bg-dj-hover hover:text-dj-text"
+            }`}
+          >
+            <FolderOpen className="h-3.5 w-3.5" aria-hidden="true" />
+            <span className="hidden lg:inline">Import Center</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => handleViewChange("inbox")}
+            aria-pressed={ui.view === "inbox"}
+            aria-label="Inbox"
+            title="Inbox — Needs Attention and Updates"
+            className={`flex h-6 items-center gap-1 rounded-sm border px-2 text-[11px] transition focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-dj-accent ${
+              ui.view === "inbox"
+                ? "border-dj-accent/40 bg-dj-accent/10 text-dj-accent"
+                : "border-dj-border bg-dj-elevated text-dj-text-secondary hover:bg-dj-hover hover:text-dj-text"
+            }`}
+          >
+            <Inbox className="h-3.5 w-3.5" aria-hidden="true" />
+            <span className="hidden md:inline">Inbox</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => handleViewChange("backup")}
+            aria-pressed={ui.view === "backup"}
+            aria-label="Open backup settings. Backup is not configured yet."
+            title="Backup is not configured yet — open backup settings"
+            className={`flex h-6 items-center gap-1 rounded-sm border px-2 text-[11px] transition focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-dj-accent ${
+              ui.view === "backup"
+                ? "border-dj-warning/40 bg-dj-warning/10 text-dj-warning"
+                : "border-dj-border bg-dj-elevated text-dj-text-secondary hover:bg-dj-hover hover:text-dj-text"
+            }`}
+          >
+            <ShieldCheck className="h-3.5 w-3.5" aria-hidden="true" />
+            <span className="hidden xl:inline">Backup not set up</span>
+          </button>
+        </div>
 
         <div
           className="flex min-w-0 flex-1 items-center gap-1.5 px-2"
@@ -1847,16 +2042,17 @@ export default function App() {
                 <button
                   key={item.label}
                   type="button"
-                  onClick={() => dispatch({ type: "setView", view: item.view })}
+                  onClick={() => handleViewChange(item.view)}
                   aria-current={active ? "page" : undefined}
-                  title={item.label}
-                  className={`flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-xs transition ${
+                  aria-label={`${item.label} (Ctrl/Cmd+${item.shortcut})`}
+                  title={`${item.label} (Ctrl/Cmd+${item.shortcut})`}
+                  className={`flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-xs transition focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-dj-accent ${
                     active
                       ? "bg-dj-active font-medium text-dj-text"
                       : "text-dj-text-secondary hover:bg-dj-hover hover:text-dj-text"
                   }`}
                 >
-                  <Icon className="h-4 w-4 shrink-0" />
+                  <Icon className="h-4 w-4 shrink-0" aria-hidden="true" />
                   {!ui.navCollapsed && (
                     <span className="min-w-0 flex-1 truncate">{item.label}</span>
                   )}
@@ -1865,29 +2061,6 @@ export default function App() {
             })}
           </nav>
 
-          {/* Roadmap strip: planned surfaces, honestly labeled and read-only */}
-          <div className="border-t border-dj-border space-y-0.5 p-2">
-            {!ui.navCollapsed && (
-              <p className="px-2 pb-1 text-[11px] font-semibold uppercase tracking-wider text-dj-text-muted">
-                Roadmap
-              </p>
-            )}
-            {ROADMAP_ITEMS.map((item) => {
-              const Icon = item.icon;
-              return (
-                <div
-                  key={item.label}
-                  title={`${item.label} — planned, not available yet`}
-                  className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-xs text-dj-text-secondary"
-                >
-                  <Icon className="h-4 w-4 shrink-0 text-dj-text-muted" />
-                  {!ui.navCollapsed && (
-                    <span className="min-w-0 flex-1 truncate">{item.label}</span>
-                  )}
-                </div>
-              );
-            })}
-          </div>
           <div className="border-t border-dj-border p-2">
             <button
               type="button"
@@ -1906,11 +2079,17 @@ export default function App() {
           </div>
         </aside>
 
-        <main className="relative flex min-w-0 flex-1 flex-col overflow-hidden">
+        <main
+          id="main-workspace"
+          tabIndex={-1}
+          className="relative flex min-w-0 flex-1 flex-col overflow-hidden focus:outline-hidden"
+        >
           {ui.view === "import" ? (
             <ViewPlaceholder
-              title="Import"
-              description="Ingest new downloaded tracks, validate tags, assess quality, rate, comment, and tag before importing them into your library."
+              icon={FolderOpen}
+              title="Import Center"
+              description="Ingest new downloaded tracks, validate tags, assess quality, rate, comment, and tag before importing them into your library. The import workflow arrives in Stage 3."
+              options={["Folder scan", "Watch folders", "Duplicate detection"]}
             />
           ) : ui.view === "library" ? (
             <>
@@ -2110,10 +2289,21 @@ export default function App() {
                     <SlidersHorizontal className="w-3 h-3 text-dj-accent" />
                     {filterSummary.map((part) => (
                       <span
-                        key={part}
-                        className="px-2 py-0.5 rounded-sm bg-dj-accent/10 text-dj-accent border border-dj-accent/20 font-mono"
+                        key={part.group}
+                        className="inline-flex items-center gap-1 px-2 py-0.5 rounded-sm bg-dj-accent/10 text-dj-accent border border-dj-accent/20 font-mono"
                       >
-                        {part}
+                        {part.label}
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setFilters((current) => clearFilterGroup(current, part.group))
+                          }
+                          title={`Remove the ${part.group} filter`}
+                          aria-label={`Remove the ${part.group} filter`}
+                          className="rounded-sm p-px text-dj-accent/70 transition hover:text-dj-accent"
+                        >
+                          <X className="h-2.5 w-2.5" />
+                        </button>
                       </span>
                     ))}
                     <button
@@ -2226,6 +2416,7 @@ export default function App() {
                             aria-label={`Inspect ${track.title || "Untitled"} by ${track.artist || "Unknown Artist"}`}
                             aria-selected={selection.includes(track.id)}
                             onClick={(event) => handleRowClick(event, track, idx)}
+                            onContextMenu={(event) => handleRowContextMenu(event, track)}
                             onKeyDown={(e) => {
                               // Only the row itself handles Enter/Space. A child
                               // control (the rating stars, the energy meter) owns
@@ -2266,6 +2457,7 @@ export default function App() {
                                 rowNumber={idx + 1}
                                 onRate={handleSetRating}
                                 onSetEnergy={handleSetEnergy}
+                                onSelectTag={handleFilterByTag}
                               />
                             ))}
                           </tr>
@@ -2947,6 +3139,61 @@ export default function App() {
                 </ModalShell>
               )}
             </>
+          ) : ui.view === "playlists" ? (
+            <ViewPlaceholder
+              icon={ListMusic}
+              title="Playlists"
+              description="Build and save sets, then score them with Set Score. Playlist editing, save recovery and Set Score arrive in Stage 5."
+              options={["Playlist Tracks", "Set Score", "Set Check"]}
+              onGoToLibrary={() => handleViewChange("library")}
+            />
+          ) : ui.view === "discover" ? (
+            <ViewPlaceholder
+              icon={Compass}
+              title="Discover"
+              description="Local-first recommendations and free downloads from Bandcamp, SoundCloud and label promos. Discover arrives in Stage 7; downloads land in the Inbox for review."
+              options={["Recommendations", "Free downloads", "Watchlist"]}
+              onGoToLibrary={() => handleViewChange("library")}
+            />
+          ) : ui.view === "statistics" ? (
+            <ViewPlaceholder
+              icon={BarChart3}
+              title="Statistics"
+              description="Whole-library statistics with drill-down. Date ranges apply only to Play History and Additions. Statistics arrives in Stage 8."
+              options={["Overview", "Play History", "Additions"]}
+              onGoToLibrary={() => handleViewChange("library")}
+            />
+          ) : ui.view === "publish" ? (
+            <ViewPlaceholder
+              icon={Usb}
+              title="Publish"
+              description="Export to USB and DJ applications. rekordbox sync arrives in Stage 9; playlist-only USB export in Stage 11. OneLibrary stays experimental until certified."
+              options={["rekordbox", "Traktor", "USB export"]}
+              onGoToLibrary={() => handleViewChange("library")}
+            />
+          ) : ui.view === "inbox" ? (
+            <InboxEmptyState onGoToLibrary={() => handleViewChange("library")} />
+          ) : ui.view === "settings" ? (
+            <SettingsView
+              theme={ui.theme}
+              navCollapsed={ui.navCollapsed}
+              playerVisible={ui.playerMode !== "hidden"}
+              onCycleTheme={() => dispatch({ type: "setTheme", theme: nextTheme(ui.theme) })}
+              onToggleNav={() => dispatch({ type: "toggleNav" })}
+              onTogglePlayer={() => dispatch({ type: "togglePlayer" })}
+              onOpenImport={() => handleViewChange("import")}
+              onOpenAnalysis={() => handleViewChange("analysis")}
+              onOpenBackup={() => handleViewChange("backup")}
+              onOpenSync={() => handleViewChange("sync")}
+              onOpenStudio={() => handleViewChange("studio")}
+            />
+          ) : ui.view === "analysis" ? (
+            <ViewPlaceholder
+              icon={Activity}
+              title="Analysis queue"
+              description="Pending, running and failed analysis jobs. This queue is part of the import pipeline and moves into Import Center in Stage 3."
+              onGoToLibrary={() => handleViewChange("library")}
+            />
           ) : ui.view === "studio" ? (
             <ViewPlaceholder
               icon={Play}
@@ -2979,6 +3226,38 @@ export default function App() {
           )}
         </main>
       </div>
+
+      {contextMenu && (
+        <RowContextMenu
+          x={contextMenu.x}
+          y={contextMenu.y}
+          trackTitle={contextMenu.track.title || "Untitled"}
+          onEditTags={() => openMetadataEditor(contextMenu.track)}
+          onClose={() => setContextMenu(null)}
+          restoreFocus={() => contextRowRef.current?.focus()}
+        />
+      )}
+
+      {editorTrackId && (
+        <MetadataEditor
+          track={
+            tracks.find((entry) => entry.id === editorTrackId) ?? {
+              id: editorTrackId,
+              title: "",
+              artist: "",
+              album: null,
+              genre: null,
+              label: null,
+              year: null,
+              tags: [],
+              comments: null,
+            }
+          }
+          targetCount={selection.includes(editorTrackId) ? selection.length : 1}
+          onSave={handleSaveMetadata}
+          onClose={() => setEditorTrackId(null)}
+        />
+      )}
 
       {ui.playerMode !== "hidden" && (
         <PreviewPlayer

@@ -10,8 +10,28 @@ Standing rules. Every session, in every tool, follows these.
   (`pnpm rust:clippy`) is enforced and `cargo fmt --all --check` must pass.
 - Full local gate: `pnpm ci:local` (`ci:local:portable` when ONNX is unavailable).
 
+## Plan and spec hierarchy
+
+- `docs/product/CANONICAL_DOCUMENTATION.md` is the canonical product and
+  technical spec; `docs/ui/01-DESIGN-SYSTEM.md` is authoritative for shipped UI
+  tokens and components.
+- `docs/plan/` is the **approved v1 plan** and delivery order. Its decision IDs
+  (`D-001–D-052`) are scoped to that tree and are separate from the repository
+  memory ledger. Do not silently mix the two namespaces.
+- When the plan and the canonical spec/UI disagree, record the conflict and
+  decide it explicitly; do not let one silently override the other.
+- `docs/plan/06-delivery/discussions.md` records rationale, rejected
+  alternatives and open items. Add an entry when a decision changes.
+
 ## Boundaries
 
+- **Put the rules in `crates/core`, not in the desktop crate.** The desktop
+  crate's test harness does not load on `stable-x86_64-pc-windows-gnu`
+  (`STATUS_ENTRYPOINT_NOT_FOUND`), so a rule that lives only in
+  `apps/desktop/src-tauri` is a rule that is never executed. Pure logic —
+  the write rules, the query builder, the normalisation — belongs in
+  `crates/core` (Tauri-free, as its own crate docstring says); the desktop
+  crate stays the thin IPC adapter over it.
 - Keep UI tokens and components aligned with `docs/ui/` — never invent a second
   palette or spacing scale.
 - Do not commit generated artefacts (`target/`, `dist/`, model binaries) or the
