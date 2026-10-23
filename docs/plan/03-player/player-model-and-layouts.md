@@ -5,13 +5,12 @@ Status: Locked model; visual details proposed
 
 ## 1. One engine
 
-DJ Assistant has one audio engine. Mini, Full, Extended and Player view are presentations, not separate players.
+DJ Assistant has one audio engine. Mini, Full and Player view are presentations, not separate players.
 
 ```text
 AudioEngine
   ├── Mini
   ├── Full
-  ├── Extended
   └── Player view
 ```
 
@@ -71,22 +70,16 @@ Shows:
 - Playlist toggle.
 - Track panel toggle.
 
-## 4. Extended
+## 4. Extended (removed)
 
-Purpose: deep preparation.
+Extended was retired on 2026-10-23. It was a taller duplicate of Full whose only
+unique content was the grid & beat tools row; those tools now live in Full's
+**Hot cues ↔ Grid & beat** segmented row, so deep preparation does not need a
+third dock height. See the 2026-10-23 entry in
+[`discussions.md`](../06-delivery/discussions.md).
 
-Shows:
-
-- Large waveform.
-- Beat grid.
-- Phrase markers.
-- Cue list.
-- Hot cues.
-- Loops.
-- EQ8.
-- Analysis.
-- Playlist.
-- Track panel.
+The playlist, track rail, EQ8 and loops once planned for Extended belong to
+Player view and later player work, not to a taller dock.
 
 ## 5. Player view
 
@@ -121,6 +114,16 @@ Rules:
 - Player view can hide the primary navigation on wide screens.
 - The dock remains visible when switching tabs.
 - The dock can be collapsed to a mini bar.
+
+**Row order (shipped):**
+
+- **Full:** detailed waveform (zoom cluster top-right) → track line (`Title — Artist`, BPM/key, bar counter, time) → overview rail → transport row (`CUE`, Play → volume → hot cues ↔ grid & beat panel → collapse to Mini / hide).
+- **Mini:** track line → compact seek rail → transport row; the full-height artwork column sits left of all three.
+- **Artwork:** left column only — a 160px cover in Full (184px column), full dock height in Mini (~91px). BPM/key never sit under the artwork.
+- **Transport:** Full's row spans the dock width under the rail and carries the Hot cues ↔ Grid & beat segmented panel. In Mini, `CUE`/Play sit immediately right of the artwork column, left of volume.
+- **Zoom:** `− / + / Fit / follow` float at the detailed waveform's top-right.
+- **Mini height:** default 104px, range 96–139px. Full's range is 230–440px, default 246px; the splitter snaps the unsupported 140–229px gap to the nearer edge.
+- No Stop button in any presentation; Pause is the stop-like action.
 
 ## 7. Transport behavior
 
@@ -157,11 +160,14 @@ Layers:
 Rules:
 
 - Real peaks only.
-- Zoom levels.
-- Scroll follows playhead.
+- Zoom levels; default **8×** in the detailed view.
+- **Traktor parallel view:** the reading head is fixed at the horizontal centre while follow is on; the peaks scroll underneath. The window offset is `position − visibleDuration / 2`, so blank space can appear before 0 and after the end.
+- Fit (≤1.05×) shows the whole track and lets the playhead travel across it.
 - Click to seek.
-- Hover time.
+- Hover time (hidden over blank pre/post-track regions).
 - Keyboard seek.
+- Shift/horizontal wheel pans; a manual pan turns follow off and the follow control re-arms it.
+- The overview draws the absolute playhead as a 2px line above the zoom-window tint.
 - Reduced-motion option.
 - High-contrast option.
 

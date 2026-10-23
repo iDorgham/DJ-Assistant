@@ -45,8 +45,31 @@ export const VIEW_LABELS: Record<AppView, string> = {
 };
 
 export type ThemeMode = "dark" | "light" | "system";
+/**
+ * The dock has two visible sizes. Full carries the hot-cue / grid-tools panel
+ * switch, so there is no separate "extended" presentation any more.
+ */
 export type PlayerMode = "hidden" | "mini" | "full";
 export type VisiblePlayerMode = Exclude<PlayerMode, "hidden">;
+
+/**
+ * Dock geometry. Mini is compact (96–139); Full starts at 230 so the cover,
+ * track line, overview and transport still fit. No presentation is designed
+ * for the 140–229 gap, so the splitter resolves it to the nearer edge.
+ */
+export const MIN_MINI_HEIGHT = 96;
+export const MAX_MINI_HEIGHT = 139;
+export const DEFAULT_MINI_HEIGHT = 104;
+export const MIN_FULL_HEIGHT = 230;
+export const DEFAULT_FULL_HEIGHT = 246;
+export const MAX_PLAYER_HEIGHT = 440;
+
+export function resolvePlayerHeight(rawHeight: number): number {
+  const clamped = Math.max(MIN_MINI_HEIGHT, Math.min(rawHeight, MAX_PLAYER_HEIGHT));
+  if (clamped <= MAX_MINI_HEIGHT || clamped >= MIN_FULL_HEIGHT) return clamped;
+  const midpoint = (MAX_MINI_HEIGHT + MIN_FULL_HEIGHT) / 2;
+  return clamped < midpoint ? MAX_MINI_HEIGHT : MIN_FULL_HEIGHT;
+}
 
 export interface UiState {
   view: AppView;
@@ -88,6 +111,21 @@ function oneOf<T extends string>(value: unknown, allowed: readonly T[]): T | nul
   return typeof value === "string" && (allowed as readonly string[]).includes(value)
     ? (value as T)
     : null;
+}
+
+/**
+ * Persisted sessions from earlier builds may still say "extended". The tall
+ * presentation was removed, so migrate it to Full instead of resetting the
+ * user's dock to Mini.
+ */
+function persistedPlayerMode(value: unknown): PlayerMode | null {
+  if (value === "extended") return "full";
+  return oneOf(value, PLAYER_MODES);
+}
+
+function persistedVisiblePlayerMode(value: unknown): VisiblePlayerMode | null {
+  if (value === "extended") return "full";
+  return oneOf(value, VISIBLE_PLAYER_MODES);
 }
 
 export function reduceUiState(state: UiState, action: UiAction): UiState {
@@ -148,9 +186,9 @@ export function initUiState(storage?: StorageLike): UiState {
           ? record.navCollapsed
           : DEFAULT_UI_STATE.navCollapsed,
       theme: oneOf(record.theme, THEMES) ?? DEFAULT_UI_STATE.theme,
-      playerMode: oneOf(record.playerMode, PLAYER_MODES) ?? DEFAULT_UI_STATE.playerMode,
+      playerMode: persistedPlayerMode(record.playerMode) ?? DEFAULT_UI_STATE.playerMode,
       lastVisiblePlayerMode:
-        oneOf(record.lastVisiblePlayerMode, VISIBLE_PLAYER_MODES) ??
+        persistedVisiblePlayerMode(record.lastVisiblePlayerMode) ??
         DEFAULT_UI_STATE.lastVisiblePlayerMode,
     };
   } catch {

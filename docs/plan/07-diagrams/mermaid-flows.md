@@ -34,7 +34,7 @@ flowchart TD
   Publish --> USB[USB Export]
 
   Shell --> TopBar[Search · Import Center · Inbox · Backup]
-  Shell --> PlayerDock[Player: Mini / Full / Extended / Player view]
+  Shell --> PlayerDock[Player: Mini / Full / Player view]
 ```
 
 ## 2. Track lifecycle

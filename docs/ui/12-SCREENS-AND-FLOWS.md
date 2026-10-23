@@ -18,7 +18,7 @@ wireframes live in [wireframes/](wireframes/README.md).
 | 2 | Scan / analysis progress | Options bar + header status | 0/1 | ✅ Events live |
 | 3 | Preparation view | Main canvas | 2–3 | ✅ Shell placeholder; set builder per T3.x |
 | 4 | Auto Performance view | Main canvas | 4 | ✅ Shell placeholder |
-| 5 | Player dock (Mini / Full / Hidden) | Bottom dock | 2.4 | ✅ Layout shipped; playback/waveform per T2.4 |
+| 5 | Player presentations: Mini / Full / Player view / Hidden | Bottom dock + full window | 2.4 | 🟡 Mini/Full shipped; Player view spec in [06A](06A-PLAYER-PRESENTATIONS.md) |
 | 6 | Settings window | Overlay | 4 | 📋 Spec: [07](07-SETTINGS.md) |
 | 7 | Dialogs / toasts / command palette | Overlays | 2–4 | 📋 Spec: [08](08-DIALOGS-AND-PATTERNS.md) |
 | 8 | Track inspector drawer (similar · gaps · buy-links · Deezer match) | Drawer | 0 | ✅ Shipped |
@@ -149,7 +149,7 @@ switching views preserves set, selection, and player state where sensible.
 |------------|--------------|
 | Minimum supported window | 1280px — table shows default columns; below that, horizontal scroll |
 | Table minimum width | 1200px (`min-w-[1200px]`) |
-| Chrome heights (v1.1) | Header 40px · options bar 36px · menu ~28px · player Mini 88px / Full 256px |
+| Chrome heights (target) | Header 40px · options bar 36px · menu ~28px · Player Mini 104px / Full 246px; Player view is full-window |
 | Row heights | 28px Compact · 32–34px Standard (default) · 36px Comfortable |
 | Scaling | Layout tolerates OS font scaling up to 150% without clipping |
 

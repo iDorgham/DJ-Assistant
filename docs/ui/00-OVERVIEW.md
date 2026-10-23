@@ -41,7 +41,7 @@ DJ Assistant
 │   ├── Header + options bar
 │   ├── Left nav (sources)
 │   ├── Main canvas (view-specific)
-│   └── Player dock (Mini / Full / Hidden)
+│   └── Player dock (Mini / Full / Hidden) + Player view
 ├── Global overlays
 │   ├── Settings window
 │   ├── Command palette (⌘/Ctrl+K)

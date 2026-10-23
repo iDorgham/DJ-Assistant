@@ -23,7 +23,7 @@ Scope split agreed up front: **Bucket 1** = fixes and alignment on existing surf
 
 ### Clarify / honesty
 - **Estimated waveform badge** — `WaveformData.isEstimated` flag in `lib/waveform-generator.ts`; `DetailedWaveform` renders an "Estimated waveform" pill while peaks are PRNG-synthesized (docs/ui/06: no fabricated analysis data presented as real).
-- **Synth-audio disclosure** — "Synth preview audio" pill in the player identity row + honest Play tooltip: the engine is a synthesized timing beat until real audio decode ships. LUFS chip removed entirely until real loudness analysis exists.
+- **Synth-audio disclosure** — "Synth preview audio" pill in the player identity row + honest Play tooltip: the engine is a synthesized timing beat until real audio decode ships. LUFS chip removed entirely until real loudness analysis exists. *(2026-10-23: the pills were removed at the user's request; the Play tooltip is now the only disclosure — see [06A §8.1](06A-PLAYER-PRESENTATIONS.md).)*
 - **Error vs. empty** — `findSimilarTracks` / `storeLinksForTrack` failures now show a distinct error state with **Retry** instead of masquerading as "no results" (`similarError`, `storeLinksError`, `drawerRetry`).
 - **Status honesty** — header status dot bound to a real tone (`ok` / `busy` / `error` via `pushStatus`); error copy sanitized (no raw `${err}` dumps) with a recovery hint; status region is `role="status" aria-live="polite"`.
 - **Analysis chip** — hardcoded green "Indexed" replaced by `ANALYSIS_STATUS_CHIP` keyed on real `track.analysisStatus` (Analyzed / Pending / Failed / Needs review).
@@ -86,7 +86,7 @@ Scope split agreed up front: **Bucket 1** = fixes and alignment on existing surf
 Re-score recorded at `apps/desktop/.impeccable/critique/2026-10-19T14-03-27Z__src-app-tsx.md`: **29/40** (baseline 24/40), P1 findings 3 → 1. The findings below were closed immediately after that re-score: (see the scope note above — the score is pinned to the 2026-10-19 revision, not to the current tree)
 
 - **P1 — the inspector drawer was pointer-only.** Library rows are now focusable (`tabIndex={0}`, `aria-label`, `aria-selected`) and toggle the drawer with Enter/Space, with a `focus-visible` ring.
-- **P2 — the honest synth-audio disclosure was missing in mini player mode** (the default mode). A compact `Synth` pill now sits in the mini identity strip; full mode keeps the "Synth preview audio" pill.
+- **P2 — the honest synth-audio disclosure was missing in mini player mode** (the default mode). A compact `Synth` pill now sits in the mini identity strip; full mode keeps the "Synth preview audio" pill. *(Superseded 2026-10-23: both pills were removed; the Play tooltip carries the disclosure.)*
 - **P3 — shortcut scoping was over-broad.** Only typing fields swallow all keys now; a focused button/control keeps just Space/Enter (native activation), so `C` and `1–8` work regardless of focus.
 - **P3 — `Ctrl+1–3` could unmount an open dialog.** View shortcuts are suppressed while a dialog is open.
 - **P3 — modal dismissal & scroll.** Scrim click dismisses (`docs/ui/08`), background scroll is locked while open and restored on close — both browser-verified, along with Escape and focus return.

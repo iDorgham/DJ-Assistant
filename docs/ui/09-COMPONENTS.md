@@ -68,13 +68,16 @@ Logical UI components for implementation (React + design tokens).
 
 | Component | Responsibility |
 |-----------|----------------|
-| `PlayerDock` | Mini/Full/Hidden shell |
+| `PlayerDock` | Mini/Full/Hidden dock shell |
 | `PlayerMini` | Compact chrome |
-| `PlayerFull` | Full chrome |
+| `PlayerFull` | Full dock chrome, including the Hot cues ↔ Grid & beat segmented panel |
+| `PlayerView` | Full-window composition: Full player + EQ8 drawer + playlist |
+| `PlayerEQ8Drawer` | Slide-down EQ panel between player and playlist |
+| `PlayerPlaylistTable` | Time-left, title and artist playlist below EQ |
 | `WaveformDetailed` | Zoomable waveform |
 | `WaveformOverview` | Full-track map |
 | `Playhead` | Position line + seek |
-| `TransportControls` | Cue / Play-Pause / Stop |
+| `TransportControls` | Cue / previous / play-pause / next |
 | `HotCueBank` | A–H pads |
 | `GridControls` | Snap, nudge, BPM fine |
 | `BeatJumpControls` | ± beat jumps |
@@ -120,7 +123,8 @@ Logical UI components for implementation (React + design tokens).
 | Panel left | `panel-left` |
 | Panel right | `panel-right` |
 | Player panel | `panel-bottom` |
-| Play / Pause / Stop | `play` / `pause` / `square` |
+| Play / Pause | `play` / `pause` |
+| Player view | `maximize-2` |
 | Settings | `settings` |
 | Theme | `sun` / `moon` |
 | Analyze | `activity` |
@@ -130,7 +134,7 @@ Logical UI components for implementation (React + design tokens).
 
 ## State notes
 
-- Player: `mode`, `trackId`, `isPlaying`, `positionMs`, `cues[]`, `zoom`, `followPlayhead`  
+- Player: `presentation`, `trackId`, `isPlaying`, `positionMs`, `cues[]`, `zoom`, `followPlayhead`, `eqOpen`, `playlistDirty`  
 - Library: `selection[]`, `filters`, `columns`, `sort`  
 - Preparation: `setId`, `tracks[]`, `dirty`  
 - Auto: `autoOn`, `setId`, `index`  

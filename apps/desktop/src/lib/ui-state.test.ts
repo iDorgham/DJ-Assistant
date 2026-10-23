@@ -8,6 +8,14 @@ import {
   reduceUiState,
   shortcutToAction,
   UI_STATE_STORAGE_KEY,
+  resolvePlayerHeight,
+  DEFAULT_FULL_HEIGHT,
+  DEFAULT_MINI_HEIGHT,
+  MAX_MINI_HEIGHT,
+  MAX_PLAYER_HEIGHT,
+  MIN_FULL_HEIGHT,
+  MIN_MINI_HEIGHT,
+  type PlayerMode,
   type StorageLike,
 } from "./ui-state.ts";
 
@@ -151,6 +159,12 @@ test("setPlayerMode and setTheme validate input", () => {
     reduceUiState(DEFAULT_UI_STATE, { type: "setPlayerMode", mode: "full" }).playerMode,
     "full"
   );
+  // @ts-expect-error "extended" was removed; runtime must reject stale callers too
+  const legacyMode: PlayerMode = "extended";
+  assert.equal(
+    reduceUiState(DEFAULT_UI_STATE, { type: "setPlayerMode", mode: legacyMode }).playerMode,
+    "mini"
+  );
   assert.equal(
     reduceUiState(DEFAULT_UI_STATE, { type: "setTheme", theme: "system" }).theme,
     "system"
@@ -159,9 +173,53 @@ test("setPlayerMode and setTheme validate input", () => {
   assert.equal(reduceUiState(DEFAULT_UI_STATE, { type: "setTheme", theme: "neon" }).theme, "dark");
 });
 
+test("legacy extended session migrates to full", () => {
+  const storage = fakeStorage({
+    [UI_STATE_STORAGE_KEY]: JSON.stringify({
+      playerMode: "extended",
+      lastVisiblePlayerMode: "extended",
+    }),
+  });
+  const state = initUiState(storage);
+  assert.equal(state.playerMode, "full");
+  assert.equal(state.lastVisiblePlayerMode, "full");
+  const hidden = reduceUiState(state, { type: "togglePlayer" });
+  assert.equal(hidden.playerMode, "hidden");
+  assert.equal(reduceUiState(hidden, { type: "togglePlayer" }).playerMode, "full");
+});
+
+test("hidden legacy session restores full instead of extended", () => {
+  const storage = fakeStorage({
+    [UI_STATE_STORAGE_KEY]: JSON.stringify({
+      playerMode: "hidden",
+      lastVisiblePlayerMode: "extended",
+    }),
+  });
+  const state = initUiState(storage);
+  assert.equal(state.playerMode, "hidden");
+  assert.equal(state.lastVisiblePlayerMode, "full");
+  assert.equal(reduceUiState(state, { type: "togglePlayer" }).playerMode, "full");
+});
+
 test("unknown action leaves state untouched", () => {
   // @ts-expect-error deliberate unknown action
   assert.deepEqual(reduceUiState(DEFAULT_UI_STATE, { type: "explode" }), DEFAULT_UI_STATE);
+});
+
+test("resolvePlayerHeight keeps each presentation inside its range", () => {
+  assert.equal(resolvePlayerHeight(0), MIN_MINI_HEIGHT);
+  assert.equal(resolvePlayerHeight(DEFAULT_MINI_HEIGHT), 104);
+  assert.equal(resolvePlayerHeight(MAX_MINI_HEIGHT), 139);
+  assert.equal(resolvePlayerHeight(DEFAULT_FULL_HEIGHT), 246);
+  assert.equal(resolvePlayerHeight(MIN_FULL_HEIGHT), 230);
+  assert.equal(resolvePlayerHeight(999), MAX_PLAYER_HEIGHT);
+});
+
+test("resolvePlayerHeight snaps the unsupported 140–229 gap to the nearer edge", () => {
+  assert.equal(resolvePlayerHeight(140), 139);
+  assert.equal(resolvePlayerHeight(184), 139);
+  assert.equal(resolvePlayerHeight(185), 230);
+  assert.equal(resolvePlayerHeight(229), 230);
 });
 
 test("Ctrl/Cmd+1..6 map to the six primary views", () => {

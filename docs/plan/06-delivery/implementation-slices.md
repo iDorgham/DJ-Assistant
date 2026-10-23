@@ -144,7 +144,7 @@ Done:
 Scope:
 
 - Real audio engine.
-- Mini, Full, Extended, Player view.
+- Mini, Full, Player view.
 - Waveform from real peaks.
 - Beat grid.
 - EQ8.
