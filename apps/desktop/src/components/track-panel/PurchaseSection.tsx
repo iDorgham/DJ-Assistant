@@ -19,6 +19,9 @@ export function PurchaseSection({ track }: { track: TrackSummary }) {
   const [copiedUrl, setCopiedUrl] = useState<string | null>(null);
   const [copyError, setCopyError] = useState(false);
   const copyTimer = useRef<number | null>(null);
+  // Only the newest lookup may write match state; a response that outlives its
+  // track must not surface on the next one.
+  const matchRequestRef = useRef(0);
 
   useEffect(() => {
     let cancelled = false;
@@ -49,6 +52,12 @@ export function PurchaseSection({ track }: { track: TrackSummary }) {
   }, [track.id, retry]);
 
   useEffect(() => {
+    // A lookup started for the previous track is no longer relevant.
+    matchRequestRef.current += 1;
+    setMatchLoading(false);
+  }, [track.id]);
+
+  useEffect(() => {
     return () => {
       if (copyTimer.current !== null) window.clearTimeout(copyTimer.current);
     };
@@ -70,16 +79,17 @@ export function PurchaseSection({ track }: { track: TrackSummary }) {
 
   /** Looks up this track on Deezer without library writes; caught failures show a retry action. */
   const runMatch = async () => {
+    const request = ++matchRequestRef.current;
     setMatchLoading(true);
     setMatchError(false);
     try {
       const res = await providerMatchTracks({ provider: "deezer", trackIds: [track.id] });
-      setMatch(res.matches[0] ?? null);
+      if (request === matchRequestRef.current) setMatch(res.matches[0] ?? null);
     } catch (err) {
       console.error("Failed to match the track on Deezer:", err);
-      setMatchError(true);
+      if (request === matchRequestRef.current) setMatchError(true);
     } finally {
-      setMatchLoading(false);
+      if (request === matchRequestRef.current) setMatchLoading(false);
     }
   };
 
