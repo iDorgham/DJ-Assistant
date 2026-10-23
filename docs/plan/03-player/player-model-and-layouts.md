@@ -1,0 +1,251 @@
+# Player Model and Layouts
+
+Last updated: 2026-10-23  
+Status: Locked model; visual details proposed
+
+## 1. One engine
+
+DJ Assistant has one audio engine. Mini, Full, Extended and Player view are presentations, not separate players.
+
+```text
+AudioEngine
+  ├── Mini
+  ├── Full
+  ├── Extended
+  └── Player view
+```
+
+State shared across presentations:
+
+- Current track.
+- Queue/playlist.
+- Playback position.
+- Play/pause.
+- Cue points.
+- Hot cues.
+- Loops.
+- EQ8.
+- Volume.
+- Waveform zoom.
+- Key lock.
+- Output device.
+
+Switching presentation must not restart playback or lose state.
+
+## 2. Mini
+
+Purpose: stay out of the way.
+
+Shows:
+
+- Artwork.
+- Title / artist.
+- Play/pause.
+- Seek bar.
+- Time.
+- BPM / key.
+- Cue indicator.
+- Expand button.
+
+Hides:
+
+- EQ8.
+- Full cue list.
+- Playlist.
+- Analysis details.
+
+## 3. Full
+
+Purpose: everyday preparation.
+
+Shows:
+
+- Artwork.
+- Waveform.
+- Transport.
+- BPM / key.
+- Cue and hot cues.
+- Loops.
+- EQ8.
+- Volume.
+- Playlist toggle.
+- Track panel toggle.
+
+## 4. Extended
+
+Purpose: deep preparation.
+
+Shows:
+
+- Large waveform.
+- Beat grid.
+- Phrase markers.
+- Cue list.
+- Hot cues.
+- Loops.
+- EQ8.
+- Analysis.
+- Playlist.
+- Track panel.
+
+## 5. Player view
+
+Purpose: performance-style view.
+
+Shows:
+
+- Large artwork.
+- Large waveform.
+- Transport.
+- Cues.
+- EQ8.
+- Playlist by default on wide screens.
+- Set Flow overlay optional.
+- Key/BPM.
+- Time.
+
+Rules:
+
+- No separate engine.
+- No separate cue store.
+- No separate playlist.
+- Escape returns to the previous tab.
+- The playlist remains the same playlist.
+
+## 6. Layout rules
+
+- The player dock is anchored at the bottom.
+- The dock height is stable per presentation.
+- The main workspace scrolls independently.
+- The track panel can coexist with the dock.
+- Player view can hide the primary navigation on wide screens.
+- The dock remains visible when switching tabs.
+- The dock can be collapsed to a mini bar.
+
+## 7. Transport behavior
+
+| Control | Behavior |
+|---|---|
+| Play | Start from current position |
+| Pause | Pause at current position |
+| CUE | Set cue when stopped; return to cue when playing |
+| Hot cue | Jump/trigger |
+| Previous | Previous playlist track |
+| Next | Next playlist track |
+| Seek | Scrub waveform or click |
+| Beat jump | Move by beats |
+| Loop | Set/activate loop |
+| Volume | Master volume |
+| EQ8 | Eight-band EQ |
+
+There is no Stop button. Pause is the stop-like action.
+
+## 8. Waveform
+
+Layers:
+
+- Peaks.
+- RMS.
+- Beat grid.
+- Phrase markers.
+- Cue markers.
+- Hot cue markers.
+- Loop region.
+- Playhead.
+- Set position markers in Player view.
+
+Rules:
+
+- Real peaks only.
+- Zoom levels.
+- Scroll follows playhead.
+- Click to seek.
+- Hover time.
+- Keyboard seek.
+- Reduced-motion option.
+- High-contrast option.
+
+## 9. Beat grid and phrases
+
+- BPM.
+- Downbeat.
+- Bar markers.
+- Phrase markers.
+- Grid offset.
+- Manual adjustment.
+- Re-analyze.
+- Stale analysis warning.
+
+Do not show a grid if analysis is missing.
+
+## 10. Queue and playlist
+
+- Current playlist drives next/previous.
+- Queue can be “play next”.
+- Playlist order is visible.
+- Reordering in Player view edits the draft.
+- Save changes explicit.
+- Missing tracks are skipped with a warning, not silently.
+
+## 11. Audio routing
+
+- Master output.
+- Headphone cue if supported.
+- Output device selection.
+- Sample rate.
+- Buffer.
+- Mono/stereo.
+- Latency display.
+- Test tone.
+
+If headphone routing is not supported by the platform, say so. Do not fake it.
+
+## 12. Player states
+
+| State | UI |
+|---|---|
+| No track | Empty player |
+| Loading | Spinner + file name |
+| Playing | Active |
+| Paused | Active, paused |
+| Missing file | Error state |
+| Unsupported format | Error state |
+| Analysis missing | Playable, no grid |
+| Output unavailable | Warning |
+| Device disconnected | Pause + warning |
+| Playlist ended | End state |
+
+## 13. Performance rules
+
+- Decode off the UI thread where possible.
+- Preload next track.
+- Keep waveform peaks in cache.
+- Release artwork memory.
+- Avoid full-library re-renders on play state changes.
+- Use stable keys.
+- Throttle time updates.
+- Render waveform at device pixel ratio.
+- Handle 30,000+ tracks.
+
+## 14. Accessibility rules
+
+- All transport buttons have labels.
+- Space toggles play/pause outside text fields.
+- Arrow keys seek when the waveform is focused.
+- Cue buttons are keyboard reachable.
+- Focus is visible.
+- Reduced motion disables waveform animation.
+- High contrast.
+- Screen reader announces track changes.
+- Time is announced in text.
+
+## 15. Anti-patterns
+
+- Separate players per layout.
+- Fake waveform.
+- Stop button.
+- Losing state on tab switch.
+- Blocking UI on analysis.
+- Autoplay without a license.
+- Hidden output errors.
+- Cue changes that do not persist.

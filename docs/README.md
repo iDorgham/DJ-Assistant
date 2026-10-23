@@ -14,6 +14,7 @@ each folder below is self-contained and cross-links to its neighbours.
 | Folder | What lives here | Start with |
 |--------|-----------------|------------|
 | [`product/`](./product/) | Vision, canonical spec, glossary, milestone sign-off | [Canonical Documentation](./product/CANONICAL_DOCUMENTATION.md) |
+| [`plan/`](./plan/) | Approved v1 product, UX, data, sync, backup and delivery plan; 52 locked decisions and the discussion log | [Plan README](./plan/README.md) |
 | [`architecture/`](./architecture/) | System design, data model, contracts, models, skills | [Architecture](./architecture/ARCHITECTURE.md) |
 | [`engineering/`](./engineering/) | Setup, standards, testing, security, build, task list | [Development Guide](./engineering/DEVELOPMENT.md) |
 | [`devops/`](./devops/) | CI/CD plans, pipeline security, AI automation, workflow templates | [DevOps & CI/CD Plan](./devops/DEVOPS_CICD_PLAN.md) |
@@ -38,6 +39,24 @@ each folder below is self-contained and cross-links to its neighbours.
 | [PRODUCT_BRIEF.md](./product/PRODUCT_BRIEF.md) | Vision, target user, scope, non-goals |
 | [PO_MILESTONE_CHECKLIST.md](./product/PO_MILESTONE_CHECKLIST.md) | Product-owner milestone sign-off gates |
 | [GLOSSARY.md](./product/GLOSSARY.md) | Product & technical terminology |
+
+## Approved v1 plan — [`plan/`](./plan/)
+
+The plan is the approved v1 scope and delivery order. It is not a replacement
+for the canonical product spec or the shipped UI token set; where they disagree,
+record the conflict and decide it explicitly.
+
+| Document | Purpose |
+|----------|---------|
+| [README.md](./plan/README.md) | Product shape, 52 locked decisions, plan map and current state |
+| [01-product/information-architecture.md](./plan/01-product/information-architecture.md) | Six-tab IA, persistent chrome, routes and cross-navigation |
+| [02-experience/](./plan/02-experience/) | Library, Maintain, Playlists, Discover, Statistics, Publish, Settings and the shared Track panel |
+| [03-player/](./plan/03-player/) | One player engine, EQ8, cues, playlist save/recovery, accessibility |
+| [04-data-and-sync/](./plan/04-data-and-sync/) | Import, data model, source-of-truth sync, backup and restore |
+| [05-design-system/](./plan/05-design-system/) | UI/UX rules and copy/microcopy |
+| [06-delivery/implementation-slices.md](./plan/06-delivery/implementation-slices.md) | Stage 0–12 build order and gates |
+| [06-delivery/discussions.md](./plan/06-delivery/discussions.md) | Decision rationale, rejected alternatives, UI/UX changes and open items |
+| [06-delivery/open-questions.md](./plan/06-delivery/open-questions.md) | Decision register and remaining non-blocking questions |
 
 ## Architecture — [`architecture/`](./architecture/)
 

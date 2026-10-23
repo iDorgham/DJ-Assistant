@@ -198,3 +198,17 @@ forces the restore to be transactional.
 **Reverses if:** the DJ wants the file's original comment kept next to the
 own note — that is a second column and a second editor field, not a change of
 this decision.
+
+## D-014 · The approved v1 plan is mirrored under `docs/plan/` (2026-10-23)
+
+The product plan approved on 2026-10-23 is mirrored at `docs/plan/`; it is the
+implementation reference for v1. Its **D-001–D-052** IDs are scoped to that
+tree and are not the same namespace as this repository's agent-memory ledger
+(this entry is the repo's D-014). `docs/product` and `docs/ui/` remain
+authoritative for the canonical product spec and shipped UI tokens; the plan
+is the approved v1 scope and delivery order. A conflict between them is a
+decision to record, not something to resolve by silently mixing both.
+**Why:** the plan had been developed outside the repo, and without a mirrored,
+versioned copy the implementation would have no stable reference.
+**Reverses if:** the plan is superseded, retired, or merged into the canonical
+product documentation.

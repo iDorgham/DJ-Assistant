@@ -16,6 +16,10 @@ not inferable by reading the code.
 - The repo contains **no** Docker, Kubernetes, or AWS/terraform artefacts.
 - `docs/ui/01-DESIGN-SYSTEM.md` is the **authoritative** UI spec — it outranks
   every generic design skill and every design opinion.
+- The approved v1 product plan is mirrored at `docs/plan/` with 52 locked
+  decisions (`D-001–D-052`, scoped to that tree) and a discussion log at
+  `docs/plan/06-delivery/discussions.md`. This is separate from the repository
+  memory ledger's `D-001–D-014`.
 - The skill library this routing layer scores against is **machine-global**: it
   lives outside the repo, a fresh clone has none of it, and nothing in
   build/test/CI depends on it. Its size and location are workstation facts —

@@ -1,7 +1,7 @@
 # DJ Assistant — Project Context
 
 **Document type:** Consolidated application, plan, and progress reference
-**Status:** Living — snapshot as of 2026-10-19 (audit TA.1–TA.14 integrated; T2.1.0 shell + T2.1.2 filters reflected)
+**Status:** Living — snapshot as of 2026-10-23 (approved v1 plan mirrored; Slice 3A protected; audit TA.1–TA.14 integrated; T2.1.0 shell + T2.1.2 filters reflected)
 **Audience:** Engineers, product, AI agents, and anyone who needs the full picture in one place
 **Source of truth:** [`docs/product/CANONICAL_DOCUMENTATION.md`](../product/CANONICAL_DOCUMENTATION.md) (product + technical) and [`docs/sdd/`](../sdd/README.md) (plan, tasks, acceptance). Audit findings live in [`docs/audit/`](../audit/README.md) and are tracked as `TA.x` tasks in [`docs/sdd/04-TASKS.md`](../sdd/04-TASKS.md).
 
@@ -10,6 +10,46 @@
 > built, what the plan is, and exactly how far development has progressed** without
 > first reading two dozen separate documents. Where a topic has a canonical home,
 > this file links to it rather than replacing it.
+
+## 0. Current planning baseline — 2026-10-23
+
+- **The approved v1 plan is mirrored at [`docs/plan/`](../plan/README.md).** It
+  contains 29 documents and 52 locked decisions (`D-001–D-052`). Those IDs are
+  scoped to the plan tree; they are separate from the repository memory ledger
+  (`docs/ai/memory/decisions.md`, D-001–D-014).
+- **Product shape is locked:** six tabs — Library, Playlists, Discover,
+  Statistics, Publish, Settings. Maintain lives inside Library; Set Score lives
+  inside Playlists; Import is a top-bar Import Center; Inbox combines Needs
+  Attention and Updates.
+- **UI/UX rules are locked** in
+  [`docs/plan/05-design-system/ui-ux-guidelines.md`](../plan/05-design-system/ui-ux-guidelines.md):
+  dense but calm, dark-first with a light theme, no dashboard, no fake data,
+  explicit empty/error/loading states, WCAG 2.2 AA, keyboard reachability,
+  reduced motion, and no color-only meaning. The shipped token set remains
+  [`docs/ui/01-DESIGN-SYSTEM.md`](../ui/01-DESIGN-SYSTEM.md).
+- **The data and safety model is locked:** one library in v1, database-first
+  metadata, hybrid tags, numeric energy, watch folders default to Inbox review,
+  quarantine before purge, explicit playlist save, and no silent destructive
+  actions.
+- **Sync and backup are locked:** Pull → Review → Maintain → Push; rekordbox
+  first, Traktor second; Library wins editorial metadata, DJ app wins cues and
+  beat grids; backups include audio; Google Drive is the only v1 cloud target;
+  restore merge is per-field and bulk merge is blocked.
+- **The v1 non-goals** include Lexicon compatibility, synthetic audio, multiple
+  libraries, a dashboard, playlist-scoped statistics, WMA/DRM audio, full USB
+  library export, and scraping music catalogs.
+- **Slice 3A is protected.** Tags and comment editing are code-complete in
+  commit `ec2b191f`, tagged `slice-3a-code-complete`. The tag set is snapshotted
+  transactionally; undo skips a track changed since the snapshot. Automated
+  checks pass; manual running-window QA is still pending, so T2.1.7 and T2.1.13
+  remain unticked.
+- **Next implementation step is Stage 1 — Foundation and shell** in
+  [`docs/plan/06-delivery/implementation-slices.md`](../plan/06-delivery/implementation-slices.md).
+- **Discussion and decision rationale** lives in
+  [`docs/plan/06-delivery/discussions.md`](../plan/06-delivery/discussions.md),
+  including rejected alternatives and non-blocking open items.
+- **The factory repository is a separate workstream** and must not be mixed into
+  DJ Assistant delivery.
 
 ---
 

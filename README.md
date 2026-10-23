@@ -373,7 +373,7 @@ CI workflows `pr-ci`, `main-ci`, `desktop-build`, and `nightly-audit` are active
 
 ## 📚 Documentation
 
-Everything lives under [`docs/`](./docs/README.md). New here? Start with the [Canonical Documentation](./docs/product/CANONICAL_DOCUMENTATION.md) — the single source of truth for product decisions — or the one-file [Project Context](./docs/context/PROJECT_CONTEXT.md) for a fast orientation. Audit findings are tracked as `TA.1–TA.14` in [Tasks](./docs/sdd/04-TASKS.md).
+Everything lives under [`docs/`](./docs/README.md). New here? Start with the [Canonical Documentation](./docs/product/CANONICAL_DOCUMENTATION.md) — the single source of truth for product decisions — or the one-file [Project Context](./docs/context/PROJECT_CONTEXT.md) for a fast orientation. The [approved v1 plan](./docs/plan/README.md) records the locked product shape, UI/UX rules and delivery stages; its discussion log is [here](./docs/plan/06-delivery/discussions.md). Audit findings are tracked as `TA.1–TA.14` in [Tasks](./docs/sdd/04-TASKS.md).
 
 <details>
 <summary><b>Product</b> — spec, brief, glossary, milestone checklist</summary>

@@ -4,6 +4,31 @@ Ephemeral. Newest first. **Rotate aggressively** — if a line would still be tr
 in two weeks, it belongs in [`decisions.md`](./decisions.md); if it is just a
 fact, it belongs in [`facts.md`](./facts.md). Delete anything stale.
 
+## 2026-10-23 · v1 plan mirrored; Slice 3A secured; Stage 1 next
+
+- **The approved v1 plan is now in the repo** at `docs/plan/` (29 files). The
+  discussion log is `docs/plan/06-delivery/discussions.md`; it records the
+  rationale, rejected alternatives, UI/UX rules and open items. Plan decision
+  IDs **D-001–D-052** are scoped to that tree and are separate from this
+  memory ledger.
+- **Slice 3A is protected:** commit `ec2b191f`, annotated tag
+  `slice-3a-code-complete`. The working tree was clean after the commit. The
+  manual running-window QA is still **not executed**, so T2.1.7 and T2.1.13
+  remain unticked.
+- **Checks run before the baseline commit:** `pnpm lint`, `pnpm typecheck`,
+  the desktop `node --test` suite (109 tests), `pnpm rust:fmt`,
+  `pnpm rust:clippy`, and
+  `cargo test -p dj-assistant-core -p dj-assistant-schema-tests` (all passed).
+- **The plan's hierarchy is explicit:** `docs/product` and `docs/ui/` remain
+  authoritative for the canonical product spec and shipped UI tokens;
+  `docs/plan/` is the approved v1 scope and delivery reference. Resolve a
+  conflict as a decision, not by silently mixing both.
+- **Next implementation step is Stage 1 — Foundation and shell** in
+  `docs/plan/06-delivery/implementation-slices.md`. Stage 0 is complete: the
+  current library DB/WAL/SHM was copied to
+  `C:\Users\User\AppData\Local\Temp\opencode\dj-assistant-backups\2026-10-23-slice3a`.
+  Run the Slice 3A manual QA in the Tauri window before marking its tasks done.
+
 ## 2026-10-22 · Slice 3A implemented — tags + comments (T2.1.7, T2.1.13)
 
 - **The slice is code-complete; the QA gate is still open.** Migration 007
