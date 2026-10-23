@@ -49,14 +49,14 @@ Use this as the UI build order and acceptance gate.
 
 ## Phase D — Player
 
-- [ ] PlayerDock Mini / Full / Hidden  
+- [ ] PlayerDock Mini / Full / Hidden + Player view  
 - [ ] **WaveformDetailed** = zoomed viewport that **scrolls/moves** with playhead (not full-track strip)  
 - [ ] **WaveformOverview** = full-track map + zoom-window highlight (distinct from detailed)  
 - [ ] Per-track peak data (never shared waveform for all files)  
 - [ ] Real audio decode/playback per file (no shared metronome/sample)  
 - [ ] Beat grid + high detail on detailed wave  
 - [ ] Playhead seek/scrub RAF-locked to audio  
-- [ ] Transport Play↔Pause, Cue, Stop  
+- [ ] Transport Play↔Pause, Cue, previous/next (no Stop)  
 - [ ] HotCueBank A–H  
 - [ ] GridControls + BeatJumpControls  
 - [ ] Keyboard shortcuts when focused  
@@ -118,7 +118,7 @@ Use this as the UI build order and acceptance gate.
 | Tokens | [01-DESIGN-SYSTEM.md](01-DESIGN-SYSTEM.md) |
 | Shell | [02-SHELL-AND-NAVIGATION.md](02-SHELL-AND-NAVIGATION.md) |
 | Screens | [03](03-LIBRARY-VIEW.md)–[05](05-AUTO-PERFORMANCE-VIEW.md) |
-| Player | [06-PLAYER.md](06-PLAYER.md) |
+| Player | [06-PLAYER.md](06-PLAYER.md) · [06A-PLAYER-PRESENTATIONS.md](06A-PLAYER-PRESENTATIONS.md) |
 | Settings | [07-SETTINGS.md](07-SETTINGS.md) |
 | Patterns | [08-DIALOGS-AND-PATTERNS.md](08-DIALOGS-AND-PATTERNS.md) |
 | Components | [09-COMPONENTS.md](09-COMPONENTS.md) |

@@ -4,6 +4,8 @@
 **Status:** Canonical wireframe reference for implementation  
 **Design system:** [01-DESIGN-SYSTEM.md](01-DESIGN-SYSTEM.md) (Ableton Live 12–inspired)
 
+> **Player layout authority:** [06A-PLAYER-PRESENTATIONS.md](06A-PLAYER-PRESENTATIONS.md) defines Mini, Full and Player view, including the full-player Player view composition. The player sketches below are dock-era sketches; the target removes Stop and adds Player view. Extended was retired on 2026-10-23. Where they conflict, 06A wins.
+
 Desktop-first layouts. The interface is built on the same modular philosophy as **Ableton Live**: every major region is resizable, collapsible, and restorable. Workspaces act as named layout snapshots (Adobe-style presets on top of Ableton-style flexibility).
 
 ---
@@ -27,15 +29,17 @@ Desktop-first layouts. The interface is built on the same modular philosophy as 
 │          │                                            │  Skills /       │
 │          │                                            │  Insights       │
 ├──────────┴────────────────────────────────────────────┴─────────────────┤
-│ PLAYER DOCK  ↑ drag height  Mini | Intermediate | Full | Hidden          │
+│ PLAYER DOCK  ↑ drag height  Mini | Full | Hidden                        │
 └─────────────────────────────────────────────────────────────────────────┘
 ```
+
+Player view is a full-window presentation, not a dock height.
 
 | Region | Min | Default | Max behavior |
 |--------|-----|---------|--------------|
 | Left nav | 48px (icon rail) or 0 (hidden) | 220px | ~320px |
 | Right dock | 0 (collapsed) | 280px when open | ~400px |
-| Player | 0 (hidden) | Mini ~80px / Full ~240px | ~40% of window height |
+| Player | 0 (hidden) | Mini ~104px / Full ~246px (range 230–440px) | ~40% of window height |
 | Main canvas | Remaining space | Grows when docks collapse | Always primary |
 
 **Interactions (non-negotiable)**
@@ -129,7 +133,7 @@ Switching workspace animates pane sizes ≤200ms, then content settles. Users ca
 │ └─────────────────────────────────────────────────────────────────────┘ │
 │ ┌ Overview map ░░░░░▓▓▓visible░░░░░  playhead ───────────────────────┐ │
 │ └─────────────────────────────────────────────────────────────────────┘ │
-│ CUE  ▶/❚❚  ■   [A][B][C][D][E][F][G][H]   Grid · Beat Jump · Zoom Fit │
+│ CUE  ▶/❚❚   [A][B][C][D][E][F][G][H]   Grid · Beat Jump · Zoom Fit      │
 └──────────────────────────────────────────────────────────────────────────┘
 ```
 
@@ -167,18 +171,20 @@ Switching workspace animates pane sizes ≤200ms, then content settles. Users ca
 └──────────────────────────────────────────────────────────────────────────┘
 ```
 
-**Not shown:** dual decks, EQ, crossfader, FX — out of product scope.
+**Not shown:** dual decks, crossfader, FX — out of product scope. EQ8 is a preview equalizer, not a live mixer strip.
 
 ---
 
 ## 5. Player states — wireframe detail
+
+> These are dock-only sketches. The canonical three-presentation layout is [06A](06A-PLAYER-PRESENTATIONS.md); the target removes Stop and adds the full-player Player view composition. Extended was retired on 2026-10-23.
 
 ### Mini
 
 ```
 ┌──────┬────────────────────────────────────────────────────────────┐
 │ art  │ Title · Artist · BPM Key LUFS                               │
-│      │ ▁▂▃▅█playhead▅▃▂▁  1:24/3:48    CUE ▶ ■  [A]…[H]  ↗ Full   │
+│      │ ▁▂▃▅█playhead▅▃▂▁  1:24/3:48    CUE ▶  [A]…[H]  ↗ Full     │
 └──────┴────────────────────────────────────────────────────────────┘
 ```
 
@@ -190,11 +196,11 @@ Switching workspace animates pane sizes ≤200ms, then content settles. Users ca
 ├──────┴────────────────────────────────────────────────────────────┤
 │ DETAILED WAVEFORM (grid · phrases · cues · PLAYHEAD)               │
 │ OVERVIEW MAP (full track · zoom window · PLAYHEAD)                 │
-│ CUE  Play/Pause  Stop   A B C D E F G H   Grid  BeatJump  Zoom    │
-└────────────────────────────────────────────────────────────────────┘
+│ CUE  Play/Pause  A B C D E F G H   Grid  BeatJump  Zoom            │
+└──────┴────────────────────────────────────────────────────────────┘
 ```
 
-Play button icon **toggles to Pause** while playing.
+Play button icon **toggles to Pause** while playing. Target transport has no Stop.
 
 ---
 

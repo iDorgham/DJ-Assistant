@@ -27,6 +27,80 @@ separate from the repository's agent-memory decision ledger
 
 ---
 
+## 2026-10-23 — Extended presentation retired; three player presentations
+
+### Context
+
+The player redesign shipped `PlayerMode = "hidden" | "mini" | "full"`. The
+fourth dock presentation planned earlier, **Extended**, was a taller copy of
+Full whose only unique content was the grid & beat tools row. Keeping it would
+have meant two nearly identical dock compositions, two sets of acceptance
+checks and a dead band of heights between Mini and Full. This supersedes the
+“One player engine, four presentations” line in the 2026-10-23 “v1 plan locked”
+entry; that entry is left intact as history.
+
+### Decision
+
+- The player has **three presentations**: Mini, Full and Player view. Hidden is
+  a visibility state, not a presentation.
+- **Full** owns the grid & beat tools in a **Hot cues ↔ Grid & beat** segmented
+  panel that shares the transport row slot. There is no separate tools row.
+- Dock heights: Mini **96–139px** (default 104), Full **230–440px** (default
+  246). The splitter snaps the unsupported **140–229px** gap to the nearer edge.
+- Hot cues use **one compact 30px letter + timecode pad** in both Mini and Full;
+  the 44px CDJ and 28px letter-only variants are retired.
+- **BPM fine-tune** drives the waveform grid, the bar counter and the beat-jump
+  size together; it resets per track with the grid offset.
+- Legacy persisted `extended` migrates to `full`; no route or preference is
+  discarded.
+- The UI and plan wording (06A, 06-PLAYER, component tables, wireframes,
+  information architecture, diagrams, slice scope) was reconciled to the
+  three-presentation model in the same change.
+
+### Alternatives rejected
+
+- **Keep Extended as a height threshold (≥380px).** Rejected: the extra height
+  would show the same Full composition plus one tools row, so it buys no
+  workflow and forces a third layout to test.
+- **Keep Extended in the docs but not in code.** Rejected: documentation that
+  describes an unreachable presentation is a dead route by another name.
+- **Keep CDJ-scale 44px hot cues in Full.** Rejected: the wider pads consumed
+  the transport row, and the compact 30px pad stays readable and preserves
+  room for the segmented panel.
+- **Put the grid tools in their own row inside Full.** Rejected: that recreates
+  Extended's composition inside Full and makes the dock taller by default.
+- **Keep 28px letter-only pads in Mini.** Rejected: one pad component and one
+  visual language is simpler, and the timecode is useful while preparing.
+
+### Consequences
+
+- `PlayerMode` no longer has an `extended` value; the UI, state persistence and
+  splitter math agree on three states.
+- Player view remains the window-scale presentation and is still unimplemented;
+  it is Stage 4 work, not a dock height.
+- The playlist/track rail/EQ8/loops once sketched for Extended are explicitly
+  Player view and later work.
+- Manual running-window QA for the new heights, the gap snap and the segmented
+  panel is still required; automated tests cover the pure resolver and the
+  waveform helpers only.
+
+### Open items
+
+- Run the native acceptance pass for Mini/Full heights, the hot-cue ↔ grid
+  switch and BPM fine-tune.
+- Implement Player view in Stage 4.
+- Keep the Visualizer panel target-only; it is unrelated to the dock shape.
+
+### Verification for this entry
+
+- `pnpm --filter @dj-assistant/desktop test` — 126 pass.
+- `pnpm --filter @dj-assistant/desktop typecheck` — clean.
+- No remaining `Extended` presentation references in active `docs/ui/` or
+  `docs/plan/` files (dated archives and unrelated “Extended Mix” copy
+  excluded).
+
+---
+
 ## 2026-10-23 — Stage 1 shell implemented
 
 ### Context

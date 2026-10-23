@@ -17,15 +17,16 @@ export interface WaveformData {
   trackId: string;
   durationMs: number;
   bpm: number;
-  peaks: Float32Array; // Normalized amplitude 0.0 - 1.0 (length e.g. 1200)
+  peaks: Float32Array; // Normalized amplitude 0.0 - 1.0 (16,000 points)
   lowPeaks: Float32Array; // Bass/kick energy
   midPeaks: Float32Array; // Lead/synth/vocal energy
   highPeaks: Float32Array; // Hi-hats/cymbals/air
   phrases: PhraseRegion[];
   /**
    * True while peaks are synthesized locally (PRNG) instead of decoded from
-   * the audio file. UI MUST mark estimated waveforms visibly — docs/ui/06
-   * forbids rendering fabricated analysis data as if it were real.
+   * the audio file. The UI discloses this in the Play tooltip and the
+   * waveform's accessible description — docs/ui/06 forbids presenting
+   * fabricated analysis data as if it were decoded.
    */
   isEstimated: boolean;
 }
@@ -77,7 +78,10 @@ export function getOrGenerateWaveform(
   const cached = waveformCache.get(cacheKey);
   if (cached) return cached;
 
-  const pointCount = 1200;
+  // High resolution so the 8× (and 16×) detailed waveform resolves individual
+  // transients instead of drawing 6px blocks. Four Float32 arrays cost ~256 KB
+  // per cached track — acceptable for the bounded preview cache.
+  const pointCount = 16000;
   const peaks = new Float32Array(pointCount);
   const lowPeaks = new Float32Array(pointCount);
   const midPeaks = new Float32Array(pointCount);
@@ -188,17 +192,87 @@ export function formatTimecode(ms: number, includeFraction = false): string {
 }
 
 /**
- * Calculates current bar and beat from position and BPM.
- * Example: Bar 17.2
+ * Current 4/4 bar, beat and phase for the waveform beat counter.
+ * Positions before the grid offset clamp to the first beat.
  */
-export function formatBarBeat(positionMs: number, bpm: number, offsetMs: number = 0): string {
+export interface BeatPosition {
+  bar: number;
+  beat: number;
+  /** Zero-based beat count for grid-line maths. */
+  beatIndex: number;
+  /** 0–1 progress through the current beat. */
+  phase: number;
+}
+
+export function getBeatPosition(
+  positionMs: number,
+  bpm: number,
+  offsetMs: number = 0
+): BeatPosition {
   const safeBpm = bpm > 40 ? bpm : 124;
   const beatMs = (60 / safeBpm) * 1000;
   const adjMs = Math.max(0, positionMs - offsetMs);
   const totalBeats = adjMs / beatMs;
-  const bar = Math.floor(totalBeats / 4) + 1;
-  const beat = Math.floor(totalBeats % 4) + 1;
+  const beatIndex = Math.floor(totalBeats);
+  return {
+    bar: Math.floor(beatIndex / 4) + 1,
+    beat: (beatIndex % 4) + 1,
+    beatIndex,
+    phase: totalBeats - beatIndex,
+  };
+}
+
+/**
+ * Calculates current bar and beat from position and BPM.
+ * Example: Bar 17.2
+ */
+export function formatBarBeat(positionMs: number, bpm: number, offsetMs: number = 0): string {
+  const { bar, beat } = getBeatPosition(positionMs, bpm, offsetMs);
   return `Bar ${bar}.${beat}`;
+}
+
+export type SnapMode = "off" | "beat" | "bar";
+
+export const MIN_ZOOM_LEVEL = 1;
+export const MAX_ZOOM_LEVEL = 16;
+/** Traktor-style parallel view opens zoomed rather than fitted. */
+export const DEFAULT_ZOOM_LEVEL = 8;
+
+export function clampZoomLevel(zoomLevel: number): number {
+  if (Number.isNaN(zoomLevel)) return MIN_ZOOM_LEVEL;
+  return Math.max(MIN_ZOOM_LEVEL, Math.min(zoomLevel, MAX_ZOOM_LEVEL));
+}
+
+/**
+ * Start of the visible window for the centred reading head: the playhead sits
+ * on the centre line, so blank space can appear before the track start. Fit
+ * (1×) shows the whole track from zero instead.
+ */
+export function getFollowViewOffset(
+  positionMs: number,
+  durationMs: number,
+  zoomLevel: number
+): number {
+  if (zoomLevel <= 1.05) return 0;
+  const safeDuration = Math.max(durationMs || 180000, 1000);
+  return positionMs - safeDuration / Math.max(1, zoomLevel) / 2;
+}
+
+/** Rounds a seek/scrub target to the nearest beat or bar of the current grid. */
+export function snapToGrid(
+  targetMs: number,
+  bpm: number,
+  gridOffsetMs: number,
+  snapMode: SnapMode,
+  durationMs: number
+): number {
+  const safeDuration = Math.max(durationMs || 0, 0);
+  const clampedTarget = Math.max(0, Math.min(targetMs, safeDuration));
+  if (snapMode === "off" || bpm <= 0) return clampedTarget;
+  const beatMs = (60 / bpm) * 1000;
+  const stepMs = snapMode === "bar" ? beatMs * 4 : beatMs;
+  const snapped = Math.round((clampedTarget - gridOffsetMs) / stepMs) * stepMs + gridOffsetMs;
+  return Math.max(0, Math.min(snapped, safeDuration));
 }
 
 /**

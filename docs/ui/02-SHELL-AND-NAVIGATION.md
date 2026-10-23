@@ -48,7 +48,7 @@
 ### View
 - Library / Preparation / Auto Performance  
 - Toggle left nav · inspector · player  
-- Mini / Full player  
+- Mini / Full player + Player view  
 - Density: Compact / Comfortable  
 - Theme: Dark / Light / System  
 - Workspaces → Library · Prepare · Validate · Save… · Reset  

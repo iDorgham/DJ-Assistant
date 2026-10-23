@@ -1,8 +1,8 @@
 # DJ Assistant — UI/UX Documentation
 
-**Version:** 1.3  
+**Version:** 1.4  
 **Status:** Canonical for design & implementation  
-**Date:** 2026-10-19  
+**Date:** 2026-10-23  
 **Design language:** Adobe precision × Ableton flexibility × 2026 pro desktop  
 
 **Related:** Master narrative [`../UI_UX_PLAYER_AND_LAYOUT_SPEC.md`](../UI_UX_PLAYER_AND_LAYOUT_SPEC.md) (v1.9+) — Library tabs, Mix Suggestions, per-view menus, Traktor-style dual waveform, 5-star rating, key 1A–12B / 1m·1d
@@ -30,7 +30,8 @@
 | [03-LIBRARY-VIEW.md](03-LIBRARY-VIEW.md) | Table, search, filters, columns, harmonic keys |
 | [04-PREPARATION-VIEW.md](04-PREPARATION-VIEW.md) | Sets, Skills, sequencing, export, Gig Ready |
 | [05-AUTO-PERFORMANCE-VIEW.md](05-AUTO-PERFORMANCE-VIEW.md) | Auto queue, insights (validation only) |
-| [06-PLAYER.md](06-PLAYER.md) | Mini/Full, waveform, playhead, cues, grid |
+| [06-PLAYER.md](06-PLAYER.md) | Functional player reference: transport, waveform, cues, grid |
+| [06A-PLAYER-PRESENTATIONS.md](06A-PLAYER-PRESENTATIONS.md) | **Three presentations, full-player Player view, EQ8 drawer, playlist, bar counter** |
 | [07-SETTINGS.md](07-SETTINGS.md) | Settings categories |
 | [08-DIALOGS-AND-PATTERNS.md](08-DIALOGS-AND-PATTERNS.md) | Modals, toasts, palette, empty/error |
 | [09-COMPONENTS.md](09-COMPONENTS.md) | Component inventory + icons |
@@ -49,7 +50,7 @@
 [ Auto Performance ]  → auto-play set in order to validate flow
 ```
 
-Shared shell: menus · header · options bar · left nav · **flexible docks** · player Mini/Full.
+Shared shell: menus · header · options bar · left nav · **flexible docks** · player Mini/Full + Player view.
 
 ---
 

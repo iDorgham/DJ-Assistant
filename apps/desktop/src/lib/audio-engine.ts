@@ -132,6 +132,12 @@ class PreviewAudioEngine {
     this.notify();
   }
 
+  /** Live tempo calibration: beat jump and the synthesised preview follow it. */
+  public setBpm(bpm: number) {
+    this.bpm = bpm > 40 && bpm < 240 ? bpm : 124;
+    this.currentBeatIndex = Math.floor(this.positionMs / 1000 / (60 / this.bpm));
+  }
+
   public jumpBeats(beats: number) {
     const beatMs = (60 / this.bpm) * 1000;
     const deltaMs = beats * beatMs;

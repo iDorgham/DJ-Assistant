@@ -1,43 +1,38 @@
-import { Play, Pause, Square, Volume2, VolumeX } from "lucide-react";
+import { Play, Pause, Volume2, VolumeX } from "lucide-react";
 
-interface TransportSectionProps {
+interface TransportCoreProps {
   isPlaying: boolean;
   onPlayPause: () => void;
-  onStop: () => void;
   onCue: () => void;
   cueActive?: boolean;
-  volume: number;
-  isMuted: boolean;
-  onVolumeChange: (vol: number) => void;
-  onToggleMute: () => void;
   compact?: boolean;
 }
 
-export function TransportSection({
+/**
+ * CUE + Play/Pause. Leads the transport row, immediately right of the artwork
+ * and left of the volume group. There is no Stop button — pause is the
+ * stop-like action (docs/plan/03-player/player-model-and-layouts.md §7).
+ */
+export function TransportCore({
   isPlaying,
   onPlayPause,
-  onStop,
   onCue,
   cueActive = false,
-  volume,
-  isMuted,
-  onVolumeChange,
-  onToggleMute,
   compact = false,
-}: TransportSectionProps) {
+}: TransportCoreProps) {
   return (
-    <div className="flex items-center gap-1.5 shrink-0" role="toolbar" aria-label="Audio transport">
+    <div className="flex shrink-0 items-center gap-1.5" role="toolbar" aria-label="Audio transport">
       {/* CUE Button */}
       <button
         type="button"
         onClick={onCue}
         title="CUE: Set temporary cue when paused / return to cue when playing (C)"
-        className={`rounded px-2.5 font-mono font-bold text-xs flex items-center transition select-none ${
+        className={`flex select-none items-center rounded px-2.5 font-mono text-xs font-bold transition ${
           compact ? "h-7" : "h-8"
         } ${
           cueActive
             ? "bg-dj-cue text-white shadow-sm shadow-dj-cue/30"
-            : "bg-dj-elevated border border-dj-border text-dj-text hover:bg-dj-hover hover:border-dj-border-strong active:bg-dj-cue/20"
+            : "border border-dj-border bg-dj-elevated text-dj-text hover:border-dj-border-strong hover:bg-dj-hover active:bg-dj-cue/20"
         }`}
       >
         <span>CUE</span>
@@ -53,64 +48,70 @@ export function TransportSection({
             : "Play preview — synthesized timing beat; decoding the real audio file is not implemented yet (Space)"
         }
         aria-label={isPlaying ? "Pause" : "Play"}
-        className={`rounded px-3 flex items-center justify-center transition select-none ${
+        className={`flex select-none items-center justify-center rounded px-3 transition ${
           compact ? "h-7 min-w-[34px]" : "h-8 min-w-[40px]"
         } ${
           isPlaying
             ? "bg-dj-accent text-dj-on-accent shadow-md shadow-dj-accent/25 hover:bg-dj-accent-strong"
-            : "bg-dj-elevated border border-dj-border text-dj-text hover:bg-dj-hover hover:border-dj-border-strong hover:text-dj-accent"
+            : "border border-dj-border bg-dj-elevated text-dj-text hover:border-dj-border-strong hover:bg-dj-hover hover:text-dj-accent"
         }`}
       >
         {isPlaying ? (
           <Pause className="h-4 w-4 fill-current" />
         ) : (
-          <Play className="h-4 w-4 fill-current ml-0.5" />
+          <Play className="ml-0.5 h-4 w-4 fill-current" />
+        )}
+      </button>
+    </div>
+  );
+}
+
+interface VolumeControlProps {
+  volume: number;
+  isMuted: boolean;
+  onVolumeChange: (vol: number) => void;
+  onToggleMute: () => void;
+  /** Mini keeps the mute toggle only; the fader lives in Full. */
+  compact?: boolean;
+}
+
+export function VolumeControl({
+  volume,
+  isMuted,
+  onVolumeChange,
+  onToggleMute,
+  compact = false,
+}: VolumeControlProps) {
+  return (
+    <div className="flex shrink-0 items-center gap-1 border-l border-dj-border pl-2">
+      <button
+        type="button"
+        onClick={onToggleMute}
+        title={isMuted ? "Unmute preview" : "Mute preview"}
+        aria-label={isMuted ? "Unmute preview" : "Mute preview"}
+        aria-pressed={isMuted}
+        className="rounded p-1 text-dj-text-secondary transition hover:text-dj-text"
+      >
+        {isMuted || volume === 0 ? (
+          <VolumeX className="h-3.5 w-3.5 text-dj-danger" />
+        ) : (
+          <Volume2 className="h-3.5 w-3.5" />
         )}
       </button>
 
-      {/* Stop Button (docs/ui/06 §5 Transport) */}
-      <button
-        type="button"
-        onClick={onStop}
-        title="Stop and return to cue"
-        aria-label="Stop"
-        className={`rounded p-1.5 bg-dj-elevated border border-dj-border text-dj-text-secondary hover:text-dj-text hover:bg-dj-hover transition select-none ${
-          compact ? "h-7 w-7" : "h-8 w-8"
-        } flex items-center justify-center`}
-      >
-        <Square className="h-3.5 w-3.5 fill-current" />
-      </button>
-
-      {/* Volume Control (Compact Horizontal Fader) */}
       {!compact && (
-        <div className="flex items-center gap-1 ml-2 border-l border-dj-border pl-2 group">
-          <button
-            type="button"
-            onClick={onToggleMute}
-            title={isMuted ? "Unmute preview" : "Mute preview"}
-            aria-label={isMuted ? "Unmute preview" : "Mute preview"}
-            aria-pressed={isMuted}
-            className="rounded p-1 text-dj-text-secondary hover:text-dj-text transition"
-          >
-            {isMuted || volume === 0 ? (
-              <VolumeX className="h-3.5 w-3.5 text-dj-danger" />
-            ) : (
-              <Volume2 className="h-3.5 w-3.5" />
-            )}
-          </button>
-          <input
-            type="range"
-            min={0}
-            max={1}
-            step={0.01}
-            value={volume}
-            onChange={(e) => onVolumeChange(Number(e.target.value))}
-            title={`Preview Volume: ${Math.round(volume * 100)}%${isMuted ? " (muted)" : ""}`}
-            aria-label="Preview volume"
-            aria-valuetext={`${Math.round(volume * 100)} percent${isMuted ? ", muted" : ""}`}
-            className="w-14 h-1 bg-dj-border rounded-lg appearance-none cursor-pointer accent-dj-accent"
-          />
-        </div>
+        <input
+          type="range"
+          min={0}
+          max={1}
+          step={0.01}
+          value={volume}
+          onChange={(e) => onVolumeChange(Number(e.target.value))}
+          title={`Preview Volume: ${Math.round(volume * 100)}%${isMuted ? " (muted)" : ""}`}
+          aria-label="Preview volume"
+          aria-valuetext={`${Math.round(volume * 100)} percent${isMuted ? ", muted" : ""}`}
+          className="h-1 w-14 cursor-pointer appearance-none rounded-lg bg-dj-border accent-dj-accent"
+        />
       )}
     </div>
   );

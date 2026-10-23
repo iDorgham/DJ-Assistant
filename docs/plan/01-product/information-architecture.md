@@ -16,7 +16,7 @@ Status: Locked
 │ Publish      │                                               │
 │ Settings     │                                               │
 ├──────────────┴───────────────────────────────────────────────┤
-│ Player dock: Mini / Full / Extended / Player view            │
+│ Player dock: Mini / Full / Player view                       │
 └──────────────────────────────────────────────────────────────┘
 ```
 
@@ -155,7 +155,7 @@ Sections:
 
 ### Player dock
 
-- One engine, four presentations.
+- One engine, three presentations.
 - Persistent across tabs.
 - Can be collapsed.
 - Player view is a presentation, not a separate audio engine.

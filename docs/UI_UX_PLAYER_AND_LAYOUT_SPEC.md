@@ -506,7 +506,7 @@ Single row: `[ A ] [ B ] [ C ] [ D ] [ E ] [ F ] [ G ] [ H ]`
 Equal width, times when set, empty = letter + dashed border.  
 Clicking a set cue moves the **playhead** to that position (and optionally starts playback).
 
-**Extended controls (mainly Preparation / Full)**
+**Grid & beat controls (Full panel)**
 
 Transport · Hot cues · Grid (snap, nudge, BPM fine) · Beat jump · Zoom / Fit  
 Beat jump moves the **playhead** by N beats; grid nudge updates grid lines on the waveform immediately.

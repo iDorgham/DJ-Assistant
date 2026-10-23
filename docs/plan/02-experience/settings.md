@@ -102,7 +102,7 @@ The default applies to new watch folders. A trusted folder can opt into auto-imp
 
 ## 5. Player
 
-- Default presentation: Mini / Full / Extended / Player view.
+- Default presentation: Mini / Full / Player view.
 - Open playlist in Player view on wide screens.
 - Waveform style.
 - Beat grid display.

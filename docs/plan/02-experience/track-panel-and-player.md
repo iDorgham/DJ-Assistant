@@ -130,13 +130,12 @@ Track panel
 
 ## 4. Player dock
 
-One engine, four presentations:
+One engine, three presentations:
 
 | Presentation | Use |
 |---|---|
 | **Mini** | Persistent compact dock |
-| **Full** | Expanded dock with EQ8 and cues |
-| **Extended** | Large preparation view |
+| **Full** | Expanded dock with EQ8, cues and the grid & beat panel |
 | **Player view** | Performance-style view; playlist by default on wide screens |
 
 Rules:

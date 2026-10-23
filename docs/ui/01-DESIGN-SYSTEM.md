@@ -232,7 +232,7 @@ Contrast rules: WCAG AA for text. Playhead and cue markers must remain clearly v
 These are non-negotiable implementation rules:
 
 1. **Every major region is resizable** by dragging splitters (left nav, right dock, player height).
-2. **Every major region is collapsible** (left nav → icon rail or hidden, right dock → hidden, player → Mini / Full / Hidden).
+2. **Every major region is collapsible** (left nav → icon rail or hidden, right dock → hidden, player dock → Mini / Full / Hidden; Player view is a full-window presentation).
 3. **Double-click a splitter** resets that pane to its default size for the current workspace.
 4. **Workspaces** remember exact sizes + collapsed state per view (Library / Preparation / Auto Performance + user Custom).
 5. Layout changes animate ≤200ms; content must never jump after the animation.

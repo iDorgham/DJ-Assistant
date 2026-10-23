@@ -27,7 +27,7 @@ DJ Assistant is **library-first**, not dashboard-first.
 - Import is a top-bar Import Center, not a permanent tab.
 - The Inbox combines Needs Attention and Updates.
 - Discover, Statistics, Publish and Settings are top-level tabs.
-- The player is one engine with four presentations: Mini, Full, Extended and Player view.
+- The player is one engine with three presentations: Mini, Full and Player view.
 
 There is no separate dashboard, notification center, attention center or maintenance tab.
 
@@ -59,7 +59,7 @@ There is no separate dashboard, notification center, attention center or mainten
 │ Publish      │                                               │
 │ Settings     │                                               │
 ├──────────────┴───────────────────────────────────────────────┤
-│ Player dock: Mini / Full / Extended / Player view            │
+│ Player dock: Mini / Full / Player view                       │
 └──────────────────────────────────────────────────────────────┘
 ```
 
@@ -238,7 +238,7 @@ dj-assistant/
 
 1. `01-product` — why the app exists, final IA, vocabulary, first run.
 2. `02-experience` — every tab and workspace, including Maintain, Discover, Statistics, Publish and Settings.
-3. `03-player` — one engine, four presentations, EQ8, Traktor-style cues, playlist save/recovery.
+3. `03-player` — one engine, three presentations, EQ8, Traktor-style cues, playlist save/recovery.
 4. `04-data-and-sync` — import, data model, sync, backup and restore.
 5. `05-design-system` — visual rules, states, accessibility and copy.
 6. `06-delivery` — build order, acceptance tests and open questions.
