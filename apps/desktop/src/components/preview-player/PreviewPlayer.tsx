@@ -44,6 +44,11 @@ export interface PreviewPlayerProps {
 
 const STORAGE_CUES_PREFIX = "dj-assistant.hot-cues.v1:";
 
+/**
+ * Renders the resizable Mini or Full preview dock with transport, waveform, and cue controls.
+ * Loads track changes into the shared preview engine; the optional inspect action passes
+ * the loaded track and its trigger button to the caller.
+ */
 export function PreviewPlayer({
   mode,
   track,

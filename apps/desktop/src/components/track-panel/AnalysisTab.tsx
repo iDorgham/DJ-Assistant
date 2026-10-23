@@ -12,11 +12,13 @@ const STATUS_LABEL: Record<AnalysisStatus, string> = {
   needs_review: "Needs review",
 };
 
+/** Shows stored analysis values and offers a forced re-analysis of this track. */
 export function AnalysisTab({ track }: { track: TrackDetail }) {
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [failed, setFailed] = useState(false);
 
+  /** Queues forced analysis and shows the queue result or a caught request failure. */
   const reanalyze = async () => {
     setBusy(true);
     setFailed(false);
@@ -95,6 +97,7 @@ export function AnalysisTab({ track }: { track: TrackDetail }) {
   );
 }
 
+/** Displays a labeled value, trimming whitespace and using "—" for missing or blank text. */
 function Fact({
   label,
   value,

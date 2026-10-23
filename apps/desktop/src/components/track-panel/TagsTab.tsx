@@ -13,6 +13,10 @@ interface TagsTabProps {
   onSelectTag?: (tag: string) => void;
 }
 
+/**
+ * Shows tags and metadata, delegating edits and tag selection to the supplied callbacks.
+ * Rating callbacks receive 1–5 and energy callbacks 1–10, or null when cleared.
+ */
 export function TagsTab({ track, onEditMetadata, onRate, onSetEnergy, onSelectTag }: TagsTabProps) {
   return (
     <div className="space-y-5">
@@ -72,6 +76,7 @@ export function TagsTab({ track, onEditMetadata, onRate, onSetEnergy, onSelectTa
   );
 }
 
+/** Shows trimmed metadata or "—", optionally preserving line breaks instead of truncating. */
 function Row({
   label,
   value,

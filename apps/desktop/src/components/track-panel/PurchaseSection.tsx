@@ -54,6 +54,7 @@ export function PurchaseSection({ track }: { track: TrackSummary }) {
     };
   }, []);
 
+  /** Copies a URL with a two-second confirmation, showing an error if clipboard access fails. */
   const copyUrl = async (url: string) => {
     try {
       await navigator.clipboard.writeText(url);
@@ -67,6 +68,7 @@ export function PurchaseSection({ track }: { track: TrackSummary }) {
     }
   };
 
+  /** Looks up this track on Deezer without library writes; caught failures show a retry action. */
   const runMatch = async () => {
     setMatchLoading(true);
     setMatchError(false);

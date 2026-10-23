@@ -1124,6 +1124,10 @@ export default function App() {
   // One panel everywhere: a row click, Enter, or the player's info control
   // opens the same inspector. Inspecting never touches playback — `playingTrack`
   // belongs to the dock and only the panel footer or a row double-click sets it.
+  /**
+   * Inspects a track without changing playback. A supplied trigger replaces the focus-return
+   * target; omitting it preserves the previous target when navigating between related tracks.
+   */
   const openTrackPanel = (track: TrackSummary, trigger?: HTMLElement | null) => {
     if (trigger) panelTriggerRef.current = trigger;
     setInspectedTrack(track);
@@ -1131,12 +1135,14 @@ export default function App() {
 
   // Closing hands the focus back to the control that opened the panel, so the
   // keyboard user lands where they left off instead of at the top of the page.
+  /** Closes an open panel and focuses its remembered trigger; does nothing if already closed. */
   const closeTrackPanel = useCallback(() => {
     if (!panelOpenRef.current) return;
     setInspectedTrack(null);
     panelTriggerRef.current?.focus();
   }, []);
 
+  /** Sets the player track, revealing the Mini dock if the player is hidden. */
   const handlePlayTrack = (track: TrackSummary) => {
     setPlayingTrack(track);
     if (ui.playerMode === "hidden") {
@@ -1291,6 +1297,11 @@ export default function App() {
     }
   };
 
+  /**
+   * Loads Beatport chart entries using the current genre, chart, and matching preference by default.
+   * When useInspected is true and a panel track exists, uses it as the taste-matching seed.
+   * Caught request failures clear the entries and show a chart error.
+   */
   const loadCharts = async (
     genre: string = chartGenre,
     chart: string = chartKind,
@@ -1628,6 +1639,7 @@ export default function App() {
     setContextMenu({ track, x: event.clientX, y: event.clientY });
   };
 
+  /** Opens the editor with a track snapshot, including tracks outside the current library page. */
   const openMetadataEditor = (track: TrackSummary) => {
     setEditorTrack(track);
   };
@@ -1635,6 +1647,11 @@ export default function App() {
   // The editor saves through the same write path as the rating and the energy
   // level, so it inherits the same "nothing changed" rule and the same Undo
   // toast — including the undo of a whole tag set.
+  /**
+   * Saves editor values to the selection if it contains the editor track, or to that track alone.
+   * Does nothing without an editor track; otherwise closes the editor before saving, refreshes
+   * the library on success, and offers Undo for changed values. Caught failures show an error status.
+   */
   const handleSaveMetadata = async (values: MetadataEditorValues) => {
     // The editor holds its own snapshot: the panel can open a track that is not
     // on the current page (a player track, a related track), so resolving the id
@@ -1667,6 +1684,11 @@ export default function App() {
   // anchor. Inspecting and multi-selecting stay separate on purpose — the panel
   // must never depend on how the row was selected. A double-click loads the
   // player; it never closes the panel the first click opened.
+  /**
+   * Inspects the clicked row and updates selection: Ctrl/Cmd toggles, Shift selects an inclusive
+   * range, and a plain click replaces it. index is the row position in filteredTracks; a missing
+   * Shift anchor falls back to selecting only this track. Records the row for focus return.
+   */
   const handleRowClick = (
     event: ReactMouseEvent<HTMLTableRowElement>,
     track: TrackSummary,

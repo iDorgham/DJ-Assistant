@@ -27,10 +27,12 @@ export const DEFAULT_TRACK_PANEL_TAB: TrackPanelTab = "overview";
 /** The panel remembers one tab per user, not one per track. */
 export const TRACK_PANEL_TAB_STORAGE_KEY = "dj-assistant.track-panel.v1";
 
+/** Reports whether the value is one of the supported panel tab IDs. */
 export function isTrackPanelTab(value: unknown): value is TrackPanelTab {
   return TRACK_PANEL_TABS.some((tab) => tab.id === value);
 }
 
+/** Returns local storage, or undefined when it is unavailable or access is blocked. */
 function defaultStorage(): StorageLike | undefined {
   try {
     return typeof localStorage === "undefined" ? undefined : localStorage;
@@ -39,6 +41,10 @@ function defaultStorage(): StorageLike | undefined {
   }
 }
 
+/**
+ * Reads the remembered tab from the supplied storage, defaulting to local storage.
+ * Returns Overview for a missing or unrecognized value, unavailable storage, or a read error.
+ */
 export function readTrackPanelTab(storage?: StorageLike): TrackPanelTab {
   const store = storage ?? defaultStorage();
   if (!store) return DEFAULT_TRACK_PANEL_TAB;
@@ -50,6 +56,10 @@ export function readTrackPanelTab(storage?: StorageLike): TrackPanelTab {
   }
 }
 
+/**
+ * Saves the shared tab preference to the supplied storage, defaulting to local storage.
+ * Unavailable storage and write errors are ignored.
+ */
 export function persistTrackPanelTab(tab: TrackPanelTab, storage?: StorageLike): void {
   const store = storage ?? defaultStorage();
   if (!store) return;
@@ -74,7 +84,10 @@ export function movePanelTab(current: TrackPanelTab, key: PanelTabKey): TrackPan
 
 const FILE_UNITS = ["B", "KB", "MB", "GB", "TB"] as const;
 
-/** Byte counts scale by 1024; a decimal below the byte unit is noise. */
+/**
+ * Formats bytes in 1024-based units up to TB, rounding bytes to an integer and larger
+ * units to at most one decimal place. Returns "—" for missing, non-finite, or negative values.
+ */
 export function formatFileSize(bytes: number | null | undefined): string {
   if (bytes == null || !Number.isFinite(bytes) || bytes < 0) return "—";
   if (bytes === 0) return "0 B";
@@ -88,7 +101,10 @@ export function formatFileSize(bytes: number | null | undefined): string {
   return `${shown} ${FILE_UNITS[unit]}`;
 }
 
-/** Sample rates are stored in Hz and read best in kHz. */
+/**
+ * Formats Hz as kHz, using one decimal place unless the converted value is an integer.
+ * Returns "—" for missing, non-finite, or nonpositive values.
+ */
 export function formatSampleRate(hz: number | null | undefined): string {
   if (hz == null || !Number.isFinite(hz) || hz <= 0) return "—";
   const khz = hz / 1000;
@@ -101,11 +117,15 @@ const CUE_TYPE_LABELS: Record<CuePoint["cueType"], string> = {
   loop: "Loop",
 };
 
+/** Returns a display label for a known cue type, otherwise the supplied value. */
 export function formatCueType(type: CuePoint["cueType"]): string {
   return CUE_TYPE_LABELS[type] ?? type;
 }
 
-/** Cue positions need millisecond precision, unlike track durations. */
+/**
+ * Formats milliseconds as m:ss.SSS, truncating fractional milliseconds and allowing minutes
+ * beyond 59. Returns "—" for missing, non-finite, or negative values.
+ */
 export function formatCueTime(ms: number | null | undefined): string {
   if (ms == null || !Number.isFinite(ms) || ms < 0) return "—";
   const totalSeconds = Math.floor(ms / 1000);
@@ -123,6 +143,7 @@ export function cueTitle(cue: CuePoint): string {
   return cue.slot != null ? `${type} ${cue.slot}` : type;
 }
 
+/** Trims and uppercases the stored format, returning "—" for missing or blank values. */
 export function fileFormatLabel(format: string | null | undefined): string {
   const value = format?.trim();
   return value ? value.toUpperCase() : "—";

@@ -53,6 +53,11 @@ interface TrackPanelProps {
   onSelectTag?: (tag: string) => void;
 }
 
+/**
+ * Shows details for the inspected track, reloading when its ID or refreshToken changes.
+ * Remembers the active tab and focuses it on mount; detail read failures show a retry action.
+ * Escape delegates closing to onClose, and playback and edits use the supplied callbacks.
+ */
 export function TrackPanel({
   track,
   refreshToken,
@@ -106,11 +111,13 @@ export function TrackPanel({
   const summary = activeDetail ?? track;
   const status = STATUS_META[summary.analysisStatus];
 
+  /** Activates a tab and moves keyboard focus to its button. */
   const selectTab = (next: TrackPanelTab) => {
     setTab(next);
     tabRefs.current[next]?.focus();
   };
 
+  /** Handles wrapping arrow navigation and Home/End selection; leaves other keys untouched. */
   const onTabKeyDown = (event: ReactKeyboardEvent<HTMLButtonElement>, id: TrackPanelTab) => {
     if (
       event.key !== "ArrowLeft" &&
@@ -124,6 +131,7 @@ export function TrackPanel({
     selectTab(movePanelTab(id, event.key as PanelTabKey));
   };
 
+  /** Closes on Escape and stops it from reaching the window handler that closes other layers. */
   const onPanelKeyDown = (event: ReactKeyboardEvent<HTMLElement>) => {
     if (event.key !== "Escape") return;
     // The panel owns Escape while focus is inside it; the window-level handler
@@ -315,6 +323,7 @@ export function TrackPanel({
   );
 }
 
+/** Shows a placeholder for an unavailable panel section, with an optional icon. */
 function EmptyTab({
   icon: Icon,
   title,

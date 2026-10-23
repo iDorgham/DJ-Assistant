@@ -21,6 +21,11 @@ interface OverviewTabProps {
   onSelectTag?: (tag: string) => void;
 }
 
+/**
+ * Shows track metadata, tag gaps, purchase links, and up to eight similar library tracks.
+ * Similar-track failures offer a retry; tag-health failures leave the gap list empty.
+ * Selecting a similar track delegates to onSelectTrack.
+ */
 export function OverviewTab({
   track,
   onEditMetadata,
@@ -189,6 +194,7 @@ export function OverviewTab({
   );
 }
 
+/** Displays a labeled value, trimming whitespace and using "—" for missing or blank text. */
 function Fact({
   label,
   value,

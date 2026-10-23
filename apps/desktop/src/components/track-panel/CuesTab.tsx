@@ -3,6 +3,7 @@ import { Flag } from "lucide-react";
 
 import { cueTitle, formatCueTime, formatCueType } from "../../lib/track-panel";
 
+/** Lists stored cues in the supplied order without editing or seeking; shows an empty state if none. */
 export function CuesTab({ cues }: { cues: CuePoint[] }) {
   if (cues.length === 0) {
     return (

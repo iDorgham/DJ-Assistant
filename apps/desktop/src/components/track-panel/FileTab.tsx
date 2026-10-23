@@ -4,6 +4,7 @@ import { Check, Copy } from "lucide-react";
 
 import { fileFormatLabel, formatFileSize, formatSampleRate } from "../../lib/track-panel";
 
+/** Shows stored file properties and offers copying the file path to the clipboard. */
 export function FileTab({ track }: { track: TrackDetail }) {
   const [copied, setCopied] = useState(false);
   const [copyError, setCopyError] = useState(false);
@@ -15,6 +16,7 @@ export function FileTab({ track }: { track: TrackDetail }) {
     };
   }, []);
 
+  /** Copies the path with a two-second confirmation, showing an error if clipboard access fails. */
   const copyPath = async () => {
     try {
       await navigator.clipboard.writeText(track.filePath);
@@ -72,12 +74,14 @@ export function FileTab({ track }: { track: TrackDetail }) {
   );
 }
 
+/** Formats a date string in the local locale and time zone, or "—" if absent or invalid. */
 function formatTimestamp(value: string | null | undefined): string {
   if (!value) return "—";
   const date = new Date(value);
   return Number.isNaN(date.getTime()) ? "—" : date.toLocaleString();
 }
 
+/** Displays a labeled value, trimming whitespace and using "—" for missing or blank text. */
 function Fact({
   label,
   value,
