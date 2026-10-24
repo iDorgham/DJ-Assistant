@@ -992,6 +992,9 @@ export default function App() {
   const loadingRef = useRef(false);
   const appendInFlightRef = useRef(false);
   const queryKeyRef = useRef("");
+  // The query whose rows are actually in `tracks`; a reload of that query may
+  // re-fetch the loaded rows, but a query still waiting for its first page may not.
+  const loadedQueryKeyRef = useRef("");
 
   const submitGlobalSearch = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -1130,9 +1133,10 @@ export default function App() {
     setLoadingMore(false);
     setLoading(true);
 
-    const target = reset
-      ? FIRST_LIBRARY_PAGE
-      : Math.max(tracksRef.current.length, FIRST_LIBRARY_PAGE);
+    const target =
+      reset || loadedQueryKeyRef.current !== queryKey
+        ? FIRST_LIBRARY_PAGE
+        : Math.max(tracksRef.current.length, FIRST_LIBRARY_PAGE);
 
     /**
      * Fetches up to `target` rows for the current query, stopping on a short page.
@@ -1166,6 +1170,7 @@ export default function App() {
         if (res === null || epoch !== requestEpochRef.current) return;
         setTracks(res.tracks);
         setLibraryTotal(res.total);
+        loadedQueryKeyRef.current = queryKey;
         pushStatus(`Library loaded: ${res.total} track${res.total === 1 ? "" : "s"}`);
       })
       .catch((err) => {
