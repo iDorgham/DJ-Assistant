@@ -11,8 +11,16 @@
  * Usage: node scripts/make-library-fixture.mjs --out <path> [--tracks N] [--force]
  */
 
-import { existsSync, mkdirSync, readFileSync, readdirSync, rmSync } from "node:fs";
-import { dirname, join, resolve } from "node:path";
+import {
+  existsSync,
+  lstatSync,
+  mkdirSync,
+  readFileSync,
+  readdirSync,
+  realpathSync,
+  rmSync,
+} from "node:fs";
+import { basename, dirname, join, resolve } from "node:path";
 import { DatabaseSync } from "node:sqlite";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
@@ -104,10 +112,37 @@ export function resolveLiveDatabasePath(env = process.env, platform = process.pl
   return base ? join(base, APP_ID, DB_FILE) : null;
 }
 
-function samePath(left, right) {
-  const a = resolve(left);
-  const b = resolve(right);
-  return process.platform === "win32" ? a.toLowerCase() === b.toLowerCase() : a === b;
+function canonicalPath(path) {
+  let ancestor = resolve(path);
+  const suffix = [];
+  while (true) {
+    try {
+      return join(realpathSync(ancestor), ...suffix);
+    } catch (error) {
+      if (error.code !== "ENOENT") {
+        throw new Error(`cannot safely resolve database path ${path}`, { cause: error });
+      }
+      // An existing but dangling symlink is not a nonexistent path suffix.
+      if (lstatSync(ancestor, { throwIfNoEntry: false })) {
+        throw new Error(`cannot safely resolve database path ${path}`, { cause: error });
+      }
+      const parent = dirname(ancestor);
+      if (parent === ancestor) {
+        throw new Error(`cannot safely resolve database path ${path}`, { cause: error });
+      }
+      suffix.unshift(basename(ancestor));
+      ancestor = parent;
+    }
+  }
+}
+
+export function samePath(left, right, platform = process.platform) {
+  const a = canonicalPath(left);
+  const b = canonicalPath(right);
+  // Conservatively protect case aliases even on case-sensitive macOS volumes.
+  return platform === "win32" || platform === "darwin"
+    ? a.toLowerCase() === b.toLowerCase()
+    : a === b;
 }
 
 function timestamp(index) {
@@ -202,9 +237,17 @@ export function seedLibraryFixture({
   }
 
   const target = resolve(dbPath);
-  const livePath = resolveLiveDatabasePath(env);
-  if (livePath && samePath(target, livePath)) {
-    throw new Error(`refusing to write the fixture over the live app database (${livePath})`);
+  const suffixes = ["", "-wal", "-shm"];
+  const outputPaths = suffixes.map((suffix) => `${target}${suffix}`);
+  for (const livePath of [env.DJ_ASSISTANT_DB_PATH, resolveLiveDatabasePath(env)]) {
+    if (
+      livePath &&
+      outputPaths.some((output) =>
+        suffixes.some((suffix) => samePath(output, `${livePath}${suffix}`))
+      )
+    ) {
+      throw new Error(`refusing to write the fixture over the live app database (${livePath})`);
+    }
   }
   if (existsSync(target) && !force) {
     throw new Error(`refusing to overwrite ${target}: it already exists; pass --force`);
@@ -216,8 +259,8 @@ export function seedLibraryFixture({
   }
 
   mkdirSync(dirname(target), { recursive: true });
-  for (const suffix of ["", "-wal", "-shm"]) {
-    rmSync(`${target}${suffix}`, { force: true });
+  for (const output of outputPaths) {
+    rmSync(output, { force: true });
   }
 
   const db = new DatabaseSync(target);

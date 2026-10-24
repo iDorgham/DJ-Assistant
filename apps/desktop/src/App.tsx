@@ -989,6 +989,7 @@ export default function App() {
   const requestEpochRef = useRef(0);
   const tracksRef = useRef<TrackSummary[]>([]);
   tracksRef.current = tracks;
+  const loadingRef = useRef(false);
   const appendInFlightRef = useRef(false);
   const queryKeyRef = useRef("");
 
@@ -1125,6 +1126,7 @@ export default function App() {
 
     const epoch = ++requestEpochRef.current;
     appendInFlightRef.current = false;
+    loadingRef.current = true;
     setLoadingMore(false);
     setLoading(true);
 
@@ -1164,7 +1166,9 @@ export default function App() {
         pushStatus("Couldn't load tracks — check the backend, then reload", "error");
       })
       .finally(() => {
-        if (epoch === requestEpochRef.current) setLoading(false);
+        if (epoch !== requestEpochRef.current) return;
+        loadingRef.current = false;
+        setLoading(false);
       });
     // Only the applied query and reloads drive the fetch; loader helpers are pure.
   }, [queryKey, normalizedFilters, sortBy, sortDir, reloadToken]);
@@ -1172,7 +1176,7 @@ export default function App() {
   // Appends the next page when the window nears the loaded end. The epoch guard
   // drops a page that resolves after a filter/sort reset.
   const loadMoreLibrary = useCallback(() => {
-    if (appendInFlightRef.current || loading) return;
+    if (appendInFlightRef.current || loadingRef.current) return;
     const loaded = tracksRef.current.length;
     if (loaded >= libraryTotal) return;
     const epoch = requestEpochRef.current;
@@ -1203,7 +1207,7 @@ export default function App() {
         appendInFlightRef.current = false;
         setLoadingMore(false);
       });
-  }, [normalizedFilters, sortBy, sortDir, libraryTotal, loading]);
+  }, [normalizedFilters, sortBy, sortDir, libraryTotal]);
 
   // Measure the scroll viewport; a window resize or a dock/player layout change
   // changes how many rows are visible, never the row height.

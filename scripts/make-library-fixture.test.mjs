@@ -1,11 +1,19 @@
 import assert from "node:assert/strict";
-import { existsSync, mkdtempSync, rmSync } from "node:fs";
+import {
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  symlinkSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { join, relative } from "node:path";
 import { DatabaseSync } from "node:sqlite";
 import { test } from "node:test";
 
-import { resolveLiveDatabasePath, seedLibraryFixture } from "./make-library-fixture.mjs";
+import { resolveLiveDatabasePath, samePath, seedLibraryFixture } from "./make-library-fixture.mjs";
 
 function tempDir() {
   return mkdtempSync(join(tmpdir(), "dj-library-fixture-"));
@@ -122,6 +130,7 @@ test("seedLibraryFixture refuses the live app database even with force", () => {
         : process.platform === "darwin"
           ? { HOME: join(dir, "home") }
           : { HOME: join(dir, "home"), XDG_DATA_HOME: join(dir, "data") };
+    env.DJ_ASSISTANT_DB_PATH = join(dir, "override.db");
     const live = resolveLiveDatabasePath(env);
     assert.ok(live, "every supported platform must resolve a live database path");
 
@@ -144,6 +153,126 @@ test("seedLibraryFixture rejects non-positive and fractional track counts", () =
         /positive integer/i
       );
     }
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test("seedLibraryFixture protects the configured database and its sidecars", () => {
+  const dir = tempDir();
+  try {
+    const live = join(dir, "configured.db");
+    const env = { DJ_ASSISTANT_DB_PATH: relative(process.cwd(), live) };
+    for (const suffix of ["", "-wal", "-shm"]) {
+      writeFileSync(`${live}${suffix}`, `keep${suffix}`);
+    }
+
+    for (const suffix of ["", "-wal", "-shm"]) {
+      assert.throws(
+        () => seedLibraryFixture({ dbPath: `${live}${suffix}`, trackCount: 1, force: true, env }),
+        /live app database/i
+      );
+    }
+    for (const suffix of ["", "-wal", "-shm"]) {
+      assert.equal(readFileSync(`${live}${suffix}`, "utf8"), `keep${suffix}`);
+    }
+    // The fixture also deletes its own sidecars before opening SQLite.
+    assert.throws(
+      () =>
+        seedLibraryFixture({
+          dbPath: join(dir, "another.db"),
+          trackCount: 1,
+          force: true,
+          env: { DJ_ASSISTANT_DB_PATH: join(dir, "another.db-wal") },
+        }),
+      /live app database/i
+    );
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test("seedLibraryFixture ignores an empty database override", () => {
+  const dir = tempDir();
+  try {
+    const summary = seedLibraryFixture({
+      dbPath: join(dir, "fixture.db"),
+      trackCount: 1,
+      env: { DJ_ASSISTANT_DB_PATH: "" },
+    });
+    assert.equal(summary.trackCount, 1);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test("samePath protects differently cased paths on macOS and Windows", () => {
+  const dir = tempDir();
+  try {
+    const first = join(dir, "Library.db");
+    const second = join(dir, "library.db");
+    assert.equal(samePath(first, second, "darwin"), true);
+    assert.equal(samePath(first, second, "win32"), true);
+    if (process.platform === "linux") {
+      assert.equal(samePath(first, second, "linux"), false);
+    }
+    assert.equal(samePath(first, join(dir, "other.db"), "darwin"), false);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test("samePath resolves a symlinked parent and preserves nonexistent suffixes", () => {
+  const dir = tempDir();
+  try {
+    const real = join(dir, "real");
+    const alias = join(dir, "alias");
+    mkdirSync(real);
+    symlinkSync(real, alias, process.platform === "win32" ? "junction" : "dir");
+    const live = join(real, "missing", "nested", "library.db");
+    const target = join(alias, "missing", "nested", "library.db");
+    assert.equal(samePath(live, target), true);
+    assert.equal(samePath(live, join(alias, "missing", "other.db")), false);
+    assert.throws(
+      () =>
+        seedLibraryFixture({
+          dbPath: target,
+          trackCount: 1,
+          force: true,
+          env: { DJ_ASSISTANT_DB_PATH: live },
+        }),
+      /live app database/i
+    );
+    assert.equal(existsSync(join(real, "missing")), false);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test("samePath fails closed for unresolved symlinks", () => {
+  const dir = tempDir();
+  try {
+    const dangling = join(dir, "dangling");
+    const loop = join(dir, "loop");
+    const linkType = process.platform === "win32" ? "junction" : "dir";
+    symlinkSync(join(dir, "missing"), dangling, linkType);
+    symlinkSync(loop, loop, linkType);
+    const live = join(dir, "live.db");
+    for (const parent of [dangling, loop]) {
+      const target = join(parent, "fixture.db");
+      assert.throws(() => samePath(live, target), /cannot safely resolve/i);
+      assert.throws(
+        () =>
+          seedLibraryFixture({
+            dbPath: target,
+            trackCount: 1,
+            force: true,
+            env: { DJ_ASSISTANT_DB_PATH: live },
+          }),
+        /cannot safely resolve/i
+      );
+    }
+    assert.equal(existsSync(join(dir, "missing")), false);
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }
