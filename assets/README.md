@@ -74,5 +74,6 @@ favicon changes.
 ## Previews
 
 Open any file directly in a browser, or open [`docs/ui/`](../docs/ui/) for the
-current screen specs these assets sit alongside. The earlier wireframes remain in
-[`docs/ui-ux/wireframes/`](../docs/ui-ux/wireframes/) for history.
+current screen specs these assets sit alongside. The wireframes live in
+[`docs/ui/wireframes/`](../docs/ui/wireframes/), with the current wireframe spec in
+[`docs/ui/12-WIREFRAMES-AND-FLEXIBILITY.md`](../docs/ui/12-WIREFRAMES-AND-FLEXIBILITY.md).

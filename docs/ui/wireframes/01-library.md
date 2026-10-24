@@ -157,7 +157,7 @@ shipped screen so far.
 - Artwork images are decorative (`alt=""`); the title conveys the meaning.
 - Icon-only controls (refresh) need an `aria-label` and `title`.
 - Announce the scan completion summary via the status region, not a modal.
-- Rows become focusable/arrow-navigable in Phase 2 (see [Accessibility](../ACCESSIBILITY.md)).
+- Rows become focusable/arrow-navigable in Phase 2 (see [Accessibility](../10-ACCESSIBILITY-AND-KEYBOARD.md)).
 
 ---
 

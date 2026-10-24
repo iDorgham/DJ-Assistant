@@ -1,7 +1,7 @@
 # DJ Assistant — Project Context
 
 **Document type:** Consolidated application, plan, and progress reference
-**Status:** Living — snapshot as of 2026-10-24 (approved v1 plan mirrored; Stage 1 shell + Slice 3A merged via PR #53; player presentations merged via PR #54; shared Track panel merged via PR #55; audit TA.1–TA.14 integrated; T2.1.2 filters reflected)
+**Status:** Living — snapshot as of 2026-10-24 (post-PR #56 merge: approved v1 plan mirrored; Stage 1 shell + Slice 3A merged via PR #53; player presentations merged via PR #54; shared Track panel merged via PR #55; 30,000-track virtualized library merged via PR #56; audit TA.1–TA.14 integrated; T2.1.2 filters reflected)
 **Audience:** Engineers, product, AI agents, and anyone who needs the full picture in one place
 **Source of truth:** [`docs/product/CANONICAL_DOCUMENTATION.md`](../product/CANONICAL_DOCUMENTATION.md) (product + technical) and [`docs/sdd/`](../sdd/README.md) (plan, tasks, acceptance). Audit findings live in [`docs/audit/`](../audit/README.md) and are tracked as `TA.x` tasks in [`docs/sdd/04-TASKS.md`](../sdd/04-TASKS.md).
 
@@ -60,6 +60,15 @@
   read-only in this slice; the footer Play, Add to playlist (disabled until
   Stage 5) and Edit metadata actions are in place. Keyboard access and focus
   restore are covered by tests; manual running-window QA is pending.
+- **The library is virtualized and proven at 30,000 tracks** on `main` via PR #56
+  (squash `ed8d1046`, 2026-10-24). Only the visible window plus overscan is
+  mounted (19–23 `<tr>` for 30,000 rows), with per-column row pitch (36/38/41/48
+  px), spacer rows for full-height scrolling, and incremental paging (first 200
+  rows, then +500) behind an epoch guard. `DJ_ASSISTANT_DB_PATH` plus
+  `make-library-fixture.mjs` isolate QA from the live database. Native run:
+  Library tab + 200 rows in 179 ms; scroll 180 frames at 17.5 ms average and
+  16.9 ms p95; paging verified to 3,700 rows; selection and scroll survived a
+  rating edit; the live database was untouched.
 - **Discussion and decision rationale** lives in
   [`docs/plan/06-delivery/discussions.md`](../plan/06-delivery/discussions.md),
   including rejected alternatives and non-blocking open items.
@@ -636,7 +645,7 @@ confirmation thresholds, dry-run/preview, full undoable history. Full design in
 | Layer | Technology |
 |-------|------------|
 | Desktop shell | Tauri v2 |
-| Frontend | React 18, TypeScript 6.0, Tailwind CSS v4, Vite 8 (Rolldown) |
+| Frontend | React 19, TypeScript 6.0, Tailwind CSS v4, Vite 8 (Rolldown) |
 | Local backend | Rust 1.82+ (Symphonia, ONNX Runtime via `ort`, `rusqlite` bundled, quick-xml) |
 | Cloud API | Fastify (Node.js / TypeScript) |
 | Cloud data | PostgreSQL 16 + pgvector, Redis + BullMQ |
@@ -784,7 +793,7 @@ and the Product Owner signed off (see
 What works today:
 
 - Monorepo scaffold (pnpm workspace + Cargo workspace), ESLint/Prettier/TS strict, Wolfspeed CI.
-- Tauri v2 desktop shell (React 18 + TypeScript 6 + Tailwind v4 + Vite 8).
+- Tauri v2 desktop shell (React 19 + TypeScript 6 + Tailwind v4 + Vite 8).
 - Native folder picker → recursive scan with live progress events.
 - BLAKE3 fingerprinting (first 1 MB + duration) + hash dedup, including intra-scan duplicates.
 - Metadata extraction (title, artist, album, genre, year, duration) across MP3/FLAC/AIFF/WAV/M4A, plus tag-sourced BPM, key (Camelot + classical), rating, comments, and embedded cover art.
@@ -837,7 +846,7 @@ The full-pipeline entry point is
 per-analyzer graceful degradation (a single detector failure does not void the
 rest).
 
-### 17.3 Phase 2 — Library Intelligence — 🚧 STARTED (shell + shared Track panel slices)
+### 17.3 Phase 2 — Library Intelligence — 🚧 STARTED (shell + shared Track panel + virtualized library)
 
 Tag cleanup, duplicates/versions, health score, cues and waveform work are still
 planned. The first Phase 2 slices landed on top of the Phase 0/1 foundations:
@@ -872,6 +881,18 @@ planned. The first Phase 2 slices landed on top of the Phase 0/1 foundations:
   provider status, Tag Health, enrichment); Cues is read-only until the cue
   editor; footer actions are Play, Add to playlist (disabled until Stage 5) and
   Edit metadata.
+- ✅ **Library virtualization + 30k QA fixture (PR #56)** — the Library table now
+  mounts only the visible rows plus overscan (19–23 `<tr>` for 30,000 tracks)
+  and keeps full-library scroll height with spacer rows. Row pitch is computed
+  per column set (36 px plain, 38 px widget, 41 px chip, 48 px artwork); paging
+  loads the first 200 rows and then +500 behind an epoch guard, and reloads are
+  chunked at the 1,000-row command limit. `DJ_ASSISTANT_DB_PATH` and the
+  deterministic 30,000-track fixture keep QA off the live library. Shipped in
+  PR #56 (squash `ed8d1046`, 2026-10-24) with native metrics: 179 ms to return
+  to Library with 200 rows, 17.5 ms average / 16.9 ms p95 frame time while
+  scrolling, paging verified to 3,700 rows, and selection plus scroll preserved
+  across a rating edit. This closes the T2.1.5 row-virtualization caveat; it does
+  not tick T2.1.6 (Energy UI), whose Slice 2 native QA is still pending.
 
 Live today inside the library screen (non-gating, post-MVP scope): local
 similar-track scoring + inspector (TF.1/TF.4), Tag Health modal (TF.4/TE.3–TE.4),
@@ -1113,11 +1134,12 @@ items on 4–6 week cycles.
   progress** (analysis engine tasks T1.1.1–T1.1.8 and T1.2.1–T1.2.6 shipped; the
   P1.x exit criteria are still being verified); **Phase 2 in progress** — the
   Stage 1 shell, T2.1.2 multi-filter/sorting and Slice 3A tags/comments merged in
-  PR #53, the player presentations in PR #54 (2026-10-23), and the shared Track
-  panel in PR #55 (squash `83831774`, 2026-10-24). Manual running-window QA is
-  still pending for Stage 1, Slice 2, Slice 3A and the Track panel; remaining
-  Stage 2 work is the virtualized 30,000-track table, artwork-grid and compact
-  list views, bulk-action scope affordances and global search, followed by tag
+  PR #53, the player presentations in PR #54 (2026-10-23), the shared Track
+  panel in PR #55 (squash `83831774`, 2026-10-24) and the 30,000-track
+  virtualized library in PR #56 (squash `ed8d1046`, 2026-10-24). Manual
+  running-window QA is still pending for Stage 1, Slice 2, Slice 3A and the
+  Track panel; remaining Stage 2 work is the artwork-grid and compact list
+  views, bulk-action scope affordances and global search, followed by tag
   cleanup, duplicates/versions, health score, real cues and real waveform work;
   **Phases 3–4 not started**. Live post-MVP foundations: TF.1–TF.6, TD.3,
   TE.1–TE.4, TM.1/TM.2a.

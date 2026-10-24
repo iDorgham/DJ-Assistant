@@ -12,6 +12,7 @@
 </p>
 
 <p align="center">
+  <!-- Status & release -->
   <a href="#status"><img src="https://img.shields.io/badge/status-phase%202%20%C2%B7%20in%20progress-00D9FF?style=for-the-badge&labelColor=0B0D12" alt="Status"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-00D9FF?style=for-the-badge&labelColor=0B0D12" alt="License: MIT"></a>
   <img src="https://img.shields.io/badge/version-0.1.0-00D9FF?style=for-the-badge&labelColor=0B0D12" alt="Version 0.1.0">
@@ -20,24 +21,27 @@
 </p>
 
 <p align="center">
+  <!-- Core stack -->
   <img src="https://img.shields.io/badge/Tauri_2-24C8DB?style=flat-square&logo=tauri&logoColor=white" alt="Tauri 2">
   <img src="https://img.shields.io/badge/Rust_1.82+-000000?style=flat-square&logo=rust&logoColor=white" alt="Rust">
-  <img src="https://img.shields.io/badge/React_18-20232A?style=flat-square&logo=react&logoColor=61DAFB" alt="React 18">
+  <img src="https://img.shields.io/badge/React_19-20232A?style=flat-square&logo=react&logoColor=61DAFB" alt="React 19">
   <img src="https://img.shields.io/badge/TypeScript_6-3178C6?style=flat-square&logo=typescript&logoColor=white" alt="TypeScript 6">
   <img src="https://img.shields.io/badge/Vite_8-646CFF?style=flat-square&logo=vite&logoColor=white" alt="Vite 8">
+</p>
+
+<p align="center">
+  <!-- Supporting stack -->
   <img src="https://img.shields.io/badge/Tailwind_4-06B6D4?style=flat-square&logo=tailwindcss&logoColor=white" alt="Tailwind CSS 4">
-  <img src="https://img.shields.io/badge/Fastify_5-000000?style=flat-square&logo=fastify&logoColor=white" alt="Fastify 5">
   <img src="https://img.shields.io/badge/ONNX_Runtime-005CED?style=flat-square&logo=onnx&logoColor=white" alt="ONNX Runtime">
   <img src="https://img.shields.io/badge/SQLite-003B57?style=flat-square&logo=sqlite&logoColor=white" alt="SQLite">
   <img src="https://img.shields.io/badge/pnpm_10-F69220?style=flat-square&logo=pnpm&logoColor=white" alt="pnpm 10">
 </p>
 
 <p align="center">
+  <!-- Quality & standards -->
   <img src="https://img.shields.io/badge/local--first-offline%20by%20default-00D9FF?style=flat-square" alt="Local-first">
   <img src="https://img.shields.io/badge/non--destructive-source%20untouched-1A1D26?style=flat-square" alt="Non-destructive">
-  <img src="https://img.shields.io/badge/tests-104%2B%20passing-2EA043?style=flat-square" alt="Tests">
-  <img src="https://img.shields.io/badge/Prettier-F7B93E?style=flat-square&logo=prettier&logoColor=black" alt="Prettier">
-  <img src="https://img.shields.io/badge/ESLint-4B32C3?style=flat-square&logo=eslint&logoColor=white" alt="ESLint">
+  <img src="https://img.shields.io/badge/tests-247%2B%20passing-2EA043?style=flat-square" alt="Tests">
   <img src="https://img.shields.io/badge/commits-conventional-1A1D26?style=flat-square&logo=conventionalcommits&logoColor=white" alt="Conventional Commits">
 </p>
 
@@ -231,7 +235,7 @@ Privacy is not a feature — it is the structural foundation. Audio decoding, mo
 graph TB
     subgraph Desktop["  DESKTOP  ·  Tauri v2  ·  fully offline  "]
         direction TB
-        UI["React 18 + TypeScript\nLibrary · Waveform · Set Builder · Skills"]
+        UI["React 19 + TypeScript\nLibrary · Waveform · Set Builder · Skills"]
         IPC["IPC Bridge\nTyped commands + events\ncontracts/*.json  codegen"]
         Core["Rust Core\nscan · BLAKE3 · SQLite WAL\nskills + undo · exporters"]
         Audio["Audio Engine\nSymphonia decode\nONNX Runtime · BPM / Key / Phrases"]
@@ -348,7 +352,7 @@ The monorepo contains three Node.js packages and two Rust crates:
 | Layer | Technology |
 |-------|------------|
 | Desktop shell | [Tauri](https://tauri.app/) v2 |
-| Frontend | [React](https://react.dev/) 18 · [TypeScript](https://www.typescriptlang.org/) 6 · [Vite](https://vite.dev/) 8 · [Tailwind CSS](https://tailwindcss.com/) v4 |
+| Frontend | [React](https://react.dev/) 19 · [TypeScript](https://www.typescriptlang.org/) 6 · [Vite](https://vite.dev/) 8 · [Tailwind CSS](https://tailwindcss.com/) v4 |
 | Local backend | [Rust](https://www.rust-lang.org/) 1.82+ · [Symphonia](https://github.com/pdeljanov/Symphonia) · [ONNX Runtime](https://onnxruntime.ai/) · SQLite |
 | Cloud API | [Fastify](https://fastify.dev/) 5 (Node.js / TypeScript) |
 | Cloud data | PostgreSQL 16 · [pgvector](https://github.com/pgvector/pgvector) · Redis · BullMQ |
@@ -362,7 +366,7 @@ The monorepo contains three Node.js packages and two Rust crates:
 
 - [x] **Phase 0 · Foundation** — folder picker → recursive scan → BLAKE3 fingerprinting → hash deduplication → tag extraction → local SQLite → fully searchable library with live progress UI.
 - [ ] **Phase 1 · Analysis** *(analyzers implemented; ONNX model wiring and P1.x verification pending)* — deterministic local analysis behind ONNX seams: BPM, key, beat grid, phrase segmentation, vocal presence, EBU R128 loudness, composite `analysis_version`. Golden 50-track fixtures and a fixed benchmark spec (TA.6).
-- [ ] **Phase 2 · Library Intelligence** *(in progress — app shell + library filters)* — track inspector, beatgrid editor, cue point templates, tag cleanup (preview → apply → undo + persistent aliases), library health score.
+- [ ] **Phase 2 · Library Intelligence** *(in progress: app shell, library filters, shared Track panel, and 30,000-track virtualized library shipped)* — remaining: track inspector, beatgrid editor, cue point templates, tag cleanup (preview → apply → undo + persistent aliases), library health score.
 - [ ] **Phase 3 · Set Builder & Export** — locked scoring formula (TA.2), energy tag + LUFS + slider (TA.3), traffic-light mix-out indicators, set versioning/diff, rekordbox / Serato / USB verify + printed set sheet, CDJ validation.
 - [ ] **Phase 4 · Skills, Cloud & B2B** — skills panel + `skill_runs` undo (TA.4), Gig Ready flow, real-time B2B collaboration, contract codegen + settings schema validation (TA.5/TA.7), public beta.
 - [ ] **Post-MVP · Discovery, Enrichment & Streaming Export** — opt-in external similarity search, tag/artwork lookup (preview → apply → undo), Beatport release radar, multi-provider export (Spotify reference playlist, Deezer). Metadata only; no audio download, in-app streaming, or storage.
@@ -423,7 +427,7 @@ Everything lives under [`docs/`](./docs/README.md). New here? Start with the [Ca
 <summary><b>Design</b> — UI/UX, wireframes, diagrams, and decision records</summary>
 
 - [UI Specification (current)](./docs/ui/README.md) · [Design System](./docs/ui/01-DESIGN-SYSTEM.md) · [Shell & Navigation](./docs/ui/02-SHELL-AND-NAVIGATION.md) · [Player](./docs/ui/06-PLAYER.md)
-- [Earlier UI/UX set](./docs/ui-ux/README.md) · [UX Principles](./docs/ui-ux/UX_PRINCIPLES.md) · [Screens & Flows](./docs/ui-ux/SCREENS_AND_FLOWS.md) · [Accessibility](./docs/ui-ux/ACCESSIBILITY.md) · [Wireframes](./docs/ui-ux/wireframes/README.md)
+- [Earlier UI/UX set](./docs/ui-ux/README.md) · [UX Principles](./docs/ui-ux/UX_PRINCIPLES.md) · [Screens & Flows](./docs/ui-ux/SCREENS_AND_FLOWS.md) · [Accessibility](./docs/ui-ux/ACCESSIBILITY.md) · [Wireframes](./docs/ui/12-WIREFRAMES-AND-FLEXIBILITY.md) · [Archived player/layout spec](./docs/ui-ux/archive/PLAYER_AND_LAYOUT_SPEC_2026-10-19.md)
 - [Diagrams](./docs/diagrams/README.md) · [Entire-project overview](./docs/diagrams/00-ENTIRE-PROJECT-OVERVIEW.md)
 - [Architecture Decision Records](./docs/ADR/README.md)
 

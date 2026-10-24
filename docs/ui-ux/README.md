@@ -1,6 +1,6 @@
 # DJ Assistant — UI/UX
 
-**Status:** Superseded — historical snapshot (2026-10-14)
+**Status:** Superseded — historical snapshot (2026-10-14); deprecated specifications live under [`archive/`](./archive/)
 **Audience:** Frontend engineers, product, design, and AI agents building the desktop UI
 **Scope:** The visual language, interaction model, screens, and accessibility rules for the Tauri desktop app
 
@@ -8,6 +8,10 @@
 > [design system](../ui/01-DESIGN-SYSTEM.md), [shell & navigation](../ui/02-SHELL-AND-NAVIGATION.md),
 > and the per-view screen specs. This folder is kept as a historical reference for the
 > Phase 0 UI; where it conflicts with `docs/ui/`, `docs/ui/` wins.
+>
+> **Archived (2026-10-24):** the superseded v1.7 player/layout proposal moved to
+> [`archive/PLAYER_AND_LAYOUT_SPEC_2026-10-19.md`](./archive/PLAYER_AND_LAYOUT_SPEC_2026-10-19.md).
+> Nothing in this folder is current; `docs/ui/` remains the authoritative UI spec.
 
 ---
 
@@ -18,7 +22,7 @@
 | [UX_PRINCIPLES.md](./UX_PRINCIPLES.md) | Who we design for, the prep loop, design principles, IA, interaction patterns, voice |
 | [DESIGN_SYSTEM.md](./DESIGN_SYSTEM.md) | Colour, type, spacing, motion, and the component inventory with states |
 | [SCREENS_AND_FLOWS.md](./SCREENS_AND_FLOWS.md) | Screen inventory, wireframes, and end-to-end user flows per phase |
-| [PLAYER_AND_LAYOUT_SPEC_2026-10-19.md](./PLAYER_AND_LAYOUT_SPEC_2026-10-19.md) | Historical v1.7 proposal for the app shell, player, and layout (superseded by `docs/ui/`) |
+| [archive/PLAYER_AND_LAYOUT_SPEC_2026-10-19.md](./archive/PLAYER_AND_LAYOUT_SPEC_2026-10-19.md) | Archived: historical v1.7 proposal for the app shell, player, and layout (superseded by `docs/ui/`) |
 | ~~wireframes/~~ | Removed 2026-10-19 — structural wireframes now live in [`docs/ui/12-WIREFRAMES-AND-FLEXIBILITY.md`](../ui/12-WIREFRAMES-AND-FLEXIBILITY.md) |
 | [ACCESSIBILITY.md](./ACCESSIBILITY.md) | WCAG targets, contrast findings, keyboard model, motion, and test checklist |
 

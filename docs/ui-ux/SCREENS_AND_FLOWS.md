@@ -15,7 +15,7 @@ flows. **Phase 0 screens are implemented**; later screens are specifications fro
 canonical workstation design and are marked with their phase.
 
 > Per-screen low-fidelity wireframes (with callouts and per-view accessibility notes) live in
-> [`wireframes/`](./wireframes/README.md). This document covers the flows between them.
+> [`wireframes/`](../ui/wireframes/README.md). This document covers the flows between them.
 
 ---
 
@@ -300,7 +300,7 @@ calls (ADR-0007).
 - **Privacy:** only track metadata and search queries leave the device. Audio is never
   downloaded, streamed, stored, or uploaded.
 
-See the [Spotify export wireframe](./wireframes/11-spotify-export.md) and the
+See the [Spotify export wireframe](../ui/wireframes/11-spotify-export.md) and the
 [Spotify playlist export diagram](../diagrams/16-spotify-playlist-export.md).
 
 ---

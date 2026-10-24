@@ -1,7 +1,7 @@
 # DJ Assistant — Application Views, Player & Layout UI/UX Spec
 
 **Version:** 1.7 (final polish)  
-**Status:** Historical design proposal — superseded by [`docs/ui/`](../ui/README.md)
+**Status:** Historical design proposal — superseded by [`docs/ui/`](../../ui/README.md)
 **Date:** 2026-10-19  
 **Scope:** Final UI/UX language — Adobe-inspired precision + Ableton flexibility + 2026 pro-app trends; full screens, menus, settings, motion, dialogs, player, library tools
 

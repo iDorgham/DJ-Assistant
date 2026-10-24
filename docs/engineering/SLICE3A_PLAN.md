@@ -24,11 +24,11 @@ does not have yet.
   year, bpm, keys, `user_rating`, `notes`, `comments`, artwork columns — and
   **no tag storage at all**. `notes` is never written.
 - **Import:** the scanner
-  ([scanner.rs](../../../apps/desktop/src-tauri/src/scanner.rs)) copies a fixed
+  ([scanner.rs](../../apps/desktop/src-tauri/src/scanner.rs)) copies a fixed
   field set out of the file tags; `comments` is the import-sourced comment
-  ([metadata.rs](../../../crates/core/src/metadata.rs) reads `COMMENT` /
+  ([metadata.rs](../../crates/core/src/metadata.rs) reads `COMMENT` /
   `DESCRIPTION`).
-- **Types:** `TrackSummary` (Rust [models.rs:7](../../../apps/desktop/src-tauri/src/models.rs)
+- **Types:** `TrackSummary` (Rust [models.rs:7](../../apps/desktop/src-tauri/src/models.rs)
   and its TS mirror in `packages/shared`) has `comments` but **no `tags`, no
   `label`, no `year`**.
 - **Write path:** `update_track_metadata` / `MetadataPatch` cover **rating and

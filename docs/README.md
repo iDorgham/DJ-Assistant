@@ -21,13 +21,14 @@ each folder below is self-contained and cross-links to its neighbours.
 | [`sdd/`](./sdd/) | Specification-Driven Development set (spec → design → plan → tasks → acceptance) | [SDD Overview](./sdd/README.md) |
 | [`diagrams/`](./diagrams/) | Mermaid diagrams for architecture, pipelines, phases, skills, data | [Entire Project Overview](./diagrams/00-ENTIRE-PROJECT-OVERVIEW.md) |
 | [`ui/`](./ui/) | Current UI specification: design system, shell, views, player, settings, dialogs, accessibility | [UI Specification](./ui/README.md) |
-| [`ui-ux/`](./ui-ux/) | Earlier UI docs: principles, Phase 0 design system, screens & flows, wireframes (tokens superseded by `ui/`) | [UI/UX Index](./ui-ux/README.md) |
+| [`ui-ux/`](./ui-ux/) | Earlier Phase 0 UI docs (superseded where they conflict); deprecated player/layout spec archived under `ui-ux/archive/` | [UI/UX Index](./ui-ux/README.md) |
 | [`ADR/`](./ADR/) | Architecture Decision Records (the "why") | [ADR Index](./ADR/README.md) |
 | [`audit/`](./audit/) | Spec/function/settings audits + TA.1–TA.14 tracking | [Audit summary](./audit/AUDIT-SUMMARY.md) |
 | [`context/`](./context/) | Single-file project digest for humans + AI agents | [Project Context](./context/PROJECT_CONTEXT.md) |
 | [`enhancements/`](./enhancements/) | Optional extensions — MCP server audit, integration plan, recommended MCP config | [MCP & Plugin Enhancement Plan](./enhancements/mcb-plugin-enhancement-plan.md) |
 | [`ai/`](./ai/) | Agent skills inventory, skill routing policy, shared AI memory layers, agent communication protocol, and the agents, commands, and scripts that automate them | [Agents & Automation](./ai/AGENTS.md) · [Communication](./ai/COMMUNICATION.md) · [Memory](./ai/MEMORY.md) · [Skills](./ai/SKILLS.md) |
 | [`evidence/`](./evidence/) | Acceptance evidence (screenshots, captured runs) | [Phase 0 evidence](./engineering/PHASE0_ACCEPTANCE_EVIDENCE.md) |
+| [`approvals/`](./approvals/) | Screenshot-based UI implementation reviews captured from the running app | [UI review 2026-10-19](./approvals/ui-2026-10-19/README.md) |
 
 ---
 
@@ -129,7 +130,7 @@ See the [diagram index](./diagrams/README.md) for the full set (00–17).
 
 ## UI/UX — [`ui/`](./ui/) and [`ui-ux/`](./ui-ux/)
 
-The 2026-10-19 specification in [`ui/`](./ui/README.md) is the current source for design tokens, the shell, views, and the player. The [`ui-ux/`](./ui-ux/) set is the earlier Phase 0 design documentation; its design system is superseded by [`ui/01-DESIGN-SYSTEM.md`](./ui/01-DESIGN-SYSTEM.md).
+The 2026-10-19 specification in [`ui/`](./ui/README.md) is the current source for design tokens, the shell, views, and the player. The [`ui-ux/`](./ui-ux/) set is the earlier Phase 0 design documentation; its design system is superseded by [`ui/01-DESIGN-SYSTEM.md`](./ui/01-DESIGN-SYSTEM.md). Deprecated specifications are archived under [`ui-ux/archive/`](./ui-ux/archive/), and nothing in `ui-ux/` overrides `ui/`.
 
 | Document | Purpose |
 |----------|---------|
@@ -149,7 +150,7 @@ Earlier set — [`ui-ux/`](./ui-ux/):
 | [SCREENS_AND_FLOWS.md](./ui-ux/SCREENS_AND_FLOWS.md) | Screen inventory, wireframes, and end-to-end flows per phase |
 | ~~wireframes/~~ | Removed 2026-10-19 — wireframes live in [`ui/12-WIREFRAMES-AND-FLEXIBILITY.md`](./ui/12-WIREFRAMES-AND-FLEXIBILITY.md) |
 | [ACCESSIBILITY.md](./ui-ux/ACCESSIBILITY.md) | WCAG targets, contrast findings, keyboard model, motion, test checklist |
-| [PLAYER_AND_LAYOUT_SPEC_2026-10-19.md](./ui-ux/PLAYER_AND_LAYOUT_SPEC_2026-10-19.md) | Historical v1.7 app shell / player / layout proposal |
+| [archive/PLAYER_AND_LAYOUT_SPEC_2026-10-19.md](./ui-ux/archive/PLAYER_AND_LAYOUT_SPEC_2026-10-19.md) | Archived: historical v1.7 app shell / player / layout proposal |
 
 ## Decisions — [`ADR/`](./ADR/)
 
@@ -157,7 +158,7 @@ Architecture Decision Records. See the [ADR index](./ADR/README.md).
 
 ## Evidence — [`evidence/`](./evidence/)
 
-Captured acceptance evidence, grouped by phase (e.g. [`evidence/phase0/`](./evidence/phase0/)).
+Captured acceptance evidence, grouped by phase (e.g. [`evidence/phase0/`](./evidence/phase0/)). The [Phase 0 evidence index](./evidence/phase0/README.md) lists the captured runs, and [UI review 2026-10-19](./approvals/ui-2026-10-19/README.md) records the screenshot-based implementation approval pass against the running app.
 
 ---
 
