@@ -9,6 +9,18 @@ project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- **Shared Track panel (Stage 2, PR #55)** — one inspectable panel used by the
+  library and every later entry point: header with artwork/metadata and seven tabs
+  (Overview, Tags, Cues, Analysis, Playlists, History, File). Overview absorbs the old
+  inspector drawer (similar tracks, gap chips, store links, provider status, Tag Health,
+  enrichment); Tags reuses the slice 3A editor; Cues is read-only until the cue editor;
+  footer actions are Play, Add to playlist (disabled until Stage 5) and Edit metadata.
+  Selection updates immediately while the panel open is deferred 350 ms so double-click
+  playback never flashes the panel; the inspected track is independent of the playing
+  track. Tabs follow the WAI-ARIA tablist pattern (roving tabindex, Arrow/Home/End),
+  the chosen tab persists, Escape closes and restores focus, and the tab body is a
+  keyboard focus target. New pure helpers are covered by Vitest; manual
+  running-window QA is pending.
 - **Library multi-filter + sorting (T2.1.2, Phase 2)** — `list_tracks` now applies
   structured filters (BPM range, Camelot keys, analysis status, genre, minimum rating)
   and sorting (title/artist/BPM/key/duration/imported-at, NULLs last) **server-side in

@@ -1,7 +1,7 @@
 # DJ Assistant — Project Context
 
 **Document type:** Consolidated application, plan, and progress reference
-**Status:** Living — snapshot as of 2026-10-23 (approved v1 plan mirrored; Slice 3A protected; audit TA.1–TA.14 integrated; T2.1.0 shell + T2.1.2 filters reflected)
+**Status:** Living — snapshot as of 2026-10-24 (approved v1 plan mirrored; Stage 1 shell + Slice 3A merged via PR #53; player presentations merged via PR #54; shared Track panel merged via PR #55; audit TA.1–TA.14 integrated; T2.1.2 filters reflected)
 **Audience:** Engineers, product, AI agents, and anyone who needs the full picture in one place
 **Source of truth:** [`docs/product/CANONICAL_DOCUMENTATION.md`](../product/CANONICAL_DOCUMENTATION.md) (product + technical) and [`docs/sdd/`](../sdd/README.md) (plan, tasks, acceptance). Audit findings live in [`docs/audit/`](../audit/README.md) and are tracked as `TA.x` tasks in [`docs/sdd/04-TASKS.md`](../sdd/04-TASKS.md).
 
@@ -11,7 +11,7 @@
 > first reading two dozen separate documents. Where a topic has a canonical home,
 > this file links to it rather than replacing it.
 
-## 0. Current planning baseline — 2026-10-23
+## 0. Current planning baseline — 2026-10-24
 
 - **The approved v1 plan is mirrored at [`docs/plan/`](../plan/README.md).** It
   contains 30 documents and 52 locked decisions (`D-001–D-052`). Those IDs are
@@ -38,18 +38,28 @@
 - **The v1 non-goals** include Lexicon compatibility, synthetic audio, multiple
   libraries, a dashboard, playlist-scoped statistics, WMA/DRM audio, full USB
   library export, and scraping music catalogs.
-- **Slice 3A is protected.** Tags and comment editing are code-complete in
-  commit `ec2b191f`, tagged `slice-3a-code-complete`. The tag set is snapshotted
-  transactionally; undo skips a track changed since the snapshot. Automated
-  checks pass; manual running-window QA is still pending, so T2.1.7 and T2.1.13
-  remain unticked.
-- **The Stage 1 shell is implemented** in the working tree: six primary tabs,
+- **Slice 3A is merged.** Tags and comment editing landed in PR #53 (squash
+  `03991d3c`, 2026-10-23); the annotated tag `slice-3a-code-complete` still
+  peels to `ec2b191f`. The tag set is snapshotted transactionally; undo skips a
+  track changed since the snapshot. Automated checks pass; manual
+  running-window QA is still pending, so T2.1.7 and T2.1.13 remain unticked.
+- **The Stage 1 shell is shipped** on `main` via PR #53: six primary tabs,
   typed view registry, top-bar library search/Import Center/Inbox/backup status,
   persistent player dock, Settings skeleton, error boundary and redacted
-  renderer logging. Native acceptance QA is pending, including the 30,000-track
-  fixture check. The top-bar search is labeled “Search library” until Stage 2
-  adds playlist/tag-wide global search. See
+  renderer logging. PR #54 (squash `5e7334eb`) rebuilt the dock to the
+  three-presentation model (Mini / Full / Player view; Extended retired), with
+  BPM fine-tune and the dock-height snap. Native acceptance QA is pending,
+  including the 30,000-track fixture check. The top-bar search is labeled
+  “Search library” until Stage 2 adds playlist/tag-wide global search. See
   [`docs/plan/06-delivery/implementation-slices.md`](../plan/06-delivery/implementation-slices.md).
+- **The shared Track panel is merged** on `main` via PR #55 (squash
+  `83831774`, 2026-10-24). One panel serves the library and every later entry
+  point: seven tabs (Overview, Tags, Cues, Analysis, Playlists, History, File),
+  a WAI-ARIA tablist with persisted tab, inspected-vs-playing separation, and a
+  deferred panel open so double-click playback stays instant. Cues are
+  read-only in this slice; the footer Play, Add to playlist (disabled until
+  Stage 5) and Edit metadata actions are in place. Keyboard access and focus
+  restore are covered by tests; manual running-window QA is pending.
 - **Discussion and decision rationale** lives in
   [`docs/plan/06-delivery/discussions.md`](../plan/06-delivery/discussions.md),
   including rejected alternatives and non-blocking open items.
@@ -525,27 +535,30 @@ v4). [`docs/ui/`](../ui/README.md) is the **current interface authority** — de
 system, shell, screens, and interaction contracts. [`docs/ui-ux/`](../ui-ux/) is
 the earlier UI/UX set, kept for history and superseded where it conflicts.
 
-The T2.1.0 shell implements three routed views (Library / Preparation / Auto
-Performance), a collapsible left nav, a per-view options bar, dark/light/system
-theming with persisted UI state, and a one-slot player dock with Hidden / Mini /
-Full modes. Preparation and Auto Performance are documented placeholders until
-Phase 3; the player dock is layout-only until T2.4.
+The T2.1.0 shell implements the six primary tabs (Library / Playlists / Discover
+/ Statistics / Publish / Settings), a collapsible 220/48px left nav, the top bar
+(search, Import Center, Inbox, backup status), dark/light/system theming with
+persisted UI state, and the player dock. The player has three presentations —
+Mini, Full and Player view — with Hidden as a visibility state; the dock is
+layout-only until T2.4. The old three-view shell (header view switcher,
+Preparation / Auto Performance tabs, per-view options bar) is superseded by the
+approved v1 plan: set building lives in Playlists → Set Score.
 
 | Surface | Phase | Status |
 |---------|-------|--------|
-| App shell (header view switcher, collapsible nav, options bar, view router) | 2 | 🟡 On branch — pending merge (T2.1.0) |
-| Theme system (dark/light/system, semantic tokens, persisted preference) | 2 | 🟡 On branch — pending merge (T2.1.0) |
-| Player dock (Hidden/Mini/Full, artwork, metadata, transport placeholders) | 2 | 🟡 On branch — layout + mode switching; playback T2.4 |
+| App shell (six tabs, collapsible 220/48px nav, top bar, typed view router) | 2 | ✅ Shipped PR #53 — native acceptance QA pending (T2.1.0) |
+| Theme system (dark/light/system, semantic tokens, persisted preference) | 2 | ✅ Shipped (T2.1.0) |
+| Player dock (Mini / Full / Player view, artwork, metadata, transport) | 2 | 🟡 Shell + presentations shipped PR #54; real audio T2.4 |
 | Library (scan, live progress, dense track table, empty/error states) | 0 | ✅ Implemented, relocated into the shell |
-| Track inspector drawer (similar tracks, gap chips, buy-links) | 0 | ✅ Implemented |
+| Track inspector drawer (similar tracks, gap chips, buy-links) | 0 | ✅ Implemented — relocated into the shared Track panel PR #55 |
 | Tag Health modal (per-field bars + gap list; online lookup shown as planned) | 0 | ✅ Implemented |
 | Provider status (options-bar summary + status readout) | 0 | ✅ Implemented |
 | Analysis (background progress + confidence review) | 1 | ⏳ In progress |
-| Track detail / inspector (tags vs analysis, provenance) | 2 | 📋 Planned |
+| Track detail / inspector (tags vs analysis, provenance) | 2 | ✅ Shipped PR #55 — shared panel, seven tabs, keyboard model; cues read-only |
 | Cue / waveform editor (markers, phrase bands, cue list) | 2–3 | 📋 Planned |
 | Tag cleanup (preview → apply → undo) | 2 | 📋 Planned |
-| Preparation view (set builder, energy curve, transitions, alternatives) | 3 | 📋 Placeholder route |
-| Auto Performance view (automix + skills) | 3 | 📋 Placeholder route |
+| Preparation view (set builder, energy curve, transitions, alternatives) | 3 | 📋 Superseded — Playlists → Set Score (Stage 5) |
+| Auto Performance view (automix + skills) | 3 | 📋 Not in the approved v1 plan |
 | Export (rekordbox XML, Serato crate, CSV, USB pack) | 3 | 📋 Planned |
 | Spotify Playlist Export (connect → match review → publish → delete) | Post-MVP | 📋 Planned |
 | Skills panel (run / view / undo, global kill-switch) | 3–4 | 📋 Planned |
@@ -556,7 +569,7 @@ Phase 3; the player dock is layout-only until T2.4.
 · [Shell & Navigation](../ui/02-SHELL-AND-NAVIGATION.md) · [Screens](../ui/03-LIBRARY-VIEW.md)
 · [Player](../ui/06-PLAYER.md) · [Accessibility](../ui/10-ACCESSIBILITY-AND-KEYBOARD.md).  
 **Historical:** [ui-ux README](../ui-ux/README.md) · [Design System](../ui-ux/DESIGN_SYSTEM.md)
-· [Screens & Flows](../ui-ux/SCREENS_AND_FLOWS.md) · [Wireframes](../ui-ux/wireframes/README.md).
+· [Screens & Flows](../ui-ux/SCREENS_AND_FLOWS.md) · [Wireframes](../ui/wireframes/README.md).
 
 ---
 
@@ -824,16 +837,20 @@ The full-pipeline entry point is
 per-analyzer graceful degradation (a single detector failure does not void the
 rest).
 
-### 17.3 Phase 2 — Library Intelligence — 🚧 STARTED (shell + library query slice)
+### 17.3 Phase 2 — Library Intelligence — 🚧 STARTED (shell + shared Track panel slices)
 
 Tag cleanup, duplicates/versions, health score, cues and waveform work are still
 planned. The first Phase 2 slices landed on top of the Phase 0/1 foundations:
 
-- ✅ **T2.1.0 App shell** — three routed views (Library / Preparation / Auto
-  Performance), header view switcher + Ctrl/Cmd+1–3, collapsible left nav, per-view
-  options bar, dark/light/system semantic tokens, persisted UI state, and the
-  Hidden/Mini/Full PlayerDock slot (layout only; playback is T2.4). Implemented on
-  `feat/T2.1.0-shell-ui`; not merged at the time of this snapshot.
+- ✅ **T2.1.0 App shell** — the six-tab Stage 1 shell (Library, Playlists,
+  Discover, Statistics, Publish, Settings) with a typed view registry, a
+  collapsible 220/48px primary nav, persisted navigation, top-bar search/Import
+  Center/Inbox/backup status, Settings skeleton, keyboard shortcuts
+  `Ctrl/Cmd+1`–`6` / `I` / `,` and the player dock. Shipped in PR #53 (squash
+  `03991d3c`, 2026-10-23); the original three-view switcher (Library /
+  Preparation / Auto Performance), per-view options bar and `Ctrl/Cmd+1`–`3`
+  wording is superseded by the approved v1 plan. The task box stays unticked
+  until native Stage 1 acceptance QA passes.
 - ✅ **T2.1.2 Library multi-filter + sorting** — `crates/core/src/library_query.rs`
   builds the complete `list_tracks` statement (server-side, parameterized):
   free-text search with `ESCAPE`, BPM range, Camelot key / analysis-status / genre
@@ -844,6 +861,17 @@ planned. The first Phase 2 slices landed on top of the Phase 0/1 foundations:
   genre counts, minimum rating) with draft → Apply/Reset, active-filter chips, and
   sortable column headers. The search box stays client-side over the
   server-filtered page, so typing remains instant.
+- ✅ **Shared Track panel (Stage 2)** — one inspectable panel for the library and
+  every later entry point, shipped in PR #55 (squash `83831774`, 2026-10-24).
+  Header with artwork/metadata plus seven tabs (Overview, Tags, Cues, Analysis,
+  Playlists, History, File), a roving-tabindex WAI-ARIA tablist with persisted
+  tab and a keyboard-focusable tab body. Selection is immediate while the panel
+  open is deferred 350 ms, so double-click loads the player without a panel
+  flash; the inspected track is independent of the playing track. Overview
+  absorbs the old inspector content (similar tracks, gap chips, buy-links,
+  provider status, Tag Health, enrichment); Cues is read-only until the cue
+  editor; footer actions are Play, Add to playlist (disabled until Stage 5) and
+  Edit metadata.
 
 Live today inside the library screen (non-gating, post-MVP scope): local
 similar-track scoring + inspector (TF.1/TF.4), Tag Health modal (TF.4/TE.3–TE.4),
@@ -861,8 +889,12 @@ provider status + store links (TF.2/TF.4), opt-in enrichment preview → apply �
 ### 17.5 Recent development activity
 
 Phases and commits are traceable in `git log` and [`CHANGELOG.md`](../../CHANGELOG.md).
-Representative recent work (2026-10-12 → 2026-10-13):
+Representative recent work (2026-10-12 → 2026-10-24):
 
+- `feat(track-panel): shared inspect panel with player entry points (#55)` — squash
+  `83831774` (2026-10-24): the seven-tab shared Track panel, inspected-vs-playing
+  separation, deferred panel open, WAI-ARIA tablist, focus restore and tab
+  persistence; replaced the library-only inspector drawer.
 - `feat(analysis): ONNX Runtime foundation for Phase 1 (T1.1.1/T1.1.2)`
 - `feat(analysis): deterministic BPM/beat-grid and key detection (T1.1.3/T1.1.4)`
 - `feat(analysis): configurable model asset path (T1.1.2)`
@@ -1079,14 +1111,18 @@ items on 4–6 week cycles.
   drift.
 - Current status snapshot: **Phase 0 complete** (P0.1–P0.8 pass); **Phase 1 in
   progress** (analysis engine tasks T1.1.1–T1.1.8 and T1.2.1–T1.2.6 shipped; the
-  P1.x exit criteria are still being verified); **Phase 2 started** with the app shell
-  (T2.1.0 implemented on `feat/T2.1.0-shell-ui`) and the library
-  multi-filter/sorting slice (T2.1.2 implemented; manual running-window QA still
-  pending) — tag cleanup, duplicates/versions, health score, cues and waveform work
-  remain; **Phases 3–4 not started**. Live post-MVP foundations: TF.1–TF.6, TD.3,
+  P1.x exit criteria are still being verified); **Phase 2 in progress** — the
+  Stage 1 shell, T2.1.2 multi-filter/sorting and Slice 3A tags/comments merged in
+  PR #53, the player presentations in PR #54 (2026-10-23), and the shared Track
+  panel in PR #55 (squash `83831774`, 2026-10-24). Manual running-window QA is
+  still pending for Stage 1, Slice 2, Slice 3A and the Track panel; remaining
+  Stage 2 work is the virtualized 30,000-track table, artwork-grid and compact
+  list views, bulk-action scope affordances and global search, followed by tag
+  cleanup, duplicates/versions, health score, real cues and real waveform work;
+  **Phases 3–4 not started**. Live post-MVP foundations: TF.1–TF.6, TD.3,
   TE.1–TE.4, TM.1/TM.2a.
 - Prefer editing the canonical document first, then reflecting the change here.
 
 ---
 
-*Maintained under `docs/context/`. Last synthesized 2026-10-19.*
+*Maintained under `docs/context/`. Last synthesized 2026-10-24.*
