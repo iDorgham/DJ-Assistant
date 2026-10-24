@@ -3,6 +3,7 @@ import type {
   MouseEvent as ReactMouseEvent,
   PointerEvent as ReactPointerEvent,
   FormEvent,
+  UIEvent as ReactUIEvent,
 } from "react";
 import type {
   TrackSummary,
@@ -131,6 +132,7 @@ import {
   type AppView,
   type PrimaryView,
 } from "./lib/ui-state";
+import { rowHeightForColumns, shouldLoadMore, virtualWindow } from "./lib/virtual-window";
 import { nextTheme, resolveTheme, THEME_LABELS } from "./lib/theme";
 import { PreviewPlayer } from "./components/preview-player";
 import { ModalShell } from "./components/ModalShell";
@@ -167,6 +169,14 @@ const errorDetail = (err: unknown): string =>
 const UNDO_TOAST_IDLE_MS = 10_000;
 const ROW_DOUBLE_CLICK_MS = 350;
 
+// Library paging (Stage 2): the first page covers the initial viewport, then
+// scrolling near the loaded end appends 500-row pages. A reload (rating edit,
+// scan finish) re-fetches the rows already on screen in `list_tracks`' max
+// page size, so the user keeps their scroll position.
+const FIRST_LIBRARY_PAGE = 200;
+const NEXT_LIBRARY_PAGE = 500;
+const MAX_LIBRARY_PAGE = 1000;
+
 const THEME_ICONS = { dark: Moon, light: Sun, system: Monitor } as const;
 
 /** Real analysis state per track — never render a hardcoded success badge. */
@@ -192,10 +202,6 @@ const ANALYSIS_STATUS_CHIP: Record<
   },
 };
 
-/**
- * Lazily loads one track's cached cover art and falls back to a placeholder
- * icon while loading, for missing art, or when the cache read fails.
- */
 /**
  * Header row for the Library table (T2.1.5): one `<col>` and one `<th>` per
  * configured column, in the configured order. Sort stays server-side (T2.1.2);
@@ -289,7 +295,10 @@ function TrackTableHeader({
           onManageColumns();
         }}
       >
-        <tr className="border-b border-dj-border bg-dj-panel text-dj-text-secondary uppercase tracking-wider text-[11px] font-semibold sticky top-0 z-10">
+        <tr
+          aria-rowindex={1}
+          className="border-b border-dj-border bg-dj-panel text-dj-text-secondary uppercase tracking-wider text-[11px] font-semibold sticky top-0 z-10"
+        >
           {columns.map((column) => {
             const definition = columnDefinition(column.id);
             const sortKey = definition.sortable;
@@ -881,6 +890,10 @@ function InboxEmptyState({ onGoToLibrary }: { onGoToLibrary: () => void }) {
   );
 }
 
+/**
+ * Renders the desktop workspace and coordinates library loading, track inspection,
+ * metadata edits, preview playback, and saved UI preferences.
+ */
 export default function App() {
   const [ui, dispatch] = useReducer(reduceUiState, DEFAULT_UI_STATE, () => initUiState());
   const [systemPrefersDark, setSystemPrefersDark] = useState(
@@ -960,12 +973,28 @@ export default function App() {
   }, []);
 
   const [tracks, setTracks] = useState<TrackSummary[]>([]);
-  // Paginated fetch: start at 200, extend with Load more (libraryTotal bounds it).
-  const [visibleLimit, setVisibleLimit] = useState(200);
   const [loading, setLoading] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [globalSearch, setGlobalSearch] = useState("");
   const [libraryTotal, setLibraryTotal] = useState(0);
+  // Virtualized table (Stage 2): the scroller is measured rather than assumed,
+  // so the window survives window resizes and dock/player layout changes.
+  const [scrollElement, setScrollElement] = useState<HTMLDivElement | null>(null);
+  const [viewportHeight, setViewportHeight] = useState(0);
+  const [scrollTop, setScrollTop] = useState(0);
+  const scrollFrameRef = useRef<number | null>(null);
+  // Every query starts an epoch; a page that resolves after the query changed
+  // is discarded instead of appending stale rows.
+  const requestEpochRef = useRef(0);
+  const tracksRef = useRef<TrackSummary[]>([]);
+  tracksRef.current = tracks;
+  const loadingRef = useRef(false);
+  const appendInFlightRef = useRef(false);
+  const queryKeyRef = useRef("");
+  // The query whose rows are actually in `tracks`; a reload of that query may
+  // re-fetch the loaded rows, but a query still waiting for its first page may not.
+  const loadedQueryKeyRef = useRef("");
 
   const submitGlobalSearch = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -1083,38 +1112,154 @@ export default function App() {
   const [chartError, setChartError] = useState<string | null>(null);
   const [matchToInspected, setMatchToInspected] = useState(true);
 
-  // Load tracks — re-runs whenever the applied filters or sort order change, or
-  // when something bumps `reloadToken` (refresh button, scan/analysis finish).
-  // The search box filters this server-filtered page client-side, so typing
-  // stays instant and never adds IPC churn.
+  // Filters and sort are part of the query key; `reloadToken` is not, so a
+  // rating edit refreshes the loaded rows without looking like a new query.
+  const normalizedFilters = useMemo(() => normalizeFilters(filters), [filters]);
+  const queryKey = useMemo(
+    () => `${JSON.stringify(normalizedFilters ?? {})}|${sortBy ?? ""}|${sortBy ? sortDir : ""}`,
+    [normalizedFilters, sortBy, sortDir]
+  );
+
+  // Load tracks — a new query resets to the first page; a reload re-fetches as
+  // many rows as are already loaded (in max-size chunks) so the view does not
+  // collapse under the user. Search stays client-side over the loaded pages.
   useEffect(() => {
-    let cancelled = false;
+    const reset = queryKeyRef.current !== queryKey;
+    queryKeyRef.current = queryKey;
+
+    const epoch = ++requestEpochRef.current;
+    appendInFlightRef.current = false;
+    loadingRef.current = true;
+    setLoadingMore(false);
     setLoading(true);
-    listTracks({
-      filters: normalizeFilters(filters),
-      sortBy,
-      sortDir: sortBy ? sortDir : undefined,
-      limit: visibleLimit,
-    })
+
+    const target =
+      reset || loadedQueryKeyRef.current !== queryKey
+        ? FIRST_LIBRARY_PAGE
+        : Math.max(tracksRef.current.length, FIRST_LIBRARY_PAGE);
+
+    /**
+     * Fetches up to `target` rows for the current query, stopping on a short page.
+     * Returns the collected tracks and latest total, or null when superseded by
+     * a query change or reload. Request failures reject for the effect to handle.
+     */
+    const load = async () => {
+      const collected: TrackSummary[] = [];
+      let total = 0;
+      while (collected.length < target) {
+        const limit = Math.min(MAX_LIBRARY_PAGE, target - collected.length);
+        const res = await listTracks({
+          filters: normalizedFilters,
+          sortBy,
+          sortDir: sortBy ? sortDir : undefined,
+          limit,
+          offset: collected.length,
+        });
+        // A superseded query must stop fetching immediately, not after all
+        // its remaining pages have resolved.
+        if (epoch !== requestEpochRef.current) return null;
+        total = res.total;
+        collected.push(...res.tracks);
+        if (res.tracks.length < limit) break;
+      }
+      return { tracks: collected, total };
+    };
+
+    load()
       .then((res) => {
-        if (cancelled) return;
+        if (res === null || epoch !== requestEpochRef.current) return;
         setTracks(res.tracks);
         setLibraryTotal(res.total);
+        loadedQueryKeyRef.current = queryKey;
         pushStatus(`Library loaded: ${res.total} track${res.total === 1 ? "" : "s"}`);
       })
       .catch((err) => {
-        if (cancelled) return;
+        if (epoch !== requestEpochRef.current) return;
         console.error("Failed to load library tracks:", err);
         pushStatus("Couldn't load tracks — check the backend, then reload", "error");
       })
       .finally(() => {
-        if (!cancelled) setLoading(false);
+        if (epoch !== requestEpochRef.current) return;
+        loadingRef.current = false;
+        setLoading(false);
       });
-    return () => {
-      cancelled = true;
-    };
-    // Only the applied view state drives the fetch; the loader helpers are pure.
-  }, [filters, sortBy, sortDir, reloadToken, visibleLimit]);
+    // Only the applied query and reloads drive the fetch; loader helpers are pure.
+  }, [queryKey, normalizedFilters, sortBy, sortDir, reloadToken]);
+
+  /**
+   * Starts the next 500-row page unless a load is active or all rows are loaded.
+   * Appends tracks whose IDs are not already loaded and updates the total. Results
+   * superseded by a query change or reload are ignored. Request failures keep the
+   * current rows and show an error status. Returns before the request completes.
+   */
+  const loadMoreLibrary = useCallback(() => {
+    if (appendInFlightRef.current || loadingRef.current) return;
+    const loaded = tracksRef.current.length;
+    if (loaded >= libraryTotal) return;
+    const epoch = requestEpochRef.current;
+    appendInFlightRef.current = true;
+    setLoadingMore(true);
+    listTracks({
+      filters: normalizedFilters,
+      sortBy,
+      sortDir: sortBy ? sortDir : undefined,
+      limit: NEXT_LIBRARY_PAGE,
+      offset: loaded,
+    })
+      .then((res) => {
+        if (epoch !== requestEpochRef.current) return;
+        setTracks((current) => {
+          const known = new Set(current.map((track) => track.id));
+          return [...current, ...res.tracks.filter((track) => !known.has(track.id))];
+        });
+        setLibraryTotal(res.total);
+      })
+      .catch((err) => {
+        if (epoch !== requestEpochRef.current) return;
+        console.error("Failed to load more library tracks:", err);
+        pushStatus("Couldn't load more tracks", "error");
+      })
+      .finally(() => {
+        if (epoch !== requestEpochRef.current) return;
+        appendInFlightRef.current = false;
+        setLoadingMore(false);
+      });
+  }, [normalizedFilters, sortBy, sortDir, libraryTotal]);
+
+  // Measure the scroll viewport; a window resize or a dock/player layout change
+  // changes how many rows are visible, never the row height.
+  useEffect(() => {
+    if (!scrollElement) return;
+    const measure = () => setViewportHeight(scrollElement.clientHeight);
+    measure();
+    const observer = new ResizeObserver(measure);
+    observer.observe(scrollElement);
+    return () => observer.disconnect();
+  }, [scrollElement]);
+
+  useEffect(
+    () => () => {
+      if (scrollFrameRef.current !== null) cancelAnimationFrame(scrollFrameRef.current);
+    },
+    []
+  );
+
+  /** Updates the virtual window from the latest scroll offset on the next animation frame. */
+  const handleTableScroll = (event: ReactUIEvent<HTMLDivElement>) => {
+    const nextTop = event.currentTarget.scrollTop;
+    if (scrollFrameRef.current !== null) cancelAnimationFrame(scrollFrameRef.current);
+    scrollFrameRef.current = requestAnimationFrame(() => {
+      scrollFrameRef.current = null;
+      setScrollTop(nextTop);
+    });
+  };
+
+  // A new filter, sort or search starts a new list at the top. Selection is
+  // keyed by track id and deliberately survives the reset.
+  useEffect(() => {
+    setScrollTop(0);
+    scrollElement?.scrollTo({ top: 0 });
+  }, [queryKey, searchQuery, scrollElement]);
 
   // Genre options for the filter panel, reloaded with the library so a scan
   // that introduced new genres surfaces them immediately.
@@ -1783,6 +1928,33 @@ export default function App() {
   // T2.1.5: the table renders exactly this list, in storage order. Resizing is
   // committed on pointer-up, so a drag writes one preference, not one per move.
   const shownColumns = visibleColumns(columns);
+
+  // Virtualized rows (Stage 2): only the slice around the viewport is mounted;
+  // spacer rows keep the scrollbar proportional to the whole result set.
+  const rowHeight = rowHeightForColumns(shownColumns);
+  const rowWindow = useMemo(
+    () =>
+      virtualWindow({
+        scrollTop,
+        viewportHeight,
+        rowHeight,
+        rowCount: filteredTracks.length,
+      }),
+    [scrollTop, viewportHeight, rowHeight, filteredTracks.length]
+  );
+  const renderedTracks = filteredTracks.slice(rowWindow.start, rowWindow.end);
+
+  // Append the next page before the window runs out of loaded rows. The footer
+  // button stays as the keyboard-reachable path for the same action. `loading`
+  // is read here (not in the callback) so a finished reload re-runs the check
+  // once, with the fresh row count.
+  useEffect(() => {
+    if (loading) return;
+    if (shouldLoadMore(rowWindow.end, tracks.length, libraryTotal)) {
+      loadMoreLibrary();
+    }
+  }, [rowWindow.end, tracks.length, libraryTotal, loadMoreLibrary, loading]);
+
   const handleToggleColumn = (id: ColumnId) => {
     setColumns((current) => toggleColumnVisible(current, id));
   };
@@ -2300,7 +2472,11 @@ export default function App() {
                 )}
 
                 {/* Track List Table */}
-                <div className="flex-1 overflow-auto">
+                <div
+                  ref={setScrollElement}
+                  onScroll={handleTableScroll}
+                  className="flex-1 overflow-auto"
+                >
                   {filteredTracks.length === 0 ? (
                     <div className="h-full flex flex-col items-center justify-center text-dj-text-muted space-y-3 p-8">
                       <div className="h-16 w-16 rounded-2xl bg-dj-elevated border border-dj-border flex items-center justify-center">
@@ -2354,6 +2530,7 @@ export default function App() {
                     </div>
                   ) : (
                     <table
+                      aria-rowcount={filteredTracks.length + 1}
                       className="table-fixed text-left border-collapse text-xs"
                       style={{ width: totalColumnWidth(shownColumns) }}
                     >
@@ -2367,87 +2544,120 @@ export default function App() {
                         onReorder={handleMoveColumn}
                         onManageColumns={() => setColumnsOpen(true)}
                       />
-                      <tbody className="divide-y divide-dj-border">
-                        {filteredTracks.map((track, idx) => (
-                          <tr
-                            key={track.id}
-                            tabIndex={0}
-                            aria-label={`Inspect ${track.title || "Untitled"} by ${track.artist || "Unknown Artist"}`}
-                            aria-selected={selection.includes(track.id)}
-                            onClick={(event) => arbitrateRowClick(event, track, idx)}
-                            onDoubleClick={(event) => {
-                              cancelPendingRowClick();
-                              // The rating stars and energy meter live inside the
-                              // row; double-clicking them must not load the player.
-                              if (
-                                (event.target as HTMLElement).closest(
-                                  "button, a, input, select, textarea"
-                                )
-                              ) {
-                                return;
-                              }
-                              handlePlayTrack(track);
-                            }}
-                            onContextMenu={(event) => handleRowContextMenu(event, track)}
-                            onKeyDown={(e) => {
-                              // Only the row itself handles Enter/Space. A child
-                              // control (the rating stars, the energy meter) owns
-                              // its own keyboard interaction, and the row must
-                              // not swallow the activation key.
-                              if (e.target !== e.currentTarget) return;
-                              if (e.key === "Enter" || e.key === " ") {
-                                cancelPendingRowClick();
-                                e.preventDefault();
-                                e.stopPropagation();
-                                setSelection([track.id]);
-                                setSelectionAnchor(track.id);
-                                openTrackPanel(track, e.currentTarget);
-                              }
-                            }}
-                            title="Click or press Enter to inspect · Double-click to load the player · Ctrl/Cmd-click to multi-select, Shift-click for a range"
-                            className={`hover:bg-dj-hover transition duration-150 group cursor-pointer focus-visible:outline-2 focus-visible:outline-dj-accent focus-visible:-outline-offset-2 ${
-                              // Selected rows are highlighted: a rating or energy
-                              // edit applies to every one of them, so the user
-                              // must be able to see which.
-                              selection.includes(track.id) ? "bg-dj-active" : ""
-                            } ${
-                              // The inspected row keeps its own marker, so the
-                              // panel and the selection stay distinguishable.
-                              // It rides on the first cell: a `tr` cannot carry a
-                              // box-shadow, and a border would shift the layout.
-                              inspectedTrack?.id === track.id
-                                ? "[&>td:first-child]:bg-dj-accent/25"
-                                : ""
-                            }`}
-                          >
-                            {shownColumns.map((column) => (
-                              <TrackCell
-                                key={column.id}
-                                id={column.id}
-                                track={track}
-                                rowNumber={idx + 1}
-                                onRate={handleSetRating}
-                                onSetEnergy={handleSetEnergy}
-                                onSelectTag={handleFilterByTag}
-                              />
-                            ))}
+                      {rowWindow.topPadding > 0 && (
+                        <tbody aria-hidden="true">
+                          <tr>
+                            <td
+                              colSpan={shownColumns.length}
+                              style={{ height: rowWindow.topPadding, padding: 0, border: 0 }}
+                            />
                           </tr>
-                        ))}
+                        </tbody>
+                      )}
+                      <tbody>
+                        {renderedTracks.map((track, offset) => {
+                          const idx = rowWindow.start + offset;
+                          return (
+                            <tr
+                              key={track.id}
+                              tabIndex={0}
+                              aria-rowindex={idx + 2}
+                              aria-label={`Inspect ${track.title || "Untitled"} by ${track.artist || "Unknown Artist"}`}
+                              aria-selected={selection.includes(track.id)}
+                              onClick={(event) => arbitrateRowClick(event, track, idx)}
+                              onDoubleClick={(event) => {
+                                cancelPendingRowClick();
+                                // The rating stars and energy meter live inside the
+                                // row; double-clicking them must not load the player.
+                                if (
+                                  (event.target as HTMLElement).closest(
+                                    "button, a, input, select, textarea"
+                                  )
+                                ) {
+                                  return;
+                                }
+                                handlePlayTrack(track);
+                              }}
+                              onContextMenu={(event) => handleRowContextMenu(event, track)}
+                              onKeyDown={(e) => {
+                                // Only the row itself handles Enter/Space. A child
+                                // control (the rating stars, the energy meter) owns
+                                // its own keyboard interaction, and the row must
+                                // not swallow the activation key.
+                                if (e.target !== e.currentTarget) return;
+                                if (e.key === "Enter" || e.key === " ") {
+                                  cancelPendingRowClick();
+                                  e.preventDefault();
+                                  e.stopPropagation();
+                                  setSelection([track.id]);
+                                  setSelectionAnchor(track.id);
+                                  openTrackPanel(track, e.currentTarget);
+                                }
+                              }}
+                              title="Click or press Enter to inspect · Double-click to load the player · Ctrl/Cmd-click to multi-select, Shift-click for a range"
+                              style={{ height: rowHeight }}
+                              className={`hover:bg-dj-hover transition duration-150 group cursor-pointer focus-visible:outline-2 focus-visible:outline-dj-accent focus-visible:-outline-offset-2 [&>td]:shadow-[inset_0_-1px_0_var(--color-dj-border)] ${
+                                // Selected rows are highlighted: a rating or energy
+                                // edit applies to every one of them, so the user
+                                // must be able to see which.
+                                selection.includes(track.id) ? "bg-dj-active" : ""
+                              } ${
+                                // The inspected row keeps its own marker, so the
+                                // panel and the selection stay distinguishable.
+                                // It rides on the first cell: a `tr` cannot carry a
+                                // box-shadow, and a border would shift the layout.
+                                // Row separators are inset cell shadows for the
+                                // same reason — a 1px border per row would drift
+                                // the spacer math by 30,000px at library scale.
+                                inspectedTrack?.id === track.id
+                                  ? "[&>td:first-child]:bg-dj-accent/25"
+                                  : ""
+                              }`}
+                            >
+                              {shownColumns.map((column) => (
+                                <TrackCell
+                                  key={column.id}
+                                  id={column.id}
+                                  track={track}
+                                  rowNumber={idx + 1}
+                                  onRate={handleSetRating}
+                                  onSetEnergy={handleSetEnergy}
+                                  onSelectTag={handleFilterByTag}
+                                />
+                              ))}
+                            </tr>
+                          );
+                        })}
                       </tbody>
+                      {rowWindow.bottomPadding > 0 && (
+                        <tbody aria-hidden="true">
+                          <tr>
+                            <td
+                              colSpan={shownColumns.length}
+                              style={{ height: rowWindow.bottomPadding, padding: 0, border: 0 }}
+                            />
+                          </tr>
+                        </tbody>
+                      )}
                     </table>
                   )}
                 </div>
 
-                {/* Pagination: honest "there is more" affordance past the first page */}
+                {/* Incremental paging: scrolling appends the next page; the
+                    button is the keyboard-reachable path to the same action. */}
                 {tracks.length > 0 && tracks.length < libraryTotal && (
-                  <div className="shrink-0 border-t border-dj-border bg-dj-panel px-3 py-2 flex justify-center">
+                  <div className="flex shrink-0 items-center justify-center gap-2 border-t border-dj-border bg-dj-panel px-3 py-1.5 text-[11px] text-dj-text-muted">
+                    <span>
+                      Showing {tracks.length.toLocaleString("en-US")} of{" "}
+                      {libraryTotal.toLocaleString("en-US")}
+                    </span>
                     <button
                       type="button"
-                      onClick={() => setVisibleLimit((n) => n + 200)}
-                      disabled={loading}
-                      className="inline-flex items-center gap-1.5 rounded-md border border-dj-border bg-dj-elevated px-3 py-1.5 text-xs text-dj-text-secondary transition hover:bg-dj-hover hover:text-dj-text disabled:opacity-50"
+                      onClick={loadMoreLibrary}
+                      disabled={loadingMore || loading}
+                      className="inline-flex items-center gap-1 rounded-sm border border-dj-border bg-dj-elevated px-2 py-0.5 text-[11px] text-dj-text-secondary transition hover:bg-dj-hover hover:text-dj-text disabled:opacity-50"
                     >
-                      Load more — showing {tracks.length} of {libraryTotal}
+                      {loadingMore ? "Loading…" : "Load more"}
                     </button>
                   </div>
                 )}
