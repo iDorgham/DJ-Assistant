@@ -93,6 +93,9 @@ export function PurchaseSection({ track }: { track: TrackSummary }) {
     }
   };
 
+  // Hoisted so the copy handler sees the same narrowed value as the guard.
+  const matchSourceUrl = match?.sourceUrl ?? null;
+
   return (
     <>
       <section>
@@ -187,19 +190,19 @@ export function PurchaseSection({ track }: { track: TrackSummary }) {
                   {match.album ?? "Unknown release"} · {match.status} ·{" "}
                   {formatScore(match.confidence)}
                 </p>
-                {match.sourceUrl && (
+                {matchSourceUrl && (
                   <button
                     type="button"
-                    onClick={() => copyUrl(match.sourceUrl!)}
+                    onClick={() => copyUrl(matchSourceUrl)}
                     className="mt-1.5 flex items-center gap-1 rounded-sm border border-dj-border bg-dj-panel px-2 py-1 text-[11px] text-dj-text-secondary transition hover:bg-dj-hover hover:text-dj-text"
-                    title={match.sourceUrl}
+                    title={matchSourceUrl}
                   >
-                    {copiedUrl === match.sourceUrl ? (
+                    {copiedUrl === matchSourceUrl ? (
                       <Check className="h-3 w-3 text-dj-success" />
                     ) : (
                       <Copy className="h-3 w-3" />
                     )}
-                    <span>{copiedUrl === match.sourceUrl ? "Copied" : "Copy Deezer link"}</span>
+                    <span>{copiedUrl === matchSourceUrl ? "Copied" : "Copy Deezer link"}</span>
                   </button>
                 )}
               </>
