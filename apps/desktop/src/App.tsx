@@ -2818,7 +2818,7 @@ export default function App() {
                     </div>
                     <p className="text-[11px] text-dj-text-muted mt-2">
                       Versioned snapshot data — Beatport exposes no public catalog API. Ownership is
-                      ISRC-exact; taste is 60% tempo / 40% key vs the selected track.
+                      ISRC-exact; taste is 60% tempo / 40% key vs the inspected track.
                     </p>
                     {chartLoading ? (
                       <p className="text-xs text-dj-text-muted mt-3">Loading snapshot…</p>
@@ -2869,7 +2869,7 @@ export default function App() {
                                   {entry.tasteScore != null && (
                                     <span
                                       className="shrink-0 font-mono text-[11px] text-dj-accent"
-                                      title="Taste match vs the selected track"
+                                      title="Taste match vs the inspected track"
                                     >
                                       {formatScore(entry.tasteScore)}
                                     </span>
