@@ -1,6 +1,6 @@
 # DJ Assistant — Product, UX and Implementation Plan
 
-Last updated: 2026-10-23  
+Last updated: 2026-10-24  
 Status: **Approved and mirrored**. The plan is mirrored into the project at `docs/plan/`; use the project copy as the implementation reference. This source copy is retained as the planning archive.
 
 ```text
@@ -266,8 +266,11 @@ If a feature needs its own vocabulary, inspector or status model, it is not read
 
 ## 9. Current project state
 
-- Slice 3A is code-complete, committed as `ec2b191f` and tagged `slice-3a-code-complete`.
-- Slice 3A manual running-window QA is still pending; T2.1.7 and T2.1.13 stay unticked.
+- **PR #53 merged 2026-10-23** (squash `03991d3c`): the Stage 1 shell, Slice 3A and the v1 plan mirror are on `main`. The annotated tag `slice-3a-code-complete` still peels to `ec2b191f`.
+- **PR #54 merged 2026-10-23** (squash `5e7334eb`): the player dock uses the three-presentation model (Mini / Full / Player view); Extended is retired; BPM fine-tune drives the grid, bar counter and beat jump.
+- **PR #55 merged 2026-10-24** (squash `83831774`): the shared Track inspect panel with player entry points.
+- **PR #56 merged 2026-10-24** (squash `ed8d1046`): the 30,000-track virtualized Library table and the `DJ_ASSISTANT_DB_PATH` override.
+- Slice 3A manual running-window QA is still pending; T2.1.7 and T2.1.13 stay unticked. Stage 1 acceptance QA is likewise pending. Stage 2 has started via PR #55 and PR #56; Stages 3–12 have not started.
 - The approved plan is mirrored at `docs/plan/` in the DJ Assistant project.
 - The discussion log lives at `docs/plan/06-delivery/discussions.md`.
 - The factory repository is a separate workstream and must not be mixed into DJ Assistant delivery.
@@ -279,15 +282,16 @@ If a feature needs its own vocabulary, inspector or status model, it is not read
 
 ## 10. Next gate
 
-The plan and baseline are secured. The **Stage 1 shell is implemented**; native acceptance QA is pending before Stage 2 begins.
+The plan and baseline are secured, **Stage 1 is shipped** and **Stage 2 is in progress**; native acceptance QA for Stage 1 is still pending.
 
 1. ~~Confirm the hybrid tag model (D-026).~~ Locked.
 2. ~~Resolve the remaining decisions.~~ Locked as D-043–D-052; non-blocking items remain in `06-delivery/open-questions.md`.
 3. ~~Secure Slice 3A with a commit/tag.~~ Done: `ec2b191f`, tag `slice-3a-code-complete`.
 4. ~~Mirror the plan into `docs/plan/`.~~ Done.
-5. Run the Slice 3A manual QA in the Tauri window; keep T2.1.7 and T2.1.13 unticked until it passes.
-6. Run the Stage 1 native acceptance pass: six tabs, player persistence, navigation restore, no dead routes, keyboard navigation and the 30,000-track fixture.
-7. Start Stage 2 — Library and Track panel after Stage 1 acceptance.
+5. ~~Merge Stage 1 and Slice 3A.~~ Done: PR #53 (squash `03991d3c`), plus PR #54 (squash `5e7334eb`) for the player presentations.
+6. Run the Slice 3A manual QA in the Tauri window; keep T2.1.7 and T2.1.13 unticked until it passes.
+7. Run the Stage 1 native acceptance pass: six tabs, player persistence, navigation restore, no dead routes, keyboard navigation and the 30,000-track fixture.
+8. Stage 2 — Library and Track panel: **in progress** (PR #55 Track panel, PR #56 virtualized table); the remaining views and Stage 2 QA stay open.
 
 ---
 

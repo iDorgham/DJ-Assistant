@@ -1,7 +1,7 @@
 # Phase 2 — Library UX & Player Implementation Plan
 
 **Scope:** T2.1.5 → T2.4 (plus supporting T2.1.1 / T2.1.3 / T2.1.4 as needed)  
-**Status:** Living plan · **Date:** 2026-10-21  
+**Status:** Living plan · **Date:** 2026-10-24  
 **UI source of truth:** `docs/ui/` (00–03, 06, 09, 11, 12) + `docs/UI_UX_PLAYER_AND_LAYOUT_SPEC.md` v1.9+  
 **Tasks:** `docs/sdd/04-TASKS.md` · **Acceptance:** `docs/sdd/05-ACCEPTANCE.md` P2.1 / P2.1a–d  
 **Does not include:** T2.5 Spectrum Visualizer (optional polish), Tag Surgeon engine (T2.2), Cue Master generation (T2.3.5)
@@ -40,13 +40,13 @@ Deliver the professional Library working surface and a trustworthy preview playe
 
 | Item | Status target | Notes |
 |------|---------------|-------|
-| T2.1.0 App shell | Merged or stable branch | View switcher, LeftNav slot, OptionsBar, PlayerDock modes, `ui-state` persistence, Ableton tokens |
+| T2.1.0 App shell | **Merged (PR #53, squash `03991d3c`, 2026-10-23)** | Six-tab Stage 1 shell, typed view registry, collapsible 220/48px primary nav, persisted navigation, player dock, `ui-state` persistence. The old header view switcher (Library/Preparation/Auto Performance), per-view options bar and `Ctrl/Cmd+1`–`3` wording is superseded by the approved v1 plan (`docs/plan/`). |
 | T2.1.2 Multi-filter + sort | Merged | BPM, key, genre, rating, analysis status; extend for Energy in Slice 2 |
-| Virtualized track table | **Does not exist** — the Phase 0 list renders every row (`App.tsx` maps the full filtered list) | Become `TrackTable` + column config in Slice 1; row virtualization is a Slice 9 item |
+| Virtualized track table | **Shipped (PR #56, squash `ed8d1046`, 2026-10-24)** — `apps/desktop/src/lib/virtual-window.ts` mounts only the visible window plus overscan (19–23 rows at 30,000 tracks) with 36/38/41/48 px row pitch and 200 → +500 paging | Fixed row height drives the spacer arithmetic; the artwork-row rule stays documented in Slice 1 |
 | `list_tracks` / `get_track` | Exists | Extend request/response shapes below |
 | Analysis fields | Phase 1 in progress | `key_camelot`, `key_classical`, BPM; energy may need migration |
 
-**Do not start Slice 1 until shell + basic table are on the integration branch.**
+**Gate met:** the shell and the basic table are on `main` (PR #53, 2026-10-23).
 
 ---
 
@@ -138,15 +138,15 @@ These get unit tests **first** (TDD-friendly).
 
 | # | Slice | Tasks | Est. | Parallel |
 |---|--------|--------|------|----------|
-| 0 | Baseline merge | T2.1.0, T2.1.2 | — | — |
+| 0 | Baseline merge — **done (PR #53, `03991d3c`, 2026-10-23)** | T2.1.0, T2.1.2 | — | — |
 | 1 | Column framework — **done (PR #49, `d037128b`)** | **T2.1.5** | S | — |
 | 2 | Rating + Energy — **done (Slice 2, 2026-10-21)** | **T2.1.4** (rating), **T2.1.6** (energy) | S–M | After 1 |
-| 3 | Tags + Key pills + Comments | **T2.1.7**, **T2.1.8**, **T2.1.13** | M | After 1; key needs playing id |
+| 3 | Tags + Comments — **3A done (PR #53, 2026-10-23); 3B pending** | **T2.1.7**, **T2.1.13** (3A), **T2.1.8** (3B) | M | After 1; key needs playing id |
 | 4 | Artwork | **T2.1.9** | S | After 1 |
 | 5 | Context menu + nav sources | **T2.1.10**, **T2.1.12** | M | After 2–4 |
 | 6 | Mix Suggestions | **T2.1.11** | M | After 3 + 5 |
-| 7 | Player modes + real audio | **T2.4.1**, **T2.4.3** | M | After play path (5) |
-| 8 | Dual-wave + transport | **T2.4.2**, **T2.4.4**, **T2.4.5** | L | After 7 |
+| 7 | Player modes + real audio — **dock presentations shipped (PR #54); real audio/peaks open** | **T2.4.1**, **T2.4.3** | M | After play path (5) |
+| 8 | Dual-wave + transport — **preview UI shipped (PR #54) over synthesized peaks; real peaks/audio open** | **T2.4.2**, **T2.4.4**, **T2.4.5** | L | After 7 |
 | 9 | Hardening (optional same sprint) | a11y, perf, **row virtualization**, search fields T2.1.1, bulk T2.1.3 | M | Continuous |
 
 S ≈ 1–2d · M ≈ 2–4d · L ≈ 4–7d (one mid-level engineer).
@@ -173,7 +173,7 @@ Slice 7 real audio ──► Slice 8 dual-wave + transport
 1. `ColumnId` union + default config (match `03-LIBRARY-VIEW` §3.2).
 2. Persist `{ id, visible, width, order }[]` per view in `localStorage` / workspace prefs.
 3. `ColumnPicker`: checklist, drag reorder, resize handles, double-click auto-fit, Reset.
-4. `TrackTable` header + body read config; the body still renders every row — when row virtualization lands (Slice 9) it needs a fixed row height unless Artwork is on (document rule: artwork row taller or fixed thumb).
+4. `TrackTable` header + body read config; the body is virtualized (PR #56) — the row pitch follows the tallest visible cell (36/38/41/48 px), and the Slice 1 rule still applies: the artwork row is taller or carries a fixed thumb.
 5. Forbid hiding the last identity column (Title).
 
 **Files (shipped)**
@@ -184,7 +184,7 @@ Slice 7 real audio ──► Slice 8 dual-wave + transport
 **DoD**
 - [x] Toggle any optional column; order + widths survive relaunch
 - [x] Reset restores defaults
-- [ ] No layout jump that breaks virtualization — *the table still renders all rows (row virtualization is not implemented); it lands with the explicit “Virtualized track table” item in the Slice 9 hardening table below*
+- [ ] No layout jump that breaks virtualization — *row virtualization shipped in PR #56 (`virtual-window.ts`); confirm in native QA, then tick*
 - [x] Unit tests for merge/validate/persist
 
 **Out of scope:** Fancy cell widgets (plain text OK).
@@ -228,6 +228,11 @@ Slice 7 real audio ──► Slice 8 dual-wave + transport
 ---
 
 ### Slice 3 — Tags + Key pills + Comments (T2.1.7, T2.1.8, T2.1.13)
+
+**Status:** 3A (tags + comments) **merged 2026-10-23** via PR #53 (squash
+`03991d3c`). Manual running-window QA is pending, so T2.1.7 and T2.1.13 stay
+unticked. 3B (key pills, T2.1.8) is **not started** — it waits on the
+key-format Settings surface.
 
 **Split (decided 2026-10-22):** **3A = tags + comments** (T2.1.7, T2.1.13),
 **3B = key pills** (T2.1.8). 3B is deferred because the key-format preference
@@ -387,8 +392,8 @@ decisions (a `track_tags` table; the user comment **overwrites**
 |------|--------|
 | T2.1.1 Search fields | title, artist, album, genre, tags, label, year, filename, comment |
 | T2.1.3 Bulk select + bulk metadata | Undo for bulk rating/tags/energy/comments |
-| **Virtualized track table (implement)** | **Window the Library table body — it renders every row today (`App.tsx` maps the full filtered list) and no virtualizer is in `apps/desktop`. Fixed row height, or the artwork-row rule from Slice 1. Unblocks the Slice 1 DoD item “no layout jump that breaks virtualization” and `docs/ui/11-IMPLEMENTATION-CHECKLIST.md` Phase C “TrackTable virtualized”.** |
-| Virtualization perf | 5k–20k rows smoke; column toggle does not drop FPS |
+| Virtualized track table | **Shipped (PR #56, `ed8d1046`)** — windowed Library body with spacer rows and 500-row pages; the Slice 1 DoD item above and `docs/ui/11-IMPLEMENTATION-CHECKLIST.md` Phase C “TrackTable virtualized” are satisfied. |
+| Virtualization perf | 30k-track native smoke shipped with PR #56 (179 ms to Library + 200 rows; 17.5 ms average / 16.9 ms p95 frame time); keep 5k–20k column-toggle checks open |
 | a11y | Star/Energy names; menu keyboard; focus rings; reduced motion on player height |
 | Empty/error states | No tracks, no peaks yet, analyze failed |
 | Telemetry (opt-in) | Column layout used, mix suggestion accept rate — no audio |

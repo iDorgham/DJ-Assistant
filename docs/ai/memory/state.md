@@ -4,10 +4,48 @@ Ephemeral. Newest first. **Rotate aggressively** — if a line would still be tr
 in two weeks, it belongs in [`decisions.md`](./decisions.md); if it is just a
 fact, it belongs in [`facts.md`](./facts.md). Delete anything stale.
 
+## 2026-10-24 · PR #53–#56 merged; main synced; QA still open
+
+- **Four pull requests are merged.** PR #53 (Stage 1 shell, Slice 3A, the v1
+  plan mirror) is squash `03991d3c`; PR #54 (player presentations, BPM
+  fine-tune, dock heights) is squash `5e7334eb`; PR #55 (shared Track inspect
+  panel with player entry points) is squash `83831774`; PR #56 (30k-track
+  virtualized Library table plus the `DJ_ASSISTANT_DB_PATH` override) is squash
+  `ed8d1046`. Local and remote `main` are at `c118a0f0` (README rewrites
+  `5282cfae` and `c118a0f0` on top of docs `a0d9b2e7`). The annotated tag
+  `slice-3a-code-complete` still peels to `ec2b191f`.
+- **Stage 2 has started.** PR #55 added the shared Track inspect panel with
+  player entry points; PR #56 added the virtualized table
+  (`apps/desktop/src/lib/virtual-window.ts`: 36/38/41/48 px row pitch, 19–23
+  mounted rows for 30,000 tracks, 200 → +500 paging) and the deterministic 30k
+  fixture.
+- **Reviews (PR #53/#54):** both carry an APPROVE review comment with no
+  blocking findings. Non-blocking follow-ups: the logging redactor misses bare `token`
+  keys and JSON-quoted keys; `PlayerArtworkRail.tsx` still names Extended in a
+  comment; the waveform cache is unbounded; `effectiveBpm` is not clamped to
+  the audio engine's 40–240 range; `OverviewMap` does not clamp its offset; the
+  shortcut test does not exercise Meta.
+- **CI:** every required GitHub Actions check is green. DeepSource JavaScript
+  is the only red advisory status — non-required and also failing on `main`.
+  DeepSource Rust passed after the rebase (no Rust diff remained).
+- **Plan and tasks reconciled:** `docs/plan/06-delivery/implementation-slices.md`
+  and `docs/plan/README.md` record the four merges, the Phase 2 plan marks Slice
+  3A merged and 3B pending, and `docs/sdd/04-TASKS.md` records the merges
+  **without ticking any box** — Stage 1, Slice 3A and Slice 2 QA are still not
+  executed. `docs/context/PROJECT_CONTEXT.md` was refreshed post-PR #56 in
+  `a0d9b2e7`; `docs/sdd/05-ACCEPTANCE.md` (P2.13) and the Stage 1 / Slice 3A QA
+  checklists name the six-tab shell and the three presentations, with the
+  checklists pinning the implementation under test at `5e7334eb`.
+- **Next:** run the native running-window QA (Stage 1, Slice 3A, Slice 2,
+  player heights); Stage 2 is already in progress, with the artwork-grid and
+  compact-list views, bulk actions, server-side search, cue/waveform editor,
+  tag cleanup, duplicates and the health score still open.
+
 ## 2026-10-23 · Player dock rebuilt; Extended retired; Stage 1 + 3A in PR #53
 
 - **Player redesign is committed** as `9247a389` on local
-  `feat/player-presentations` (not pushed, no PR yet). Three presentations:
+  `feat/player-presentations` (since merged as PR #54 — see the 2026-10-24
+  entry). Three presentations:
   Mini / Full / Player view. Full owns the **Hot cues ↔ Grid & beat** segmented
   panel; hot cues are one compact 30px pad style; dock heights are 96–139
   (default 104) and 230–440 (default 246) with the 140–229px gap snapped at
@@ -33,7 +71,8 @@ fact, it belongs in [`facts.md`](./facts.md). Delete anything stale.
   is 0 errors / 2 pre-existing Player `exhaustive-deps` warnings;
   `pnpm lint:root` passes.
 - **Open:** native running-window QA for Stage 1, Slice 3A and the new player
-  heights; the player branch still needs a PR.
+  heights. (The player branch has since merged as PR #54 — see the 2026-10-24
+  entry.)
 
 ## 2026-10-23 · Stage 1 shell implemented; native acceptance pending
 
@@ -64,8 +103,9 @@ fact, it belongs in [`facts.md`](./facts.md). Delete anything stale.
   [`docs/engineering/STAGE1_MANUAL_QA_CHECKLIST.md`](../../engineering/STAGE1_MANUAL_QA_CHECKLIST.md).
 - **Working tree:** committed as `8a41e6ac`; pushed with Slice 3A as PR #53.
   No Stage 1 tag exists.
-- **Next:** run the native acceptance pass, then start Stage 2 (Library and
-  Track panel). Keep Slice 3A manual QA open; T2.1.7 and T2.1.13 stay unticked.
+- **Next:** run the native acceptance pass. Stage 2 has since started (PR #55
+  Track panel, PR #56 virtualized table — see the 2026-10-24 entry above). Keep
+  Slice 3A manual QA open; T2.1.7 and T2.1.13 stay unticked.
 
 ## 2026-10-23 · v1 plan mirrored; Slice 3A secured; Stage 1 next
 

@@ -1,15 +1,19 @@
 # Implementation Slices
 
-Last updated: 2026-10-23  
-Status: Active
+Last updated: 2026-10-24  
+Status: Active — Stage 1 shipped, Stage 2 in progress; native acceptance QA pending.
 
 ## 1. Current state
 
-- Slice 3A is code-complete, committed as `ec2b191f` and tagged `slice-3a-code-complete`.
+- **PR #53 merged 2026-10-23** (squash `03991d3c`): the Stage 1 shell, Slice 3A, the v1 plan mirror and the Slice 2 QA checklist are on `main`.
+- **PR #54 merged 2026-10-23** (squash `5e7334eb`): the player dock now uses the three-presentation model (Mini / Full / Player view); Extended is retired; BPM fine-tune drives the grid, bar counter and beat jump.
+- **PR #55 merged 2026-10-24** (squash `83831774`): the shared Track inspect panel with player entry points.
+- **PR #56 merged 2026-10-24** (squash `ed8d1046`): the 30,000-track virtualized Library table and the `DJ_ASSISTANT_DB_PATH` override.
 - Slice 3A manual running-window QA is still pending; T2.1.7 and T2.1.13 stay unticked.
 - The approved plan is mirrored at `docs/plan/`; the discussion log is `docs/plan/06-delivery/discussions.md`.
 - The factory repository is a separate workstream and must not be mixed into DJ Assistant delivery.
-- Stage 0 is complete, including the current-library backup. The Stage 1 shell is implemented; native acceptance QA is pending.
+- Stage 0 is complete, including the current-library backup. Stage 1 is shipped; native acceptance QA is pending.
+- Stage 2 (Library and Track panel) is **in progress** — the shell, filters, shared Track panel and virtualized table are on `main`. Stages 3–12 are **not started**; the `Done` list under each is its exit criteria, not a completion claim.
 
 ## 2. Delivery principles
 
@@ -47,7 +51,7 @@ Done:
 
 ## 4. Stage 1 — Foundation and shell
 
-Status: **in progress 2026-10-23** — shell implemented in the working tree;
+Status: **shipped 2026-10-23** — merged via PR #53 (squash `03991d3c`);
 running-window acceptance QA is pending.
 
 Scope:
@@ -70,6 +74,8 @@ Implemented:
 - [x] Honest placeholders for Playlists, Discover, Statistics and Publish.
 - [x] Inbox empty state and Settings skeleton with utility links.
 - [x] Player dock persists across tabs.
+- [x] Player dock rebuilt to the three-presentation model with BPM fine-tune,
+      dock-height snap and one hot-cue pad style (PR #54, squash `5e7334eb`).
 - [x] Keyboard shortcuts (`Ctrl/Cmd+1..6`, `Ctrl/Cmd+I`, `Ctrl/Cmd+,`)
       and skip-to-main-content.
 - [x] App error boundary and redacted renderer logging.
@@ -86,6 +92,11 @@ Acceptance (native Tauri window, not browser mock mode):
 - [ ] 30,000-track fixture loads without freezing.
 
 ## 5. Stage 2 — Library and Track panel
+
+Status: **in progress** — the Library table (filters, sort, multi-select, column
+config, 30k virtualization) and the shared Track panel are merged via PR #55 and
+PR #56; the artwork grid, compact list, bulk actions, cue/waveform editor, tag
+cleanup and health score remain open.
 
 Scope:
 
@@ -140,6 +151,11 @@ Done:
 - No UI freeze during analysis.
 
 ## 7. Stage 4 — Player
+
+Already shipped (PR #54): the dock shell and its three presentations, dock
+heights, BPM fine-tune and the hot-cue strip. The synthesized preview waveform
+is **not** the real-peaks deliverable; real audio, real peaks, EQ8, loops and
+playlist playback remain.
 
 Scope:
 
