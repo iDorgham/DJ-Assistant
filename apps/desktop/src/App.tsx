@@ -1146,6 +1146,9 @@ export default function App() {
           limit,
           offset: collected.length,
         });
+        // A superseded query must stop fetching immediately, not after all
+        // its remaining pages have resolved.
+        if (epoch !== requestEpochRef.current) return null;
         total = res.total;
         collected.push(...res.tracks);
         if (res.tracks.length < limit) break;
@@ -1155,7 +1158,7 @@ export default function App() {
 
     load()
       .then((res) => {
-        if (epoch !== requestEpochRef.current) return;
+        if (res === null || epoch !== requestEpochRef.current) return;
         setTracks(res.tracks);
         setLibraryTotal(res.total);
         pushStatus(`Library loaded: ${res.total} track${res.total === 1 ? "" : "s"}`);
@@ -1927,12 +1930,15 @@ export default function App() {
   const renderedTracks = filteredTracks.slice(rowWindow.start, rowWindow.end);
 
   // Append the next page before the window runs out of loaded rows. The footer
-  // button stays as the keyboard-reachable path for the same action.
+  // button stays as the keyboard-reachable path for the same action. `loading`
+  // is read here (not in the callback) so a finished reload re-runs the check
+  // once, with the fresh row count.
   useEffect(() => {
+    if (loading) return;
     if (shouldLoadMore(rowWindow.end, tracks.length, libraryTotal)) {
       loadMoreLibrary();
     }
-  }, [rowWindow.end, tracks.length, libraryTotal, loadMoreLibrary]);
+  }, [rowWindow.end, tracks.length, libraryTotal, loadMoreLibrary, loading]);
 
   const handleToggleColumn = (id: ColumnId) => {
     setColumns((current) => toggleColumnVisible(current, id));
