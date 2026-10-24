@@ -12,37 +12,10 @@
 </p>
 
 <p align="center">
-  <!-- Status & release -->
-  <a href="#status"><img src="https://img.shields.io/badge/status-phase%202%20%C2%B7%20in%20progress-00D9FF?style=for-the-badge&labelColor=0B0D12" alt="Status"></a>
-  <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-00D9FF?style=for-the-badge&labelColor=0B0D12" alt="License: MIT"></a>
-  <img src="https://img.shields.io/badge/version-0.1.0-00D9FF?style=for-the-badge&labelColor=0B0D12" alt="Version 0.1.0">
-  <img src="https://img.shields.io/badge/platform-windows%20%7C%20macos%20%7C%20linux-1A1D26?style=for-the-badge&labelColor=0B0D12" alt="Platforms">
-  <a href="CONTRIBUTING.md"><img src="https://img.shields.io/badge/PRs-welcome-00D9FF?style=for-the-badge&labelColor=0B0D12" alt="PRs welcome"></a>
-</p>
-
-<p align="center">
-  <!-- Core stack -->
-  <img src="https://img.shields.io/badge/Tauri_2-24C8DB?style=flat-square&logo=tauri&logoColor=white" alt="Tauri 2">
-  <img src="https://img.shields.io/badge/Rust_1.82+-000000?style=flat-square&logo=rust&logoColor=white" alt="Rust">
-  <img src="https://img.shields.io/badge/React_19-20232A?style=flat-square&logo=react&logoColor=61DAFB" alt="React 19">
-  <img src="https://img.shields.io/badge/TypeScript_6-3178C6?style=flat-square&logo=typescript&logoColor=white" alt="TypeScript 6">
-  <img src="https://img.shields.io/badge/Vite_8-646CFF?style=flat-square&logo=vite&logoColor=white" alt="Vite 8">
-</p>
-
-<p align="center">
-  <!-- Supporting stack -->
-  <img src="https://img.shields.io/badge/Tailwind_4-06B6D4?style=flat-square&logo=tailwindcss&logoColor=white" alt="Tailwind CSS 4">
-  <img src="https://img.shields.io/badge/ONNX_Runtime-005CED?style=flat-square&logo=onnx&logoColor=white" alt="ONNX Runtime">
-  <img src="https://img.shields.io/badge/SQLite-003B57?style=flat-square&logo=sqlite&logoColor=white" alt="SQLite">
-  <img src="https://img.shields.io/badge/pnpm_10-F69220?style=flat-square&logo=pnpm&logoColor=white" alt="pnpm 10">
-</p>
-
-<p align="center">
-  <!-- Quality & standards -->
-  <img src="https://img.shields.io/badge/local--first-offline%20by%20default-00D9FF?style=flat-square" alt="Local-first">
-  <img src="https://img.shields.io/badge/non--destructive-source%20untouched-1A1D26?style=flat-square" alt="Non-destructive">
-  <img src="https://img.shields.io/badge/tests-247%2B%20passing-2EA043?style=flat-square" alt="Tests">
-  <img src="https://img.shields.io/badge/commits-conventional-1A1D26?style=flat-square&logo=conventionalcommits&logoColor=white" alt="Conventional Commits">
+  <a href="#status"><img src="https://img.shields.io/badge/Phase_2-In_Progress-00D9FF?style=flat-square&labelColor=0B0D12" alt="Status"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-00D9FF?style=flat-square&labelColor=0B0D12" alt="License"></a>
+  <img src="https://img.shields.io/badge/Tests-247%2B%20Passing-2EA043?style=flat-square" alt="Tests">
+  <img src="https://img.shields.io/badge/Local--First-Offline%20by%20Default-1A1D26?style=flat-square" alt="Local-first">
 </p>
 
 <p align="center">
