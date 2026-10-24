@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, useMemo, useReducer } from "react";
+import { useEffect, useRef, useState, useMemo, useReducer, useCallback } from "react";
 import type {
   MouseEvent as ReactMouseEvent,
   PointerEvent as ReactPointerEvent,
@@ -10,14 +10,11 @@ import type {
   ScanCompletedEvent,
   AnalysisProgressEvent,
   AnalysisCompletedEvent,
-  SimilarTrackResult,
-  StoreLinksResponse,
   TagHealthResponse,
   ProviderStatusResponse,
   EnrichmentPreviewResponse,
   EnrichmentProgressEvent,
   EnrichmentProviderKind,
-  ProviderTrackMatch,
   ChartListResponse,
   GenreCount,
   ListTracksFilters,
@@ -29,19 +26,15 @@ import {
   scanFolder,
   listTracks,
   listGenres,
-  getArtwork,
   analyzeLibrary,
   listenToAnalysisProgress,
   listenToAnalysisCompleted,
-  findSimilarTracks,
   trackTagHealth,
-  storeLinksForTrack,
   providerStatus,
   enrichmentPreview,
   enrichmentApply,
   enrichmentUndo,
   listenToEnrichmentProgress,
-  providerMatchTracks,
   chartImportSnapshot,
   chartList,
   listenToScanProgress,
@@ -59,10 +52,8 @@ import {
   ShieldCheck,
   Disc3,
   CheckCircle2,
-  Sparkles,
-  ExternalLink,
-  Copy,
   Check,
+  Sparkles,
   Columns3,
   Activity,
   PlugZap,
@@ -104,7 +95,6 @@ import {
   describeMetadataWrite,
   filterTracks,
   formatBpm,
-  formatDuration,
   formatKey,
   formatScore,
   formatMissingField,
@@ -144,6 +134,8 @@ import {
 import { nextTheme, resolveTheme, THEME_LABELS } from "./lib/theme";
 import { PreviewPlayer } from "./components/preview-player";
 import { ModalShell } from "./components/ModalShell";
+import { ArtworkThumb } from "./components/ArtworkThumb";
+import { TrackPanel } from "./components/track-panel/TrackPanel";
 import { ColumnPicker } from "./components/ColumnPicker";
 import { EnergyBars } from "./components/EnergyBars";
 import { StarRating } from "./components/StarRating";
@@ -173,6 +165,7 @@ const errorDetail = (err: unknown): string =>
  * it or dismisses it.
  */
 const UNDO_TOAST_IDLE_MS = 10_000;
+const ROW_DOUBLE_CLICK_MS = 350;
 
 const THEME_ICONS = { dark: Moon, light: Sun, system: Monitor } as const;
 
@@ -203,65 +196,6 @@ const ANALYSIS_STATUS_CHIP: Record<
  * Lazily loads one track's cached cover art and falls back to a placeholder
  * icon while loading, for missing art, or when the cache read fails.
  */
-function ArtworkThumb({
-  trackId,
-  hasArtwork,
-  large = false,
-}: {
-  trackId: string;
-  hasArtwork: boolean;
-  large?: boolean;
-}) {
-  const [src, setSrc] = useState<string | null>(null);
-
-  useEffect(() => {
-    let cancelled = false;
-    if (!hasArtwork) {
-      setSrc(null);
-      return;
-    }
-    getArtwork({ trackId })
-      .then((dataUrl) => {
-        if (!cancelled) setSrc(dataUrl);
-      })
-      .catch((err) => {
-        console.error("Failed to load artwork:", err);
-        if (!cancelled) setSrc(null);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [trackId, hasArtwork]);
-
-  if (!src) {
-    return (
-      <div
-        className={
-          large
-            ? "h-20 w-20 rounded-md bg-dj-elevated border border-dj-border flex items-center justify-center"
-            : "h-9 w-9 rounded-sm bg-dj-elevated border border-dj-border flex items-center justify-center"
-        }
-        title={hasArtwork ? "Loading artwork..." : "No embedded artwork"}
-      >
-        <Music className={large ? "w-8 h-8 text-dj-text-muted" : "w-4 h-4 text-dj-text-muted"} />
-      </div>
-    );
-  }
-
-  return (
-    <img
-      src={src}
-      alt=""
-      loading="lazy"
-      className={
-        large
-          ? "h-20 w-20 rounded-md object-cover border border-dj-border"
-          : "h-9 w-9 rounded-sm object-cover border border-dj-border"
-      }
-    />
-  );
-}
-
 /**
  * Header row for the Library table (T2.1.5): one `<col>` and one `<th>` per
  * configured column, in the configured order. Sort stays server-side (T2.1.2);
@@ -1005,7 +939,10 @@ export default function App() {
         (target.tagName === "INPUT" ||
           target.tagName === "TEXTAREA" ||
           target.tagName === "SELECT" ||
-          target.isContentEditable)
+          target.isContentEditable ||
+          // Unmodified keys belong to the panel; Ctrl/Cmd view shortcuts
+          // still reach the shell when a panel control has focus.
+          (!event.ctrlKey && !event.metaKey && target.closest("[data-track-panel]")))
       ) {
         return;
       }
@@ -1076,7 +1013,17 @@ export default function App() {
   const [analysisProgress, setAnalysisProgress] = useState<AnalysisProgressEvent | null>(null);
 
   // Discovery / enrichment / provider state (local-first; online lookup is planned).
-  const [selectedTrack, setSelectedTrack] = useState<TrackSummary | null>(null);
+  // The panel inspects a track without interrupting playback. The dock owns
+  // `playingTrack`; a row click opens the panel, a double-click (or the panel
+  // footer) loads the player.
+  const [inspectedTrack, setInspectedTrack] = useState<TrackSummary | null>(null);
+  const [playingTrack, setPlayingTrack] = useState<TrackSummary | null>(null);
+  // The control that opened the panel, so closing it can hand the focus back.
+  const panelTriggerRef = useRef<HTMLElement | null>(null);
+  // Mirrors the open state for the stable close handler; a window-level Escape
+  // when the panel is already closed must not pull the focus to an old row.
+  const panelOpenRef = useRef(false);
+  panelOpenRef.current = inspectedTrack !== null;
   // Multi-select for the library table (T2.1.4/T2.1.6). Ctrl/Cmd-click toggles
   // a track, Shift-click takes the range from the anchor. A rating or energy
   // edit applies to the whole selection when the edited track is part of it.
@@ -1085,6 +1032,17 @@ export default function App() {
   // metadata reloads reorder the table, so a stored index would point at a
   // different track by the time the user Shift-clicks.
   const [selectionAnchor, setSelectionAnchor] = useState<string | null>(null);
+  // The pending *panel open* of a plain row click. The selection applies
+  // immediately; only the open waits out the double-click window, so a quick
+  // edit after selecting a row cannot still target the previous selection.
+  const pendingRowClickRef = useRef<{ timer: number; trackId: string } | null>(null);
+  const cancelPendingRowClick = useCallback(() => {
+    if (pendingRowClickRef.current) {
+      window.clearTimeout(pendingRowClickRef.current.timer);
+      pendingRowClickRef.current = null;
+    }
+  }, []);
+  useEffect(() => cancelPendingRowClick, [cancelPendingRowClick, ui.view]);
   // Undo for the newest metadata write (T2.1.4/T2.1.6). The backend keeps the
   // pre-write values, so the toast restores real data instead of guessing it.
   const [pendingUndo, setPendingUndo] = useState<{ undoId: string; message: string } | null>(null);
@@ -1098,18 +1056,10 @@ export default function App() {
     x: number;
     y: number;
   } | null>(null);
-  const [editorTrackId, setEditorTrackId] = useState<string | null>(null);
+  const [editorTrack, setEditorTrack] = useState<TrackSummary | null>(null);
   // The row the context menu was opened from, so the focus can go back to it
   // when the menu closes.
   const contextRowRef = useRef<HTMLTableRowElement | null>(null);
-  const [similar, setSimilar] = useState<SimilarTrackResult[]>([]);
-  const [similarLoading, setSimilarLoading] = useState(false);
-  const [storeLinks, setStoreLinks] = useState<StoreLinksResponse | null>(null);
-  const [similarError, setSimilarError] = useState(false);
-  const [storeLinksError, setStoreLinksError] = useState(false);
-  const [drawerRetry, setDrawerRetry] = useState(0);
-  const [selectedGaps, setSelectedGaps] = useState<string[]>([]);
-  const [copiedUrl, setCopiedUrl] = useState<string | null>(null);
   const [healthOpen, setHealthOpen] = useState(false);
   const [health, setHealth] = useState<TagHealthResponse | null>(null);
   const [healthLoading, setHealthLoading] = useState(false);
@@ -1123,19 +1073,15 @@ export default function App() {
   const [checkedProposals, setCheckedProposals] = useState<string[]>([]);
   const [applyMessage, setApplyMessage] = useState<string | null>(null);
 
-  // Deezer catalog match for the inspected track (TX.2: live reads, no writes).
-  const [deezerMatch, setDeezerMatch] = useState<ProviderTrackMatch | null>(null);
-  const [deezerLoading, setDeezerLoading] = useState(false);
-
   // Chart snapshots Tier 1 (TD.3): versioned data with local taste filtering.
   const [chartsOpen, setChartsOpen] = useState(false);
-  dialogsOpenRef.current = healthOpen || chartsOpen || editorTrackId !== null;
+  dialogsOpenRef.current = healthOpen || chartsOpen || editorTrack !== null;
   const [chartGenre, setChartGenre] = useState("techno");
   const [chartKind, setChartKind] = useState("top100");
   const [chartData, setChartData] = useState<ChartListResponse | null>(null);
   const [chartLoading, setChartLoading] = useState(false);
   const [chartError, setChartError] = useState<string | null>(null);
-  const [matchToSelected, setMatchToSelected] = useState(true);
+  const [matchToInspected, setMatchToInspected] = useState(true);
 
   // Load tracks — re-runs whenever the applied filters or sort order change, or
   // when something bumps `reloadToken` (refresh button, scan/analysis finish).
@@ -1185,6 +1131,39 @@ export default function App() {
   }, [reloadToken]);
 
   const refreshLibrary = () => setReloadToken((token) => token + 1);
+
+  // --- Shared track panel (Stage 2) ----------------------------------------
+  // One panel everywhere: a row click, Enter, or the player's info control
+  // opens the same inspector. Inspecting never touches playback — `playingTrack`
+  // belongs to the dock and only the panel footer or a row double-click sets it.
+  /**
+   * Inspects a track without changing playback. A supplied trigger replaces the focus-return
+   * target; omitting it preserves the previous target when navigating between related tracks.
+   */
+  const openTrackPanel = (track: TrackSummary, trigger?: HTMLElement | null) => {
+    if (trigger) panelTriggerRef.current = trigger;
+    setInspectedTrack(track);
+  };
+
+  // Closing hands the focus back to the control that opened the panel, so the
+  // keyboard user lands where they left off instead of at the top of the page.
+  /** Closes an open panel and focuses its remembered trigger; does nothing if already closed. */
+  const closeTrackPanel = useCallback(() => {
+    // Dropping the panel must also drop a click that is still waiting out the
+    // double-click window; otherwise it reopens the panel right after Escape.
+    cancelPendingRowClick();
+    if (!panelOpenRef.current) return;
+    setInspectedTrack(null);
+    panelTriggerRef.current?.focus();
+  }, [cancelPendingRowClick]);
+
+  /** Sets the player track, revealing the Mini dock if the player is hidden. */
+  const handlePlayTrack = (track: TrackSummary) => {
+    setPlayingTrack(track);
+    if (ui.playerMode === "hidden") {
+      dispatch({ type: "setPlayerMode", mode: "mini" });
+    }
+  };
 
   const openFilters = () => {
     setDraftFilters(filters);
@@ -1249,60 +1228,6 @@ export default function App() {
       .catch((err) => console.error("Failed to load provider status:", err));
   }, []);
 
-  // Selection drawer data: similar tracks, store buy-links, and this track's
-  // tag gaps. All local reads; online enrichment is a planned follow-up.
-  useEffect(() => {
-    if (!selectedTrack) {
-      setSimilar([]);
-      setStoreLinks(null);
-      setSelectedGaps([]);
-      setDeezerMatch(null);
-      return;
-    }
-    let cancelled = false;
-    const trackId = selectedTrack.id;
-    setSimilarLoading(true);
-    setSimilarError(false);
-    setStoreLinksError(false);
-    setDeezerMatch(null);
-    findSimilarTracks({ trackId, limit: 8 })
-      .then((res) => {
-        if (!cancelled) setSimilar(res.results);
-      })
-      .catch((err) => {
-        console.error("Failed to load similar tracks:", err);
-        if (!cancelled) {
-          setSimilar([]);
-          setSimilarError(true);
-        }
-      })
-      .finally(() => {
-        if (!cancelled) setSimilarLoading(false);
-      });
-    storeLinksForTrack({ trackId })
-      .then((res) => {
-        if (!cancelled) setStoreLinks(res);
-      })
-      .catch((err) => {
-        console.error("Failed to load store links:", err);
-        if (!cancelled) {
-          setStoreLinks(null);
-          setStoreLinksError(true);
-        }
-      });
-    trackTagHealth({ trackIds: [trackId], limit: 1 })
-      .then((res) => {
-        if (!cancelled) setSelectedGaps(res.gaps[0]?.missing ?? []);
-      })
-      .catch((err) => {
-        console.error("Failed to load tag gaps:", err);
-        if (!cancelled) setSelectedGaps([]);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [selectedTrack, drawerRetry]);
-
   const openTagHealth = async () => {
     setHealthOpen(true);
     setHealthLoading(true);
@@ -1317,18 +1242,6 @@ export default function App() {
       setHealth(null);
     } finally {
       setHealthLoading(false);
-    }
-  };
-
-  const copyStoreUrl = async (url: string) => {
-    try {
-      await navigator.clipboard.writeText(url);
-      setCopiedUrl(url);
-      window.setTimeout(() => {
-        setCopiedUrl((current) => (current === url ? null : current));
-      }, 1500);
-    } catch (err) {
-      console.error("Failed to copy store URL:", err);
     }
   };
 
@@ -1399,24 +1312,15 @@ export default function App() {
     }
   };
 
-  const runDeezerMatch = async () => {
-    if (!selectedTrack) return;
-    setDeezerLoading(true);
-    setDeezerMatch(null);
-    try {
-      const res = await providerMatchTracks({ provider: "deezer", trackIds: [selectedTrack.id] });
-      setDeezerMatch(res.matches[0] ?? null);
-    } catch (err) {
-      console.error("Deezer match failed:", err);
-    } finally {
-      setDeezerLoading(false);
-    }
-  };
-
+  /**
+   * Loads Beatport chart entries using the current genre, chart, and matching preference by default.
+   * When useInspected is true and a panel track exists, uses it as the taste-matching seed.
+   * Caught request failures clear the entries and show a chart error.
+   */
   const loadCharts = async (
     genre: string = chartGenre,
     chart: string = chartKind,
-    useSelected: boolean = matchToSelected
+    useInspected: boolean = matchToInspected
   ) => {
     setChartLoading(true);
     setChartError(null);
@@ -1426,7 +1330,7 @@ export default function App() {
           provider: "beatport",
           chart,
           genre,
-          seedTrackId: useSelected ? (selectedTrack?.id ?? undefined) : undefined,
+          seedTrackId: useInspected ? (inspectedTrack?.id ?? undefined) : undefined,
         })
       );
     } catch (err) {
@@ -1563,23 +1467,25 @@ export default function App() {
     // through `refreshLibrary`, which reloads with the *current* view state.
   }, []);
 
-  // Esc closes the inspector drawer, the Tag Health/Charts modals, the
+  // Esc closes the track panel, the Tag Health/Charts modals, the
   // filter/columns dropdowns, the row context menu and the metadata editor.
+  // The panel handles Escape itself while the focus is inside it; this window
+  // handler is the fallback for when the focus sits outside the panel.
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
-        setSelectedTrack(null);
+        closeTrackPanel();
         setHealthOpen(false);
         setChartsOpen(false);
         setFiltersOpen(false);
         setColumnsOpen(false);
         setContextMenu(null);
-        setEditorTrackId(null);
+        setEditorTrack(null);
       }
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, []);
+  }, [closeTrackPanel]);
 
   const handleSelectFolder = async () => {
     const selected = await openFolderDialog();
@@ -1743,28 +1649,35 @@ export default function App() {
     event: ReactMouseEvent<HTMLTableRowElement>,
     track: TrackSummary
   ) => {
+    cancelPendingRowClick();
     event.preventDefault();
     contextRowRef.current = event.currentTarget;
     setContextMenu({ track, x: event.clientX, y: event.clientY });
   };
 
+  /** Opens the editor with a track snapshot, including tracks outside the current library page. */
   const openMetadataEditor = (track: TrackSummary) => {
-    setEditorTrackId(track.id);
+    setEditorTrack(track);
   };
 
   // The editor saves through the same write path as the rating and the energy
   // level, so it inherits the same "nothing changed" rule and the same Undo
   // toast — including the undo of a whole tag set.
+  /**
+   * Saves editor values to the selection if it contains the editor track, or to that track alone.
+   * Does nothing without an editor track; otherwise closes the editor before saving, refreshes
+   * the library on success, and offers Undo for changed values. Caught failures show an error status.
+   */
   const handleSaveMetadata = async (values: MetadataEditorValues) => {
-    const track = tracks.find((entry) => entry.id === editorTrackId);
-    if (!track) {
-      setEditorTrackId(null);
-      return;
-    }
+    // The editor holds its own snapshot: the panel can open a track that is not
+    // on the current page (a player track, a related track), so resolving the id
+    // against `tracks` would silently drop the save.
+    if (!editorTrack) return;
+    const track = editorTrack;
     // A multi-selection applies to the whole selection; a single row applies
     // to that row alone. Same rule as the rating and the energy level.
     const trackIds = selection.includes(track.id) ? selection : [track.id];
-    setEditorTrackId(null);
+    setEditorTrack(null);
     try {
       const res = await updateTrackMetadata(buildMetadataUpdatePayload(trackIds, values));
       refreshLibrary();
@@ -1784,41 +1697,87 @@ export default function App() {
 
   // Row selection: a plain click inspects a track (and replaces the selection),
   // Ctrl/Cmd-click toggles one track, Shift-click takes the range from the
-  // anchor. Inspecting and multi-selecting stay separate on purpose — the
-  // inspector must never depend on how the row was selected.
-  const handleRowClick = (event: ReactMouseEvent, track: TrackSummary, index: number) => {
+  // anchor. Inspecting and multi-selecting stay separate on purpose — the panel
+  // must never depend on how the row was selected. A double-click loads the
+  // player without inspecting first; an already open panel stays open.
+  /**
+   * Updates the selection for a row click: Ctrl/Cmd toggles, Shift selects an inclusive range, and
+   * a plain click replaces it. index is the row position in filteredTracks; a missing Shift anchor
+   * falls back to selecting only this track.
+   */
+  const applyRowSelection = (
+    event: Pick<ReactMouseEvent<HTMLTableRowElement>, "ctrlKey" | "metaKey" | "shiftKey">,
+    track: TrackSummary,
+    index: number,
+    anchor = selectionAnchor
+  ) => {
     if (event.ctrlKey || event.metaKey) {
-      event.preventDefault();
       setSelection((current) =>
         current.includes(track.id)
           ? current.filter((id) => id !== track.id)
           : [...current, track.id]
       );
       setSelectionAnchor(track.id);
-      setSelectedTrack(track);
       return;
     }
-    if (event.shiftKey && selectionAnchor !== null) {
-      event.preventDefault();
+    if (event.shiftKey && anchor !== null) {
       // The anchor is resolved against the *current* list, so a re-sort or a
       // reload between the two clicks cannot shift the range onto other rows.
-      const anchorIndex = filteredTracks.findIndex((entry) => entry.id === selectionAnchor);
+      const anchorIndex = filteredTracks.findIndex((entry) => entry.id === anchor);
       if (anchorIndex === -1) {
         // The anchor is no longer in the visible list: fall back to a plain
         // selection instead of a range built from a stale position.
         setSelection([track.id]);
         setSelectionAnchor(track.id);
-        setSelectedTrack(track);
         return;
       }
       const [from, to] = anchorIndex < index ? [anchorIndex, index] : [index, anchorIndex];
       setSelection(filteredTracks.slice(from, to + 1).map((entry) => entry.id));
-      setSelectedTrack(track);
       return;
     }
     setSelection([track.id]);
     setSelectionAnchor(track.id);
-    setSelectedTrack((current) => (current?.id === track.id ? null : track));
+  };
+
+  /** Selects the clicked row and inspects it, remembering the row for focus return. */
+  const handleRowClick = (
+    event: Pick<
+      ReactMouseEvent<HTMLTableRowElement>,
+      "ctrlKey" | "metaKey" | "shiftKey" | "currentTarget"
+    >,
+    track: TrackSummary,
+    index: number,
+    anchor = selectionAnchor
+  ) => {
+    applyRowSelection(event, track, index, anchor);
+    openTrackPanel(track, event.currentTarget);
+  };
+
+  const arbitrateRowClick = (
+    event: ReactMouseEvent<HTMLTableRowElement>,
+    track: TrackSummary,
+    index: number
+  ) => {
+    const pending = pendingRowClickRef.current;
+    cancelPendingRowClick();
+    if (event.ctrlKey || event.metaKey || event.shiftKey) {
+      event.preventDefault();
+      // The previous plain click has already applied its selection; its anchor
+      // has not reached this render yet, so pass that track explicitly.
+      handleRowClick(event, track, index, pending?.trackId ?? selectionAnchor);
+      return;
+    }
+    if (event.detail > 1) return;
+    // Selection follows the click at once; only the panel open waits for the
+    // double-click window. React clears currentTarget after dispatch, so retain
+    // the row for the deferred open and the focus return.
+    applyRowSelection({ ctrlKey: false, metaKey: false, shiftKey: false }, track, index);
+    const { currentTarget } = event;
+    const timer = window.setTimeout(() => {
+      pendingRowClickRef.current = null;
+      openTrackPanel(track, currentTarget);
+    }, ROW_DOUBLE_CLICK_MS);
+    pendingRowClickRef.current = { timer, trackId: track.id };
   };
 
   // T2.1.5: the table renders exactly this list, in storage order. Resizing is
@@ -2415,7 +2374,20 @@ export default function App() {
                             tabIndex={0}
                             aria-label={`Inspect ${track.title || "Untitled"} by ${track.artist || "Unknown Artist"}`}
                             aria-selected={selection.includes(track.id)}
-                            onClick={(event) => handleRowClick(event, track, idx)}
+                            onClick={(event) => arbitrateRowClick(event, track, idx)}
+                            onDoubleClick={(event) => {
+                              cancelPendingRowClick();
+                              // The rating stars and energy meter live inside the
+                              // row; double-clicking them must not load the player.
+                              if (
+                                (event.target as HTMLElement).closest(
+                                  "button, a, input, select, textarea"
+                                )
+                              ) {
+                                return;
+                              }
+                              handlePlayTrack(track);
+                            }}
                             onContextMenu={(event) => handleRowContextMenu(event, track)}
                             onKeyDown={(e) => {
                               // Only the row itself handles Enter/Space. A child
@@ -2424,16 +2396,15 @@ export default function App() {
                               // not swallow the activation key.
                               if (e.target !== e.currentTarget) return;
                               if (e.key === "Enter" || e.key === " ") {
+                                cancelPendingRowClick();
                                 e.preventDefault();
                                 e.stopPropagation();
                                 setSelection([track.id]);
                                 setSelectionAnchor(track.id);
-                                setSelectedTrack((current) =>
-                                  current?.id === track.id ? null : track
-                                );
+                                openTrackPanel(track, e.currentTarget);
                               }
                             }}
-                            title="Click or press Enter to inspect: similar tracks, tag gaps, buy-links · Ctrl/Cmd-click to multi-select, Shift-click for a range"
+                            title="Click or press Enter to inspect · Double-click to load the player · Ctrl/Cmd-click to multi-select, Shift-click for a range"
                             className={`hover:bg-dj-hover transition duration-150 group cursor-pointer focus-visible:outline-2 focus-visible:outline-dj-accent focus-visible:-outline-offset-2 ${
                               // Selected rows are highlighted: a rating or energy
                               // edit applies to every one of them, so the user
@@ -2441,10 +2412,10 @@ export default function App() {
                               selection.includes(track.id) ? "bg-dj-active" : ""
                             } ${
                               // The inspected row keeps its own marker, so the
-                              // drawer and the selection stay distinguishable.
+                              // panel and the selection stay distinguishable.
                               // It rides on the first cell: a `tr` cannot carry a
                               // box-shadow, and a border would shift the layout.
-                              selectedTrack?.id === track.id
+                              inspectedTrack?.id === track.id
                                 ? "[&>td:first-child]:bg-dj-accent/25"
                                 : ""
                             }`}
@@ -2526,227 +2497,6 @@ export default function App() {
                   </div>
                 )}
               </div>
-
-              {/* Track inspector drawer: similar tracks, tag gaps, buy-links */}
-              {selectedTrack && (
-                <aside className="absolute inset-y-0 right-0 w-[380px] max-w-[92vw] bg-dj-panel border-l border-dj-border overflow-y-auto shadow-2xl z-20">
-                  <div className="p-4 border-b border-dj-border">
-                    <div className="flex items-start justify-between gap-2">
-                      <div className="flex items-start space-x-3 min-w-0">
-                        <ArtworkThumb
-                          trackId={selectedTrack.id}
-                          hasArtwork={!!selectedTrack.artworkHash}
-                          large
-                        />
-                        <div className="min-w-0">
-                          <p className="text-sm font-semibold text-dj-text truncate">
-                            {selectedTrack.title || "Untitled"}
-                          </p>
-                          <p className="text-xs text-dj-text-secondary truncate">
-                            {selectedTrack.artist || "Unknown Artist"}
-                          </p>
-                          <p className="text-[11px] text-dj-text-muted font-mono mt-1">
-                            {formatBpm(selectedTrack.bpm)} ·{" "}
-                            {formatKey(selectedTrack.keyCamelot, selectedTrack.keyClassical)} ·{" "}
-                            {formatDuration(selectedTrack.durationMs)}
-                          </p>
-                        </div>
-                      </div>
-                      <button
-                        onClick={() => setSelectedTrack(null)}
-                        className="p-1.5 rounded-md hover:bg-dj-hover text-dj-text-secondary transition"
-                        title="Close inspector (Esc)"
-                      >
-                        <X className="w-4 h-4" />
-                      </button>
-                    </div>
-                    {selectedGaps.length > 0 && (
-                      <div className="mt-3 flex flex-wrap gap-1.5">
-                        {selectedGaps.map((field) => (
-                          <span
-                            key={field}
-                            className="px-1.5 py-0.5 rounded-sm text-[11px] font-medium bg-dj-warning/10 text-dj-warning border border-dj-warning/20"
-                            title="Missing locally — online lookup (MusicBrainz / iTunes / Deezer) is planned and opt-in"
-                          >
-                            missing: {formatMissingField(field)}
-                          </span>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-
-                  <div className="p-4 border-b border-dj-border">
-                    <p className="text-[11px] uppercase tracking-wider font-semibold text-dj-text-secondary flex items-center space-x-1.5">
-                      <Sparkles className="w-3.5 h-3.5 text-dj-accent" />
-                      <span>Similar tracks (local mix-compatibility)</span>
-                    </p>
-                    {similarLoading ? (
-                      <p className="text-xs text-dj-text-muted mt-2">Scoring library…</p>
-                    ) : similarError ? (
-                      <p className="text-xs text-dj-danger mt-2">
-                        Couldn't score similar tracks.{" "}
-                        <button
-                          type="button"
-                          onClick={() => setDrawerRetry((n) => n + 1)}
-                          className="rounded px-1 text-dj-accent underline underline-offset-2 hover:bg-dj-hover transition"
-                        >
-                          Retry
-                        </button>
-                      </p>
-                    ) : similar.length === 0 ? (
-                      <p className="text-xs text-dj-text-muted mt-2">
-                        No comparable tracks yet — import more music with BPM and key tags.
-                      </p>
-                    ) : (
-                      <ul className="mt-2 space-y-2">
-                        {similar.map((result) => (
-                          <li key={result.id}>
-                            <button
-                              onClick={() => {
-                                const next = tracks.find((t) => t.id === result.id);
-                                if (next) setSelectedTrack(next);
-                              }}
-                              className="w-full text-left p-2 rounded-md bg-dj-elevated hover:bg-dj-elevated border border-dj-border transition"
-                              title={result.reasons.join(" · ")}
-                            >
-                              <div className="flex items-center justify-between gap-2">
-                                <span className="text-xs font-medium text-dj-text truncate">
-                                  {result.title || "Untitled"}
-                                </span>
-                                <span className="text-[11px] font-mono text-dj-accent shrink-0">
-                                  {formatScore(result.score)}
-                                </span>
-                              </div>
-                              <div className="flex items-center justify-between gap-2 mt-0.5">
-                                <span className="text-[11px] text-dj-text-muted truncate">
-                                  {result.artist || "Unknown Artist"}
-                                </span>
-                                <span className="text-[11px] font-mono text-dj-text-muted shrink-0">
-                                  {formatBpm(result.bpm)} ·{" "}
-                                  {formatKey(result.keyCamelot, result.keyClassical)}
-                                </span>
-                              </div>
-                              {result.reasons.length > 0 && (
-                                <p className="text-[11px] text-dj-text-muted mt-1 truncate">
-                                  {result.reasons.join(" · ")}
-                                </p>
-                              )}
-                            </button>
-                          </li>
-                        ))}
-                      </ul>
-                    )}
-                  </div>
-
-                  <div className="p-4">
-                    <p className="text-[11px] uppercase tracking-wider font-semibold text-dj-text-secondary flex items-center space-x-1.5">
-                      <ExternalLink className="w-3.5 h-3.5 text-dj-success" />
-                      <span>Find to buy (metadata links only)</span>
-                    </p>
-                    {storeLinksError ? (
-                      <p className="text-xs text-dj-danger mt-2">
-                        Couldn't load store links.{" "}
-                        <button
-                          type="button"
-                          onClick={() => setDrawerRetry((n) => n + 1)}
-                          className="rounded px-1 text-dj-accent underline underline-offset-2 hover:bg-dj-hover transition"
-                        >
-                          Retry
-                        </button>
-                      </p>
-                    ) : !storeLinks || storeLinks.links.length === 0 ? (
-                      <p className="text-xs text-dj-text-muted mt-2">
-                        No store links for this track.
-                      </p>
-                    ) : (
-                      <ul className="mt-2 space-y-1.5">
-                        {storeLinks.links.map((link) => (
-                          <li
-                            key={link.provider}
-                            className="flex items-center justify-between gap-2 p-2 rounded-md bg-dj-elevated border border-dj-border"
-                          >
-                            <span className="text-xs text-dj-text-secondary">{link.label}</span>
-                            <button
-                              onClick={() => copyStoreUrl(link.url)}
-                              className="flex items-center space-x-1 px-2 py-1 rounded-sm text-[11px] bg-dj-overlay hover:bg-dj-hover text-dj-text-secondary border border-dj-border transition"
-                              title={link.url}
-                            >
-                              {copiedUrl === link.url ? (
-                                <Check className="w-3 h-3 text-dj-success" />
-                              ) : (
-                                <Copy className="w-3 h-3" />
-                              )}
-                              <span>{copiedUrl === link.url ? "Copied" : "Copy link"}</span>
-                            </button>
-                          </li>
-                        ))}
-                      </ul>
-                    )}
-                    <p className="text-[11px] text-dj-text-muted mt-2">
-                      Links open the store's own search page. No audio is fetched; Beatport charts
-                      and release radar arrive as data integrations next.
-                    </p>
-                  </div>
-
-                  <div className="p-4 border-t border-dj-border">
-                    <p className="text-[11px] uppercase tracking-wider font-semibold text-dj-text-secondary flex items-center space-x-1.5">
-                      <PlugZap className="w-3.5 h-3.5 text-dj-accent" />
-                      <span>Match on Deezer (live read, no key)</span>
-                    </p>
-                    {!deezerMatch && !deezerLoading && (
-                      <button
-                        onClick={runDeezerMatch}
-                        className="mt-2 px-2.5 py-1.5 rounded-md bg-dj-elevated hover:bg-dj-hover text-dj-text-secondary border border-dj-border text-xs transition"
-                        title="ISRC-exact first, then fuzzy search. Writes nothing."
-                      >
-                        Match this track
-                      </button>
-                    )}
-                    {deezerLoading && <p className="text-xs text-dj-text-muted mt-2">Matching…</p>}
-                    {deezerMatch && (
-                      <div className="mt-2 p-2 rounded-md bg-dj-elevated border border-dj-border text-xs">
-                        {deezerMatch.providerId ? (
-                          <>
-                            <p className="text-dj-text truncate">
-                              {deezerMatch.title} — {deezerMatch.artist}
-                            </p>
-                            <p className="text-[11px] text-dj-text-muted mt-0.5">
-                              {deezerMatch.album ?? "Unknown release"} · {deezerMatch.status} ·{" "}
-                              {formatScore(deezerMatch.confidence)}
-                            </p>
-                            {deezerMatch.sourceUrl && (
-                              <button
-                                onClick={() => copyStoreUrl(deezerMatch.sourceUrl!)}
-                                className="mt-1.5 flex items-center space-x-1 px-2 py-1 rounded-sm text-[11px] bg-dj-overlay hover:bg-dj-hover text-dj-text-secondary border border-dj-border transition"
-                                title={deezerMatch.sourceUrl}
-                              >
-                                {copiedUrl === deezerMatch.sourceUrl ? (
-                                  <Check className="w-3 h-3 text-dj-success" />
-                                ) : (
-                                  <Copy className="w-3 h-3" />
-                                )}
-                                <span>
-                                  {copiedUrl === deezerMatch.sourceUrl
-                                    ? "Copied"
-                                    : "Copy Deezer link"}
-                                </span>
-                              </button>
-                            )}
-                          </>
-                        ) : (
-                          <p className="text-dj-text-muted">No Deezer match for this track.</p>
-                        )}
-                        <p
-                          className="text-[11px] text-dj-text-muted mt-1.5"
-                          title="Playlist export needs a Deezer application ID (TX follow-up)"
-                        >
-                          Playlist export: needs a Deezer app ID — matching stays read-only.
-                        </p>
-                      </div>
-                    )}
-                  </div>
-                </aside>
-              )}
 
               {/* Tag Health modal: library-wide missing tags/artwork */}
               {healthOpen && (
@@ -3013,7 +2763,7 @@ export default function App() {
                         value={chartKind}
                         onChange={(e) => {
                           setChartKind(e.target.value);
-                          loadCharts(chartGenre, e.target.value, matchToSelected);
+                          loadCharts(chartGenre, e.target.value, matchToInspected);
                         }}
                         className="bg-dj-elevated border border-dj-border rounded-md px-2 py-1.5 text-dj-text"
                         title="Beatport chart"
@@ -3025,7 +2775,7 @@ export default function App() {
                         value={chartGenre}
                         onChange={(e) => {
                           setChartGenre(e.target.value);
-                          loadCharts(e.target.value, chartKind, matchToSelected);
+                          loadCharts(e.target.value, chartKind, matchToInspected);
                         }}
                         className="bg-dj-elevated border border-dj-border rounded-md px-2 py-1.5 text-dj-text"
                         title="Genre"
@@ -3049,14 +2799,14 @@ export default function App() {
                       <label className="flex items-center gap-1.5 text-dj-text-secondary cursor-pointer">
                         <input
                           type="checkbox"
-                          checked={matchToSelected}
+                          checked={matchToInspected}
                           onChange={(e) => {
-                            setMatchToSelected(e.target.checked);
+                            setMatchToInspected(e.target.checked);
                             loadCharts(chartGenre, chartKind, e.target.checked);
                           }}
                           className="accent-dj-accent"
                         />
-                        Taste-match to selected track
+                        Taste-match to the inspected track
                       </label>
                       <button
                         onClick={() => loadCharts()}
@@ -3068,7 +2818,7 @@ export default function App() {
                     </div>
                     <p className="text-[11px] text-dj-text-muted mt-2">
                       Versioned snapshot data — Beatport exposes no public catalog API. Ownership is
-                      ISRC-exact; taste is 60% tempo / 40% key vs the selected track.
+                      ISRC-exact; taste is 60% tempo / 40% key vs the inspected track.
                     </p>
                     {chartLoading ? (
                       <p className="text-xs text-dj-text-muted mt-3">Loading snapshot…</p>
@@ -3119,7 +2869,7 @@ export default function App() {
                                   {entry.tasteScore != null && (
                                     <span
                                       className="shrink-0 font-mono text-[11px] text-dj-accent"
-                                      title="Taste match vs the selected track"
+                                      title="Taste match vs the inspected track"
                                     >
                                       {formatScore(entry.tasteScore)}
                                     </span>
@@ -3224,6 +2974,24 @@ export default function App() {
               description="This view is not implemented yet."
             />
           )}
+
+          {/* The shared Track panel overlays whichever view is current — a
+              player track can be inspected without leaving Studio, and the
+              panel always describes the inspected track, never the playing one. */}
+          {inspectedTrack && (
+            <TrackPanel
+              track={inspectedTrack}
+              targetCount={editTargets(inspectedTrack).length}
+              refreshToken={reloadToken}
+              onClose={closeTrackPanel}
+              onPlay={handlePlayTrack}
+              onRate={handleSetRating}
+              onSetEnergy={handleSetEnergy}
+              onEditMetadata={openMetadataEditor}
+              onSelectTrack={(track) => openTrackPanel(track)}
+              onSelectTag={handleFilterByTag}
+            />
+          )}
         </main>
       </div>
 
@@ -3238,33 +3006,22 @@ export default function App() {
         />
       )}
 
-      {editorTrackId && (
+      {editorTrack && (
         <MetadataEditor
-          track={
-            tracks.find((entry) => entry.id === editorTrackId) ?? {
-              id: editorTrackId,
-              title: "",
-              artist: "",
-              album: null,
-              genre: null,
-              label: null,
-              year: null,
-              tags: [],
-              comments: null,
-            }
-          }
-          targetCount={selection.includes(editorTrackId) ? selection.length : 1}
+          track={editorTrack}
+          targetCount={selection.includes(editorTrack.id) ? selection.length : 1}
           onSave={handleSaveMetadata}
-          onClose={() => setEditorTrackId(null)}
+          onClose={() => setEditorTrack(null)}
         />
       )}
 
       {ui.playerMode !== "hidden" && (
         <PreviewPlayer
           mode={ui.playerMode}
-          track={selectedTrack}
+          track={playingTrack}
           onModeChange={(mode) => dispatch({ type: "setPlayerMode", mode })}
           onHide={() => dispatch({ type: "setPlayerMode", mode: "hidden" })}
+          onInspectTrack={openTrackPanel}
           activeView={ui.view}
           isDarkTheme={resolveTheme(ui.theme, systemPrefersDark) === "dark"}
         />
