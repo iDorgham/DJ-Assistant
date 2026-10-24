@@ -99,6 +99,8 @@ const TRACK_COLUMNS = [
 /**
  * Where the desktop app keeps its real library unless `DJ_ASSISTANT_DB_PATH`
  * overrides it. Mirrors Tauri's `app_data_dir` on each platform.
+ * Uses `env` for directory variables and `platform` to select the directory layout;
+ * returns null when no base directory is available. Does not apply the override.
  */
 export function resolveLiveDatabasePath(env = process.env, platform = process.platform) {
   let base;
@@ -112,6 +114,11 @@ export function resolveLiveDatabasePath(env = process.env, platform = process.pl
   return base ? join(base, APP_ID, DB_FILE) : null;
 }
 
+/**
+ * Resolves an absolute path through existing symlinks, preserving missing suffixes.
+ * Throws if an existing ancestor cannot be resolved, including dangling or looping
+ * symlinks; filesystem inspection errors also propagate.
+ */
 function canonicalPath(path) {
   let ancestor = resolve(path);
   const suffix = [];
@@ -136,6 +143,12 @@ function canonicalPath(path) {
   }
 }
 
+/**
+ * Compares paths after resolving existing symlinks, including parent directories.
+ * Missing suffixes are allowed. `platform` selects case-insensitive comparison on
+ * Windows and macOS; path resolution uses the host filesystem. Resolution errors
+ * propagate rather than returning false for paths that cannot safely be compared.
+ */
 export function samePath(left, right, platform = process.platform) {
   const a = canonicalPath(left);
   const b = canonicalPath(right);
@@ -145,10 +158,18 @@ export function samePath(left, right, platform = process.platform) {
     : a === b;
 }
 
+/**
+ * Formats a zero-based track index as UTC `YYYY-MM-DD HH:mm:ss`, starting at
+ * 2025-01-01 and advancing one minute per index. Invalid dates throw a RangeError.
+ */
 function timestamp(index) {
   return new Date(FIXTURE_EPOCH + index * 60_000).toISOString().replace("T", " ").slice(0, 19);
 }
 
+/**
+ * Builds deterministic metadata for a zero-based fixture track index. File paths
+ * are synthetic references; no audio files are created. Timestamp errors propagate.
+ */
 function trackRow(index) {
   const status =
     index % 20 === 0
@@ -201,6 +222,7 @@ function trackRow(index) {
   };
 }
 
+/** Returns the fixture's repeatable warmup, peak-time, and vocal tags for a zero-based index. */
 function tagsFor(index) {
   const tags = [];
   if (index % 3 === 0) tags.push("warmup");
@@ -209,6 +231,7 @@ function tagsFor(index) {
   return tags;
 }
 
+/** Reads migration version/SQL pairs in filename order; filesystem read errors propagate. */
 function readMigrations() {
   return readdirSync(MIGRATIONS_DIR)
     .filter((file) => file.endsWith(".sql"))
@@ -219,12 +242,27 @@ function readMigrations() {
     }));
 }
 
+/** Throws unless the requested track count is a positive integer. */
 function assertTrackCount(trackCount) {
   if (!Number.isInteger(trackCount) || trackCount <= 0) {
     throw new Error(`trackCount must be a positive integer (received ${trackCount})`);
   }
 }
 
+/**
+ * Creates a SQLite library with all migrations and synthetic tracks and tags.
+ * `dbPath` is required and resolved from the working directory. `trackCount`
+ * defaults to 30,000 and must be a positive integer. `force` permits replacing an
+ * existing fixture; it never bypasses the live-database path checks. `env` supplies
+ * both the database override and directory variables used by those checks.
+ *
+ * Creates parent directories and removes the target and its `-wal`/`-shm` sidecars
+ * before opening SQLite. Returns the absolute dbPath and track, tag, and migration
+ * counts. Throws for invalid options, protected paths, an existing target without
+ * force, or missing migrations. Path-resolution, filesystem, and SQLite errors
+ * propagate. Failed writes attempt a transaction rollback; replaced files are not
+ * restored, and a failed run can leave a database file behind.
+ */
 export function seedLibraryFixture({
   dbPath,
   trackCount = DEFAULT_TRACK_COUNT,
@@ -310,6 +348,10 @@ export function seedLibraryFixture({
   }
 }
 
+/**
+ * Parses fixture CLI options, leaving path and track-count validation to the caller.
+ * Throws for unknown arguments; `--help` and `-h` set the returned help flag.
+ */
 function parseArgs(argv) {
   const options = { dbPath: null, trackCount: DEFAULT_TRACK_COUNT, force: false, help: false };
   for (let index = 0; index < argv.length; index += 1) {
@@ -331,6 +373,7 @@ function parseArgs(argv) {
   return options;
 }
 
+/** Prints the fixture command's usage to standard output. */
 function printUsage() {
   console.log("Usage: node scripts/make-library-fixture.mjs --out <path> [--tracks N] [--force]");
 }

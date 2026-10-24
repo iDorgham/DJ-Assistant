@@ -48,11 +48,12 @@ export interface VirtualWindow {
   bottomPadding: number;
 }
 
+/** Replaces NaN and infinities with `fallback`, which defaults to zero. */
 function finite(value: number, fallback = 0): number {
   return Number.isFinite(value) ? value : fallback;
 }
 
-/** The tallest visible cell decides the row height. */
+/** The tallest visible cell decides the row height in pixels, with a 36px minimum. */
 export function rowHeightForColumns(columns: readonly { id: string }[]): number {
   return columns.reduce(
     (height, column) => Math.max(height, COLUMN_ROW_HEIGHTS[column.id] ?? DEFAULT_ROW_HEIGHT),
@@ -60,6 +61,16 @@ export function rowHeightForColumns(columns: readonly { id: string }[]): number 
   );
 }
 
+/**
+ * Returns a start-inclusive, end-exclusive row slice and spacer heights in pixels.
+ * `scrollTop`, `viewportHeight`, and `rowHeight` are in pixels; `rowCount` is the
+ * number of rows available to render. `overscan` adds rows on each side (default 4).
+ *
+ * Counts and overscan are floored and clamped to zero; non-finite values become zero.
+ * The scroll offset is clamped to the list bounds. Negative or non-finite viewport
+ * heights become zero. Positive finite row heights are floored, so callers should
+ * supply at least 1px; other row heights use 36px. An empty list returns all zeros.
+ */
 export function virtualWindow({
   scrollTop,
   viewportHeight,
@@ -94,6 +105,10 @@ export function virtualWindow({
 /**
  * True when the window is close enough to the loaded rows that the next
  * server page should be fetched. `end` is the exclusive window end.
+ * `threshold` is the remaining row count that triggers a fetch, inclusive (default 20).
+ * An empty or fully loaded result returns false; zero loaded rows with a positive
+ * total returns true. Numeric inputs are floored, clamped to zero, and non-finite
+ * values are treated as zero.
  */
 export function shouldLoadMore(
   end: number,

@@ -203,10 +203,6 @@ const ANALYSIS_STATUS_CHIP: Record<
 };
 
 /**
- * Lazily loads one track's cached cover art and falls back to a placeholder
- * icon while loading, for missing art, or when the cache read fails.
- */
-/**
  * Header row for the Library table (T2.1.5): one `<col>` and one `<th>` per
  * configured column, in the configured order. Sort stays server-side (T2.1.2);
  * the additions here are width, order and the entry point to the picker.
@@ -894,6 +890,10 @@ function InboxEmptyState({ onGoToLibrary }: { onGoToLibrary: () => void }) {
   );
 }
 
+/**
+ * Renders the desktop workspace and coordinates library loading, track inspection,
+ * metadata edits, preview playback, and saved UI preferences.
+ */
 export default function App() {
   const [ui, dispatch] = useReducer(reduceUiState, DEFAULT_UI_STATE, () => initUiState());
   const [systemPrefersDark, setSystemPrefersDark] = useState(
@@ -1134,6 +1134,11 @@ export default function App() {
       ? FIRST_LIBRARY_PAGE
       : Math.max(tracksRef.current.length, FIRST_LIBRARY_PAGE);
 
+    /**
+     * Fetches up to `target` rows for the current query, stopping on a short page.
+     * Returns the collected tracks and latest total, or null when superseded by
+     * a query change or reload. Request failures reject for the effect to handle.
+     */
     const load = async () => {
       const collected: TrackSummary[] = [];
       let total = 0;
@@ -1176,8 +1181,12 @@ export default function App() {
     // Only the applied query and reloads drive the fetch; loader helpers are pure.
   }, [queryKey, normalizedFilters, sortBy, sortDir, reloadToken]);
 
-  // Appends the next page when the window nears the loaded end. The epoch guard
-  // drops a page that resolves after a filter/sort reset.
+  /**
+   * Starts the next 500-row page unless a load is active or all rows are loaded.
+   * Appends tracks whose IDs are not already loaded and updates the total. Results
+   * superseded by a query change or reload are ignored. Request failures keep the
+   * current rows and show an error status. Returns before the request completes.
+   */
   const loadMoreLibrary = useCallback(() => {
     if (appendInFlightRef.current || loadingRef.current) return;
     const loaded = tracksRef.current.length;
@@ -1230,6 +1239,7 @@ export default function App() {
     []
   );
 
+  /** Updates the virtual window from the latest scroll offset on the next animation frame. */
   const handleTableScroll = (event: ReactUIEvent<HTMLDivElement>) => {
     const nextTop = event.currentTarget.scrollTop;
     if (scrollFrameRef.current !== null) cancelAnimationFrame(scrollFrameRef.current);

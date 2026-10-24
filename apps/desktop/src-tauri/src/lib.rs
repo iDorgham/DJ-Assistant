@@ -13,8 +13,9 @@ use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex};
 use tauri::Manager;
 
-/// Resolve the SQLite file the app opens. `DJ_ASSISTANT_DB_PATH` lets QA run
-/// against a fixture library without ever pointing the app at the live one.
+/// Use a nonempty override as supplied, otherwise `dj_assistant.db` under
+/// `app_data_dir`. Relative overrides stay relative to the working directory;
+/// this does not validate the path or create its parent directories.
 fn resolve_database_path(app_data_dir: &Path, override_path: Option<&OsStr>) -> PathBuf {
     match override_path {
         Some(path) if !path.is_empty() => PathBuf::from(path),
@@ -22,6 +23,13 @@ fn resolve_database_path(app_data_dir: &Path, override_path: Option<&OsStr>) -> 
     }
 }
 
+/// Run the desktop app with its SQLite database, applying pending migrations.
+/// A nonempty `DJ_ASSISTANT_DB_PATH` overrides the default app-data database.
+/// If the app-data directory cannot be resolved, the default is `./dj_assistant.db`.
+///
+/// # Panics
+///
+/// Panics if database initialization or the Tauri application run fails.
 pub fn run() {
     let context = tauri::generate_context!();
 
