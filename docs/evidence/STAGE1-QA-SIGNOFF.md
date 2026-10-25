@@ -93,3 +93,19 @@ These items have been verified via static code analysis and automated tests. The
 3. **T2.1.10 Decision:** Determine the priority for completing the remaining context menu actions (e.g. Play, Analyze, Reveal in Finder, Copy path, Remove from library) as these are currently entirely absent from the UI.
 4. **T2.2 Planning:** Evaluate timing for the Tag Surgeon to replace the disabled `Fix tags` stub.
 5. **Proceed to Next Slice:** With all verifiable items passing, it is recommended to move forward to Player QA / Slice 4 while tracking the deferred items above.
+
+---
+
+## Post-Sign-Off Addendum
+
+- 2026-10-25: T2.1.10 Batch A implemented but PARTIAL — see
+  [`T2.1.10-BATCH-A-PARTIAL.md`](./T2.1.10-BATCH-A-PARTIAL.md). Rate / Play / View columns are CODE-ONLY;
+  missing-file guard blocked; no net new tests; suite remains 154/154.
+  The Stage 1 results above are preserved as the historical baseline.
+- Note: the date in the original report header (2025-10-25) is a typo;
+  the QA pass took place on 2026-10-25.
+- Note: the addendum also corrects one point of its own first draft — the 7
+  `RowContextMenu.test.tsx` placeholders were **not** removed. They are committed
+  (in `d5fad9bf`) and still in the tree, but the desktop runner's
+  `node --test "src/**/*.test.ts"` glob never collects a `.test.tsx` file, so they
+  do not execute and do not count. Net new executed tests remain 0.
