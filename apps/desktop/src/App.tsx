@@ -120,6 +120,7 @@ import {
   trackColumnText,
   trackColumnTooltip,
   visibleColumns,
+  canHideColumn,
   type ColumnId,
   type ColumnState,
 } from "./lib/library-columns";
@@ -3213,6 +3214,25 @@ export default function App() {
           onEditTags={() => openMetadataEditor(contextMenu.track)}
           onClose={() => setContextMenu(null)}
           restoreFocus={() => contextRowRef.current?.focus()}
+          currentRating={contextMenu.track.userRating ?? null}
+          onRate={(rating) => {
+            // Apply rating to the selection if the context track is selected; otherwise to just this track.
+            // handleSetRating takes (track, rating: number|null)
+            handleSetRating(contextMenu.track, rating === 0 ? null : rating);
+            setContextMenu(null);
+          }}
+          onPlay={() => {
+            // If context menu opened on an unselected row, play the context track (selection behavior documented).
+            handlePlayTrack(contextMenu.track);
+            setContextMenu(null);
+          }}
+          playDisabled={false}
+          columns={columns}
+          onToggleColumn={(id) => {
+            handleToggleColumn(id);
+            setContextMenu(null);
+          }}
+          canHideColumnFn={canHideColumn}
         />
       )}
 

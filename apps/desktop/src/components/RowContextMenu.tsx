@@ -1,6 +1,7 @@
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import type { KeyboardEvent as ReactKeyboardEvent } from "react";
-import { Pencil, Tag } from "lucide-react";
+import { Check, Columns3, Pencil, Play, Star, Tag } from "lucide-react";
+import type { ColumnId, ColumnState } from "../lib/library-columns";
 
 /**
  * Row context menu (T2.1.7, `docs/ui/03-LIBRARY-VIEW.md` §3.5).
@@ -36,6 +37,22 @@ interface RowContextMenuProps {
    * chosen, because the editor takes the focus from there.
    */
   restoreFocus?: () => void;
+  /** Set rating for the selection/context track. */
+  onRate?: (rating: 0 | 1 | 2 | 3 | 4 | 5) => void;
+  /** Current rating for visual state. */
+  currentRating?: number | null;
+  /** Trigger playback for the resolved selection. */
+  onPlay?: () => void;
+  /** If true, Play action is disabled with explanation in title. */
+  playDisabled?: boolean;
+  /** Explanation for disabled Play action. */
+  playDisabledReason?: string;
+  /** Current column configuration for toggles. */
+  columns?: readonly ColumnState[];
+  /** Toggle column visibility. */
+  onToggleColumn?: (id: ColumnId) => void;
+  /** Check if a column can be hidden (respects identity guard). */
+  canHideColumnFn?: (columns: readonly ColumnState[], id: ColumnId) => boolean;
 }
 
 const MENU_MARGIN = 8;
@@ -47,6 +64,14 @@ export function RowContextMenu({
   onEditTags,
   onClose,
   restoreFocus,
+  onRate,
+  currentRating,
+  onPlay,
+  playDisabled = false,
+  playDisabledReason = "Playback unavailable for this track",
+  columns,
+  onToggleColumn,
+  canHideColumnFn,
 }: RowContextMenuProps) {
   const panelRef = useRef<HTMLDivElement>(null);
   const itemRefs = useRef<(HTMLButtonElement | null)[]>([]);
@@ -109,7 +134,7 @@ export function RowContextMenu({
     }
     if (event.key === "ArrowDown" || event.key === "ArrowUp") {
       event.preventDefault();
-      const items = itemRefs.current.filter((item): item is HTMLButtonElement => item !== null);
+      const items = itemRefs.current.filter((item): item is HTMLButtonElement => item !== null && !item.disabled);
       if (items.length === 0) return;
       const current = items.indexOf(document.activeElement as HTMLButtonElement);
       const step = event.key === "ArrowDown" ? 1 : -1;
@@ -117,6 +142,9 @@ export function RowContextMenu({
       items[next]?.focus();
     }
   };
+
+  const rating = currentRating == null ? 0 : Math.min(5, Math.max(0, Math.round(currentRating)));
+  const columnList = columns ?? [];
 
   return (
     <div
@@ -126,11 +154,74 @@ export function RowContextMenu({
       onKeyDown={onKeyDown}
       onContextMenu={(event) => event.preventDefault()}
       style={{ left: `${position.left}px`, top: `${position.top}px` }}
-      className="fixed z-50 min-w-[11rem] overflow-hidden rounded-md border border-dj-border-strong bg-dj-panel py-1 shadow-2xl shadow-black/60"
+      className="fixed z-50 min-w-[12rem] overflow-hidden rounded-md border border-dj-border-strong bg-dj-panel py-1 shadow-2xl shadow-black/60"
     >
       <button
         ref={(element) => {
           itemRefs.current[0] = element;
+        }}
+        type="button"
+        role="menuitem"
+        disabled={playDisabled}
+        title={playDisabled ? playDisabledReason : "Play track"}
+        onClick={() => {
+          if (playDisabled) return;
+          actionTakenRef.current = true;
+          onPlay?.();
+          onClose();
+        }}
+        className={`flex w-full items-center gap-2 px-3 py-1.5 text-left text-xs transition ${
+          playDisabled
+            ? "text-dj-text-muted opacity-60"
+            : "text-dj-text-secondary hover:bg-dj-hover hover:text-dj-text focus:bg-dj-hover focus:text-dj-text focus:outline-hidden"
+        }`}
+      >
+        <Play className="h-3.5 w-3.5 shrink-0" />
+        <span>Play</span>
+      </button>
+      <div className="my-1 h-px bg-dj-border" />
+      <div className="px-3 py-1 text-[10px] uppercase tracking-wider text-dj-text-muted">Rate</div>
+      <div className="flex items-center gap-1 px-3 py-1">
+        {[1, 2, 3, 4, 5].map((star) => (
+          <button
+            key={star}
+            type="button"
+            role="menuitem"
+            title={rating === star ? `Clear rating (currently ${rating})` : `Rate ${star} of 5`}
+            aria-label={rating === star ? `Clear rating (currently ${rating})` : `Rate ${star} of 5`}
+            onClick={() => {
+              if (!onRate) return;
+              actionTakenRef.current = true;
+              onRate(rating === star ? 0 : (star as 0 | 1 | 2 | 3 | 4 | 5));
+              onClose();
+            }}
+            className={`rounded-sm p-0.5 transition focus:outline-hidden focus-visible:ring-1 focus-visible:ring-dj-accent ${
+              star <= rating ? "text-dj-accent" : "text-dj-text-muted hover:text-dj-accent"
+            }`}
+          >
+            <Star className="h-3.5 w-3.5" fill={star <= rating ? "currentColor" : "none"} />
+          </button>
+        ))}
+        <button
+          type="button"
+          role="menuitem"
+          title="Clear rating"
+          aria-label="Clear rating"
+          onClick={() => {
+            if (!onRate) return;
+            actionTakenRef.current = true;
+            onRate(0);
+            onClose();
+          }}
+          className="ml-1 rounded-sm px-1.5 py-0.5 text-[10px] text-dj-text-muted transition hover:bg-dj-hover hover:text-dj-text focus:outline-hidden focus-visible:ring-1 focus-visible:ring-dj-accent"
+        >
+          Clear
+        </button>
+      </div>
+      <div className="my-1 h-px bg-dj-border" />
+      <button
+        ref={(element) => {
+          itemRefs.current[1] = element;
         }}
         type="button"
         role="menuitem"
@@ -146,7 +237,7 @@ export function RowContextMenu({
       </button>
       <button
         ref={(element) => {
-          itemRefs.current[1] = element;
+          itemRefs.current[2] = element;
         }}
         type="button"
         role="menuitem"
@@ -157,6 +248,42 @@ export function RowContextMenu({
         <Tag className="h-3.5 w-3.5 shrink-0" />
         <span>Fix tags</span>
       </button>
+      {columns && onToggleColumn && (
+        <>
+          <div className="my-1 h-px bg-dj-border" />
+          <div className="px-3 py-1 text-[10px] uppercase tracking-wider text-dj-text-muted">View columns</div>
+          {columnList.map((col) => {
+            const def = { label: col.id } as any; // will look up properly via canHideColumn
+            const canHide = canHideColumnFn ? canHideColumnFn(columnList, col.id) : true;
+            const disabled = col.visible && !canHide;
+            const label = col.id === "index" ? "#" : col.id === "artwork" ? "Art" : col.id.charAt(0).toUpperCase() + col.id.slice(1);
+            return (
+              <button
+                key={col.id}
+                type="button"
+                role="menuitem"
+                disabled={disabled}
+                title={disabled ? "The last identity column cannot be hidden." : col.visible ? "Hide column" : "Show column"}
+                onClick={() => {
+                  if (disabled) return;
+                  actionTakenRef.current = true;
+                  onToggleColumn(col.id);
+                  onClose();
+                }}
+                className={`flex w-full items-center gap-2 px-3 py-1.5 text-left text-xs transition ${
+                  disabled
+                    ? "text-dj-text-muted opacity-60"
+                    : "text-dj-text-secondary hover:bg-dj-hover hover:text-dj-text focus:bg-dj-hover focus:text-dj-text focus:outline-hidden"
+                }`}
+              >
+                <span className="w-3.5">{col.visible ? <Check className="h-3.5 w-3.5" /> : null}</span>
+                <Columns3 className="h-3.5 w-3.5 shrink-0 text-dj-text-muted" />
+                <span>{label}</span>
+              </button>
+            );
+          })}
+        </>
+      )}
     </div>
   );
 }
