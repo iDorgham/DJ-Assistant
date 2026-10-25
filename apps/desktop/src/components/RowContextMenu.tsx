@@ -134,7 +134,9 @@ export function RowContextMenu({
     }
     if (event.key === "ArrowDown" || event.key === "ArrowUp") {
       event.preventDefault();
-      const items = itemRefs.current.filter((item): item is HTMLButtonElement => item !== null && !item.disabled);
+      const items = itemRefs.current.filter(
+        (item): item is HTMLButtonElement => item !== null && !item.disabled
+      );
       if (items.length === 0) return;
       const current = items.indexOf(document.activeElement as HTMLButtonElement);
       const step = event.key === "ArrowDown" ? 1 : -1;
@@ -192,7 +194,9 @@ export function RowContextMenu({
             type="button"
             role="menuitem"
             title={rating === star ? `Clear rating (currently ${rating})` : `Rate ${star} of 5`}
-            aria-label={rating === star ? `Clear rating (currently ${rating})` : `Rate ${star} of 5`}
+            aria-label={
+              rating === star ? `Clear rating (currently ${rating})` : `Rate ${star} of 5`
+            }
             onClick={() => {
               if (!onRate) return;
               actionTakenRef.current = true;
@@ -255,18 +259,31 @@ export function RowContextMenu({
       {columns && onToggleColumn && (
         <>
           <div className="my-1 h-px bg-dj-border" />
-          <div className="px-3 py-1 text-[10px] uppercase tracking-wider text-dj-text-muted">View columns</div>
+          <div className="px-3 py-1 text-[10px] uppercase tracking-wider text-dj-text-muted">
+            View columns
+          </div>
           {columnList.map((col) => {
             const canHide = canHideColumnFn ? canHideColumnFn(columnList, col.id) : true;
             const disabled = col.visible && !canHide;
-            const label = col.id === "index" ? "#" : col.id === "artwork" ? "Art" : col.id.charAt(0).toUpperCase() + col.id.slice(1);
+            const label =
+              col.id === "index"
+                ? "#"
+                : col.id === "artwork"
+                  ? "Art"
+                  : col.id.charAt(0).toUpperCase() + col.id.slice(1);
             return (
               <button
                 key={col.id}
                 type="button"
                 role="menuitem"
                 disabled={disabled}
-                title={disabled ? "The last identity column cannot be hidden." : col.visible ? "Hide column" : "Show column"}
+                title={
+                  disabled
+                    ? "The last identity column cannot be hidden."
+                    : col.visible
+                      ? "Hide column"
+                      : "Show column"
+                }
                 onClick={() => {
                   if (disabled) return;
                   actionTakenRef.current = true;
@@ -279,7 +296,9 @@ export function RowContextMenu({
                     : "text-dj-text-secondary hover:bg-dj-hover hover:text-dj-text focus:bg-dj-hover focus:text-dj-text focus:outline-hidden"
                 }`}
               >
-                <span className="w-3.5">{col.visible ? <Check className="h-3.5 w-3.5" /> : null}</span>
+                <span className="w-3.5">
+                  {col.visible ? <Check className="h-3.5 w-3.5" /> : null}
+                </span>
                 <Columns3 className="h-3.5 w-3.5 shrink-0 text-dj-text-muted" />
                 <span>{label}</span>
               </button>
