@@ -257,7 +257,6 @@ export function RowContextMenu({
           <div className="my-1 h-px bg-dj-border" />
           <div className="px-3 py-1 text-[10px] uppercase tracking-wider text-dj-text-muted">View columns</div>
           {columnList.map((col) => {
-            const def = { label: col.id } as any; // will look up properly via canHideColumn
             const canHide = canHideColumnFn ? canHideColumnFn(columnList, col.id) : true;
             const disabled = col.visible && !canHide;
             const label = col.id === "index" ? "#" : col.id === "artwork" ? "Art" : col.id.charAt(0).toUpperCase() + col.id.slice(1);
