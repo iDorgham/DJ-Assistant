@@ -1797,6 +1797,12 @@ export default function App() {
   ) => {
     cancelPendingRowClick();
     event.preventDefault();
+    // If the context menu is opened on an unselected row, select that row first.
+    // If opened on a multi-selection, play the context-track (the one right-clicked).
+    if (!selection.includes(track.id)) {
+      setSelection([track.id]);
+      setSelectionAnchor(track.id);
+    }
     contextRowRef.current = event.currentTarget;
     setContextMenu({ track, x: event.clientX, y: event.clientY });
   };
@@ -3222,11 +3228,11 @@ export default function App() {
             setContextMenu(null);
           }}
           onPlay={() => {
-            // If context menu opened on an unselected row, play the context track (selection behavior documented).
             handlePlayTrack(contextMenu.track);
             setContextMenu(null);
           }}
           playDisabled={false}
+          playDisabledReason={undefined}
           columns={columns}
           onToggleColumn={(id) => {
             handleToggleColumn(id);

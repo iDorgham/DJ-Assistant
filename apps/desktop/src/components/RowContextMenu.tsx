@@ -167,6 +167,10 @@ export function RowContextMenu({
         onClick={() => {
           if (playDisabled) return;
           actionTakenRef.current = true;
+          // Play behavior:
+          // - If the context menu was opened on an unselected row, that row is selected first (see handleRowContextMenu in App.tsx)
+          // - If the context menu was opened on a multi-selection, play the context-track (the one right-clicked)
+          // - This matches the existing multi-select contract
           onPlay?.();
           onClose();
         }}
