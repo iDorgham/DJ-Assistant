@@ -1,23 +1,44 @@
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import type { KeyboardEvent as ReactKeyboardEvent } from "react";
-import { Check, Columns3, Pencil, Play, Star, Tag } from "lucide-react";
+import {
+  Check,
+  Columns3,
+  Copy,
+  FileMinus,
+  FolderOpen,
+  Globe,
+  HardDrive,
+  ListChecks,
+  ListMusic,
+  Pencil,
+  Play,
+  Search,
+  Sparkles,
+  Star,
+  Tag,
+  Waves,
+} from "lucide-react";
+import type { LucideIcon } from "lucide-react";
 import type { ColumnId, ColumnState } from "../lib/library-columns";
+import { isDisabled, itemTooltip, MENU_LAYOUT } from "../lib/library-menu";
+import type { MenuEntry } from "../lib/library-menu";
 
 /**
- * Row context menu (T2.1.7, `docs/ui/03-LIBRARY-VIEW.md` §3.5).
+ * Row context menu (T2.1.7 / T2.1.10, `docs/ui/03-LIBRARY-VIEW.md` §3.5).
  *
  * A right-click on a library row opens this menu at the cursor. It closes on
  * Escape, on a click outside it, and after an action — and it hands the focus
  * back to the row it came from, so a keyboard user is never stranded.
  *
- * The menu ships **only** the actions that exist today. The other items the
- * spec lists (Fix tags, Add to playlist, Find in playlists, Mix suggestions,
- * online find, Remove from library) act on features that do not exist yet;
- * they are added when they do, rather than shipped as disabled clutter.
+ * The rows and their order come from `MENU_LAYOUT`, which is tested against the
+ * spec. This component only renders that list: a plain row, or one of the two
+ * widgets the list names by id (`rate`, `viewColumns`). Items whose feature is
+ * not built are rendered disabled with the reason they are disabled, so the
+ * menu shows the shape of the feature instead of hiding it.
  *
- * The spec's selection semantics carry over: an action either applies to the
- * whole selection or acts on the focused row. Which is which is the caller's
- * decision — this component only reports the action.
+ * Which track an action lands on — the whole selection or the row under the
+ * pointer — is the caller's decision, and `library-menu.appliesToWholeSelection`
+ * says which is which; this component only reports the action.
  */
 interface RowContextMenuProps {
   /** Where the menu opens — the cursor position, in viewport pixels. */
@@ -53,9 +74,70 @@ interface RowContextMenuProps {
   onToggleColumn?: (id: ColumnId) => void;
   /** Check if a column can be hidden (respects identity guard). */
   canHideColumnFn?: (columns: readonly ColumnState[], id: ColumnId) => boolean;
+  /** Show the track's file in the OS file manager. */
+  onReveal?: () => void;
+  /** Put the track's file path on the clipboard. */
+  onCopyPath?: () => void;
+  /** Ask to remove the track(s) from the library — the caller confirms first. */
+  onRemove?: () => void;
 }
 
 const MENU_MARGIN = 8;
+
+/** The row icon per menu id. Widgets (`rate`, `viewColumns`) draw their own. */
+const MENU_ICONS: Record<string, LucideIcon> = {
+  play: Play,
+  analyze: Waves,
+  editTags: Pencil,
+  fixTags: Tag,
+  addToPlaylist: ListMusic,
+  addToSet: ListChecks,
+  findInPlaylists: Search,
+  mixSuggestions: Sparkles,
+  findSmallerOnline: HardDrive,
+  findNewOnline: Globe,
+  reveal: FolderOpen,
+  copyPath: Copy,
+  remove: FileMinus,
+};
+
+/** The focusable rows, in DOM order — every item but the disabled ones. */
+function menuItems(panel: HTMLElement | null): HTMLButtonElement[] {
+  return Array.from(
+    panel?.querySelectorAll<HTMLButtonElement>('[role="menuitem"]:not([disabled])') ?? []
+  );
+}
+
+interface MenuItemProps {
+  icon: LucideIcon;
+  label: string;
+  tooltip?: string;
+  disabled?: boolean;
+  /** Marks the destructive row, so it does not read like the actions above it. */
+  danger?: boolean;
+  onActivate: () => void;
+}
+
+function MenuItem({ icon: Icon, label, tooltip, disabled, danger, onActivate }: MenuItemProps) {
+  const tone = disabled
+    ? "text-dj-text-muted opacity-60"
+    : danger
+      ? "text-dj-danger hover:bg-dj-hover focus:bg-dj-hover focus:outline-hidden"
+      : "text-dj-text-secondary hover:bg-dj-hover hover:text-dj-text focus:bg-dj-hover focus:text-dj-text focus:outline-hidden";
+  return (
+    <button
+      type="button"
+      role="menuitem"
+      disabled={disabled}
+      title={tooltip ?? label}
+      onClick={onActivate}
+      className={`flex w-full items-center gap-2 px-3 py-1.5 text-left text-xs transition ${tone}`}
+    >
+      <Icon className="h-3.5 w-3.5 shrink-0" />
+      <span>{label}</span>
+    </button>
+  );
+}
 
 export function RowContextMenu({
   x,
@@ -72,13 +154,15 @@ export function RowContextMenu({
   columns,
   onToggleColumn,
   canHideColumnFn,
+  onReveal,
+  onCopyPath,
+  onRemove,
 }: RowContextMenuProps) {
   const panelRef = useRef<HTMLDivElement>(null);
-  const itemRefs = useRef<(HTMLButtonElement | null)[]>([]);
+  const [position, setPosition] = useState({ left: x, top: y });
   // Set when an action was chosen: the editor takes the focus from there, so
   // the row must not steal it back.
   const actionTakenRef = useRef(false);
-  const [position, setPosition] = useState({ left: x, top: y });
 
   // Keep the menu inside the viewport: near an edge it opens towards the
   // cursor instead of away from it.
@@ -105,7 +189,7 @@ export function RowContextMenu({
   restoreFocusRef.current = restoreFocus;
 
   useEffect(() => {
-    itemRefs.current[0]?.focus();
+    menuItems(panelRef.current)[0]?.focus();
     return () => {
       if (!actionTakenRef.current) restoreFocusRef.current?.();
     };
@@ -134,9 +218,7 @@ export function RowContextMenu({
     }
     if (event.key === "ArrowDown" || event.key === "ArrowUp") {
       event.preventDefault();
-      const items = itemRefs.current.filter(
-        (item): item is HTMLButtonElement => item !== null && !item.disabled
-      );
+      const items = menuItems(panelRef.current);
       if (items.length === 0) return;
       const current = items.indexOf(document.activeElement as HTMLButtonElement);
       const step = event.key === "ArrowDown" ? 1 : -1;
@@ -148,124 +230,91 @@ export function RowContextMenu({
   const rating = currentRating == null ? 0 : Math.min(5, Math.max(0, Math.round(currentRating)));
   const columnList = columns ?? [];
 
-  return (
-    <div
-      ref={panelRef}
-      role="menu"
-      aria-label={`Actions for ${trackTitle}`}
-      onKeyDown={onKeyDown}
-      onContextMenu={(event) => event.preventDefault()}
-      style={{ left: `${position.left}px`, top: `${position.top}px` }}
-      className="fixed z-50 min-w-[12rem] overflow-hidden rounded-md border border-dj-border-strong bg-dj-panel py-1 shadow-2xl shadow-black/60"
-    >
-      <button
-        ref={(element) => {
-          itemRefs.current[0] = element;
-        }}
-        type="button"
-        role="menuitem"
-        disabled={playDisabled}
-        title={playDisabled ? playDisabledReason : "Play track"}
-        onClick={() => {
-          if (playDisabled) return;
-          actionTakenRef.current = true;
-          // Play behavior:
-          // - If the context menu was opened on an unselected row, that row is selected first (see handleRowContextMenu in App.tsx)
-          // - If the context menu was opened on a multi-selection, play the context-track (the one right-clicked)
-          // - This matches the existing multi-select contract
-          onPlay?.();
-          onClose();
-        }}
-        className={`flex w-full items-center gap-2 px-3 py-1.5 text-left text-xs transition ${
-          playDisabled
-            ? "text-dj-text-muted opacity-60"
-            : "text-dj-text-secondary hover:bg-dj-hover hover:text-dj-text focus:bg-dj-hover focus:text-dj-text focus:outline-hidden"
-        }`}
-      >
-        <Play className="h-3.5 w-3.5 shrink-0" />
-        <span>Play</span>
-      </button>
-      <div className="my-1 h-px bg-dj-border" />
-      <div className="px-3 py-1 text-[10px] uppercase tracking-wider text-dj-text-muted">Rate</div>
-      <div className="flex items-center gap-1 px-3 py-1">
-        {[1, 2, 3, 4, 5].map((star) => (
-          <button
-            key={star}
-            type="button"
-            role="menuitem"
-            title={rating === star ? `Clear rating (currently ${rating})` : `Rate ${star} of 5`}
-            aria-label={
-              rating === star ? `Clear rating (currently ${rating})` : `Rate ${star} of 5`
-            }
-            onClick={() => {
-              if (!onRate) return;
-              actionTakenRef.current = true;
-              onRate(rating === star ? 0 : (star as 0 | 1 | 2 | 3 | 4 | 5));
-              onClose();
-            }}
-            className={`rounded-sm p-0.5 transition focus:outline-hidden focus-visible:ring-1 focus-visible:ring-dj-accent ${
-              star <= rating ? "text-dj-accent" : "text-dj-text-muted hover:text-dj-accent"
-            }`}
-          >
-            <Star className="h-3.5 w-3.5" fill={star <= rating ? "currentColor" : "none"} />
-          </button>
-        ))}
-        <button
-          type="button"
-          role="menuitem"
-          title="Clear rating"
-          aria-label="Clear rating"
-          onClick={() => {
-            if (!onRate) return;
-            actionTakenRef.current = true;
-            onRate(0);
-            onClose();
-          }}
-          className="ml-1 rounded-sm px-1.5 py-0.5 text-[10px] text-dj-text-muted transition hover:bg-dj-hover hover:text-dj-text focus:outline-hidden focus-visible:ring-1 focus-visible:ring-dj-accent"
-        >
-          Clear
-        </button>
-      </div>
-      <div className="my-1 h-px bg-dj-border" />
-      <button
-        ref={(element) => {
-          itemRefs.current[1] = element;
-        }}
-        type="button"
-        role="menuitem"
-        onClick={() => {
-          actionTakenRef.current = true;
-          onEditTags();
-          onClose();
-        }}
-        className="flex w-full items-center gap-2 px-3 py-1.5 text-left text-xs text-dj-text-secondary transition hover:bg-dj-hover hover:text-dj-text focus:bg-dj-hover focus:text-dj-text focus:outline-hidden"
-      >
-        <Pencil className="h-3.5 w-3.5 shrink-0 text-dj-text-muted" />
-        <span>Edit tags…</span>
-      </button>
-      <button
-        ref={(element) => {
-          itemRefs.current[2] = element;
-        }}
-        type="button"
-        role="menuitem"
-        disabled
-        title="Tag cleaning arrives with the Tag Surgeon (T2.2)"
-        className="flex w-full items-center gap-2 px-3 py-1.5 text-left text-xs text-dj-text-muted opacity-60"
-      >
-        <Tag className="h-3.5 w-3.5 shrink-0" />
-        <span>Fix tags</span>
-      </button>
-      {columns && onToggleColumn && (
-        <>
-          <div className="my-1 h-px bg-dj-border" />
+  // An action closes the menu and keeps the focus away from the row: the thing
+  // it opens (editor, dialog, player) owns the focus from here.
+  const run = (action?: () => void) => () => {
+    if (!action) return;
+    actionTakenRef.current = true;
+    action();
+    onClose();
+  };
+
+  const actions: Record<string, (() => void) | undefined> = {
+    play: onPlay,
+    editTags: onEditTags,
+    reveal: onReveal,
+    copyPath: onCopyPath,
+    remove: onRemove,
+  };
+
+  const renderEntry = (entry: MenuEntry, index: number) => {
+    if (entry.kind === "divider") {
+      return <div key={`divider-${index}`} className="my-1 h-px bg-dj-border" />;
+    }
+    const { id, label } = entry;
+
+    if (id === "rate") {
+      return (
+        <div key={id}>
+          <div className="px-3 py-1 text-[10px] uppercase tracking-wider text-dj-text-muted">
+            Rate
+          </div>
+          <div className="flex items-center gap-1 px-3 py-1">
+            {[1, 2, 3, 4, 5].map((star) => (
+              <button
+                key={star}
+                type="button"
+                role="menuitem"
+                title={rating === star ? `Clear rating (currently ${rating})` : `Rate ${star} of 5`}
+                aria-label={
+                  rating === star ? `Clear rating (currently ${rating})` : `Rate ${star} of 5`
+                }
+                onClick={() => {
+                  if (!onRate) return;
+                  actionTakenRef.current = true;
+                  onRate(rating === star ? 0 : (star as 0 | 1 | 2 | 3 | 4 | 5));
+                  onClose();
+                }}
+                className={`rounded-sm p-0.5 transition focus:outline-hidden focus-visible:ring-1 focus-visible:ring-dj-accent ${
+                  star <= rating ? "text-dj-accent" : "text-dj-text-muted hover:text-dj-accent"
+                }`}
+              >
+                <Star className="h-3.5 w-3.5" fill={star <= rating ? "currentColor" : "none"} />
+              </button>
+            ))}
+            <button
+              type="button"
+              role="menuitem"
+              title="Clear rating"
+              aria-label="Clear rating"
+              onClick={() => {
+                if (!onRate) return;
+                actionTakenRef.current = true;
+                onRate(0);
+                onClose();
+              }}
+              className="ml-1 rounded-sm px-1.5 py-0.5 text-[10px] text-dj-text-muted transition hover:bg-dj-hover hover:text-dj-text focus:outline-hidden focus-visible:ring-1 focus-visible:ring-dj-accent"
+            >
+              Clear
+            </button>
+          </div>
+        </div>
+      );
+    }
+
+    if (id === "viewColumns") {
+      // The caller supplies the column state; without it there is nothing to
+      // toggle, so the group is absent rather than shown empty.
+      if (!columns || !onToggleColumn) return null;
+      return (
+        <div key={id}>
           <div className="px-3 py-1 text-[10px] uppercase tracking-wider text-dj-text-muted">
             View columns
           </div>
           {columnList.map((col) => {
             const canHide = canHideColumnFn ? canHideColumnFn(columnList, col.id) : true;
-            const disabled = col.visible && !canHide;
-            const label =
+            const colDisabled = col.visible && !canHide;
+            const colLabel =
               col.id === "index"
                 ? "#"
                 : col.id === "artwork"
@@ -276,22 +325,22 @@ export function RowContextMenu({
                 key={col.id}
                 type="button"
                 role="menuitem"
-                disabled={disabled}
+                disabled={colDisabled}
                 title={
-                  disabled
+                  colDisabled
                     ? "The last identity column cannot be hidden."
                     : col.visible
                       ? "Hide column"
                       : "Show column"
                 }
                 onClick={() => {
-                  if (disabled) return;
+                  if (colDisabled) return;
                   actionTakenRef.current = true;
                   onToggleColumn(col.id);
                   onClose();
                 }}
                 className={`flex w-full items-center gap-2 px-3 py-1.5 text-left text-xs transition ${
-                  disabled
+                  colDisabled
                     ? "text-dj-text-muted opacity-60"
                     : "text-dj-text-secondary hover:bg-dj-hover hover:text-dj-text focus:bg-dj-hover focus:text-dj-text focus:outline-hidden"
                 }`}
@@ -300,12 +349,46 @@ export function RowContextMenu({
                   {col.visible ? <Check className="h-3.5 w-3.5" /> : null}
                 </span>
                 <Columns3 className="h-3.5 w-3.5 shrink-0 text-dj-text-muted" />
-                <span>{label}</span>
+                <span>{colLabel}</span>
               </button>
             );
           })}
-        </>
-      )}
+        </div>
+      );
+    }
+
+    const Icon = MENU_ICONS[id];
+    if (!Icon) return null;
+    // Play is the one live item that can be unavailable for reasons the layout
+    // cannot know — a track with no readable file.
+    const disabled = id === "play" ? playDisabled : isDisabled(id);
+    const tooltip = id === "play" && playDisabled ? playDisabledReason : itemTooltip(entry);
+    return (
+      <MenuItem
+        key={id}
+        icon={Icon}
+        label={label}
+        tooltip={tooltip}
+        disabled={disabled}
+        danger={id === "remove"}
+        onActivate={run(actions[id])}
+      />
+    );
+  };
+
+  return (
+    <div
+      ref={panelRef}
+      role="menu"
+      aria-label={`Actions for ${trackTitle}`}
+      onKeyDown={onKeyDown}
+      onContextMenu={(event) => event.preventDefault()}
+      style={{ left: `${position.left}px`, top: `${position.top}px` }}
+      // The §3.5 list plus the column toggles can stand taller than the
+      // window, so the panel scrolls instead of losing its last rows.
+      className="fixed z-50 max-h-[calc(100vh-1rem)] min-w-[12rem] overflow-y-auto rounded-md border border-dj-border-strong bg-dj-panel py-1 shadow-2xl shadow-black/60"
+    >
+      {MENU_LAYOUT.map(renderEntry)}
     </div>
   );
 }

@@ -35,14 +35,14 @@ test("seedLibraryFixture applies every migration and seeds the workspace", () =>
     const summary = seedLibraryFixture({ dbPath, trackCount: 40 });
 
     assert.equal(summary.trackCount, 40);
-    assert.equal(summary.migrationCount, 7);
+    assert.equal(summary.migrationCount, 8);
 
     withDatabase(dbPath, (db) => {
       const versions = db
         .prepare("SELECT version FROM schema_migrations ORDER BY version")
         .all()
         .map((row) => row.version);
-      assert.deepEqual(versions, [1, 2, 3, 4, 5, 6, 7]);
+      assert.deepEqual(versions, [1, 2, 3, 4, 5, 6, 7, 8]);
       assert.equal(db.prepare("SELECT COUNT(*) AS n FROM tracks").get().n, 40);
       assert.equal(db.prepare("SELECT id FROM workspaces").get().id, "default");
       assert.ok(

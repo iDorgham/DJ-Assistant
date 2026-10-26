@@ -3,18 +3,25 @@ use tauri::{AppHandle, Manager, State};
 use uuid::Uuid;
 
 use dj_assistant_core::library_query::QueryParam;
+use dj_assistant_core::library_remove::{
+    after_doc, before_doc, check_undoable, input_doc, parse_states, present_states, read_statement,
+    remove_statement, skill_run_insert, undo_statements, SkillRun, Statement, TrackState,
+    MARK_UNDONE_SQL, UNDO_READ_SQL,
+};
 use dj_assistant_core::patch::{number_value, tags_match, text_value, PATCH_COLUMNS};
+use dj_assistant_core::reveal::reveal_command;
 
 use crate::db::Database;
 use crate::models::{
     AnalyzeLibraryRequest, AnalyzeLibraryResponse, CuePoint, FindSimilarTracksRequest,
     FindSimilarTracksResponse, GenreCount, GetArtworkRequest, GetTrackRequest, GetTrackResponse,
     ListGenresResponse, ListTracksRequest, ListTracksResponse, ProviderAccount, ProviderCapability,
-    ProviderStatusResponse, ScanFolderRequest, ScanFolderResponse, SetTrackRatingRequest,
-    SetTrackRatingResponse, SimilarTrackResult, StoreLink, StoreLinksRequest, StoreLinksResponse,
-    TagHealthRequest, TagHealthResponse, TagHealthTotals, TrackDetail, TrackGaps, TrackSummary,
-    UndoTrackMetadataRequest, UndoTrackMetadataResponse, UpdateTrackMetadataRequest,
-    UpdateTrackMetadataResponse,
+    ProviderStatusResponse, RemoveTracksRequest, RemoveTracksResponse, RevealInFileManagerRequest,
+    ScanFolderRequest, ScanFolderResponse, SetTrackRatingRequest, SetTrackRatingResponse,
+    SimilarTrackResult, StoreLink, StoreLinksRequest, StoreLinksResponse, TagHealthRequest,
+    TagHealthResponse, TagHealthTotals, TrackDetail, TrackGaps, TrackSummary,
+    UndoRemoveTracksRequest, UndoRemoveTracksResponse, UndoTrackMetadataRequest,
+    UndoTrackMetadataResponse, UpdateTrackMetadataRequest, UpdateTrackMetadataResponse,
 };
 use crate::scanner::run_scan;
 use crate::security::validate_and_canonicalize_dir;
@@ -1161,6 +1168,179 @@ pub async fn undo_track_metadata(
     tx.commit().map_err(|e| e.to_string())?;
 
     Ok(UndoTrackMetadataResponse { restored, skipped })
+}
+
+/// Runs a statement built in `core` — SQL text plus its bound parameters.
+///
+/// The desktop layer is the executor and nothing else: every decision about
+/// what a write does lives in `crates/core`, where it is unit-testable.
+fn execute_core(tx: &rusqlite::Transaction<'_>, stmt: &Statement) -> Result<usize, String> {
+    tx.execute(&stmt.sql, rusqlite::params_from_iter(stmt.params.iter()))
+        .map_err(|e| e.to_string())
+}
+
+/// Takes tracks out of the library index (T2.1.10).
+///
+/// The audio files are never touched, and neither is the rest of the row:
+/// `removed_at` is the only column written, so the cue points, tags and
+/// analysis a hard `DELETE` would cascade away are still there when the user
+/// changes their mind. The snapshot goes into `skill_runs` inside the same
+/// transaction as the stamp — a remove that cannot be undone is not shipped.
+#[tauri::command]
+pub async fn remove_tracks(
+    db: State<'_, Arc<Mutex<Database>>>,
+    request: RemoveTracksRequest,
+) -> Result<RemoveTracksResponse, String> {
+    let read = read_statement(&request.track_ids).map_err(|e| e.to_string())?;
+
+    let mut db_guard = db.lock().map_err(|e| e.to_string())?;
+    let tx = db_guard
+        .conn_mut()
+        .transaction()
+        .map_err(|e| e.to_string())?;
+
+    let found: Vec<TrackState> = {
+        let mut stmt = tx.prepare(&read.sql).map_err(|e| e.to_string())?;
+        let rows = stmt
+            .query_map(rusqlite::params_from_iter(read.params.iter()), |row| {
+                Ok(TrackState {
+                    id: row.get(0)?,
+                    removed_at: row.get(1)?,
+                })
+            })
+            .map_err(|e| e.to_string())?;
+        rows.collect::<Result<Vec<_>, _>>()
+            .map_err(|e| e.to_string())?
+    };
+
+    // A track already out of the library belongs to an earlier remove, with an
+    // undo of its own. Re-stamping it here would let this snapshot bring it back
+    // from under that action, so it is left out of both the write and the
+    // record.
+    let present = present_states(&found);
+    if present.is_empty() {
+        return Ok(RemoveTracksResponse {
+            undo_id: None,
+            removed: 0,
+        });
+    }
+    let ids: Vec<String> = present.iter().map(|state| state.id.clone()).collect();
+
+    // The timestamp comes from SQLite, so the after-state records exactly what
+    // the write stores — the value undo compares the row against.
+    let removed_at: String = tx
+        .query_row("SELECT datetime('now')", [], |row| row.get(0))
+        .map_err(|e| e.to_string())?;
+
+    let update = remove_statement(&ids, &removed_at).map_err(|e| e.to_string())?;
+    let removed = execute_core(&tx, &update)?;
+    let undo_id = Uuid::new_v4().to_string();
+    execute_core(
+        &tx,
+        &skill_run_insert(&SkillRun {
+            id: undo_id.clone(),
+            workspace_id: "default".to_string(),
+            before_state: before_doc(&present),
+            after_state: after_doc(&present, &removed_at),
+            input_summary: input_doc(&ids),
+        }),
+    )?;
+
+    tx.commit().map_err(|e| e.to_string())?;
+
+    Ok(RemoveTracksResponse {
+        undo_id: Some(undo_id),
+        removed,
+    })
+}
+
+/// Puts the tracks a remove took out of the library back in.
+///
+/// Mirrors [`undo_track_metadata`]: the snapshot is refused unless it is an
+/// applied remove, each track is restored only while it still holds the state
+/// this write left, and the snapshot is marked `undone` so a second undo of the
+/// same id cannot fire.
+#[tauri::command]
+pub async fn undo_remove_tracks(
+    db: State<'_, Arc<Mutex<Database>>>,
+    request: UndoRemoveTracksRequest,
+) -> Result<UndoRemoveTracksResponse, String> {
+    let mut db_guard = db.lock().map_err(|e| e.to_string())?;
+    let tx = db_guard
+        .conn_mut()
+        .transaction()
+        .map_err(|e| e.to_string())?;
+
+    let (skill_name, status, before_raw, after_raw): (
+        String,
+        String,
+        Option<String>,
+        Option<String>,
+    ) = tx
+        .query_row(UNDO_READ_SQL, [&request.undo_id], |row| {
+            Ok((row.get(0)?, row.get(1)?, row.get(2)?, row.get(3)?))
+        })
+        .map_err(|_| format!("undo snapshot not found: {}", request.undo_id))?;
+
+    check_undoable(&skill_name, &status).map_err(|e| e.to_string())?;
+    let before_raw =
+        before_raw.ok_or_else(|| format!("undo snapshot {} has no snapshot", request.undo_id))?;
+    let after_raw =
+        after_raw.ok_or_else(|| format!("undo snapshot {} has no after-state", request.undo_id))?;
+    let before = parse_states(&before_raw).map_err(|e| e.to_string())?;
+    let after = parse_states(&after_raw).map_err(|e| e.to_string())?;
+
+    let mut restored = 0;
+    let mut skipped = 0;
+    for stmt in undo_statements(&before, &after).map_err(|e| e.to_string())? {
+        // Each statement carries the state the write left in its WHERE, so a
+        // track that was removed again in between matches nothing and stays
+        // out — the newer action wins.
+        if execute_core(&tx, &stmt)? == 0 {
+            skipped += 1;
+        } else {
+            restored += 1;
+        }
+    }
+
+    tx.execute(MARK_UNDONE_SQL, rusqlite::params![request.undo_id])
+        .map_err(|e| e.to_string())?;
+
+    tx.commit().map_err(|e| e.to_string())?;
+
+    Ok(UndoRemoveTracksResponse { restored, skipped })
+}
+
+/// Shows a track's file in the operating system's file manager.
+///
+/// The path is handed to the program as an argument — never through a shell —
+/// and the app does not read or write the file, so this cannot change a
+/// library in any way.
+#[tauri::command]
+pub async fn reveal_in_file_manager(request: RevealInFileManagerRequest) -> Result<bool, String> {
+    if !std::path::Path::new(&request.path).exists() {
+        return Err(format!(
+            "The file is not where the library says it is: {}",
+            request.path
+        ));
+    }
+    let command = reveal_command(std::env::consts::OS, &request.path)
+        .ok_or_else(|| format!("Reveal is not supported on {}.", std::env::consts::OS))?;
+
+    // The spawn is what is checked, not the exit code: `explorer` reports
+    // failure even when it opened the folder. A missing helper — no
+    // `xdg-open` on a minimal Linux box — surfaces here as a readable error.
+    std::process::Command::new(command.program)
+        .args(&command.args)
+        .spawn()
+        .map_err(|e| {
+            format!(
+                "Couldn't open {} to reveal {}: {e}",
+                command.program, request.path
+            )
+        })?;
+
+    Ok(true)
 }
 
 /// True when the track's current values still match the state the snapshot

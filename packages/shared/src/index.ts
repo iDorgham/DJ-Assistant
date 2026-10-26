@@ -232,6 +232,50 @@ export interface UndoTrackMetadataResponse {
   skipped: number;
 }
 
+// --- Library soft-remove, reveal and copy path (T2.1.10 Batch B/C) ---
+// "Remove from library" is an index change, not a file operation: it stamps
+// `tracks.removed_at` and leaves the row — with its cue points, tags and
+// analysis — in the database. Like every other write here it is logged as a
+// `skill_runs` snapshot, so the Undo on the toast restores real state.
+
+export interface RemoveTracksRequest {
+  /**
+   * Tracks to take out of the library. Unknown ids and ids already out of it
+   * are ignored, so `removed` can be smaller than this list — or zero.
+   */
+  trackIds: string[];
+}
+
+export interface RemoveTracksResponse {
+  /**
+   * Id of the `skill_runs` row holding the undo snapshot, or `null` when
+   * nothing changed — there is no snapshot, so there is nothing to undo.
+   */
+  undoId: string | null;
+  /** Number of tracks that actually left the library. */
+  removed: number;
+}
+
+export interface UndoRemoveTracksRequest {
+  /** The `undoId` returned by `remove_tracks`. */
+  undoId: string;
+}
+
+export interface UndoRemoveTracksResponse {
+  /** Number of tracks put back into the library. */
+  restored: number;
+  /**
+   * Number of tracks skipped because they were removed again after the
+   * snapshot was taken, so restoring would undo a newer action.
+   */
+  skipped: number;
+}
+
+export interface RevealInFileManagerRequest {
+  /** The track's `file_path`, exactly as the library holds it. */
+  path: string;
+}
+
 // --- Analysis queue (T1.2.1 / T1.2.2): analyze_library + progress events ---
 // Mirrors apps/desktop/src-tauri/src/models.rs (serde camelCase). The backend
 // selects tracks needing analysis (version-aware unless force:true), runs the

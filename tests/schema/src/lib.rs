@@ -17,10 +17,12 @@ pub const MIGRATION_006: &str =
     include_str!("../../../apps/desktop/src-tauri/migrations/006_track_energy.sql");
 pub const MIGRATION_007: &str =
     include_str!("../../../apps/desktop/src-tauri/migrations/007_track_tags_table.sql");
+pub const MIGRATION_008: &str =
+    include_str!("../../../apps/desktop/src-tauri/migrations/008_tracks_removed_at.sql");
 
 /// The migrations this crate's contract tests need, in the order `db.rs`
-/// applies them: the base schema, the tag columns, the energy column and the
-/// custom-tag table.
+/// applies them: the base schema, the tag columns, the energy column, the
+/// custom-tag table and the soft-removal column.
 /// Migrations 003-005 (enrichment, charts) are deliberately left out - no
 /// contract here reads those tables.
 const MIGRATIONS: &[(i64, &str)] = &[
@@ -28,6 +30,7 @@ const MIGRATIONS: &[(i64, &str)] = &[
     (2, MIGRATION_002),
     (6, MIGRATION_006),
     (7, MIGRATION_007),
+    (8, MIGRATION_008),
 ];
 
 /// Opens (or creates) a **file-backed** database at `path`, applies the pragmas and

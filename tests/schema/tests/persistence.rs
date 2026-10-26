@@ -19,13 +19,13 @@ use rusqlite::{params, Connection};
 
 use dj_assistant_schema_tests::open_migrated_at;
 
-/// Mirrors `list_tracks`'s unfiltered SELECT built by
-/// `crates/core/src/library_query.rs`: newest first, with `id` as the stable
-/// tiebreaker and LIMIT/OFFSET bound as parameters.
+/// Mirrors `list_tracks`'s baseline SELECT built by
+/// `crates/core/src/library_query.rs`: present tracks only, newest first, with
+/// `id` as the stable tiebreaker and LIMIT/OFFSET bound as parameters.
 const LIST_TRACKS_SQL: &str =
     "SELECT id, file_path, file_hash, title, artist, album, genre, label, year, bpm, key_camelot, key_classical, \
      duration_ms, format, analysis_status, user_rating, energy, comments, artwork_hash, created_at, updated_at \
-     FROM tracks ORDER BY created_at DESC, id ASC LIMIT ?1 OFFSET ?2";
+     FROM tracks WHERE removed_at IS NULL ORDER BY created_at DESC, id ASC LIMIT ?1 OFFSET ?2";
 
 /// Mirrors the search SELECT (one repeated `?1` bind plus `ESCAPE` so `%`/`_`
 /// in the search box match literally). The searched fields are the title, the
@@ -33,7 +33,7 @@ const LIST_TRACKS_SQL: &str =
 const SEARCH_TRACKS_SQL: &str = "SELECT id, file_path, file_hash, title, artist, album, genre, label, year, bpm, key_camelot, key_classical, \
      duration_ms, format, analysis_status, user_rating, energy, comments, artwork_hash, created_at, updated_at \
      FROM tracks \
-     WHERE (LOWER(title) LIKE ?1 ESCAPE '\\' \
+     WHERE removed_at IS NULL AND (LOWER(title) LIKE ?1 ESCAPE '\\' \
         OR LOWER(artist) LIKE ?1 ESCAPE '\\' \
         OR LOWER(album) LIKE ?1 ESCAPE '\\' \
         OR LOWER(file_path) LIKE ?1 ESCAPE '\\' \
@@ -43,9 +43,9 @@ const SEARCH_TRACKS_SQL: &str = "SELECT id, file_path, file_hash, title, artist,
      ORDER BY created_at DESC, id ASC LIMIT ?2 OFFSET ?3";
 
 /// Mirrors the count queries emitted by the query builder.
-const COUNT_ALL_SQL: &str = "SELECT COUNT(*) FROM tracks";
+const COUNT_ALL_SQL: &str = "SELECT COUNT(*) FROM tracks WHERE removed_at IS NULL";
 const COUNT_SEARCH_SQL: &str = "SELECT COUNT(*) FROM tracks \
-     WHERE (LOWER(title) LIKE ?1 ESCAPE '\\' \
+     WHERE removed_at IS NULL AND (LOWER(title) LIKE ?1 ESCAPE '\\' \
         OR LOWER(artist) LIKE ?1 ESCAPE '\\' \
         OR LOWER(album) LIKE ?1 ESCAPE '\\' \
         OR LOWER(file_path) LIKE ?1 ESCAPE '\\' \
@@ -56,13 +56,13 @@ const COUNT_SEARCH_SQL: &str = "SELECT COUNT(*) FROM tracks \
 /// Mirrors the tag filter the query builder emits: an `EXISTS` over
 /// `track_tags`, so a track with several tags still matches exactly once.
 const TAG_FILTER_SQL: &str = "SELECT id, title FROM tracks \
-     WHERE EXISTS (SELECT 1 FROM track_tags tt \
+     WHERE removed_at IS NULL AND EXISTS (SELECT 1 FROM track_tags tt \
                    WHERE tt.track_id = tracks.id AND LOWER(tt.tag) IN (?1)) \
      ORDER BY created_at DESC, id ASC LIMIT ?2 OFFSET ?3";
 
 /// Count half of the tag filter (no LIMIT/OFFSET placeholders).
 const COUNT_TAG_FILTER_SQL: &str = "SELECT COUNT(*) FROM tracks \
-     WHERE EXISTS (SELECT 1 FROM track_tags tt \
+     WHERE removed_at IS NULL AND EXISTS (SELECT 1 FROM track_tags tt \
                    WHERE tt.track_id = tracks.id AND LOWER(tt.tag) IN (?1))";
 
 /// Mirrors the builder's filtered SELECT for
@@ -70,7 +70,7 @@ const COUNT_TAG_FILTER_SQL: &str = "SELECT COUNT(*) FROM tracks \
 /// genre: ["techno"], ratingMin: 3, energyMin: 4, energyMax: 6, sortBy: "bpm",
 /// sortDir: "asc"}`.
 const FILTER_TRACKS_SQL: &str = "SELECT id, title FROM tracks \
-     WHERE bpm >= ?1 AND bpm <= ?2 \
+     WHERE removed_at IS NULL AND bpm >= ?1 AND bpm <= ?2 \
        AND UPPER(key_camelot) IN (?3) \
        AND LOWER(analysis_status) IN (?4) \
        AND LOWER(TRIM(genre)) IN (?5) \
@@ -80,7 +80,7 @@ const FILTER_TRACKS_SQL: &str = "SELECT id, title FROM tracks \
 
 /// Count half of the same filtered query (no LIMIT/OFFSET placeholders).
 const COUNT_FILTER_SQL: &str = "SELECT COUNT(*) FROM tracks \
-     WHERE bpm >= ?1 AND bpm <= ?2 \
+     WHERE removed_at IS NULL AND bpm >= ?1 AND bpm <= ?2 \
        AND UPPER(key_camelot) IN (?3) \
        AND LOWER(analysis_status) IN (?4) \
        AND LOWER(TRIM(genre)) IN (?5) \
@@ -90,23 +90,25 @@ const COUNT_FILTER_SQL: &str = "SELECT COUNT(*) FROM tracks \
 /// Mirrors the builder's `{sortBy: "bpm", sortDir: "asc"}` SELECT: unknown BPMs
 /// sort last in both directions.
 const SORT_BPM_SQL: &str = "SELECT id, title FROM tracks \
+     WHERE removed_at IS NULL \
      ORDER BY bpm IS NULL, bpm ASC, id ASC LIMIT ?1 OFFSET ?2";
 
 /// Mirrors the builder's filtered SELECT for
 /// `{ratingMin: 4, energyMin: 5, energyMax: 7, sortBy: "energy", sortDir: "asc"}`.
 const ENERGY_RATED_SQL: &str = "SELECT id FROM tracks \
-     WHERE user_rating >= ?1 \
+     WHERE removed_at IS NULL AND user_rating >= ?1 \
        AND energy >= ?2 AND energy <= ?3 \
      ORDER BY energy IS NULL, energy ASC, id ASC LIMIT ?4 OFFSET ?5";
 
 /// Count half of the energy/rating filtered query (no LIMIT/OFFSET placeholders).
 const COUNT_ENERGY_RATED_SQL: &str = "SELECT COUNT(*) FROM tracks \
-     WHERE user_rating >= ?1 \
+     WHERE removed_at IS NULL AND user_rating >= ?1 \
        AND energy >= ?2 AND energy <= ?3";
 
 /// Mirrors the builder for `{sortBy: "energy", sortDir: "desc"}`: the
 /// highest energy first, unrated tracks last.
 const SORT_ENERGY_DESC_SQL: &str = "SELECT id FROM tracks \
+     WHERE removed_at IS NULL \
      ORDER BY energy IS NULL, energy DESC, id ASC LIMIT ?1 OFFSET ?2";
 
 /// Escapes `LIKE` wildcards the way the query builder does, so a search for a

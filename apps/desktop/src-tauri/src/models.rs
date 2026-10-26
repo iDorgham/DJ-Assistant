@@ -606,6 +606,54 @@ pub struct UpdateTrackMetadataResponse {
     pub updated: usize,
 }
 
+// --- Library soft-remove, reveal and copy path (T2.1.10 Batch B/C) ---
+
+/// Tracks taken out of the library index. The files on disk are never touched:
+/// the write only stamps `tracks.removed_at`, which keeps the row — and the cue
+/// points and tags that cascade from it — restorable.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct RemoveTracksRequest {
+    /// Tracks to remove. Unknown ids and ids already out of the library are
+    /// ignored, so `removed` can be smaller than this list — or zero.
+    pub track_ids: Vec<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct RemoveTracksResponse {
+    /// Id of the `skill_runs` row holding the undo snapshot, or `None` when
+    /// nothing changed — there is no snapshot, so there is nothing to undo.
+    pub undo_id: Option<String>,
+    /// Number of tracks that actually left the library.
+    pub removed: usize,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct UndoRemoveTracksRequest {
+    /// The `undoId` returned by [`RemoveTracksRequest`]'s response.
+    pub undo_id: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct UndoRemoveTracksResponse {
+    /// Number of tracks put back into the library.
+    pub restored: usize,
+    /// Number of tracks skipped because they were removed again after the
+    /// snapshot was taken, so restoring them would undo a newer action.
+    pub skipped: usize,
+}
+
+/// The file to show in the OS file manager. The app only hands the path to the
+/// shell — it does not read or write the file.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct RevealInFileManagerRequest {
+    pub path: String,
+}
+
 /// Rating-only variant of [`UpdateTrackMetadataRequest`].
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]

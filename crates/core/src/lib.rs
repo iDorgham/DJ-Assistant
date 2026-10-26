@@ -13,11 +13,13 @@ pub mod dedup;
 pub mod enrichment;
 pub mod fingerprint;
 pub mod library_query;
+pub mod library_remove;
 pub mod library_stats;
 pub mod metadata;
 pub mod mp3;
 pub mod patch;
 pub mod providers;
+pub mod reveal;
 pub mod riff;
 pub mod similarity;
 pub mod tags;
@@ -37,6 +39,11 @@ pub use fingerprint::{compute_file_fingerprint, FINGERPRINT_WINDOW};
 pub use library_query::{
     sort_column, BuiltQuery, QueryError, QueryParam, TrackFilters, TrackQuery, SORT_KEYS,
 };
+pub use library_remove::{
+    after_doc, before_doc, check_undoable, input_doc, parse_states, present_states, read_statement,
+    remove_statement, skill_run_insert, undo_statements, RemoveError, SkillRun, Statement,
+    TrackState, MARK_UNDONE_SQL, REMOVE_SKILL_NAME, UNDO_READ_SQL,
+};
 pub use library_stats::{stat_queries, StatQuery, STATUS_BREAKDOWN_SQL};
 pub use metadata::{
     cache_artwork, camelot_from_key, extract_metadata, CachedArtwork, EmbeddedArtwork,
@@ -48,6 +55,7 @@ pub use providers::{
     store_links_for_track, store_search_url, ProviderCapabilities, StoreLink, StoreProvider,
     StreamingProvider,
 };
+pub use reveal::{reveal_command, RevealCommand};
 pub use riff::wav_duration_ms;
 pub use similarity::{bpm_similarity, camelot_distance, find_similar, ScoredTrack, TrackFeatures};
 pub use tags::normalize_tags;
