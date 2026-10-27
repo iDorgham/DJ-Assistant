@@ -36,8 +36,9 @@ impl LibrarySchema {
 
     /// The shape of a database whose `tracks` table has these columns.
     ///
-    /// Keeping the mapping here means "what makes a schema track removals" is one
-    /// rule in `core`, not a `contains("removed_at")` scattered across callers.
+    /// Enables removal tracking only if `columns` contains the exact name
+    /// `removed_at`. An empty set yields [`Self::PRE_REMOVAL`]; other schema
+    /// requirements are not validated.
     pub fn from_columns(columns: &HashSet<String>) -> Self {
         Self {
             removal_tracked: columns.contains("removed_at"),

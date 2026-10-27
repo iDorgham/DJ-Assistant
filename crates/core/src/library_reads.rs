@@ -45,7 +45,8 @@ pub const SIMILAR_CANDIDATES_SQL: &str = "SELECT id, bpm, key_camelot, genre, du
 pub const OWNED_ISRC_SQL: &str =
     "SELECT UPPER(isrc) FROM tracks WHERE removed_at IS NULL AND isrc IS NOT NULL";
 
-/// Every present track's path, for the on-disk drift check.
+/// Builds a `SELECT` of every present track's path for the on-disk drift check.
+/// This returns SQL without checking whether any file exists.
 ///
 /// The schema shape is a parameter because `dj-query --check-files` reads
 /// snapshots too, and one taken before migration 008 has no `removed_at` column

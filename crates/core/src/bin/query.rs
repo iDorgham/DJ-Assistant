@@ -434,6 +434,10 @@ fn map_track(row: &rusqlite::Row) -> rusqlite::Result<TrackRow> {
     })
 }
 
+/// Runs a read-only library query, printing results or help to stdout and
+/// diagnostics to stderr, including a warning when removal tracking is absent.
+/// Returns success for help or a completed query, and failure for argument,
+/// database, schema or query errors.
 fn main() -> ExitCode {
     let args = match parse_args() {
         Ok(args) => args,
@@ -529,7 +533,12 @@ const STAT_COLUMNS: [&str; 5] = [
     "file_hash",
 ];
 
-/// The library summary.
+/// Prints library-wide counts and a status breakdown to stdout as JSON or text.
+/// `available` and `schema` must describe the connection's `tracks` table.
+/// With `check_files`, also checks paths and caps examples at `args.limit`.
+///
+/// Returns an error for missing summary columns, count or status-query setup
+/// failures, or a failed file-path query. Unreadable status rows are skipped.
 fn run_stats(
     conn: &Connection,
     args: &Args,
@@ -634,6 +643,12 @@ fn run_stats(
 /// cheapest way to spot a library that has drifted from the filesystem.
 ///
 /// Returns the total number of missing files and up to `limit` example paths.
+/// The caller supplies a nonnegative sample limit; zero returns no examples
+/// without limiting the count. `schema` controls whether soft-removed rows are
+/// excluded. Paths whose existence cannot be determined also count as missing.
+///
+/// Returns an error if the file-path query cannot be prepared or started.
+/// Unreadable path rows are skipped.
 fn missing_files(
     conn: &Connection,
     limit: i64,
@@ -660,7 +675,13 @@ fn missing_files(
     Ok((total, sample))
 }
 
-/// The track list, using the app's own query builder.
+/// Prints a filtered, sorted page and its unpaginated matching count as JSON or text.
+/// `available` and `schema` must describe the connection's `tracks` table;
+/// missing optional output columns become NULL. With `check_files`, checks the
+/// entire library rather than just the matching page, capping examples at `args.limit`.
+///
+/// Returns schema-check, filter-validation, count or list-query setup errors,
+/// including errors from the optional file-path query. Unreadable track rows are skipped.
 fn run_list(
     conn: &Connection,
     args: &Args,

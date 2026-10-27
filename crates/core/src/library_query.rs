@@ -226,16 +226,30 @@ impl TrackQuery {
     /// This is the strict read: the app migrates on startup, so a track the DJ
     /// took away never comes back into view. A caller reading an older database
     /// asks for the shape it detected with [`TrackQuery::build_with`].
+    /// Parameters, returned statements and validation errors are described there.
     pub fn build(&self, columns: &str, limit: i64, offset: i64) -> Result<BuiltQuery, QueryError> {
         self.build_with(&LibrarySchema::CURRENT, columns, limit, offset)
     }
 
     /// Renders the query for a database of the given schema.
     ///
-    /// Values are always bound; only allow-listed column names and directions are
-    /// interpolated. Only the soft-removal condition depends on the schema — every
-    /// filter, the search, the order and the bound parameters are identical across
-    /// shapes, so an old library is never answered with a different question.
+    /// `columns` is a trusted SQL select list, interpolated without validation;
+    /// never pass user input. Filter and search values are bound, and sort choices
+    /// come from allow-lists. Only the soft-removal condition depends on the schema —
+    /// every filter, the search, the order and the bound parameters are identical
+    /// across shapes, so an old library is never answered with a different question.
+    /// Other required columns and tables must be checked by the caller.
+    ///
+    /// Returns count and paginated select statements without executing them.
+    /// `limit` and `offset` are passed through without validation or clamping;
+    /// bind all returned parameters for the select, but omit the final two
+    /// pagination parameters for the count.
+    ///
+    /// # Errors
+    ///
+    /// Returns a [`QueryError`] for non-finite or negative BPM bounds, a minimum
+    /// exceeding its maximum for BPM or energy, a rating outside `0..=5`, or an
+    /// energy bound outside `1..=10`.
     pub fn build_with(
         &self,
         schema: &LibrarySchema,

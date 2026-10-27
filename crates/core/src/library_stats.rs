@@ -30,7 +30,10 @@ pub struct StatQuery {
     pub sql: String,
 }
 
-/// The per-status breakdown, returned as `(status, count)` rows.
+/// Builds SQL yielding `(status, count)` rows ordered by status when executed.
+///
+/// Counts tracks across all workspaces, excluding soft-removed rows only when
+/// `schema.removal_tracked` is true.
 ///
 /// The status is folded exactly the way [`crate::library_query`] folds its
 /// `analysis_status` filter — `LOWER(...)`, no `TRIM` — so the counts and the
@@ -45,16 +48,20 @@ pub fn status_breakdown_sql(schema: &LibrarySchema) -> String {
     )
 }
 
-/// The scalar counts that make up a library summary, in output order.
+/// Builds the labeled scalar-count statements for a library summary, in output order.
+///
+/// Each statement yields one count across all workspaces when executed, excluding
+/// soft-removed rows only when `schema.removal_tracked` is true.
 ///
 /// * `total` — every track still in the library.
-/// * `missing_bpm` / `missing_key` — tracks the analyser has not filled in.
-/// * `analyzed` — tracks the analyser completed.
-/// * `unrated` — tracks the DJ has not rated.
+/// * `analyzed` — tracks whose lowercased analysis status is `complete`, without trimming.
+/// * `missing_bpm` / `missing_key` — a NULL BPM, or a NULL or blank trimmed key.
+/// * `unrated` — tracks with a NULL user rating; zero counts as rated.
 /// * `duplicate_groups` / `duplicate_files` — the same content imported more
 ///   than once, counted by `file_hash`. The schema's `unique_hash_per_workspace`
 ///   constraint makes a duplicate *within* a workspace impossible, so a group
 ///   here can only span workspaces — the shape a re-import takes.
+///   `duplicate_files` counts all tracks in those groups, including the first copy.
 pub fn stat_queries(schema: &LibrarySchema) -> Vec<StatQuery> {
     let rows = schema.rows_condition();
     vec![
