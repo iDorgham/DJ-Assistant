@@ -10,7 +10,8 @@
 //! the same rows.
 
 use dj_assistant_core::library_query::{TrackFilters, TrackQuery};
-use dj_assistant_core::library_stats::{stat_queries, STATUS_BREAKDOWN_SQL};
+use dj_assistant_core::library_schema::LibrarySchema;
+use dj_assistant_core::library_stats::{stat_queries, status_breakdown_sql};
 use dj_assistant_schema_tests::open_migrated;
 use rusqlite::{params, Connection};
 
@@ -108,11 +109,11 @@ fn seeded() -> Connection {
 
 /// Runs one summary statement and returns its count.
 fn count(conn: &Connection, key: &str) -> i64 {
-    let stat = stat_queries()
+    let stat = stat_queries(&LibrarySchema::CURRENT)
         .into_iter()
         .find(|stat| stat.key == key)
         .unwrap_or_else(|| panic!("stat {key} must exist"));
-    conn.query_row(stat.sql, [], |row| row.get(0))
+    conn.query_row(&stat.sql, [], |row| row.get(0))
         .unwrap_or_else(|e| panic!("stat {key} must run: {e}"))
 }
 
@@ -121,9 +122,8 @@ fn count(conn: &Connection, key: &str) -> i64 {
 /// The statement is executed as exported — a copy of the SQL inside the test
 /// would keep passing when the real statement drifts.
 fn status_breakdown(conn: &Connection) -> Vec<(String, i64)> {
-    let mut stmt = conn
-        .prepare(STATUS_BREAKDOWN_SQL)
-        .expect("status breakdown must prepare");
+    let sql = status_breakdown_sql(&LibrarySchema::CURRENT);
+    let mut stmt = conn.prepare(&sql).expect("status breakdown must prepare");
     let rows = stmt
         .query_map([], |row| {
             Ok((row.get::<_, String>(0)?, row.get::<_, i64>(1)?))

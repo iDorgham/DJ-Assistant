@@ -47,11 +47,30 @@ pub fn open_migrated_at<P: AsRef<std::path::Path>>(path: P) -> Connection {
     conn
 }
 
+/// Creates an in-memory database holding **only** the migrations up to
+/// `version`.
+///
+/// The library database is migrated by the desktop app, so a snapshot taken
+/// before a migration is older than the code reading it — this is how a
+/// contract test reproduces that. `open_migrated_through(1)` gives a database
+/// with no `removed_at` column, exactly what `dj-query` has to tolerate.
+pub fn open_migrated_through(version: i64) -> Connection {
+    let conn = Connection::open_in_memory().expect("in-memory sqlite");
+    apply_schema_up_to(&conn, version);
+    conn
+}
+
 /// Creates `schema_migrations`, enables foreign keys and applies migration 001.
 ///
 /// Shared by the in-memory and file-backed openers so both stay in step with
 /// `db.rs`.
 fn apply_schema(conn: &Connection) {
+    apply_schema_up_to(conn, i64::MAX);
+}
+
+/// [`apply_schema`] narrowed to the migrations whose version is at or below
+/// `up_to`.
+fn apply_schema_up_to(conn: &Connection, up_to: i64) {
     conn.execute_batch("PRAGMA foreign_keys = ON;")
         .expect("foreign_keys must be settable");
 
@@ -74,7 +93,7 @@ fn apply_schema(conn: &Connection) {
     // existing database is a no-op rather than an error. Bare ALTERs are
     // additionally filtered so a retry after a crash between the ALTER and the
     // version INSERT does not fail with "duplicate column name".
-    for (version, sql) in MIGRATIONS {
+    for (version, sql) in MIGRATIONS.iter().filter(|(version, _)| *version <= up_to) {
         let already: i64 = conn
             .query_row(
                 "SELECT COUNT(*) FROM schema_migrations WHERE version = ?1",

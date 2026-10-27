@@ -8,6 +8,7 @@
 //! column/direction choices come from closed allow-lists — no user input is
 //! ever interpolated into SQL text.
 
+use crate::library_schema::LibrarySchema;
 use serde::{Deserialize, Serialize};
 
 /// Filter set from `ListTracksRequest.filters` (`docs/architecture/API_CONTRACTS.md` §2.1).
@@ -220,16 +221,35 @@ pub struct BuiltQuery {
 }
 
 impl TrackQuery {
-    /// Renders the SQL and parameter list. Values are always bound; only
-    /// allow-listed column names and directions are interpolated.
+    /// Renders the SQL and parameter list for a current-schema database.
+    ///
+    /// This is the strict read: the app migrates on startup, so a track the DJ
+    /// took away never comes back into view. A caller reading an older database
+    /// asks for the shape it detected with [`TrackQuery::build_with`].
     pub fn build(&self, columns: &str, limit: i64, offset: i64) -> Result<BuiltQuery, QueryError> {
+        self.build_with(&LibrarySchema::CURRENT, columns, limit, offset)
+    }
+
+    /// Renders the query for a database of the given schema.
+    ///
+    /// Values are always bound; only allow-listed column names and directions are
+    /// interpolated. Only the soft-removal condition depends on the schema — every
+    /// filter, the search, the order and the bound parameters are identical across
+    /// shapes, so an old library is never answered with a different question.
+    pub fn build_with(
+        &self,
+        schema: &LibrarySchema,
+        columns: &str,
+        limit: i64,
+        offset: i64,
+    ) -> Result<BuiltQuery, QueryError> {
         self.filters.validate()?;
 
         // A soft-removed track keeps its row — and its cue points and tags,
         // which a hard delete would cascade away — but leaves every library
         // read path. The filter is a base condition rather than one of the
         // optional filters below, so no caller can forget to apply it.
-        let mut conditions: Vec<String> = vec!["removed_at IS NULL".to_string()];
+        let mut conditions: Vec<String> = vec![schema.rows_condition().to_string()];
         let mut params: Vec<QueryParam> = Vec::new();
 
         if let Some(search) = self.search_pattern() {
@@ -476,6 +496,95 @@ mod tests {
             built.select_sql,
             "SELECT id, title FROM tracks WHERE removed_at IS NULL \
              ORDER BY created_at DESC, id ASC LIMIT ?1 OFFSET ?2"
+        );
+    }
+
+    #[test]
+    fn a_pre_removal_schema_lists_without_the_removal_predicate() {
+        // Issue #61: a library last opened before migration 008 has no
+        // `removed_at` column at all, so the predicate is not merely unwanted —
+        // it is a query that cannot run. `1 = 1` keeps the WHERE clause shape so
+        // the two forms stay one template apart.
+        let built = TrackQuery::default()
+            .build_with(&LibrarySchema::PRE_REMOVAL, COLUMNS, 50, 0)
+            .expect("query must be valid");
+        assert_eq!(built.count_sql, "SELECT COUNT(*) FROM tracks WHERE 1 = 1");
+        assert_eq!(
+            built.select_sql,
+            "SELECT id, title FROM tracks WHERE 1 = 1 ORDER BY created_at DESC, id ASC \
+             LIMIT ?1 OFFSET ?2"
+        );
+    }
+
+    #[test]
+    fn build_is_the_current_schema() {
+        // The desktop app migrates on startup, so its read is always the strict
+        // one. If `build()` drifted to the degraded shape, soft-removed tracks
+        // would reappear in the Library view.
+        let query = TrackQuery {
+            query: Some("deep".into()),
+            filters: TrackFilters {
+                bpm_min: Some(120.0),
+                rating_min: Some(4),
+                ..Default::default()
+            },
+            sort_by: Some("bpm".into()),
+            ..Default::default()
+        };
+        assert_eq!(
+            query.build(COLUMNS, 10, 5).expect("query must build"),
+            query
+                .build_with(&LibrarySchema::CURRENT, COLUMNS, 10, 5)
+                .expect("query must build"),
+        );
+    }
+
+    #[test]
+    fn a_degraded_build_differs_only_in_the_removal_predicate() {
+        // Degradation is one predicate, not a second query builder: the filters,
+        // the search, the order and every bound parameter must survive it, or the
+        // CLI would answer an old library with a different question.
+        let query = TrackQuery {
+            query: Some("deep%house".into()),
+            filters: TrackFilters {
+                bpm_min: Some(120.0),
+                bpm_max: Some(130.0),
+                key_camelot: vec!["8A".into()],
+                analysis_status: vec!["complete".into()],
+                genre: vec!["house".into()],
+                tag: vec!["warmup".into()],
+                rating_min: Some(4),
+                energy_min: Some(3),
+                energy_max: Some(8),
+            },
+            sort_by: Some("rating".into()),
+            sort_dir: Some("asc".into()),
+        };
+        let current = query.build(COLUMNS, 20, 40).expect("query must build");
+        let degraded = query
+            .build_with(&LibrarySchema::PRE_REMOVAL, COLUMNS, 20, 40)
+            .expect("query must build");
+
+        assert_eq!(
+            degraded.params, current.params,
+            "degrading must not change what is bound"
+        );
+        for (current, degraded) in [
+            (&current.count_sql, &degraded.count_sql),
+            (&current.select_sql, &degraded.select_sql),
+        ] {
+            assert_eq!(
+                degraded,
+                &current.replace("removed_at IS NULL", "1 = 1"),
+                "the removal predicate is the only difference between the shapes"
+            );
+        }
+        assert!(
+            degraded
+                .select_sql
+                .contains("ORDER BY user_rating IS NULL, user_rating ASC, id ASC"),
+            "the sort survives degradation: {}",
+            degraded.select_sql
         );
     }
 

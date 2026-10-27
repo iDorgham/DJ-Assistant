@@ -15,6 +15,7 @@
 //! waiting to be restored must still be readable.
 
 use crate::library_remove::Statement;
+use crate::library_schema::LibrarySchema;
 
 /// The columns the tag-health report computes its gaps from.
 pub const TAG_HEALTH_COLUMNS: &str = "id, title, artist, album, genre, year, bpm, key_camelot, \
@@ -45,7 +46,16 @@ pub const OWNED_ISRC_SQL: &str =
     "SELECT UPPER(isrc) FROM tracks WHERE removed_at IS NULL AND isrc IS NOT NULL";
 
 /// Every present track's path, for the on-disk drift check.
-pub const MISSING_FILE_PATHS_SQL: &str = "SELECT file_path FROM tracks WHERE removed_at IS NULL";
+///
+/// The schema shape is a parameter because `dj-query --check-files` reads
+/// snapshots too, and one taken before migration 008 has no `removed_at` column
+/// — see [`crate::library_schema`].
+pub fn missing_file_paths_sql(schema: &LibrarySchema) -> String {
+    format!(
+        "SELECT file_path FROM tracks WHERE {}",
+        schema.rows_condition()
+    )
+}
 
 /// Why a read cannot be built.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -128,11 +138,12 @@ pub fn analysis_candidates(
 #[cfg(test)]
 mod tests {
     use super::{
-        analysis_candidates, enrichment_targets, present_rows, tag_health_rows, ReadError,
-        ENRICHMENT_TARGET_COLUMNS, GENRE_COUNTS_SQL, MISSING_FILE_PATHS_SQL, OWNED_ISRC_SQL,
+        analysis_candidates, enrichment_targets, missing_file_paths_sql, present_rows,
+        tag_health_rows, ReadError, ENRICHMENT_TARGET_COLUMNS, GENRE_COUNTS_SQL, OWNED_ISRC_SQL,
         SIMILAR_CANDIDATES_SQL, TAG_HEALTH_COLUMNS,
     };
     use crate::library_remove::Statement;
+    use crate::library_schema::LibrarySchema;
 
     fn ids(values: &[&str]) -> Vec<String> {
         values.iter().map(|value| value.to_string()).collect()
@@ -157,9 +168,25 @@ mod tests {
             GENRE_COUNTS_SQL.to_string(),
             SIMILAR_CANDIDATES_SQL.to_string(),
             OWNED_ISRC_SQL.to_string(),
-            MISSING_FILE_PATHS_SQL.to_string(),
+            missing_file_paths_sql(&LibrarySchema::CURRENT),
         ]);
         out
+    }
+
+    #[test]
+    fn the_missing_file_paths_statement_follows_the_schema_shape() {
+        // `dj-query --check-files` reads snapshots, and a snapshot older than
+        // migration 008 has no `removed_at` column. The other reads in this
+        // module are only ever sent by the app, which migrates on startup, so
+        // they stay strict — this is the one the CLI also runs.
+        assert_eq!(
+            missing_file_paths_sql(&LibrarySchema::CURRENT),
+            "SELECT file_path FROM tracks WHERE removed_at IS NULL"
+        );
+        assert_eq!(
+            missing_file_paths_sql(&LibrarySchema::PRE_REMOVAL),
+            "SELECT file_path FROM tracks WHERE 1 = 1"
+        );
     }
 
     #[test]
@@ -295,7 +322,7 @@ mod tests {
             "SELECT UPPER(isrc) FROM tracks WHERE removed_at IS NULL AND isrc IS NOT NULL"
         );
         assert_eq!(
-            MISSING_FILE_PATHS_SQL,
+            missing_file_paths_sql(&LibrarySchema::CURRENT),
             "SELECT file_path FROM tracks WHERE removed_at IS NULL"
         );
     }
