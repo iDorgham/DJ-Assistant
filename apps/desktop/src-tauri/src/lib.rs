@@ -77,6 +77,8 @@ pub fn run() {
             commands::undo_track_metadata,
             commands::remove_tracks,
             commands::undo_remove_tracks,
+            commands::list_removed_tracks,
+            commands::restore_tracks,
             commands::reveal_in_file_manager,
             enrichment::enrichment_preview,
             enrichment::enrichment_apply,

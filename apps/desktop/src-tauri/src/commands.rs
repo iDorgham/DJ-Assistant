@@ -4,12 +4,14 @@ use uuid::Uuid;
 
 use dj_assistant_core::library_query::QueryParam;
 use dj_assistant_core::library_reads::{
-    analysis_candidates, tag_health_rows, GENRE_COUNTS_SQL, SIMILAR_CANDIDATES_SQL,
+    analysis_candidates, tag_health_rows, GENRE_COUNTS_SQL, REMOVED_TRACKS_SQL,
+    SIMILAR_CANDIDATES_SQL,
 };
 use dj_assistant_core::library_remove::{
     after_doc, before_doc, check_undoable, input_doc, parse_states, present_states, read_statement,
-    remove_statement, skill_run_insert, undo_statements, SkillRun, Statement, TrackState,
-    MARK_UNDONE_SQL, UNDO_READ_SQL,
+    remove_statement, removed_states, restore_statements, restored_doc, skill_run_insert,
+    undo_statements, SkillRun, Statement, TrackState, MARK_UNDONE_SQL, REMOVE_SKILL_NAME,
+    RESTORE_SKILL_NAME, UNDO_READ_SQL,
 };
 use dj_assistant_core::patch::{
     check_metadata_undoable, number_value, tags_match, text_value, METADATA_SKILL_NAME,
@@ -21,11 +23,12 @@ use crate::db::Database;
 use crate::models::{
     AnalyzeLibraryRequest, AnalyzeLibraryResponse, CuePoint, FindSimilarTracksRequest,
     FindSimilarTracksResponse, GenreCount, GetArtworkRequest, GetTrackRequest, GetTrackResponse,
-    ListGenresResponse, ListTracksRequest, ListTracksResponse, ProviderAccount, ProviderCapability,
-    ProviderStatusResponse, RemoveTracksRequest, RemoveTracksResponse, RevealInFileManagerRequest,
-    ScanFolderRequest, ScanFolderResponse, SetTrackRatingRequest, SetTrackRatingResponse,
-    SimilarTrackResult, StoreLink, StoreLinksRequest, StoreLinksResponse, TagHealthRequest,
-    TagHealthResponse, TagHealthTotals, TrackDetail, TrackGaps, TrackSummary,
+    ListGenresResponse, ListRemovedTracksResponse, ListTracksRequest, ListTracksResponse,
+    ProviderAccount, ProviderCapability, ProviderStatusResponse, RemoveTracksRequest,
+    RemoveTracksResponse, RemovedTrack, RestoreTracksRequest, RestoreTracksResponse,
+    RevealInFileManagerRequest, ScanFolderRequest, ScanFolderResponse, SetTrackRatingRequest,
+    SetTrackRatingResponse, SimilarTrackResult, StoreLink, StoreLinksRequest, StoreLinksResponse,
+    TagHealthRequest, TagHealthResponse, TagHealthTotals, TrackDetail, TrackGaps, TrackSummary,
     UndoRemoveTracksRequest, UndoRemoveTracksResponse, UndoTrackMetadataRequest,
     UndoTrackMetadataResponse, UpdateTrackMetadataRequest, UpdateTrackMetadataResponse,
 };
@@ -1197,6 +1200,7 @@ pub async fn remove_tracks(
         &skill_run_insert(&SkillRun {
             id: undo_id.clone(),
             workspace_id: "default".to_string(),
+            skill_name: REMOVE_SKILL_NAME,
             before_state: before_doc(&present),
             after_state: after_doc(&present, &removed_at),
             input_summary: input_doc(&ids),
@@ -1211,12 +1215,14 @@ pub async fn remove_tracks(
     })
 }
 
-/// Puts the tracks a remove took out of the library back in.
+/// Runs a removal snapshot backwards, one command for both directions.
 ///
 /// Mirrors [`undo_track_metadata`]: the snapshot is refused unless it is an
-/// applied remove, each track is restored only while it still holds the state
-/// this write left, and the snapshot is marked `undone` so a second undo of the
-/// same id cannot fire.
+/// applied remove *or* an applied restore, each track is restored only while it
+/// still holds the state that write left, and the snapshot is marked `undone` so
+/// a second undo of the same id cannot fire. Which way it goes — clearing
+/// `removed_at` or putting the original stamp back — is read off the snapshot
+/// itself, in `core`'s `undo_statements`.
 #[tauri::command]
 pub async fn undo_remove_tracks(
     db: State<'_, Arc<Mutex<Database>>>,
@@ -1266,6 +1272,133 @@ pub async fn undo_remove_tracks(
     tx.commit().map_err(|e| e.to_string())?;
 
     Ok(UndoRemoveTracksResponse { restored, skipped })
+}
+
+/// Lists the tracks a soft remove took out of the library (issue #62).
+///
+/// The one read in the app that asks for `removed_at IS NOT NULL`, and the
+/// reason the rule lives in `crates/core`: the removed view is the surface that
+/// makes a removal recoverable once its Undo toast has gone, so it has to be
+/// the only place those rows are ever shown. Nothing is filtered further — a
+/// removal the user did from a selection is still here.
+#[tauri::command]
+pub async fn list_removed_tracks(
+    db: State<'_, Arc<Mutex<Database>>>,
+) -> Result<ListRemovedTracksResponse, String> {
+    let db_guard = db.lock().map_err(|e| e.to_string())?;
+    let mut stmt = db_guard
+        .conn()
+        .prepare(REMOVED_TRACKS_SQL)
+        .map_err(|e| e.to_string())?;
+    let tracks = stmt
+        .query_map([], |row| {
+            Ok(RemovedTrack {
+                id: row.get(0)?,
+                title: row.get(1)?,
+                artist: row.get(2)?,
+                album: row.get(3)?,
+                file_path: row.get(4)?,
+                duration_ms: row.get(5)?,
+                removed_at: row.get(6)?,
+            })
+        })
+        .map_err(|e| e.to_string())?
+        .collect::<Result<Vec<_>, _>>()
+        .map_err(|e| e.to_string())?;
+
+    let total = tracks.len();
+    Ok(ListRemovedTracksResponse { tracks, total })
+}
+
+/// Puts tracks back into the library from the removed view (issue #62).
+///
+/// A write of its own rather than the original remove's undo replayed: the
+/// removal's `skill_runs` id lives in a toast, so by the time the user opens
+/// this view there is usually nothing left that could name it. The tracks and
+/// their stamps come from the rows themselves, the clear goes through the same
+/// guarded statement builder the undo uses, and the snapshot is written in this
+/// transaction — so the restore is undoable on its own, and undoing it puts the
+/// track's *original* stamp back instead of inventing a new removal time.
+#[tauri::command]
+pub async fn restore_tracks(
+    db: State<'_, Arc<Mutex<Database>>>,
+    request: RestoreTracksRequest,
+) -> Result<RestoreTracksResponse, String> {
+    let read = read_statement(&request.track_ids).map_err(|e| e.to_string())?;
+
+    let mut db_guard = db.lock().map_err(|e| e.to_string())?;
+    let tx = db_guard
+        .conn_mut()
+        .transaction()
+        .map_err(|e| e.to_string())?;
+
+    let found: Vec<TrackState> = {
+        let mut stmt = tx.prepare(&read.sql).map_err(|e| e.to_string())?;
+        let rows = stmt
+            .query_map(rusqlite::params_from_iter(read.params.iter()), |row| {
+                Ok(TrackState {
+                    id: row.get(0)?,
+                    removed_at: row.get(1)?,
+                })
+            })
+            .map_err(|e| e.to_string())?;
+        rows.collect::<Result<Vec<_>, _>>()
+            .map_err(|e| e.to_string())?
+    };
+
+    // A track still in the library was not removed by anything, so it is left
+    // out of both the write and the snapshot — the same rule that keeps a
+    // re-remove from recording an undo that could resurrect it.
+    let removed = removed_states(&found);
+    if removed.is_empty() {
+        return Ok(RestoreTracksResponse {
+            undo_id: None,
+            restored: 0,
+            skipped: 0,
+        });
+    }
+
+    // Each statement matches the stamp the read returned, so a track removed
+    // again in between holds a newer value, matches nothing and is skipped.
+    let statements = restore_statements(&removed).map_err(|e| e.to_string())?;
+    let mut cleared: Vec<TrackState> = Vec::new();
+    let mut skipped = 0;
+    for (state, stmt) in removed.iter().zip(&statements) {
+        if execute_core(&tx, stmt)? == 0 {
+            skipped += 1;
+        } else {
+            cleared.push(state.clone());
+        }
+    }
+    if cleared.is_empty() {
+        return Ok(RestoreTracksResponse {
+            undo_id: None,
+            restored: 0,
+            skipped,
+        });
+    }
+
+    let ids: Vec<String> = cleared.iter().map(|state| state.id.clone()).collect();
+    let undo_id = Uuid::new_v4().to_string();
+    execute_core(
+        &tx,
+        &skill_run_insert(&SkillRun {
+            id: undo_id.clone(),
+            workspace_id: "default".to_string(),
+            skill_name: RESTORE_SKILL_NAME,
+            before_state: before_doc(&cleared),
+            after_state: restored_doc(&cleared),
+            input_summary: input_doc(&ids),
+        }),
+    )?;
+
+    tx.commit().map_err(|e| e.to_string())?;
+
+    Ok(RestoreTracksResponse {
+        undo_id: Some(undo_id),
+        restored: cleared.len(),
+        skipped,
+    })
 }
 
 /// Shows a track's file in the operating system's file manager.

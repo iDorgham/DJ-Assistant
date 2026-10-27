@@ -18,6 +18,9 @@ import type {
   RemoveTracksResponse,
   UndoRemoveTracksRequest,
   UndoRemoveTracksResponse,
+  ListRemovedTracksResponse,
+  RestoreTracksRequest,
+  RestoreTracksResponse,
   RevealInFileManagerRequest,
   ScanProgressEvent,
   ScanCompletedEvent,
@@ -167,6 +170,37 @@ export async function undoRemoveTracks(
   }
   const { invoke } = await import("@tauri-apps/api/core");
   return invoke<UndoRemoveTracksResponse>("undo_remove_tracks", { request: req });
+}
+
+/**
+ * The removed view: every track a soft remove took out of the library.
+ *
+ * This is the one surface that shows those rows — everywhere else they are
+ * filtered out. Opened deliberately, because the Undo toast that normally
+ * offers the way back is transient.
+ */
+export async function listRemovedTracks(): Promise<ListRemovedTracksResponse> {
+  if (!isTauri) {
+    return { tracks: [], total: 0 };
+  }
+  const { invoke } = await import("@tauri-apps/api/core");
+  return invoke<ListRemovedTracksResponse>("list_removed_tracks");
+}
+
+/**
+ * Puts tracks back into the library from the removed view.
+ *
+ * A write of its own, with its own snapshot: it does not need the removal's
+ * `undoId`, which is gone with the toast. Undoing what this returns takes the
+ * tracks out again — with the stamp the original removal carried.
+ */
+export async function restoreTracks(req: RestoreTracksRequest): Promise<RestoreTracksResponse> {
+  if (!isTauri) {
+    console.warn("[Mock API] Tauri not detected, ignoring restore");
+    return { undoId: null, restored: 0, skipped: 0 };
+  }
+  const { invoke } = await import("@tauri-apps/api/core");
+  return invoke<RestoreTracksResponse>("restore_tracks", { request: req });
 }
 
 /**

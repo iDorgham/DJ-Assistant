@@ -177,3 +177,37 @@ export function describeUndoRemove(restored: number, skipped: number): string {
   const head = `Undone — ${restored} track${restored === 1 ? "" : "s"} back in the library`;
   return skipped > 0 ? `${head}, ${skipped} skipped (removed again since)` : head;
 }
+
+/**
+ * The Restore toast (issue #62). `count` is what the backend actually cleared,
+ * not the size of the selection: a track removed again after this command read
+ * it is skipped rather than overwritten, so the two counts are reported apart.
+ */
+export function describeRestore(count: number, skipped: number): string {
+  if (count === 0) {
+    return `Nothing restored — ${skipped} track${skipped === 1 ? "" : "s"} removed again since`;
+  }
+  const head = `Restored ${count} track${count === 1 ? "" : "s"} to library`;
+  return skipped > 0 ? `${head}, ${skipped} skipped (removed again since)` : head;
+}
+
+/**
+ * The Undo toast for a restore. Undoing a restore removes the tracks again, so
+ * the wording runs the opposite way from the removal's own undo — the same
+ * snapshot table, two different directions.
+ */
+export function describeUndoRestore(restored: number, skipped: number): string {
+  if (restored === 0) {
+    return `Nothing undone — ${skipped} track${skipped === 1 ? "" : "s"} changed since`;
+  }
+  const head = `Undone — ${restored} track${restored === 1 ? "" : "s"} removed again`;
+  return skipped > 0 ? `${head}, ${skipped} skipped (changed since)` : head;
+}
+
+/**
+ * How many tracks the removed view holds, phrased for a toolbar button. Zero
+ * must read as an ordinary part of the library, not as something to fix.
+ */
+export function describeRemovedCount(count: number): string {
+  return count === 0 ? "Removed" : `Removed (${count})`;
+}
