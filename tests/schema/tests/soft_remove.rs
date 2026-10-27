@@ -13,11 +13,16 @@
 //! ones the app sends, not a paraphrase of them.
 
 use dj_assistant_core::library_query::TrackQuery;
+use dj_assistant_core::library_reads::{
+    analysis_candidates, enrichment_targets, tag_health_rows, GENRE_COUNTS_SQL,
+    MISSING_FILE_PATHS_SQL, OWNED_ISRC_SQL, SIMILAR_CANDIDATES_SQL,
+};
 use dj_assistant_core::library_remove::{
     after_doc, before_doc, check_undoable, input_doc, parse_states, present_states, read_statement,
     remove_statement, skill_run_insert, undo_statements, RemoveError, SkillRun, Statement,
     TrackState, MARK_UNDONE_SQL, REMOVE_SKILL_NAME, UNDO_READ_SQL,
 };
+use dj_assistant_core::patch::{check_metadata_undoable, PATCH_COLUMNS};
 use dj_assistant_schema_tests::{open_migrated, seed_cue, seed_track, TRACK_SUMMARY_COLUMNS};
 use rusqlite::{params, Connection};
 
@@ -314,4 +319,127 @@ fn the_library_summary_and_the_list_agree_after_a_remove() {
     let counted: i64 = conn.query_row(total.sql, [], |r| r.get(0)).unwrap();
     assert_eq!(counted as usize, listed_ids(&conn).len());
     assert_eq!(counted, 1, "the removed track is not in the summary either");
+}
+
+/// A second track, differing from [`seed_track`]'s in every column a
+/// library-wide read looks at: genre, ISRC, BPM, key, duration and path.
+fn seed_second_track(conn: &Connection, id: &str) {
+    conn.execute(
+        "INSERT INTO tracks (id, workspace_id, file_path, file_hash, file_size, duration_ms, \
+         format, title, artist, genre, isrc, bpm, key_camelot, analysis_status, created_at, updated_at) \
+         VALUES (?1, 'default', ?2, 'other-hash', 2048, 300000, 'flac', 'Second', 'Artist', \
+         'Techno', 'USX2R2400002', 140.0, '8A', 'pending', \
+         '2026-01-01T00:00:00Z', '2026-01-01T00:00:00Z')",
+        params![id, "D:\\Music\\two.flac"],
+    )
+    .unwrap();
+}
+
+/// The first column of every row a read returns.
+fn first_column(conn: &Connection, sql: &str, params: &[String]) -> Vec<String> {
+    let mut stmt = conn
+        .prepare(sql)
+        .unwrap_or_else(|e| panic!("core read must run as built: {e}\n{sql}"));
+    stmt.query_map(rusqlite::params_from_iter(params.iter()), |row| {
+        row.get::<_, String>(0)
+    })
+    .unwrap()
+    .map(|row| row.expect("a read row must map"))
+    .collect()
+}
+
+/// A read over the whole library, as the app sends it.
+fn read_ids(conn: &Connection, built: &Statement) -> Vec<String> {
+    first_column(conn, &built.sql, &built.params)
+}
+
+#[test]
+fn every_library_wide_read_skips_a_removed_track() {
+    // The row stays so an undo can restore it — which is exactly why each read
+    // has to ask for the library the user sees. A track that still shows up in
+    // one of these is analysed, scored, enriched or counted behind its own
+    // absence from the list.
+    let conn = open_migrated();
+    let kept = seed_track(&conn);
+    let gone = "track-2".to_string();
+    seed_second_track(&conn, &gone);
+    remove_tracks(&conn, "run-1", std::slice::from_ref(&gone));
+
+    let genre_options = first_column(&conn, GENRE_COUNTS_SQL, &[]);
+    assert_eq!(
+        genre_options,
+        vec!["House".to_string()],
+        "one genre option left"
+    );
+
+    let pool = first_column(&conn, SIMILAR_CANDIDATES_SQL, std::slice::from_ref(&kept));
+    assert!(
+        pool.is_empty(),
+        "the seed's pool must not hold a removed track"
+    );
+
+    for built in [
+        analysis_candidates(None, true, "2026.10").unwrap(),
+        analysis_candidates(Some(&[gone.clone(), kept.clone()]), false, "2026.10").unwrap(),
+        tag_health_rows(None).unwrap(),
+        enrichment_targets(None).unwrap(),
+    ] {
+        let ids = read_ids(&conn, &built);
+        assert!(
+            !ids.contains(&gone),
+            "a removed track is still read by: {}",
+            built.sql
+        );
+        assert!(
+            ids.contains(&kept),
+            "the present track must stay readable by: {}",
+            built.sql
+        );
+    }
+
+    assert!(first_column(&conn, OWNED_ISRC_SQL, &[]).is_empty());
+    assert_eq!(
+        first_column(&conn, MISSING_FILE_PATHS_SQL, &[]),
+        vec!["D:\\Music\\track.mp3".to_string()]
+    );
+
+    // And the reads come back with the track: filtering is a view, not a loss.
+    assert_eq!(undo_remove(&conn, "run-1").unwrap(), 1);
+    assert_eq!(
+        first_column(&conn, OWNED_ISRC_SQL, &[]),
+        vec!["USX2R2400002".to_string()]
+    );
+    assert_eq!(
+        first_column(&conn, GENRE_COUNTS_SQL, &[]).len(),
+        2,
+        "both genres are offered again once the remove is undone"
+    );
+}
+
+#[test]
+fn the_metadata_undo_refuses_a_remove_snapshot_without_spending_it() {
+    // Both write paths answer with an `undoId` from the one `skill_runs` table,
+    // so a remove id can reach the metadata command. Its snapshot holds
+    // `removed_at`, which is not a patch column: the metadata undo would
+    // restore nothing and still mark the row `undone`, and a spent remove
+    // snapshot is a track permanently out of the library.
+    let conn = open_migrated();
+    let a = seed_track(&conn);
+    remove_tracks(&conn, "run-1", std::slice::from_ref(&a));
+
+    let (skill, status, before_raw, _) = read_snapshot(&conn, "run-1");
+    assert_eq!(skill, REMOVE_SKILL_NAME);
+    assert!(check_metadata_undoable(&skill, &status).is_err());
+    assert!(
+        !PATCH_COLUMNS.contains(&"removed_at"),
+        "the metadata undo cannot restore the one column a remove wrote"
+    );
+
+    // Refusing changes nothing, so the remove is still undoable.
+    let (_, after_status, _, _) = read_snapshot(&conn, "run-1");
+    assert_eq!(after_status, "success");
+    assert!(before_raw.contains("removed_at"));
+    assert!(listed_ids(&conn).is_empty());
+    assert_eq!(undo_remove(&conn, "run-1").unwrap(), 1);
+    assert_eq!(listed_ids(&conn), vec![a]);
 }

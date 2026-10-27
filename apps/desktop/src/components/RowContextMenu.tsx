@@ -39,6 +39,11 @@ import type { MenuEntry } from "../lib/library-menu";
  * Which track an action lands on — the whole selection or the row under the
  * pointer — is the caller's decision, and `library-menu.appliesToWholeSelection`
  * says which is which; this component only reports the action.
+ *
+ * Items whose feature is not built are marked `aria-disabled` and refuse
+ * activation, rather than being made `disabled`: a disabled button takes no
+ * pointer events, and its tooltip — the reason the feature is missing, which
+ * the spec asks for — would never be shown.
  */
 interface RowContextMenuProps {
   /** Where the menu opens — the cursor position, in viewport pixels. */
@@ -54,8 +59,7 @@ interface RowContextMenuProps {
    * Returns the focus to the row the menu was opened from.
    *
    * Called when the menu unmounts, so every closing path — Escape, an outside
-   * click, an action — gives the focus back. Skipped when an action was
-   * chosen, because the editor takes the focus from there.
+   * click, an action — gives the focus back.
    */
   restoreFocus?: () => void;
   /** Set rating for the selection/context track. */
@@ -101,7 +105,11 @@ const MENU_ICONS: Record<string, LucideIcon> = {
   remove: FileMinus,
 };
 
-/** The focusable rows, in DOM order — every item but the disabled ones. */
+/** The menu rows in DOM order, for the arrow keys and the initial focus.
+ *
+ * A blocked row stays in the ring: it cannot be activated, and the reason it
+ * is blocked is the one thing worth reading.
+ */
 function menuItems(panel: HTMLElement | null): HTMLButtonElement[] {
   return Array.from(
     panel?.querySelectorAll<HTMLButtonElement>('[role="menuitem"]:not([disabled])') ?? []
@@ -120,7 +128,7 @@ interface MenuItemProps {
 
 function MenuItem({ icon: Icon, label, tooltip, disabled, danger, onActivate }: MenuItemProps) {
   const tone = disabled
-    ? "text-dj-text-muted opacity-60"
+    ? "cursor-not-allowed text-dj-text-muted opacity-60"
     : danger
       ? "text-dj-danger hover:bg-dj-hover focus:bg-dj-hover focus:outline-hidden"
       : "text-dj-text-secondary hover:bg-dj-hover hover:text-dj-text focus:bg-dj-hover focus:text-dj-text focus:outline-hidden";
@@ -128,9 +136,15 @@ function MenuItem({ icon: Icon, label, tooltip, disabled, danger, onActivate }: 
     <button
       type="button"
       role="menuitem"
-      disabled={disabled}
+      // Marked rather than made disabled: a `disabled` button takes no pointer
+      // events, and Chromium never shows its `title` — so the reason the item
+      // is blocked, which is the whole point of the row, would never render.
+      aria-disabled={disabled || undefined}
       title={tooltip ?? label}
-      onClick={onActivate}
+      onClick={() => {
+        if (disabled) return;
+        onActivate();
+      }}
       className={`flex w-full items-center gap-2 px-3 py-1.5 text-left text-xs transition ${tone}`}
     >
       <Icon className="h-3.5 w-3.5 shrink-0" />
@@ -160,9 +174,6 @@ export function RowContextMenu({
 }: RowContextMenuProps) {
   const panelRef = useRef<HTMLDivElement>(null);
   const [position, setPosition] = useState({ left: x, top: y });
-  // Set when an action was chosen: the editor takes the focus from there, so
-  // the row must not steal it back.
-  const actionTakenRef = useRef(false);
 
   // Keep the menu inside the viewport: near an edge it opens towards the
   // cursor instead of away from it.
@@ -181,18 +192,19 @@ export function RowContextMenu({
     setPosition({ left, top });
   }, [x, y]);
 
-  // The focus goes to the first item on open, and back to the row on close.
-  // The callback is read from a ref, so a caller that passes a new function on
-  // every render does not re-run this effect and steal the focus back from
-  // the item the user moved to with the arrow keys.
+  // The focus goes to the first row on open, and back to the row it came from
+  // on close — every closing path, an action included. The menu is the row's
+  // own surface: after Copy path or Reveal nothing else has taken the focus,
+  // and a dialog that opens instead takes it in its own effect, which runs
+  // after this one. The callback is read from a ref so a caller that passes a
+  // new function on every render does not re-run this effect and steal the
+  // focus back from the row the user moved to with the arrow keys.
   const restoreFocusRef = useRef(restoreFocus);
   restoreFocusRef.current = restoreFocus;
 
   useEffect(() => {
     menuItems(panelRef.current)[0]?.focus();
-    return () => {
-      if (!actionTakenRef.current) restoreFocusRef.current?.();
-    };
+    return () => restoreFocusRef.current?.();
   }, []);
 
   // A click outside the menu closes it. The listener is on the document, so
@@ -230,11 +242,10 @@ export function RowContextMenu({
   const rating = currentRating == null ? 0 : Math.min(5, Math.max(0, Math.round(currentRating)));
   const columnList = columns ?? [];
 
-  // An action closes the menu and keeps the focus away from the row: the thing
-  // it opens (editor, dialog, player) owns the focus from here.
+  // An action closes the menu; the focus goes back to the row on unmount, and
+  // whatever the action opens takes it from there if it needs it.
   const run = (action?: () => void) => () => {
     if (!action) return;
-    actionTakenRef.current = true;
     action();
     onClose();
   };
@@ -271,7 +282,6 @@ export function RowContextMenu({
                 }
                 onClick={() => {
                   if (!onRate) return;
-                  actionTakenRef.current = true;
                   onRate(rating === star ? 0 : (star as 0 | 1 | 2 | 3 | 4 | 5));
                   onClose();
                 }}
@@ -289,7 +299,6 @@ export function RowContextMenu({
               aria-label="Clear rating"
               onClick={() => {
                 if (!onRate) return;
-                actionTakenRef.current = true;
                 onRate(0);
                 onClose();
               }}
@@ -325,7 +334,9 @@ export function RowContextMenu({
                 key={col.id}
                 type="button"
                 role="menuitem"
-                disabled={colDisabled}
+                // Same as a blocked menu row: a `disabled` button would hide the
+                // `title` that says why the column cannot go.
+                aria-disabled={colDisabled || undefined}
                 title={
                   colDisabled
                     ? "The last identity column cannot be hidden."
@@ -335,13 +346,12 @@ export function RowContextMenu({
                 }
                 onClick={() => {
                   if (colDisabled) return;
-                  actionTakenRef.current = true;
                   onToggleColumn(col.id);
                   onClose();
                 }}
                 className={`flex w-full items-center gap-2 px-3 py-1.5 text-left text-xs transition ${
                   colDisabled
-                    ? "text-dj-text-muted opacity-60"
+                    ? "cursor-not-allowed text-dj-text-muted opacity-60"
                     : "text-dj-text-secondary hover:bg-dj-hover hover:text-dj-text focus:bg-dj-hover focus:text-dj-text focus:outline-hidden"
                 }`}
               >

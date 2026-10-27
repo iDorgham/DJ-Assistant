@@ -600,7 +600,7 @@ fn run_stats(conn: &Connection, args: &Args) -> Result<(), String> {
 /// Returns the total number of missing files and up to `limit` example paths.
 fn missing_files(conn: &Connection, limit: i64) -> Result<(usize, Vec<String>), String> {
     let mut stmt = conn
-        .prepare("SELECT file_path FROM tracks")
+        .prepare(dj_assistant_core::MISSING_FILE_PATHS_SQL)
         .map_err(|e| format!("missing files: {e}"))?;
     let rows = stmt
         .query_map([], |row| row.get::<_, String>(0))

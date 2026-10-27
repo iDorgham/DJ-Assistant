@@ -3,12 +3,18 @@ use tauri::{AppHandle, Manager, State};
 use uuid::Uuid;
 
 use dj_assistant_core::library_query::QueryParam;
+use dj_assistant_core::library_reads::{
+    analysis_candidates, tag_health_rows, GENRE_COUNTS_SQL, SIMILAR_CANDIDATES_SQL,
+};
 use dj_assistant_core::library_remove::{
     after_doc, before_doc, check_undoable, input_doc, parse_states, present_states, read_statement,
     remove_statement, skill_run_insert, undo_statements, SkillRun, Statement, TrackState,
     MARK_UNDONE_SQL, UNDO_READ_SQL,
 };
-use dj_assistant_core::patch::{number_value, tags_match, text_value, PATCH_COLUMNS};
+use dj_assistant_core::patch::{
+    check_metadata_undoable, number_value, tags_match, text_value, METADATA_SKILL_NAME,
+    PATCH_COLUMNS, RATING_SKILL_NAME,
+};
 use dj_assistant_core::reveal::reveal_command;
 
 use crate::db::Database;
@@ -189,15 +195,7 @@ pub async fn list_genres(
     let db_guard = db.lock().map_err(|e| e.to_string())?;
     let conn = db_guard.conn();
 
-    let mut stmt = conn
-        .prepare(
-            "SELECT MIN(TRIM(genre)), COUNT(*)
-             FROM tracks
-             WHERE genre IS NOT NULL AND TRIM(genre) <> ''
-             GROUP BY LOWER(TRIM(genre))
-             ORDER BY COUNT(*) DESC, LOWER(TRIM(genre)) ASC",
-        )
-        .map_err(|e| e.to_string())?;
+    let mut stmt = conn.prepare(GENRE_COUNTS_SQL).map_err(|e| e.to_string())?;
 
     let rows = stmt
         .query_map([], |row| {
@@ -384,54 +382,22 @@ pub async fn analyze_library(
     let conn = db_guard.conn();
 
     let force = request.force.unwrap_or(false);
-    // NOTE: params must follow placeholder order in the SQL below. The
-    // `IN (...)` ID placeholders come first, so the version value is pushed
-    // *after* the IDs — binding it first mis-assigns it to the first ID
-    // placeholder and returns no work for explicit selections.
-    let mut conditions = Vec::new();
-    if !force {
-        conditions.push(
-            "(analysis_status != 'complete' OR analysis_version IS NULL OR analysis_version != ?)",
-        );
-    }
+    // `core` builds the work list, so the bind order — every id, then the
+    // analysis version — is fixed where its tests cover it. A soft-removed
+    // track is not work: the library no longer shows it, and analysing it in
+    // the background would keep a file the DJ took out of play.
+    let candidates = analysis_candidates(
+        request.track_ids.as_deref(),
+        force,
+        &dj_assistant_analysis::analysis_version(),
+    )
+    .map_err(|e| e.to_string())?;
 
-    let (base_sql, params): (String, Vec<rusqlite::types::Value>) =
-        if let Some(ref ids) = request.track_ids {
-            if ids.is_empty() {
-                return Err("track_ids cannot be empty when provided".to_string());
-            }
-            let placeholders: Vec<String> = ids.iter().map(|_| "?".to_string()).collect();
-            let mut sql = format!(
-                "SELECT id, file_path FROM tracks WHERE id IN ({})",
-                placeholders.join(",")
-            );
-            if !conditions.is_empty() {
-                sql.push_str(&format!(" AND {}", conditions.join(" AND ")));
-            }
-            let mut params: Vec<rusqlite::types::Value> =
-                ids.iter().map(|id| id.clone().into()).collect();
-            if !force {
-                params.push(dj_assistant_analysis::analysis_version().into());
-            }
-            (sql, params)
-        } else {
-            let mut sql = "SELECT id, file_path FROM tracks".to_string();
-            if !conditions.is_empty() {
-                sql.push_str(&format!(" WHERE {}", conditions.join(" AND ")));
-            }
-            let params: Vec<rusqlite::types::Value> = if !force {
-                vec![dj_assistant_analysis::analysis_version().into()]
-            } else {
-                Vec::new()
-            };
-            (sql, params)
-        };
-
-    let mut stmt = conn.prepare(&base_sql).map_err(|e| e.to_string())?;
+    let mut stmt = conn.prepare(&candidates.sql).map_err(|e| e.to_string())?;
     let mut rows: Vec<(String, String)> = Vec::new();
     {
         let mut iter = stmt
-            .query(rusqlite::params_from_iter(params.iter()))
+            .query(rusqlite::params_from_iter(candidates.params.iter()))
             .map_err(|e| e.to_string())?;
         while let Some(row) = iter.next().map_err(|e| e.to_string())? {
             let id: String = row.get(0).map_err(|e| e.to_string())?;
@@ -493,7 +459,7 @@ pub async fn find_similar_tracks(
     // unordered `LIMIT 5000` that can hide the best match in large libraries.
     // Scoring is cheap pure math over small feature rows.
     let mut stmt = conn
-        .prepare("SELECT id, bpm, key_camelot, genre, duration_ms FROM tracks WHERE id != ?1")
+        .prepare(SIMILAR_CANDIDATES_SQL)
         .map_err(|e| e.to_string())?;
     let candidates: Vec<TrackFeatures> = stmt
         .query_map([&request.track_id], |row| {
@@ -574,18 +540,7 @@ pub async fn track_tag_health(
 
     let limit = request.limit.unwrap_or(200).clamp(1, 2000) as usize;
 
-    let mut sql = "SELECT id, title, artist, album, genre, year, bpm, key_camelot, \
-        artwork_hash, isrc, duration_ms FROM tracks"
-        .to_string();
-    let mut params: Vec<String> = Vec::new();
-    if let Some(ids) = request.track_ids.as_ref() {
-        if ids.is_empty() {
-            return Err("track_ids cannot be empty when provided".to_string());
-        }
-        let placeholders: Vec<String> = ids.iter().map(|_| "?".to_string()).collect();
-        sql.push_str(&format!(" WHERE id IN ({})", placeholders.join(",")));
-        params.extend(ids.iter().cloned());
-    }
+    let read = tag_health_rows(request.track_ids.as_deref()).map_err(|e| e.to_string())?;
 
     fn blank(value: &Option<String>) -> bool {
         value.as_deref().map(str::trim).unwrap_or("").is_empty()
@@ -632,9 +587,9 @@ pub async fn track_tag_health(
         }
     }
 
-    let mut stmt = conn.prepare(&sql).map_err(|e| e.to_string())?;
+    let mut stmt = conn.prepare(&read.sql).map_err(|e| e.to_string())?;
     let rows: Vec<TagHealthRow> = stmt
-        .query_map(rusqlite::params_from_iter(params.iter()), |row| {
+        .query_map(rusqlite::params_from_iter(read.params.iter()), |row| {
             Ok(TagHealthRow {
                 id: row.get(0)?,
                 title: row.get(1)?,
@@ -1004,7 +959,7 @@ pub async fn update_track_metadata(
     let mut db_guard = db.lock().map_err(|e| e.to_string())?;
     let (undo_id, updated) = apply_metadata_patch(
         db_guard.conn_mut(),
-        "update_track_metadata",
+        METADATA_SKILL_NAME,
         &request.track_ids,
         patch,
     )?;
@@ -1034,7 +989,7 @@ pub async fn set_track_rating(
     let mut db_guard = db.lock().map_err(|e| e.to_string())?;
     let (undo_id, updated) = apply_metadata_patch(
         db_guard.conn_mut(),
-        "set_track_rating",
+        RATING_SKILL_NAME,
         &request.track_ids,
         patch,
     )?;
@@ -1046,6 +1001,12 @@ pub async fn set_track_rating(
 ///
 /// The snapshot is marked `undone`, so a second undo of the same id is
 /// refused instead of restoring twice.
+///
+/// Only a metadata snapshot is restored at all. Every write path shares the
+/// `skill_runs` table, and a remove snapshot holds `removed_at` — not a patch
+/// column — so it would restore nothing while still being spent, leaving the
+/// track out of the library with no way back. [`check_metadata_undoable`]
+/// refuses it before the row is touched.
 ///
 /// A snapshot only restores what it still describes: when a track was edited
 /// again after the snapshot was taken, its current value no longer matches the
@@ -1062,20 +1023,19 @@ pub async fn undo_track_metadata(
         .transaction()
         .map_err(|e| e.to_string())?;
 
-    let (status, before_raw, after_raw): (String, Option<String>, Option<String>) = tx
-        .query_row(
-            "SELECT status, before_state, after_state FROM skill_runs WHERE id = ?1",
-            [&request.undo_id],
-            |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?)),
-        )
+    let (skill_name, status, before_raw, after_raw): (
+        String,
+        String,
+        Option<String>,
+        Option<String>,
+    ) = tx
+        .query_row(UNDO_READ_SQL, [&request.undo_id], |row| {
+            Ok((row.get(0)?, row.get(1)?, row.get(2)?, row.get(3)?))
+        })
         .map_err(|_| format!("undo snapshot not found: {}", request.undo_id))?;
 
-    if status != "success" {
-        return Err(format!(
-            "undo snapshot {} is {status}, not applied",
-            request.undo_id
-        ));
-    }
+    check_metadata_undoable(&skill_name, &status)
+        .map_err(|reason| format!("undo snapshot {}: {reason}", request.undo_id))?;
 
     let before_raw =
         before_raw.ok_or_else(|| format!("undo snapshot {} has no snapshot", request.undo_id))?;
@@ -1159,11 +1119,8 @@ pub async fn undo_track_metadata(
         restored += 1;
     }
 
-    tx.execute(
-        "UPDATE skill_runs SET status = 'undone' WHERE id = ?1",
-        [&request.undo_id],
-    )
-    .map_err(|e| e.to_string())?;
+    tx.execute(MARK_UNDONE_SQL, rusqlite::params![request.undo_id])
+        .map_err(|e| e.to_string())?;
 
     tx.commit().map_err(|e| e.to_string())?;
 
@@ -1330,15 +1287,32 @@ pub async fn reveal_in_file_manager(request: RevealInFileManagerRequest) -> Resu
     // The spawn is what is checked, not the exit code: `explorer` reports
     // failure even when it opened the folder. A missing helper — no
     // `xdg-open` on a minimal Linux box — surfaces here as a readable error.
-    std::process::Command::new(command.program)
-        .args(&command.args)
-        .spawn()
-        .map_err(|e| {
-            format!(
-                "Couldn't open {} to reveal {}: {e}",
-                command.program, request.path
-            )
-        })?;
+    let mut process = std::process::Command::new(command.program);
+    #[cfg(windows)]
+    {
+        use std::os::windows::process::CommandExt;
+        if command.verbatim {
+            // `arg` would wrap the whole `/select,"…"` in quotes and Explorer
+            // then looks for a file whose name starts with a quote. Each
+            // argument already carries the quoting the shell wants.
+            for arg in &command.args {
+                process.raw_arg(arg);
+            }
+        } else {
+            process.args(&command.args);
+        }
+    }
+    #[cfg(not(windows))]
+    {
+        // Nothing outside Windows asks for verbatim arguments.
+        process.args(&command.args);
+    }
+    process.spawn().map_err(|e| {
+        format!(
+            "Couldn't open {} to reveal {}: {e}",
+            command.program, request.path
+        )
+    })?;
 
     Ok(true)
 }

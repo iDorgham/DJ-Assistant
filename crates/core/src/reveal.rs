@@ -13,6 +13,17 @@
 pub struct RevealCommand {
     pub program: &'static str,
     pub args: Vec<String>,
+    /// True when `args` must reach the OS exactly as written, with no argument
+    /// quoting added on top.
+    ///
+    /// Only the Windows shape needs this: Explorer parses `/select,` and its
+    /// target itself, so the quotes belong around the **path**, and Rust's
+    /// ordinary quoting would put them around the whole argument instead —
+    /// which Explorer reads as a path beginning with a quote and answers with a
+    /// default folder. A path holding a `"` cannot exist on Windows, and the
+    /// caller reveals only paths the library says are on disk, so the quoting
+    /// below cannot be escaped by a crafted path.
+    pub verbatim: bool,
 }
 
 /// The command that reveals `path` on `os` (a [`std::env::consts::OS`] value).
@@ -25,15 +36,17 @@ pub fn reveal_command(os: &str, path: &str) -> Option<RevealCommand> {
         return None;
     }
     match os {
-        // `/select,` and the path are one argument: explorer parses the verb
-        // and its target together, and a separate argument is dropped.
+        // `/select,` and the quoted path are one argument: explorer parses the
+        // verb and its target together, and a separate argument is dropped.
         "windows" => Some(RevealCommand {
             program: "explorer",
-            args: vec![format!("/select,{path}")],
+            args: vec![format!(r#"/select,"{path}""#)],
+            verbatim: true,
         }),
         "macos" => Some(RevealCommand {
             program: "open",
             args: vec!["-R".to_string(), path.to_string()],
+            verbatim: false,
         }),
         "linux" => std::path::Path::new(path)
             .parent()
@@ -41,6 +54,7 @@ pub fn reveal_command(os: &str, path: &str) -> Option<RevealCommand> {
             .map(|dir| RevealCommand {
                 program: "xdg-open",
                 args: vec![dir.to_string_lossy().into_owned()],
+                verbatim: false,
             }),
         _ => None,
     }
@@ -59,7 +73,7 @@ mod tests {
         assert_eq!(command.program, "explorer");
         assert_eq!(
             command.args,
-            vec![r#"/select,C:\Music\Track.mp3"#.to_string()]
+            vec![r#"/select,"C:\Music\Track.mp3""#.to_string()]
         );
     }
 
@@ -68,7 +82,33 @@ mod tests {
         let path = r"C:\My Music\Long Version (Live).mp3";
         let command = reveal_command("windows", path).unwrap();
         assert_eq!(command.args.len(), 1);
-        assert_eq!(command.args[0], format!("/select,{path}"));
+        assert_eq!(command.args[0], format!(r#"/select,"{path}""#));
+    }
+
+    #[test]
+    fn the_windows_argument_is_handed_over_exactly_as_built() {
+        // Rust quotes an argument that holds a space, and the quote then lands
+        // in front of `/select,` — which is the shape Explorer cannot parse.
+        // The verb has to sit outside the quotes, so nothing may re-quote it.
+        assert!(
+            reveal_command("windows", r"C:\My Music\Track.mp3")
+                .unwrap()
+                .verbatim
+        );
+    }
+
+    #[test]
+    fn the_other_platforms_pass_plain_arguments() {
+        // `open -R <path>` and `xdg-open <dir>` mean exactly what they look
+        // like, so the standard argument quoting is what they want.
+        for os in ["macos", "linux"] {
+            assert!(
+                !reveal_command(os, "/home/dj Music/Track.mp3")
+                    .unwrap()
+                    .verbatim,
+                "{os} must not suppress argument quoting"
+            );
+        }
     }
 
     #[test]

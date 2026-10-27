@@ -13,6 +13,8 @@ pub const MIGRATION_001: &str =
     include_str!("../../../apps/desktop/src-tauri/migrations/001_initial_schema.sql");
 pub const MIGRATION_002: &str =
     include_str!("../../../apps/desktop/src-tauri/migrations/002_track_tags.sql");
+pub const MIGRATION_003: &str =
+    include_str!("../../../apps/desktop/src-tauri/migrations/003_enrichment_providers.sql");
 pub const MIGRATION_006: &str =
     include_str!("../../../apps/desktop/src-tauri/migrations/006_track_energy.sql");
 pub const MIGRATION_007: &str =
@@ -21,13 +23,14 @@ pub const MIGRATION_008: &str =
     include_str!("../../../apps/desktop/src-tauri/migrations/008_tracks_removed_at.sql");
 
 /// The migrations this crate's contract tests need, in the order `db.rs`
-/// applies them: the base schema, the tag columns, the energy column, the
-/// custom-tag table and the soft-removal column.
-/// Migrations 003-005 (enrichment, charts) are deliberately left out - no
-/// contract here reads those tables.
+/// applies them: the base schema, the tag columns, the enrichment columns, the
+/// energy column, the custom-tag table and the soft-removal column.
+/// Migrations 004-005 (enrichment candidates, chart snapshots) are deliberately
+/// left out — no contract here reads those tables.
 const MIGRATIONS: &[(i64, &str)] = &[
     (1, MIGRATION_001),
     (2, MIGRATION_002),
+    (3, MIGRATION_003),
     (6, MIGRATION_006),
     (7, MIGRATION_007),
     (8, MIGRATION_008),

@@ -13,6 +13,7 @@ pub mod dedup;
 pub mod enrichment;
 pub mod fingerprint;
 pub mod library_query;
+pub mod library_reads;
 pub mod library_remove;
 pub mod library_stats;
 pub mod metadata;
@@ -39,6 +40,11 @@ pub use fingerprint::{compute_file_fingerprint, FINGERPRINT_WINDOW};
 pub use library_query::{
     sort_column, BuiltQuery, QueryError, QueryParam, TrackFilters, TrackQuery, SORT_KEYS,
 };
+pub use library_reads::{
+    analysis_candidates, enrichment_targets, present_rows, tag_health_rows, ReadError,
+    ENRICHMENT_TARGET_COLUMNS, GENRE_COUNTS_SQL, MISSING_FILE_PATHS_SQL, OWNED_ISRC_SQL,
+    SIMILAR_CANDIDATES_SQL, TAG_HEALTH_COLUMNS,
+};
 pub use library_remove::{
     after_doc, before_doc, check_undoable, input_doc, parse_states, present_states, read_statement,
     remove_statement, skill_run_insert, undo_statements, RemoveError, SkillRun, Statement,
@@ -50,7 +56,10 @@ pub use metadata::{
     ExtractedMetadata,
 };
 pub use mp3::mp3_duration_ms;
-pub use patch::{number_value, tags_match, text_value, PATCH_COLUMNS};
+pub use patch::{
+    check_metadata_undoable, number_value, tags_match, text_value, METADATA_SKILL_NAME,
+    METADATA_SKILL_NAMES, PATCH_COLUMNS, RATING_SKILL_NAME,
+};
 pub use providers::{
     store_links_for_track, store_search_url, ProviderCapabilities, StoreLink, StoreProvider,
     StreamingProvider,

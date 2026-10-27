@@ -243,7 +243,7 @@ pub async fn chart_list(
     // ISRCs owned by the library (upper-cased at import/enrichment time).
     let owned_isrcs: std::collections::HashSet<String> = {
         let mut stmt = conn
-            .prepare("SELECT UPPER(isrc) FROM tracks WHERE isrc IS NOT NULL")
+            .prepare(dj_assistant_core::OWNED_ISRC_SQL)
             .map_err(|e| e.to_string())?;
         let owned: std::collections::HashSet<String> = stmt
             .query_map([], |row| row.get(0))

@@ -1887,11 +1887,8 @@ export default function App() {
 
   const openRemoveConfirm = (track: TrackSummary) => {
     const trackIds = appliesToWholeSelection("remove") ? editTargets(track) : [track.id];
-    // The menu never hands the focus back after an action, because whatever the
-    // action opens takes it. The dialog records its opener on mount, so the row
-    // has to hold the focus before this commit — otherwise the confirm would
-    // return to nothing when it closes.
-    contextRowRef.current?.focus();
+    // No focus juggling here: closing the menu hands the focus back to the row,
+    // and that happens before this dialog mounts and records its opener.
     setRemoveConfirm({ trackIds });
   };
 
@@ -1906,6 +1903,10 @@ export default function App() {
       // The rows leave the list, so the selection has to let go of them too —
       // a stale id would keep the toolbar counting tracks the user cannot see.
       setSelection((current) => current.filter((id) => !trackIds.includes(id)));
+      // The panel is the other place a removed track is still on screen: it
+      // holds its own copy, so it would keep showing a track the library no
+      // longer has — and its own actions would write to that row.
+      setInspectedTrack((current) => (current && trackIds.includes(current.id) ? null : current));
       refreshLibrary();
       const message = describeRemove(res.removed);
       pushStatus(message);
