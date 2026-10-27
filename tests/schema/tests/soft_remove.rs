@@ -14,14 +14,15 @@
 
 use dj_assistant_core::library_query::TrackQuery;
 use dj_assistant_core::library_reads::{
-    analysis_candidates, enrichment_targets, tag_health_rows, GENRE_COUNTS_SQL,
-    MISSING_FILE_PATHS_SQL, OWNED_ISRC_SQL, SIMILAR_CANDIDATES_SQL,
+    analysis_candidates, enrichment_targets, missing_file_paths_sql, tag_health_rows,
+    GENRE_COUNTS_SQL, OWNED_ISRC_SQL, SIMILAR_CANDIDATES_SQL,
 };
 use dj_assistant_core::library_remove::{
     after_doc, before_doc, check_undoable, input_doc, parse_states, present_states, read_statement,
     remove_statement, skill_run_insert, undo_statements, RemoveError, SkillRun, Statement,
     TrackState, MARK_UNDONE_SQL, REMOVE_SKILL_NAME, UNDO_READ_SQL,
 };
+use dj_assistant_core::library_schema::LibrarySchema;
 use dj_assistant_core::patch::{check_metadata_undoable, PATCH_COLUMNS};
 use dj_assistant_schema_tests::{open_migrated, seed_cue, seed_track, TRACK_SUMMARY_COLUMNS};
 use rusqlite::{params, Connection};
@@ -312,11 +313,11 @@ fn the_library_summary_and_the_list_agree_after_a_remove() {
     .unwrap();
     remove_tracks(&conn, "run-1", std::slice::from_ref(&a));
 
-    let total = stat_queries()
+    let total = stat_queries(&LibrarySchema::CURRENT)
         .into_iter()
         .find(|q| q.key == "total")
         .expect("total stat");
-    let counted: i64 = conn.query_row(total.sql, [], |r| r.get(0)).unwrap();
+    let counted: i64 = conn.query_row(&total.sql, [], |r| r.get(0)).unwrap();
     assert_eq!(counted as usize, listed_ids(&conn).len());
     assert_eq!(counted, 1, "the removed track is not in the summary either");
 }
@@ -399,7 +400,7 @@ fn every_library_wide_read_skips_a_removed_track() {
 
     assert!(first_column(&conn, OWNED_ISRC_SQL, &[]).is_empty());
     assert_eq!(
-        first_column(&conn, MISSING_FILE_PATHS_SQL, &[]),
+        first_column(&conn, &missing_file_paths_sql(&LibrarySchema::CURRENT), &[]),
         vec!["D:\\Music\\track.mp3".to_string()]
     );
 

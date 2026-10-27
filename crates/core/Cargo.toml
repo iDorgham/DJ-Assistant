@@ -41,6 +41,11 @@ name = "dj-query"
 path = "src/bin/query.rs"
 required-features = ["cli"]
 
+# Drives the `dj-query` binary, so it is built only when that binary is.
+[[test]]
+name = "cli_schema_tolerance"
+required-features = ["cli"]
+
 [dev-dependencies]
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"

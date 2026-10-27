@@ -35,15 +35,32 @@
 //! The connection is opened `SQLITE_OPEN_READ_ONLY`, so this binary cannot
 //! write to the library database, and it never touches the audio files unless
 //! `--check-files` is passed (which only stats them).
+//!
+//! The database is migrated by the desktop app, so the file this binary is pointed
+//! at can be older than the code reading it — a snapshot taken before migration 008
+//! has no `tracks.removed_at`. The list, the summary and the drift check adapt to
+//! the schema they find ([`dj_assistant_core::library_schema`]) and say so on stderr,
+//! rather than failing every read with `no such column`.
 
 use std::collections::HashSet;
 use std::path::{Path, PathBuf};
 use std::process::ExitCode;
 
 use dj_assistant_core::library_query::{sort_column, QueryParam, TrackFilters, TrackQuery};
-use dj_assistant_core::library_stats::{stat_queries, STATUS_BREAKDOWN_SQL};
+use dj_assistant_core::library_reads::missing_file_paths_sql;
+use dj_assistant_core::library_schema::LibrarySchema;
+use dj_assistant_core::library_stats::{stat_queries, status_breakdown_sql};
 use rusqlite::types::Value;
 use rusqlite::{params, Connection, OpenFlags};
+
+/// The library predates migration 008, so the soft-removal filter is dropped.
+///
+/// Nothing is lost by dropping it — a database without the column cannot have
+/// removed a track — but the caller has to know the read is not the app's own,
+/// because the next migration may not be tolerated the same way. On stderr, so
+/// `--json` on stdout stays parseable.
+const OUTDATED_SCHEMA_WARNING: &str = "Warning: Database schema is outdated (missing \
+    'removed_at' column). Some filters are disabled. Run migrations for full functionality.";
 
 /// The columns the list query selects, in row order.
 ///
@@ -417,6 +434,10 @@ fn map_track(row: &rusqlite::Row) -> rusqlite::Result<TrackRow> {
     })
 }
 
+/// Runs a read-only library query, printing results or help to stdout and
+/// diagnostics to stderr, including a warning when removal tracking is absent.
+/// Returns success for help or a completed query, and failure for argument,
+/// database, schema or query errors.
 fn main() -> ExitCode {
     let args = match parse_args() {
         Ok(args) => args,
@@ -450,10 +471,24 @@ fn main() -> ExitCode {
         }
     };
 
+    // The schema is read once, here, so the warning about an old library is
+    // printed once — and both modes see the same answer.
+    let available = match table_columns(&conn, "tracks") {
+        Ok(columns) => columns,
+        Err(message) => {
+            eprintln!("error: {message}");
+            return ExitCode::FAILURE;
+        }
+    };
+    let schema = LibrarySchema::from_columns(&available);
+    if !schema.removal_tracked {
+        eprintln!("{OUTDATED_SCHEMA_WARNING}");
+    }
+
     let result = if args.stats {
-        run_stats(&conn, &args)
+        run_stats(&conn, &args, &available, &schema)
     } else {
-        run_list(&conn, &args)
+        run_list(&conn, &args, &available, &schema)
     };
 
     if let Err(message) = result {
@@ -498,9 +533,18 @@ const STAT_COLUMNS: [&str; 5] = [
     "file_hash",
 ];
 
-/// The library summary.
-fn run_stats(conn: &Connection, args: &Args) -> Result<(), String> {
-    let available = table_columns(conn, "tracks")?;
+/// Prints library-wide counts and a status breakdown to stdout as JSON or text.
+/// `available` and `schema` must describe the connection's `tracks` table.
+/// With `check_files`, also checks paths and caps examples at `args.limit`.
+///
+/// Returns an error for missing summary columns, count or status-query setup
+/// failures, or a failed file-path query. Unreadable status rows are skipped.
+fn run_stats(
+    conn: &Connection,
+    args: &Args,
+    available: &HashSet<String>,
+    schema: &LibrarySchema,
+) -> Result<(), String> {
     for column in STAT_COLUMNS {
         if !available.contains(column) {
             return Err(format!(
@@ -511,17 +555,18 @@ fn run_stats(conn: &Connection, args: &Args) -> Result<(), String> {
     }
 
     let mut counts: Vec<(String, i64)> = Vec::new();
-    for stat in stat_queries() {
+    for stat in stat_queries(schema) {
         let value: i64 = conn
-            .query_row(stat.sql, [], |row| row.get(0))
+            .query_row(&stat.sql, [], |row| row.get(0))
             .map_err(|e| format!("{}: {e}", stat.key))?;
         counts.push((stat.key.to_string(), value));
     }
 
     let mut by_status: Vec<(String, i64)> = Vec::new();
     {
+        let sql = status_breakdown_sql(schema);
         let mut stmt = conn
-            .prepare(STATUS_BREAKDOWN_SQL)
+            .prepare(&sql)
             .map_err(|e| format!("status breakdown: {e}"))?;
         let rows = stmt
             .query_map([], |row| {
@@ -534,7 +579,7 @@ fn run_stats(conn: &Connection, args: &Args) -> Result<(), String> {
     }
 
     let missing_files = if args.check_files {
-        Some(missing_files(conn, args.limit)?)
+        Some(missing_files(conn, args.limit, schema)?)
     } else {
         None
     };
@@ -598,9 +643,20 @@ fn run_stats(conn: &Connection, args: &Args) -> Result<(), String> {
 /// cheapest way to spot a library that has drifted from the filesystem.
 ///
 /// Returns the total number of missing files and up to `limit` example paths.
-fn missing_files(conn: &Connection, limit: i64) -> Result<(usize, Vec<String>), String> {
+/// The caller supplies a nonnegative sample limit; zero returns no examples
+/// without limiting the count. `schema` controls whether soft-removed rows are
+/// excluded. Paths whose existence cannot be determined also count as missing.
+///
+/// Returns an error if the file-path query cannot be prepared or started.
+/// Unreadable path rows are skipped.
+fn missing_files(
+    conn: &Connection,
+    limit: i64,
+    schema: &LibrarySchema,
+) -> Result<(usize, Vec<String>), String> {
+    let sql = missing_file_paths_sql(schema);
     let mut stmt = conn
-        .prepare(dj_assistant_core::MISSING_FILE_PATHS_SQL)
+        .prepare(&sql)
         .map_err(|e| format!("missing files: {e}"))?;
     let rows = stmt
         .query_map([], |row| row.get::<_, String>(0))
@@ -619,10 +675,20 @@ fn missing_files(conn: &Connection, limit: i64) -> Result<(usize, Vec<String>), 
     Ok((total, sample))
 }
 
-/// The track list, using the app's own query builder.
-fn run_list(conn: &Connection, args: &Args) -> Result<(), String> {
-    let available = table_columns(conn, "tracks")?;
-    check_schema(conn, args, &available)?;
+/// Prints a filtered, sorted page and its unpaginated matching count as JSON or text.
+/// `available` and `schema` must describe the connection's `tracks` table;
+/// missing optional output columns become NULL. With `check_files`, checks the
+/// entire library rather than just the matching page, capping examples at `args.limit`.
+///
+/// Returns schema-check, filter-validation, count or list-query setup errors,
+/// including errors from the optional file-path query. Unreadable track rows are skipped.
+fn run_list(
+    conn: &Connection,
+    args: &Args,
+    available: &HashSet<String>,
+    schema: &LibrarySchema,
+) -> Result<(), String> {
+    check_schema(conn, args, available)?;
 
     let query = TrackQuery {
         query: args.query.clone(),
@@ -632,7 +698,7 @@ fn run_list(conn: &Connection, args: &Args) -> Result<(), String> {
     };
 
     let built = query
-        .build(&select_columns(&available), args.limit, args.offset)
+        .build_with(schema, &select_columns(available), args.limit, args.offset)
         .map_err(|e| e.to_string())?;
 
     let params: Vec<Value> = built.params.iter().map(to_sql_value).collect();
@@ -659,7 +725,7 @@ fn run_list(conn: &Connection, args: &Args) -> Result<(), String> {
     // alongside them. Same scan as the summary — every track in the library,
     // with the sample capped at the page size.
     let missing_files = if args.check_files {
-        Some(missing_files(conn, args.limit)?)
+        Some(missing_files(conn, args.limit, schema)?)
     } else {
         None
     };

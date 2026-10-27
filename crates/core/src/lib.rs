@@ -15,6 +15,7 @@ pub mod fingerprint;
 pub mod library_query;
 pub mod library_reads;
 pub mod library_remove;
+pub mod library_schema;
 pub mod library_stats;
 pub mod metadata;
 pub mod mp3;
@@ -41,16 +42,17 @@ pub use library_query::{
     sort_column, BuiltQuery, QueryError, QueryParam, TrackFilters, TrackQuery, SORT_KEYS,
 };
 pub use library_reads::{
-    analysis_candidates, enrichment_targets, present_rows, tag_health_rows, ReadError,
-    ENRICHMENT_TARGET_COLUMNS, GENRE_COUNTS_SQL, MISSING_FILE_PATHS_SQL, OWNED_ISRC_SQL,
-    SIMILAR_CANDIDATES_SQL, TAG_HEALTH_COLUMNS,
+    analysis_candidates, enrichment_targets, missing_file_paths_sql, present_rows, tag_health_rows,
+    ReadError, ENRICHMENT_TARGET_COLUMNS, GENRE_COUNTS_SQL, OWNED_ISRC_SQL, SIMILAR_CANDIDATES_SQL,
+    TAG_HEALTH_COLUMNS,
 };
 pub use library_remove::{
     after_doc, before_doc, check_undoable, input_doc, parse_states, present_states, read_statement,
     remove_statement, skill_run_insert, undo_statements, RemoveError, SkillRun, Statement,
     TrackState, MARK_UNDONE_SQL, REMOVE_SKILL_NAME, UNDO_READ_SQL,
 };
-pub use library_stats::{stat_queries, StatQuery, STATUS_BREAKDOWN_SQL};
+pub use library_schema::LibrarySchema;
+pub use library_stats::{stat_queries, status_breakdown_sql, StatQuery};
 pub use metadata::{
     cache_artwork, camelot_from_key, extract_metadata, CachedArtwork, EmbeddedArtwork,
     ExtractedMetadata,
