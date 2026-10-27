@@ -1,5 +1,5 @@
-//! The soft-remove contract: what "Remove from library" writes, and what
-//! bringing it back takes.
+//! The soft-remove contract: what "Remove from library" writes, what bringing
+//! it back takes, and what undoing either of them means.
 //!
 //! Like [`crate::library_query`], this module holds SQL as data and never runs
 //! it — `core` stays free of a database dependency so the rules are unit
@@ -13,12 +13,23 @@
 //!   stays, so its cue points, tags and analysis survive — and so does an undo.
 //! * **Every write is undoable.** The write is only committed together with a
 //!   `skill_runs` row holding the pre-write values, in the same transaction.
+//!
+//! A restore from the removed view is a write of its own, not the remove's undo
+//! replayed: it carries its own snapshot, so the action stays undoable no matter
+//! how old the removal was or whether its toast has long gone.
 
 /// The `skill_runs.skill_name` written by the remove path.
 ///
 /// Undo checks it, so a snapshot id from another write path can never be
 /// undone as a remove.
 pub const REMOVE_SKILL_NAME: &str = "remove_from_library";
+
+/// The `skill_runs.skill_name` written when the removed view puts tracks back.
+///
+/// Its snapshot runs the other way from a remove's — stamped before, clear
+/// after — which is what lets the same undo restore the *original* stamp
+/// instead of inventing a new one.
+pub const RESTORE_SKILL_NAME: &str = "restore_to_library";
 
 /// A statement ready to run: SQL text plus the parameters in `?N` order.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -68,11 +79,59 @@ pub fn remove_statement(ids: &[String], removed_at: &str) -> Result<Statement, R
     })
 }
 
+/// The statements that put `states` back in the library, one per track.
+///
+/// A restore is a write of its own, so it is guarded like one: each statement
+/// carries the `removed_at` the removed view actually showed. A track removed
+/// again since then holds a newer stamp, matches nothing, and counts as
+/// skipped — the newer action wins and the older view does not silently
+/// overwrite it.
+pub fn restore_statements(states: &[TrackState]) -> Result<Vec<Statement>, RemoveError> {
+    if states.is_empty() {
+        return Err(RemoveError::EmptySelection);
+    }
+    states
+        .iter()
+        .map(|state| match state.removed_at.as_deref() {
+            Some(stamped) => Ok(clear_statement(&state.id, stamped)),
+            None => Err(RemoveError::Corrupt(format!(
+                "{} is already in the library",
+                state.id
+            ))),
+        })
+        .collect()
+}
+
+/// `UPDATE ... SET removed_at = NULL` for one track, holding only while the row
+/// still carries `stamped`.
+fn clear_statement(track_id: &str, stamped: &str) -> Statement {
+    Statement {
+        sql: "UPDATE tracks SET removed_at = NULL, updated_at = datetime('now') \
+              WHERE id = ?1 AND removed_at IS ?2"
+            .to_string(),
+        params: vec![track_id.to_string(), stamped.to_string()],
+    }
+}
+
+/// `UPDATE ... SET removed_at = <the stamp it had>` for one track, holding only
+/// while the row is clear.
+fn stamp_statement(track_id: &str, stamped: &str) -> Statement {
+    Statement {
+        sql: "UPDATE tracks SET removed_at = ?2, updated_at = datetime('now') \
+              WHERE id = ?1 AND removed_at IS NULL"
+            .to_string(),
+        params: vec![track_id.to_string(), stamped.to_string()],
+    }
+}
+
 /// The `skill_runs` row that makes the write undoable.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct SkillRun {
     pub id: String,
     pub workspace_id: String,
+    /// Which write path this snapshot belongs to — always one of this module's
+    /// `*_SKILL_NAME` consts, never a string built from user data.
+    pub skill_name: &'static str,
     pub before_state: String,
     pub after_state: String,
     pub input_summary: String,
@@ -90,7 +149,7 @@ pub fn skill_run_insert(run: &SkillRun) -> Statement {
         params: vec![
             run.id.clone(),
             run.workspace_id.clone(),
-            REMOVE_SKILL_NAME.to_string(),
+            run.skill_name.to_string(),
             run.input_summary.clone(),
             run.before_state.clone(),
             run.after_state.clone(),
@@ -134,9 +193,10 @@ impl std::fmt::Display for RemoveError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             RemoveError::EmptySelection => write!(f, "no tracks selected"),
-            RemoveError::ForeignSnapshot(name) => {
-                write!(f, "snapshot is a {name} write, not a library remove")
-            }
+            RemoveError::ForeignSnapshot(name) => write!(
+                f,
+                "snapshot is a {name} write, not a library remove or restore"
+            ),
             RemoveError::AlreadyUndone => write!(f, "snapshot is already undone"),
             RemoveError::NotApplied(status) => {
                 write!(f, "snapshot is {status}, not an applied remove")
@@ -172,6 +232,20 @@ pub fn present_states(states: &[TrackState]) -> Vec<TrackState> {
         .collect()
 }
 
+/// The tracks in the selection that are out of the library.
+///
+/// The mirror of [`present_states`], and the reason a restore takes states
+/// rather than ids: the stamp each track holds is what its statement matches
+/// against, and a track that came back in between belongs to no removal this
+/// action has any business touching.
+pub fn removed_states(states: &[TrackState]) -> Vec<TrackState> {
+    states
+        .iter()
+        .filter(|state| state.removed_at.is_some())
+        .cloned()
+        .collect()
+}
+
 /// The pre-write half of the snapshot: every track as it is right now.
 pub fn before_doc(states: &[TrackState]) -> String {
     state_doc(
@@ -191,6 +265,14 @@ pub fn after_doc(states: &[TrackState], removed_at: &str) -> String {
             .iter()
             .map(|state| (state.id.as_str(), Some(removed_at))),
     )
+}
+
+/// The post-restore half: the same tracks, back in the library.
+///
+/// Every one of them is clear, whatever stamp it carried, so the value is not
+/// taken from the state — the state is only there to name the tracks.
+pub fn restored_doc(states: &[TrackState]) -> String {
+    state_doc(states.iter().map(|state| (state.id.as_str(), None)))
 }
 
 /// What the user asked for, recorded alongside what the write did.
@@ -249,8 +331,13 @@ pub fn parse_states(raw: &str) -> Result<Vec<TrackState>, RemoveError> {
 }
 
 /// Guards the undo against a snapshot it has no business restoring.
+///
+/// Both removal paths are accepted — a remove and a restore are undone by the
+/// same command, and [`undo_statements`] reads the direction off the snapshot
+/// itself. Anything else (a rating, a metadata edit, an enrichment run) names
+/// columns this code does not hold and must never be replayed as a removal.
 pub fn check_undoable(skill_name: &str, status: &str) -> Result<(), RemoveError> {
-    if skill_name != REMOVE_SKILL_NAME {
+    if skill_name != REMOVE_SKILL_NAME && skill_name != RESTORE_SKILL_NAME {
         return Err(RemoveError::ForeignSnapshot(skill_name.to_string()));
     }
     match status {
@@ -260,12 +347,15 @@ pub fn check_undoable(skill_name: &str, status: &str) -> Result<(), RemoveError>
     }
 }
 
-/// The statements that bring the selection back, one per track.
+/// The statements that run a removal snapshot backwards, one per track.
 ///
-/// Each one carries the state the write left (`removed_at IS ?2`) in its WHERE,
-/// so a track edited in between is skipped rather than overwritten — and each
-/// restores to `NULL`, because the only thing a remove snapshot can undo is a
-/// track it took out of the library.
+/// The direction comes from the snapshot, not from a flag: `present → stamped`
+/// was a remove, so its undo clears; `stamped → present` was a restore, so its
+/// undo puts the *original* stamp back rather than a fresh `datetime('now')`,
+/// which would record a removal at a time it did not happen.
+///
+/// Either way each statement carries the state the write left in its WHERE, so
+/// a track edited in between is skipped rather than overwritten.
 pub fn undo_statements(
     before: &[TrackState],
     after: &[TrackState],
@@ -285,21 +375,18 @@ pub fn undo_statements(
                     was.id, became.id
                 )));
             }
-            if was.removed_at.is_some() {
-                return Err(RemoveError::Corrupt(format!(
-                    "{} was already removed before this snapshot",
+            match (&was.removed_at, &became.removed_at) {
+                (None, Some(stamped)) => Ok(clear_statement(&was.id, stamped)),
+                (Some(stamped), None) => Ok(stamp_statement(&was.id, stamped)),
+                (None, None) => Err(RemoveError::Corrupt(format!(
+                    "{} was never stamped by this remove",
                     was.id
-                )));
+                ))),
+                (Some(_), Some(_)) => Err(RemoveError::Corrupt(format!(
+                    "{} holds a stamp on both sides, so this snapshot wrote nothing",
+                    was.id
+                ))),
             }
-            let stamped = became.removed_at.as_deref().ok_or_else(|| {
-                RemoveError::Corrupt(format!("{} was never stamped by this remove", was.id))
-            })?;
-            Ok(Statement {
-                sql: "UPDATE tracks SET removed_at = NULL, updated_at = datetime('now') \
-                      WHERE id = ?1 AND removed_at IS ?2"
-                    .to_string(),
-                params: vec![was.id.clone(), stamped.to_string()],
-            })
         })
         .collect()
 }
@@ -402,10 +489,12 @@ mod tests {
             undo_statements(&before, &after),
             Err(RemoveError::Corrupt(_))
         ));
-        // And a snapshot whose before-state is not "present" is not a remove
-        // snapshot either.
-        let weird = [state("a", Some("2026-01-01 00:00:00"))];
-        assert!(undo_statements(&weird, &after).is_err());
+        // Both halves stamped describes neither direction: nothing moved.
+        let stamped = [state("a", Some("2026-01-01 00:00:00"))];
+        assert!(matches!(
+            undo_statements(&stamped, &stamped),
+            Err(RemoveError::Corrupt(_))
+        ));
         // Mismatched id sets cannot be paired up, so they are refused too.
         assert!(undo_statements(&before, &[state("z", Some("2026-10-27 10:00:00"))]).is_err());
     }
@@ -470,6 +559,7 @@ mod tests {
         let run = SkillRun {
             id: "run-1".into(),
             workspace_id: "default".into(),
+            skill_name: REMOVE_SKILL_NAME,
             before_state: "{\"a\":{\"removed_at\":null}}".into(),
             after_state: "{\"a\":{\"removed_at\":\"2026-10-27 10:00:00\"}}".into(),
             input_summary: "{\"trackIds\":[\"a\"]}".into(),
@@ -493,5 +583,93 @@ mod tests {
                 "{\"a\":{\"removed_at\":\"2026-10-27 10:00:00\"}}",
             ])
         );
+    }
+
+    #[test]
+    fn a_restore_snapshot_names_the_restore_write() {
+        // One `skill_runs` table, several write paths: the row has to say which
+        // one wrote it, or `check_undoable` cannot tell a restore undo from a
+        // remove undo and the wrong statement pair runs against the tracks.
+        assert_eq!(RESTORE_SKILL_NAME, "restore_to_library");
+        let built = skill_run_insert(&SkillRun {
+            id: "run-2".into(),
+            workspace_id: "default".into(),
+            skill_name: RESTORE_SKILL_NAME,
+            before_state: "{\"a\":{\"removed_at\":\"2026-10-27 10:00:00\"}}".into(),
+            after_state: "{\"a\":{\"removed_at\":null}}".into(),
+            input_summary: "{\"trackIds\":[\"a\"]}".into(),
+        });
+        assert_eq!(built.params[2], RESTORE_SKILL_NAME.to_string());
+    }
+
+    #[test]
+    fn only_removed_tracks_are_kept_for_a_restore() {
+        // The mirror of `present_states`: a track still in the library belongs
+        // to no remove of ours, so restoring it would write a snapshot that
+        // undo could later use to stamp a present track.
+        let removed = removed_states(&[state("a", Some("2026-10-27 10:00:00")), state("b", None)]);
+        assert_eq!(removed, vec![state("a", Some("2026-10-27 10:00:00"))]);
+    }
+
+    #[test]
+    fn a_restore_clears_only_a_track_still_holding_its_stamp() {
+        // Optimistic locking in the other direction: `?2` is the `removed_at`
+        // the removed view showed. A track removed again in between holds a
+        // newer stamp, matches nothing and is skipped — the newer action wins.
+        let built = restore_statements(&[state("a", Some("2026-10-27 10:00:00"))]).unwrap();
+        assert_eq!(built.len(), 1);
+        assert_eq!(
+            built[0].sql,
+            "UPDATE tracks SET removed_at = NULL, updated_at = datetime('now') \
+             WHERE id = ?1 AND removed_at IS ?2"
+        );
+        assert_eq!(built[0].params, ids(&["a", "2026-10-27 10:00:00"]));
+    }
+
+    #[test]
+    fn a_restore_never_clears_a_track_that_is_already_in_the_library() {
+        assert!(matches!(
+            restore_statements(&[state("a", None)]),
+            Err(RemoveError::Corrupt(_))
+        ));
+        assert_eq!(
+            restore_statements(&[]).err(),
+            Some(RemoveError::EmptySelection)
+        );
+    }
+
+    #[test]
+    fn the_restore_snapshot_records_the_stamp_and_the_clear() {
+        let states = [state("a", Some("2026-10-27 10:00:00"))];
+        assert_eq!(
+            before_doc(&states),
+            "{\"a\":{\"removed_at\":\"2026-10-27 10:00:00\"}}"
+        );
+        assert_eq!(restored_doc(&states), "{\"a\":{\"removed_at\":null}}");
+    }
+
+    #[test]
+    fn undoing_a_restore_stamps_the_track_back_with_its_old_value() {
+        // The snapshot is the only place the original stamp survives, so the
+        // undo of a restore puts that exact value back rather than a fresh
+        // `datetime('now')` — which would invent a removal the user never made.
+        let before = [state("a", Some("2026-10-27 10:00:00"))];
+        let after = [state("a", None)];
+        let built = undo_statements(&before, &after).unwrap();
+        assert_eq!(
+            built[0].sql,
+            "UPDATE tracks SET removed_at = ?2, updated_at = datetime('now') \
+             WHERE id = ?1 AND removed_at IS NULL"
+        );
+        assert_eq!(built[0].params, ids(&["a", "2026-10-27 10:00:00"]));
+    }
+
+    #[test]
+    fn both_removal_snapshots_are_undoable() {
+        assert!(check_undoable(RESTORE_SKILL_NAME, "success").is_ok());
+        assert!(matches!(
+            check_undoable(RESTORE_SKILL_NAME, "undone"),
+            Err(RemoveError::AlreadyUndone)
+        ));
     }
 }

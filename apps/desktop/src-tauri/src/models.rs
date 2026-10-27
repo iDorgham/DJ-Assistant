@@ -646,6 +646,66 @@ pub struct UndoRemoveTracksResponse {
     pub skipped: usize,
 }
 
+// --- Removed-view recovery (issue #62) ---
+
+/// One row of the removed view: a track a soft remove took out of the library.
+///
+/// Deliberately narrow — the view exists so the user can name the track and
+/// decide whether to bring it back, not to browse it. `file_path` is here for
+/// the same reason the full row is not: it is the proof the audio is still on
+/// disk.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct RemovedTrack {
+    pub id: String,
+    pub title: String,
+    pub artist: String,
+    pub album: Option<String>,
+    pub file_path: String,
+    pub duration_ms: i64,
+    /// When the track left the library, as SQLite stored it.
+    pub removed_at: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ListRemovedTracksResponse {
+    /// Every track currently out of the library, newest departure first.
+    pub tracks: Vec<RemovedTrack>,
+    /// Number of rows here — the same as `tracks.len()`, kept so the UI can
+    /// show a count without re-counting the list.
+    pub total: usize,
+}
+
+/// Tracks put back into the library from the removed view.
+///
+/// This is a write of its own, not the original remove's undo replayed: it
+/// carries a fresh `skill_runs` snapshot, so it is undoable long after the
+/// removal's toast has gone.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct RestoreTracksRequest {
+    /// Tracks to restore. Unknown ids and ids already in the library are
+    /// ignored, so `restored` can be smaller than this list — or zero.
+    pub track_ids: Vec<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct RestoreTracksResponse {
+    /// Id of the `skill_runs` row holding the undo snapshot, or `None` when
+    /// nothing changed — no snapshot, so nothing to undo.
+    ///
+    /// Undoing it runs the removal backwards, which puts the track out of the
+    /// library again with the stamp it originally carried.
+    pub undo_id: Option<String>,
+    /// Number of tracks that actually came back.
+    pub restored: usize,
+    /// Number of tracks skipped because they were removed again after this
+    /// command read them, so clearing them would overwrite a newer action.
+    pub skipped: usize,
+}
+
 /// The file to show in the OS file manager. The app only hands the path to the
 /// shell — it does not read or write the file.
 #[derive(Debug, Clone, Serialize, Deserialize)]

@@ -101,7 +101,7 @@ mod tests {
         check_metadata_undoable, number_value, tags_match, text_value, METADATA_SKILL_NAME,
         METADATA_SKILL_NAMES, PATCH_COLUMNS, RATING_SKILL_NAME,
     };
-    use crate::library_remove::REMOVE_SKILL_NAME;
+    use crate::library_remove::{REMOVE_SKILL_NAME, RESTORE_SKILL_NAME};
 
     fn tags(values: &[&str]) -> Vec<String> {
         values.iter().map(|value| value.to_string()).collect()
@@ -191,6 +191,17 @@ mod tests {
         let err = check_metadata_undoable(REMOVE_SKILL_NAME, "success")
             .expect_err("a remove snapshot must be refused");
         assert!(err.contains(REMOVE_SKILL_NAME), "{err}");
+    }
+
+    #[test]
+    fn a_restore_snapshot_is_not_the_metadata_undo_s_to_restore() {
+        // Same trap on the way back in: a restore snapshot is the only record
+        // of the stamp a restored track carried, and spending it here would
+        // strand the track in the library with no way to remove it again.
+        assert!(!METADATA_SKILL_NAMES.contains(&RESTORE_SKILL_NAME));
+        let err = check_metadata_undoable(RESTORE_SKILL_NAME, "success")
+            .expect_err("a restore snapshot must be refused");
+        assert!(err.contains(RESTORE_SKILL_NAME), "{err}");
     }
 
     #[test]

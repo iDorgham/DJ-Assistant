@@ -13,6 +13,10 @@
 //! Per-track detail reads (`get_track`, artwork, an undo snapshot) deliberately
 //! do *not* filter: they answer for one id the caller already holds, and a row
 //! waiting to be restored must still be readable.
+//!
+//! [`REMOVED_TRACKS_SQL`] is the one library-wide exception, and it is the
+//! recovery surface itself: those rows are hidden everywhere else precisely so
+//! this view can be the single place the user goes to bring one back.
 
 use crate::library_remove::Statement;
 use crate::library_schema::LibrarySchema;
@@ -20,6 +24,23 @@ use crate::library_schema::LibrarySchema;
 /// The columns the tag-health report computes its gaps from.
 pub const TAG_HEALTH_COLUMNS: &str = "id, title, artist, album, genre, year, bpm, key_camelot, \
     artwork_hash, isrc, duration_ms";
+
+/// The columns the removed view renders, in `RemovedTrack` order.
+///
+/// `file_path` is here because the point of the view is to show the user that
+/// the file is still on disk, and `removed_at` because when a track left is the
+/// only thing that orders the list sensibly.
+pub const REMOVED_TRACKS_COLUMNS: &str =
+    "id, title, artist, album, file_path, duration_ms, removed_at";
+
+/// The rows a soft remove took out of the library, newest departure first.
+///
+/// `ORDER BY removed_at DESC` puts the tracks the user removed a moment ago —
+/// the ones they are most likely here about — at the top; `id` breaks ties so
+/// two tracks stamped in the same second keep a stable order across pages.
+pub const REMOVED_TRACKS_SQL: &str =
+    "SELECT id, title, artist, album, file_path, duration_ms, removed_at \
+     FROM tracks WHERE removed_at IS NOT NULL ORDER BY removed_at DESC, id ASC";
 
 /// The columns an enrichment preview needs to match and judge a track.
 pub const ENRICHMENT_TARGET_COLUMNS: &str =
@@ -141,7 +162,7 @@ mod tests {
     use super::{
         analysis_candidates, enrichment_targets, missing_file_paths_sql, present_rows,
         tag_health_rows, ReadError, ENRICHMENT_TARGET_COLUMNS, GENRE_COUNTS_SQL, OWNED_ISRC_SQL,
-        SIMILAR_CANDIDATES_SQL, TAG_HEALTH_COLUMNS,
+        REMOVED_TRACKS_COLUMNS, REMOVED_TRACKS_SQL, SIMILAR_CANDIDATES_SQL, TAG_HEALTH_COLUMNS,
     };
     use crate::library_remove::Statement;
     use crate::library_schema::LibrarySchema;
@@ -151,6 +172,9 @@ mod tests {
     }
 
     /// Every statement this module produces or hands out, as text.
+    ///
+    /// `REMOVED_TRACKS_SQL` is deliberately absent: it is the one read allowed
+    /// to show a soft-removed track, and the test below is what proves it.
     fn all_read_sql() -> Vec<String> {
         let built = [
             present_rows(TAG_HEALTH_COLUMNS, None),
@@ -343,5 +367,26 @@ mod tests {
                 built.sql
             );
         }
+    }
+
+    #[test]
+    fn the_removed_view_is_the_one_read_that_holds_a_soft_removed_track() {
+        // The recovery surface has to reach the rows every other read hides —
+        // that is the whole point of the feature. It stays in this module so
+        // the exception is visible next to the rule, and it is the only read
+        // excluded from `all_read_sql` above.
+        assert_eq!(
+            REMOVED_TRACKS_SQL,
+            format!(
+                "SELECT {REMOVED_TRACKS_COLUMNS} FROM tracks \
+             WHERE removed_at IS NOT NULL ORDER BY removed_at DESC, id ASC"
+            )
+        );
+        let upper = REMOVED_TRACKS_SQL.to_ascii_uppercase();
+        assert!(upper.trim_start().starts_with("SELECT"), "{upper}");
+        assert!(
+            REMOVED_TRACKS_COLUMNS.contains("removed_at"),
+            "the view has to show when a track left"
+        );
     }
 }

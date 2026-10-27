@@ -5,7 +5,10 @@ import {
   appliesToWholeSelection,
   BLOCKED_ACTIONS,
   describeRemove,
+  describeRemovedCount,
+  describeRestore,
   describeUndoRemove,
+  describeUndoRestore,
   isBlocked,
   isDisabled,
   itemTooltip,
@@ -225,4 +228,31 @@ test("undoing a remove reports restored and skipped separately", () => {
   );
   assert.equal(describeUndoRemove(0, 2), "Nothing restored — 2 tracks removed again since");
   assert.equal(describeUndoRemove(0, 1), "Nothing restored — 1 track removed again since");
+});
+
+test("a restore reports what came back and what was skipped", () => {
+  assert.equal(describeRestore(1, 0), "Restored 1 track to library");
+  assert.equal(describeRestore(3, 0), "Restored 3 tracks to library");
+  assert.equal(
+    describeRestore(2, 1),
+    "Restored 2 tracks to library, 1 skipped (removed again since)"
+  );
+  assert.equal(describeRestore(0, 2), "Nothing restored — 2 tracks removed again since");
+});
+
+test("undoing a restore removes again, and says so", () => {
+  // The same undo command serves both directions, so the wording has to come
+  // from which snapshot it ran: "back in the library" here would be a lie.
+  assert.equal(describeUndoRestore(2, 0), "Undone — 2 tracks removed again");
+  assert.equal(describeUndoRestore(1, 0), "Undone — 1 track removed again");
+  assert.equal(
+    describeUndoRestore(1, 2),
+    "Undone — 1 track removed again, 2 skipped (changed since)"
+  );
+  assert.equal(describeUndoRestore(0, 1), "Nothing undone — 1 track changed since");
+});
+
+test("the removed button counts what is hidden", () => {
+  assert.equal(describeRemovedCount(0), "Removed");
+  assert.equal(describeRemovedCount(4), "Removed (4)");
 });

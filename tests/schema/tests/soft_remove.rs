@@ -15,12 +15,13 @@
 use dj_assistant_core::library_query::TrackQuery;
 use dj_assistant_core::library_reads::{
     analysis_candidates, enrichment_targets, missing_file_paths_sql, tag_health_rows,
-    GENRE_COUNTS_SQL, OWNED_ISRC_SQL, SIMILAR_CANDIDATES_SQL,
+    GENRE_COUNTS_SQL, OWNED_ISRC_SQL, REMOVED_TRACKS_SQL, SIMILAR_CANDIDATES_SQL,
 };
 use dj_assistant_core::library_remove::{
     after_doc, before_doc, check_undoable, input_doc, parse_states, present_states, read_statement,
-    remove_statement, skill_run_insert, undo_statements, RemoveError, SkillRun, Statement,
-    TrackState, MARK_UNDONE_SQL, REMOVE_SKILL_NAME, UNDO_READ_SQL,
+    remove_statement, removed_states, restore_statements, restored_doc, skill_run_insert,
+    undo_statements, RemoveError, SkillRun, Statement, TrackState, MARK_UNDONE_SQL,
+    REMOVE_SKILL_NAME, RESTORE_SKILL_NAME, UNDO_READ_SQL,
 };
 use dj_assistant_core::library_schema::LibrarySchema;
 use dj_assistant_core::patch::{check_metadata_undoable, PATCH_COLUMNS};
@@ -73,10 +74,8 @@ fn listed_ids(conn: &Connection) -> Vec<String> {
     rows.map(|r| r.unwrap()).collect()
 }
 
-/// Removes the selection exactly the way the `remove_tracks` command does: read
-/// the current state, stamp what is present, and record the snapshot in the
-/// same breath. Returns how many tracks left the library.
-fn remove_tracks(conn: &Connection, run_id: &str, ids: &[String]) -> usize {
+/// The states the read half of a write returns for `ids`.
+fn states_for(conn: &Connection, ids: &[String]) -> Vec<TrackState> {
     let read = read_statement(ids).unwrap();
     let mut stmt = conn.prepare(&read.sql).unwrap();
     let found: Vec<TrackState> = stmt
@@ -90,8 +89,14 @@ fn remove_tracks(conn: &Connection, run_id: &str, ids: &[String]) -> usize {
         .map(|r| r.unwrap())
         .collect();
     drop(stmt);
+    found
+}
 
-    let present = present_states(&found);
+/// Removes the selection exactly the way the `remove_tracks` command does: read
+/// the current state, stamp what is present, and record the snapshot in the
+/// same breath. Returns how many tracks left the library.
+fn remove_tracks(conn: &Connection, run_id: &str, ids: &[String]) -> usize {
+    let present = present_states(&states_for(conn, ids));
     if present.is_empty() {
         return 0;
     }
@@ -106,12 +111,49 @@ fn remove_tracks(conn: &Connection, run_id: &str, ids: &[String]) -> usize {
         &skill_run_insert(&SkillRun {
             id: run_id.into(),
             workspace_id: "default".into(),
+            skill_name: REMOVE_SKILL_NAME,
             before_state: before,
             after_state: after,
             input_summary: input_doc(&ids),
         }),
     );
     removed
+}
+
+/// Restores the selection exactly the way the `restore_tracks` command does,
+/// recording a snapshot of its own. Returns `(restored, skipped)`.
+fn restore_tracks(conn: &Connection, run_id: &str, ids: &[String]) -> (usize, usize) {
+    let removed = removed_states(&states_for(conn, ids));
+    if removed.is_empty() {
+        return (0, 0);
+    }
+    let statements = restore_statements(&removed).unwrap();
+    let mut cleared = Vec::new();
+    let mut skipped = 0;
+    for (state, stmt) in removed.iter().zip(&statements) {
+        if execute(conn, stmt) == 0 {
+            skipped += 1;
+        } else {
+            cleared.push(state.clone());
+        }
+    }
+    // A restore that changed nothing has nothing to undo, so it records nothing
+    // — the same rule the remove follows.
+    if !cleared.is_empty() {
+        let ids: Vec<String> = cleared.iter().map(|state| state.id.clone()).collect();
+        execute(
+            conn,
+            &skill_run_insert(&SkillRun {
+                id: run_id.into(),
+                workspace_id: "default".into(),
+                skill_name: RESTORE_SKILL_NAME,
+                before_state: before_doc(&cleared),
+                after_state: restored_doc(&cleared),
+                input_summary: input_doc(&ids),
+            }),
+        );
+    }
+    (cleared.len(), skipped)
 }
 
 /// Undoes `run_id` the way the `undo_remove_tracks` command does, returning the
@@ -127,6 +169,11 @@ fn undo_remove(conn: &Connection, run_id: &str) -> Result<usize, RemoveError> {
     }
     conn.execute(MARK_UNDONE_SQL, [run_id]).unwrap();
     Ok(restored)
+}
+
+/// The removed view, as the app reads it: the ids it would render, in order.
+fn removed_ids(conn: &Connection) -> Vec<String> {
+    first_column(conn, REMOVED_TRACKS_SQL, &[])
 }
 
 fn tag_count(conn: &Connection, track_id: &str) -> i64 {
@@ -443,4 +490,152 @@ fn the_metadata_undo_refuses_a_remove_snapshot_without_spending_it() {
     assert!(listed_ids(&conn).is_empty());
     assert_eq!(undo_remove(&conn, "run-1").unwrap(), 1);
     assert_eq!(listed_ids(&conn), vec![a]);
+}
+
+#[test]
+fn the_removed_view_holds_exactly_the_stamped_rows() {
+    // The view is the one place a soft-removed track is allowed to appear, and
+    // it must hold nothing else: a present row showing up here would offer a
+    // "restore" for a track that is already in the library.
+    let conn = open_migrated();
+    let kept = seed_track(&conn);
+    let gone = "track-2".to_string();
+    seed_second_track(&conn, &gone);
+    assert!(removed_ids(&conn).is_empty(), "nothing has left yet");
+
+    remove_tracks(&conn, "run-1", std::slice::from_ref(&gone));
+    assert_eq!(removed_ids(&conn), vec![gone.clone()]);
+    assert_eq!(listed_ids(&conn), vec![kept]);
+}
+
+#[test]
+fn a_restore_from_the_view_is_a_write_with_an_undo_of_its_own() {
+    let conn = open_migrated();
+    let a = seed_track(&conn);
+    seed_cue(&conn, &a);
+    insert_tag(&conn, &a, "peak");
+
+    remove_tracks(&conn, "run-1", std::slice::from_ref(&a));
+    assert_eq!(removed_ids(&conn), vec![a.clone()]);
+
+    // `get_track`-style per-track reads stay unfiltered, which is what makes
+    // the restore possible at all: the row, its stamp and its file path are
+    // still readable while it is out of the library.
+    assert_eq!(
+        states_for(&conn, std::slice::from_ref(&a)),
+        vec![TrackState {
+            id: a.clone(),
+            removed_at: Some(STAMP.to_string()),
+        }]
+    );
+
+    assert_eq!(
+        restore_tracks(&conn, "run-2", std::slice::from_ref(&a)),
+        (1, 0)
+    );
+    assert_eq!(listed_ids(&conn), vec![a.clone()], "back in the library");
+    assert!(removed_ids(&conn).is_empty());
+    // The row was never deleted, so the cue grid and the tags the DJ built are
+    // exactly where they were — this is a restore, not a re-import.
+    assert_eq!(cue_count(&conn, &a), 1);
+    assert_eq!(tag_count(&conn, &a), 1);
+
+    // Undoing the restore removes the track again, with the stamp the original
+    // remove carried: the snapshot is the only place that value survives, and
+    // re-stamping with a fresh `datetime('now') would record a removal at a
+    // time it did not happen.
+    let (skill, status, _, _) = read_snapshot(&conn, "run-2");
+    assert_eq!(skill, RESTORE_SKILL_NAME);
+    assert_eq!(status, "success");
+    assert_eq!(undo_remove(&conn, "run-2").unwrap(), 1);
+    assert_eq!(removed_at(&conn, &a), Some(Some(STAMP.to_string())));
+    assert_eq!(removed_ids(&conn), vec![a.clone()]);
+
+    // And the older remove is still where it was: undoing a restore returns the
+    // library to the state that remove left, so its undo still applies.
+    assert_eq!(undo_remove(&conn, "run-1").unwrap(), 1);
+    assert_eq!(listed_ids(&conn), vec![a]);
+}
+
+#[test]
+fn a_restore_skips_a_track_removed_again_after_the_view_was_read() {
+    let conn = open_migrated();
+    let a = seed_track(&conn);
+    assert_eq!(remove_tracks(&conn, "run-1", std::slice::from_ref(&a)), 1);
+
+    // What the view showed, before anything else could happen.
+    let seen = removed_states(&states_for(&conn, std::slice::from_ref(&a)));
+    // A newer remove lands in between, with an undo of its own.
+    conn.execute(
+        "UPDATE tracks SET removed_at = '2026-12-31 23:59:59' WHERE id = ?1",
+        [&a],
+    )
+    .unwrap();
+
+    let statements = restore_statements(&seen).unwrap();
+    let cleared: usize = statements.iter().map(|stmt| execute(&conn, stmt)).sum();
+    assert_eq!(cleared, 0, "the stamp the view saw is no longer the row's");
+    assert_eq!(
+        removed_at(&conn, &a),
+        Some(Some("2026-12-31 23:59:59".to_string())),
+        "the newer removal is left alone"
+    );
+    assert!(listed_ids(&conn).is_empty());
+}
+
+#[test]
+fn the_metadata_undo_refuses_a_restore_snapshot_without_spending_it() {
+    // The restore id is handed to the toast like any other undo id, so it can
+    // reach the metadata command. Its snapshot holds only `removed_at` — not a
+    // patch column — and spending it would throw away the only record of the
+    // stamp the track carried before it came back.
+    let conn = open_migrated();
+    let a = seed_track(&conn);
+    remove_tracks(&conn, "run-1", std::slice::from_ref(&a));
+    assert_eq!(
+        restore_tracks(&conn, "run-2", std::slice::from_ref(&a)),
+        (1, 0)
+    );
+
+    let (skill, status, before_raw, _) = read_snapshot(&conn, "run-2");
+    assert_eq!(skill, RESTORE_SKILL_NAME);
+    assert!(check_metadata_undoable(&skill, &status).is_err());
+    let (_, after_status, _, _) = read_snapshot(&conn, "run-2");
+    assert_eq!(after_status, "success", "refusing spends nothing");
+    assert!(before_raw.contains("removed_at"));
+
+    assert_eq!(undo_remove(&conn, "run-2").unwrap(), 1);
+    assert_eq!(removed_at(&conn, &a), Some(Some(STAMP.to_string())));
+}
+
+#[test]
+fn the_removed_view_columns_are_in_the_order_the_model_reads() {
+    // `list_removed_tracks` maps each column by index, so a column that moves
+    // in `REMOVED_TRACKS_COLUMNS` silently becomes the wrong field in the UI —
+    // the audio path rendered as the title. This pins the order against real
+    // values, which is the only check that mapping has.
+    let conn = open_migrated();
+    let a = seed_track(&conn);
+    remove_tracks(&conn, "run-1", std::slice::from_ref(&a));
+
+    let row = conn
+        .query_row(REMOVED_TRACKS_SQL, [], |row| {
+            Ok((
+                row.get::<_, String>(0)?,
+                row.get::<_, String>(1)?,
+                row.get::<_, String>(2)?,
+                row.get::<_, Option<String>>(3)?,
+                row.get::<_, String>(4)?,
+                row.get::<_, i64>(5)?,
+                row.get::<_, String>(6)?,
+            ))
+        })
+        .expect("the removed view must return the row it stamped");
+    assert_eq!(row.0, a);
+    assert_eq!(row.1, "Test Title");
+    assert_eq!(row.2, "Test Artist");
+    assert_eq!(row.3, Some("Test Album".to_string()));
+    assert_eq!(row.4, "D:\\Music\\track.mp3");
+    assert_eq!(row.5, 240_000);
+    assert_eq!(row.6, STAMP.to_string());
 }

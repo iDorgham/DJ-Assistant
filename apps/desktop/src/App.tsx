@@ -20,6 +20,7 @@ import type {
   GenreCount,
   ListTracksFilters,
   ListTracksSortBy,
+  RemovedTrack,
   SortDirection,
 } from "@dj-assistant/shared";
 import {
@@ -45,6 +46,8 @@ import {
   updateTrackMetadata,
   removeTracks,
   undoRemoveTracks,
+  listRemovedTracks,
+  restoreTracks,
   revealInFileManager,
 } from "./services/api";
 import {
@@ -60,6 +63,7 @@ import {
   Sparkles,
   Columns3,
   Activity,
+  ArchiveRestore,
   PlugZap,
   Globe,
   Undo2,
@@ -99,6 +103,7 @@ import {
   describeMetadataWrite,
   filterTracks,
   formatBpm,
+  formatDuration,
   formatKey,
   formatScore,
   formatMissingField,
@@ -108,7 +113,14 @@ import {
   toggleFilterValue,
   truncateComment,
 } from "./lib/library";
-import { appliesToWholeSelection, describeRemove, describeUndoRemove } from "./lib/library-menu";
+import {
+  appliesToWholeSelection,
+  describeRemove,
+  describeRemovedCount,
+  describeRestore,
+  describeUndoRemove,
+  describeUndoRestore,
+} from "./lib/library-menu";
 import {
   analysisStatusLabel,
   autoFitWidth,
@@ -1083,7 +1095,7 @@ export default function App() {
   const [pendingUndo, setPendingUndo] = useState<{
     undoId: string;
     message: string;
-    kind: "metadata" | "remove";
+    kind: "metadata" | "remove" | "restore";
   } | null>(null);
   const undoTimerRef = useRef<number | null>(null);
   // True while the undo toast holds the focus; the idle timer is paused then.
@@ -1108,6 +1120,20 @@ export default function App() {
   const [healthLoading, setHealthLoading] = useState(false);
   const [providers, setProviders] = useState<ProviderStatusResponse | null>(null);
 
+  // The removed view (issue #62). The Undo toast is transient, so the way back
+  // has to be a place of its own: this list is the only read in the app that
+  // asks for the rows every other library read filters out, and its length is
+  // the toolbar count.
+  const [removedOpen, setRemovedOpen] = useState(false);
+  const [removed, setRemoved] = useState<RemovedTrack[]>([]);
+  const [removedLoading, setRemovedLoading] = useState(false);
+  const [removedError, setRemovedError] = useState<string | null>(null);
+  const [restoringIds, setRestoringIds] = useState<string[]>([]);
+  // State is what the buttons disable on; this is what the click handler checks.
+  // Without it a fast double-click fires a second restore whose rows are already
+  // back, and the toast would report that as "removed again since".
+  const restoringRef = useRef(false);
+
   // Online enrichment review (TE.3): explicit lookup → diff review → apply → undo.
   const [enrichProvider, setEnrichProvider] = useState<EnrichmentProviderKind>("musicbrainz");
   const [enrichLoading, setEnrichLoading] = useState(false);
@@ -1119,7 +1145,7 @@ export default function App() {
   // Chart snapshots Tier 1 (TD.3): versioned data with local taste filtering.
   const [chartsOpen, setChartsOpen] = useState(false);
   dialogsOpenRef.current =
-    healthOpen || chartsOpen || editorTrack !== null || removeConfirm !== null;
+    healthOpen || chartsOpen || removedOpen || editorTrack !== null || removeConfirm !== null;
   const [chartGenre, setChartGenre] = useState("techno");
   const [chartKind, setChartKind] = useState("top100");
   const [chartData, setChartData] = useState<ChartListResponse | null>(null);
@@ -1291,6 +1317,30 @@ export default function App() {
   }, [reloadToken]);
 
   const refreshLibrary = () => setReloadToken((token) => token + 1);
+
+  // The removed view's rows, reloaded with the library: a remove adds one, a
+  // restore takes it back, and undoing either changes the set again. Its length
+  // is also the toolbar count, which is why it refreshes without being opened.
+  useEffect(() => {
+    let cancelled = false;
+    setRemovedLoading(true);
+    setRemovedError(null);
+    listRemovedTracks()
+      .then((res) => {
+        if (!cancelled) setRemoved(res.tracks);
+      })
+      .catch((err) => {
+        if (cancelled) return;
+        console.error("Failed to load the removed tracks:", err);
+        setRemovedError(`Couldn't load the removed tracks — ${errorDetail(err)}.`);
+      })
+      .finally(() => {
+        if (!cancelled) setRemovedLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [reloadToken]);
 
   // --- Shared track panel (Stage 2) ----------------------------------------
   // One panel everywhere: a row click, Enter, or the player's info control
@@ -1719,7 +1769,11 @@ export default function App() {
     setPendingUndo(null);
   };
 
-  const offerUndo = (undoId: string, message: string, kind: "metadata" | "remove" = "metadata") => {
+  const offerUndo = (
+    undoId: string,
+    message: string,
+    kind: "metadata" | "remove" | "restore" = "metadata"
+  ) => {
     clearUndoTimer();
     setPendingUndo({ undoId, message, kind });
     startUndoTimer();
@@ -1805,13 +1859,32 @@ export default function App() {
     }
   };
 
-  // One toast, two write paths: a metadata undo puts old values back, a remove
-  // undo puts the rows back in the library. Running the wrong one would report
-  // success against the wrong snapshot.
+  // Undoing a restore runs the same command, because the snapshot says which
+  // direction it was written in — but the wording has to run the other way:
+  // undoing a restore takes the tracks out of the library again.
+  const handleUndoRestore = async () => {
+    if (!pendingUndo) return;
+    const undoId = pendingUndo.undoId;
+    dismissUndo();
+    try {
+      const res = await undoRemoveTracks({ undoId });
+      refreshLibrary();
+      pushStatus(describeUndoRestore(res.restored, res.skipped));
+    } catch (err) {
+      console.error("Failed to undo the library restore:", err);
+      pushStatus("Couldn't undo that restore", "error");
+    }
+  };
+
+  // One toast, three write paths: a metadata undo puts old values back, a remove
+  // undo puts the rows back in the library, and a restore undo takes them out
+  // again. Running the wrong one would report success against the wrong snapshot.
   const handleUndo = () => {
     if (!pendingUndo) return;
     if (pendingUndo.kind === "remove") {
       void handleUndoRemove();
+    } else if (pendingUndo.kind === "restore") {
+      void handleUndoRestore();
     } else {
       void handleUndoMetadata();
     }
@@ -1915,6 +1988,31 @@ export default function App() {
     } catch (err) {
       console.error("Failed to remove tracks from the library:", err);
       pushStatus("Couldn't remove the tracks from the library", "error");
+    }
+  };
+
+  // The way back once the Undo toast is gone (issue #62). The ids and stamps
+  // come from the removed view's own rows, so nothing here depends on the
+  // removal's snapshot: the backend clears the stamp and writes a new
+  // `skill_runs` row in one transaction, and the returned id undoes *this*
+  // restore — putting the original stamp back, not a fresh one.
+  const handleRestore = async (trackIds: string[]) => {
+    if (trackIds.length === 0 || restoringRef.current) return;
+    restoringRef.current = true;
+    setRestoringIds(trackIds);
+    try {
+      const res = await restoreTracks({ trackIds });
+      refreshLibrary();
+      const message = describeRestore(res.restored, res.skipped);
+      pushStatus(message);
+      // No `undoId` means nothing was cleared, so there is nothing to undo.
+      if (res.undoId) offerUndo(res.undoId, message, "restore");
+    } catch (err) {
+      console.error("Failed to restore tracks from the removed view:", err);
+      pushStatus("Couldn't restore the tracks", "error");
+    } finally {
+      restoringRef.current = false;
+      setRestoringIds([]);
     }
   };
 
@@ -2420,6 +2518,16 @@ export default function App() {
                   <span className="mx-1 h-4 w-px bg-dj-border" />
                   <button
                     type="button"
+                    onClick={() => setRemovedOpen(true)}
+                    className="flex h-6 items-center gap-1 rounded-sm border border-dj-border bg-dj-elevated px-2 text-[11px] text-dj-text-secondary transition hover:bg-dj-hover"
+                    title="The tracks you removed from the library — the way back once the Undo toast is gone"
+                    aria-haspopup="dialog"
+                  >
+                    <ArchiveRestore className="h-3.5 w-3.5 text-dj-text-muted" />
+                    <span>{describeRemovedCount(removed.length)}</span>
+                  </button>
+                  <button
+                    type="button"
                     onClick={openTagHealth}
                     className="flex h-6 items-center gap-1 rounded-sm border border-dj-border bg-dj-elevated px-2 text-[11px] text-dj-text-secondary transition hover:bg-dj-hover"
                     title="Show missing tags and artwork across the library (local gap detection; online lookup planned)"
@@ -2811,7 +2919,9 @@ export default function App() {
                       title={
                         pendingUndo.kind === "remove"
                           ? "Put the tracks back in the library"
-                          : "Restore the previous rating / energy"
+                          : pendingUndo.kind === "restore"
+                            ? "Take the tracks out of the library again"
+                            : "Restore the previous rating / energy"
                       }
                     >
                       <Undo2 className="h-3 w-3" />
@@ -2829,6 +2939,108 @@ export default function App() {
                   </div>
                 )}
               </div>
+
+              {/* Removed view (issue #62): the one surface over the rows every
+                  other library read filters out. The Undo toast is transient,
+                  so this is the deliberate way back. */}
+              {removedOpen && (
+                <ModalShell
+                  onClose={() => setRemovedOpen(false)}
+                  ariaLabel="Removed from library — restore a track"
+                  panelClassName="w-[640px] max-w-full max-h-full overflow-y-auto bg-dj-panel border border-dj-border rounded-lg shadow-2xl"
+                >
+                  <div className="p-4 border-b border-dj-border flex items-center justify-between">
+                    <div>
+                      <p className="text-sm font-semibold text-dj-text flex items-center space-x-2">
+                        <ArchiveRestore className="w-4 h-4 text-dj-text-secondary" />
+                        <span>Removed from library</span>
+                      </p>
+                      <p className="text-[11px] text-dj-text-muted mt-1">
+                        The files were never touched — restoring a track puts its row back with its
+                        cues, tags and analysis intact.
+                      </p>
+                    </div>
+                    <button
+                      onClick={() => setRemovedOpen(false)}
+                      className="p-1.5 rounded-md hover:bg-dj-hover text-dj-text-secondary transition"
+                      title="Close"
+                      aria-label="Close the removed view"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  </div>
+                  <div className="p-4">
+                    {removedError ? (
+                      <p className="text-xs text-dj-text-secondary">{removedError}</p>
+                    ) : removedLoading && removed.length === 0 ? (
+                      <p className="text-xs text-dj-text-muted">Loading removed tracks…</p>
+                    ) : removed.length === 0 ? (
+                      <div className="flex flex-col items-center justify-center gap-2 py-8 text-center">
+                        <div className="h-12 w-12 rounded-2xl bg-dj-elevated border border-dj-border flex items-center justify-center">
+                          <ArchiveRestore className="w-6 h-6 text-dj-text-muted" />
+                        </div>
+                        <p className="text-sm font-semibold text-dj-text-secondary">
+                          Nothing has been removed
+                        </p>
+                        <p className="text-xs text-dj-text-muted max-w-sm">
+                          Tracks you remove from the library show up here, so you can bring one back
+                          later without re-importing the folder.
+                        </p>
+                      </div>
+                    ) : (
+                      <>
+                        <div className="flex items-center justify-between gap-3">
+                          <p className="text-[11px] uppercase tracking-wider font-semibold text-dj-text-muted">
+                            {removed.length} track{removed.length === 1 ? "" : "s"} out of the
+                            library
+                          </p>
+                          <button
+                            type="button"
+                            onClick={() => void handleRestore(removed.map((track) => track.id))}
+                            disabled={restoringIds.length > 0}
+                            className="inline-flex items-center gap-1 rounded-sm border border-dj-accent/40 bg-dj-accent/10 px-2 py-1 text-[11px] font-medium text-dj-accent transition hover:bg-dj-accent/15 disabled:opacity-50"
+                          >
+                            <ArchiveRestore className="h-3 w-3" />
+                            {restoringIds.length > 0 ? "Restoring…" : "Restore all"}
+                          </button>
+                        </div>
+                        <ul className="mt-3 space-y-1.5 max-h-80 overflow-y-auto">
+                          {removed.map((track) => (
+                            <li
+                              key={track.id}
+                              className="flex items-center gap-3 rounded-md border border-dj-border bg-dj-elevated p-2 text-xs"
+                            >
+                              <div className="min-w-0 flex-1">
+                                <p className="truncate text-dj-text">
+                                  {track.title || "Untitled"} — {track.artist || "Unknown Artist"}
+                                  <span className="ml-2 font-mono text-[11px] text-dj-text-muted">
+                                    {formatDuration(track.durationMs)}
+                                  </span>
+                                </p>
+                                <p className="truncate text-[11px] text-dj-text-muted mt-0.5">
+                                  {track.album ? `${track.album} · ` : ""}
+                                  removed {track.removedAt}
+                                </p>
+                              </div>
+                              <button
+                                type="button"
+                                onClick={() => void handleRestore([track.id])}
+                                disabled={restoringIds.length > 0}
+                                className="inline-flex shrink-0 items-center gap-1 rounded-sm border border-dj-border bg-dj-panel px-2 py-1 text-[11px] text-dj-text transition hover:bg-dj-hover hover:text-dj-accent disabled:opacity-50"
+                                title="Put this track back in the library (Undo stays available in the toast)"
+                                aria-label={`Restore ${track.title || "Untitled"} by ${track.artist || "Unknown Artist"}`}
+                              >
+                                <ArchiveRestore className="h-3 w-3" />
+                                Restore
+                              </button>
+                            </li>
+                          ))}
+                        </ul>
+                      </>
+                    )}
+                  </div>
+                </ModalShell>
+              )}
 
               {/* Tag Health modal: library-wide missing tags/artwork */}
               {healthOpen && (

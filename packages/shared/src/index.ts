@@ -271,6 +271,53 @@ export interface UndoRemoveTracksResponse {
   skipped: number;
 }
 
+// --- Removed-view recovery (issue #62) ---
+// The Undo toast is temporary, so a soft removal would otherwise be
+// irrecoverable inside the app. `list_removed_tracks` is the deliberate
+// surface over the rows every other read hides, and `restore_tracks` is a
+// snapshotted write of its own — undoable on its own terms.
+
+export interface RemovedTrack {
+  id: string;
+  title: string;
+  artist: string;
+  album: string | null;
+  /** The track is out of the library, but the file is still exactly here. */
+  filePath: string;
+  durationMs: number;
+  /** When it left the library, as the database stored it. */
+  removedAt: string;
+}
+
+export interface ListRemovedTracksResponse {
+  /** Every track currently out of the library, newest departure first. */
+  tracks: RemovedTrack[];
+  total: number;
+}
+
+export interface RestoreTracksRequest {
+  /**
+   * Tracks to put back. Unknown ids and ids already in the library are
+   * ignored, so `restored` can be smaller than this list — or zero.
+   */
+  trackIds: string[];
+}
+
+export interface RestoreTracksResponse {
+  /**
+   * Id of the `skill_runs` row holding the undo snapshot, or `null` when
+   * nothing changed. Undoing a restore removes the tracks again, with the
+   * stamp the original removal carried.
+   */
+  undoId: string | null;
+  restored: number;
+  /**
+   * Tracks skipped because they were removed again after this command read
+   * them, so clearing them would overwrite the newer removal.
+   */
+  skipped: number;
+}
+
 export interface RevealInFileManagerRequest {
   /** The track's `file_path`, exactly as the library holds it. */
   path: string;
