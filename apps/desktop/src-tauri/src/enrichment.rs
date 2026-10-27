@@ -273,21 +273,11 @@ pub async fn enrichment_preview(
     let targets: Vec<Target> = {
         let db_guard = db.lock().map_err(|e| e.to_string())?;
         let conn = db_guard.conn();
-        let mut sql =
-            "SELECT id, title, artist, album, genre, year, isrc, artwork_hash FROM tracks"
-                .to_string();
-        let mut params: Vec<String> = Vec::new();
-        if let Some(ids) = request.track_ids.as_ref() {
-            if ids.is_empty() {
-                return Err("track_ids cannot be empty when provided".to_string());
-            }
-            let placeholders: Vec<String> = ids.iter().map(|_| "?".to_string()).collect();
-            sql.push_str(&format!(" WHERE id IN ({})", placeholders.join(",")));
-            params.extend(ids.iter().cloned());
-        }
-        let mut stmt = conn.prepare(&sql).map_err(|e| e.to_string())?;
+        let read = dj_assistant_core::enrichment_targets(request.track_ids.as_deref())
+            .map_err(|e| e.to_string())?;
+        let mut stmt = conn.prepare(&read.sql).map_err(|e| e.to_string())?;
         let rows: Vec<PreviewRow> = stmt
-            .query_map(rusqlite::params_from_iter(params.iter()), |row| {
+            .query_map(rusqlite::params_from_iter(read.params.iter()), |row| {
                 Ok(PreviewRow {
                     id: row.get(0)?,
                     title: row.get(1)?,

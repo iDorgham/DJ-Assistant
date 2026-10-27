@@ -43,6 +43,9 @@ import {
   setTrackRating,
   undoTrackMetadata,
   updateTrackMetadata,
+  removeTracks,
+  undoRemoveTracks,
+  revealInFileManager,
 } from "./services/api";
 import {
   FolderOpen,
@@ -105,6 +108,7 @@ import {
   toggleFilterValue,
   truncateComment,
 } from "./lib/library";
+import { appliesToWholeSelection, describeRemove, describeUndoRemove } from "./lib/library-menu";
 import {
   analysisStatusLabel,
   autoFitWidth,
@@ -1073,9 +1077,14 @@ export default function App() {
     }
   }, []);
   useEffect(() => cancelPendingRowClick, [cancelPendingRowClick, ui.view]);
-  // Undo for the newest metadata write (T2.1.4/T2.1.6). The backend keeps the
-  // pre-write values, so the toast restores real data instead of guessing it.
-  const [pendingUndo, setPendingUndo] = useState<{ undoId: string; message: string } | null>(null);
+  // Undo for the newest write (T2.1.4/T2.1.6, and the soft remove of T2.1.10).
+  // The backend keeps the pre-write values, so the toast restores real data
+  // instead of guessing it. `kind` picks which undo path the button runs.
+  const [pendingUndo, setPendingUndo] = useState<{
+    undoId: string;
+    message: string;
+    kind: "metadata" | "remove";
+  } | null>(null);
   const undoTimerRef = useRef<number | null>(null);
   // True while the undo toast holds the focus; the idle timer is paused then.
   const undoFocusedRef = useRef(false);
@@ -1087,6 +1096,10 @@ export default function App() {
     y: number;
   } | null>(null);
   const [editorTrack, setEditorTrack] = useState<TrackSummary | null>(null);
+  // The "Remove from library…" confirmation (§3.5 ends the menu with it). The
+  // ids are resolved when the item is chosen, so the dialog says exactly what
+  // confirming will take out of the library.
+  const [removeConfirm, setRemoveConfirm] = useState<{ trackIds: string[] } | null>(null);
   // The row the context menu was opened from, so the focus can go back to it
   // when the menu closes.
   const contextRowRef = useRef<HTMLTableRowElement | null>(null);
@@ -1105,7 +1118,8 @@ export default function App() {
 
   // Chart snapshots Tier 1 (TD.3): versioned data with local taste filtering.
   const [chartsOpen, setChartsOpen] = useState(false);
-  dialogsOpenRef.current = healthOpen || chartsOpen || editorTrack !== null;
+  dialogsOpenRef.current =
+    healthOpen || chartsOpen || editorTrack !== null || removeConfirm !== null;
   const [chartGenre, setChartGenre] = useState("techno");
   const [chartKind, setChartKind] = useState("top100");
   const [chartData, setChartData] = useState<ChartListResponse | null>(null);
@@ -1705,9 +1719,9 @@ export default function App() {
     setPendingUndo(null);
   };
 
-  const offerUndo = (undoId: string, message: string) => {
+  const offerUndo = (undoId: string, message: string, kind: "metadata" | "remove" = "metadata") => {
     clearUndoTimer();
-    setPendingUndo({ undoId, message });
+    setPendingUndo({ undoId, message, kind });
     startUndoTimer();
   };
 
@@ -1777,6 +1791,32 @@ export default function App() {
     }
   };
 
+  const handleUndoRemove = async () => {
+    if (!pendingUndo) return;
+    const undoId = pendingUndo.undoId;
+    dismissUndo();
+    try {
+      const res = await undoRemoveTracks({ undoId });
+      refreshLibrary();
+      pushStatus(describeUndoRemove(res.restored, res.skipped));
+    } catch (err) {
+      console.error("Failed to undo the library removal:", err);
+      pushStatus("Couldn't undo that removal", "error");
+    }
+  };
+
+  // One toast, two write paths: a metadata undo puts old values back, a remove
+  // undo puts the rows back in the library. Running the wrong one would report
+  // success against the wrong snapshot.
+  const handleUndo = () => {
+    if (!pendingUndo) return;
+    if (pendingUndo.kind === "remove") {
+      void handleUndoRemove();
+    } else {
+      void handleUndoMetadata();
+    }
+  };
+
   // --- Tags and the metadata editor (T2.1.7 / T2.1.13) ----------------------
   // A tag chip filters the library by that tag. The filter is a normal filter
   // group, so it shows up in the summary strip and can be removed from there.
@@ -1805,6 +1845,77 @@ export default function App() {
     }
     contextRowRef.current = event.currentTarget;
     setContextMenu({ track, x: event.clientX, y: event.clientY });
+  };
+
+  // --- The rest of the row menu (T2.1.10 Batch B/C) -------------------------
+  // §3.5 splits the menu in two: some items take the whole selection, the rest
+  // act on the primary row. `library-menu.appliesToWholeSelection` is the list
+  // of which is which, so the rule lives with the spec text it comes from.
+
+  /** The row the single-row actions land on: the first selected track, or the row under the pointer. */
+  const primaryRowTrack = (track: TrackSummary): TrackSummary => {
+    if (selection.length < 2 || !selection.includes(track.id)) return track;
+    return tracks.find((entry) => entry.id === selection[0]) ?? track;
+  };
+
+  const handleCopyPath = async (track: TrackSummary) => {
+    const target = primaryRowTrack(track);
+    try {
+      await navigator.clipboard.writeText(target.filePath);
+      pushStatus("File path copied");
+    } catch (err) {
+      // The clipboard is a browser API and can be refused; the file is untouched
+      // either way, so this is a status line, not a failure of the library.
+      console.error("Failed to copy the track path:", err);
+      pushStatus("Couldn't copy the path — clipboard unavailable", "error");
+    }
+  };
+
+  const handleRevealTrack = async (track: TrackSummary) => {
+    const target = primaryRowTrack(track);
+    try {
+      const opened = await revealInFileManager({ path: target.filePath });
+      pushStatus(
+        opened ? "Opened the folder holding this file" : "Couldn't open the file manager",
+        opened ? "ok" : "error"
+      );
+    } catch (err) {
+      console.error("Failed to reveal the track in the file manager:", err);
+      pushStatus("Couldn't open the file manager", "error");
+    }
+  };
+
+  const openRemoveConfirm = (track: TrackSummary) => {
+    const trackIds = appliesToWholeSelection("remove") ? editTargets(track) : [track.id];
+    // No focus juggling here: closing the menu hands the focus back to the row,
+    // and that happens before this dialog mounts and records its opener.
+    setRemoveConfirm({ trackIds });
+  };
+
+  // Confirming soft-removes: the row keeps its data and only leaves the library
+  // list, and the write carries the snapshot the Undo button restores from.
+  const handleRemoveConfirmed = async () => {
+    if (!removeConfirm) return;
+    const trackIds = removeConfirm.trackIds;
+    setRemoveConfirm(null);
+    try {
+      const res = await removeTracks({ trackIds });
+      // The rows leave the list, so the selection has to let go of them too —
+      // a stale id would keep the toolbar counting tracks the user cannot see.
+      setSelection((current) => current.filter((id) => !trackIds.includes(id)));
+      // The panel is the other place a removed track is still on screen: it
+      // holds its own copy, so it would keep showing a track the library no
+      // longer has — and its own actions would write to that row.
+      setInspectedTrack((current) => (current && trackIds.includes(current.id) ? null : current));
+      refreshLibrary();
+      const message = describeRemove(res.removed);
+      pushStatus(message);
+      // No `undoId` means nothing was stamped, so there is no snapshot to offer.
+      if (res.undoId) offerUndo(res.undoId, message, "remove");
+    } catch (err) {
+      console.error("Failed to remove tracks from the library:", err);
+      pushStatus("Couldn't remove the tracks from the library", "error");
+    }
   };
 
   /** Opens the editor with a track snapshot, including tracks outside the current library page. */
@@ -2695,9 +2806,13 @@ export default function App() {
                     <span>{pendingUndo.message}</span>
                     <button
                       type="button"
-                      onClick={handleUndoMetadata}
+                      onClick={handleUndo}
                       className="inline-flex items-center gap-1 rounded-sm border border-dj-border bg-dj-elevated px-2 py-1 text-[11px] text-dj-text transition hover:bg-dj-hover hover:text-dj-accent"
-                      title="Restore the previous rating / energy"
+                      title={
+                        pendingUndo.kind === "remove"
+                          ? "Put the tracks back in the library"
+                          : "Restore the previous rating / energy"
+                      }
                     >
                       <Undo2 className="h-3 w-3" />
                       Undo
@@ -3212,6 +3327,45 @@ export default function App() {
         </main>
       </div>
 
+      {removeConfirm && (
+        <ModalShell
+          onClose={() => setRemoveConfirm(null)}
+          ariaLabel="Confirm remove from library"
+          panelClassName="w-[440px] max-w-full rounded-lg border border-dj-border-strong bg-dj-panel shadow-2xl"
+        >
+          <div className="p-4">
+            <p className="mb-2 flex items-center gap-2 text-sm font-semibold text-dj-text">
+              <AlertTriangle className="w-4 h-4 text-dj-danger" />
+              <span>
+                Remove {removeConfirm.trackIds.length} track
+                {removeConfirm.trackIds.length === 1 ? "" : "s"} from the library?
+              </span>
+            </p>
+            <p className="text-xs leading-relaxed text-dj-text-secondary">
+              The tracks leave the library list only. Nothing is deleted from disk: the audio file,
+              its analysis, cue points and tags stay where they are, and Undo puts the rows back.
+            </p>
+          </div>
+          <div className="flex items-center justify-end gap-2 border-t border-dj-border px-4 py-3">
+            <button
+              type="button"
+              onClick={() => setRemoveConfirm(null)}
+              className="rounded-md border border-dj-border bg-dj-elevated px-3 py-1.5 text-xs text-dj-text-secondary transition hover:bg-dj-hover"
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              onClick={() => void handleRemoveConfirmed()}
+              className="rounded-md bg-dj-danger px-3 py-1.5 text-xs font-medium text-dj-on-accent transition hover:bg-dj-danger/85"
+              title="Soft-remove from the library index — the file on disk is untouched"
+            >
+              Remove from library
+            </button>
+          </div>
+        </ModalShell>
+      )}
+
       {contextMenu && (
         <RowContextMenu
           x={contextMenu.x}
@@ -3228,6 +3382,9 @@ export default function App() {
             setContextMenu(null);
           }}
           onPlay={() => {
+            // The menu resolves the row, not the selection: opening on an
+            // unselected row selects it first (handleRowContextMenu), and
+            // opening on a multi-selection plays the row under the pointer.
             handlePlayTrack(contextMenu.track);
             setContextMenu(null);
           }}
@@ -3239,6 +3396,9 @@ export default function App() {
             setContextMenu(null);
           }}
           canHideColumnFn={canHideColumn}
+          onReveal={() => void handleRevealTrack(contextMenu.track)}
+          onCopyPath={() => void handleCopyPath(contextMenu.track)}
+          onRemove={() => openRemoveConfirm(contextMenu.track)}
         />
       )}
 

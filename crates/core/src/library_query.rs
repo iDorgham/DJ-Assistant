@@ -225,7 +225,11 @@ impl TrackQuery {
     pub fn build(&self, columns: &str, limit: i64, offset: i64) -> Result<BuiltQuery, QueryError> {
         self.filters.validate()?;
 
-        let mut conditions: Vec<String> = Vec::new();
+        // A soft-removed track keeps its row — and its cue points and tags,
+        // which a hard delete would cascade away — but leaves every library
+        // read path. The filter is a base condition rather than one of the
+        // optional filters below, so no caller can forget to apply it.
+        let mut conditions: Vec<String> = vec!["removed_at IS NULL".to_string()];
         let mut params: Vec<QueryParam> = Vec::new();
 
         if let Some(search) = self.search_pattern() {
@@ -310,11 +314,7 @@ impl TrackQuery {
             conditions.push(format!("energy <= ?{}", params.len()));
         }
 
-        let where_clause = if conditions.is_empty() {
-            String::new()
-        } else {
-            format!(" WHERE {}", conditions.join(" AND "))
-        };
+        let where_clause = format!(" WHERE {}", conditions.join(" AND "));
 
         let order_clause = self.order_clause();
 
@@ -466,12 +466,29 @@ mod tests {
     }
 
     #[test]
-    fn empty_query_has_no_where_and_a_stable_default_order() {
+    fn list_query_always_excludes_soft_removed_tracks() {
         let built = build(TrackQuery::default());
-        assert_eq!(built.count_sql, "SELECT COUNT(*) FROM tracks");
+        assert_eq!(
+            built.count_sql,
+            "SELECT COUNT(*) FROM tracks WHERE removed_at IS NULL"
+        );
         assert_eq!(
             built.select_sql,
-            "SELECT id, title FROM tracks ORDER BY created_at DESC, id ASC LIMIT ?1 OFFSET ?2"
+            "SELECT id, title FROM tracks WHERE removed_at IS NULL \
+             ORDER BY created_at DESC, id ASC LIMIT ?1 OFFSET ?2"
+        );
+    }
+
+    #[test]
+    fn empty_query_lists_present_tracks_with_a_stable_default_order() {
+        let built = build(TrackQuery::default());
+        assert_eq!(
+            built.count_sql,
+            "SELECT COUNT(*) FROM tracks WHERE removed_at IS NULL"
+        );
+        assert_eq!(
+            built.select_sql,
+            "SELECT id, title FROM tracks WHERE removed_at IS NULL ORDER BY created_at DESC, id ASC LIMIT ?1 OFFSET ?2"
         );
         assert_eq!(built.params, vec![QueryParam::Int(50), QueryParam::Int(0)]);
     }
@@ -484,7 +501,7 @@ mod tests {
         });
         assert_eq!(
             built.count_sql,
-            "SELECT COUNT(*) FROM tracks WHERE (LOWER(title) LIKE ?1 ESCAPE '\\' \
+            "SELECT COUNT(*) FROM tracks WHERE removed_at IS NULL AND (LOWER(title) LIKE ?1 ESCAPE '\\' \
              OR LOWER(artist) LIKE ?1 ESCAPE '\\' OR LOWER(album) LIKE ?1 ESCAPE '\\' \
              OR LOWER(file_path) LIKE ?1 ESCAPE '\\' OR LOWER(comments) LIKE ?1 ESCAPE '\\' \
              OR EXISTS (SELECT 1 FROM track_tags tt WHERE tt.track_id = tracks.id \
@@ -515,7 +532,10 @@ mod tests {
             query: Some("   ".into()),
             ..Default::default()
         });
-        assert!(!built.count_sql.contains("WHERE"));
+        assert_eq!(
+            built.count_sql,
+            "SELECT COUNT(*) FROM tracks WHERE removed_at IS NULL"
+        );
         assert_eq!(built.params.len(), 2);
     }
 
@@ -531,7 +551,7 @@ mod tests {
         });
         assert_eq!(
             built.count_sql,
-            "SELECT COUNT(*) FROM tracks WHERE bpm >= ?1 AND bpm <= ?2"
+            "SELECT COUNT(*) FROM tracks WHERE removed_at IS NULL AND bpm >= ?1 AND bpm <= ?2"
         );
         assert_eq!(
             built.params,
@@ -559,7 +579,7 @@ mod tests {
         });
         assert_eq!(
             built.count_sql,
-            "SELECT COUNT(*) FROM tracks WHERE bpm >= ?1 AND UPPER(key_camelot) IN (?2, ?3) \
+            "SELECT COUNT(*) FROM tracks WHERE removed_at IS NULL AND bpm >= ?1 AND UPPER(key_camelot) IN (?2, ?3) \
              AND LOWER(analysis_status) IN (?4, ?5) AND LOWER(TRIM(genre)) IN (?6, ?7) \
              AND user_rating >= ?8"
         );
@@ -593,7 +613,7 @@ mod tests {
         });
         assert_eq!(
             built.count_sql,
-            "SELECT COUNT(*) FROM tracks WHERE (LOWER(title) LIKE ?1 ESCAPE '\\' \
+            "SELECT COUNT(*) FROM tracks WHERE removed_at IS NULL AND (LOWER(title) LIKE ?1 ESCAPE '\\' \
              OR LOWER(artist) LIKE ?1 ESCAPE '\\' OR LOWER(album) LIKE ?1 ESCAPE '\\' \
              OR LOWER(file_path) LIKE ?1 ESCAPE '\\' OR LOWER(comments) LIKE ?1 ESCAPE '\\' \
              OR EXISTS (SELECT 1 FROM track_tags tt WHERE tt.track_id = tracks.id \
@@ -617,7 +637,7 @@ mod tests {
         });
         assert_eq!(
             built.count_sql,
-            "SELECT COUNT(*) FROM tracks WHERE EXISTS (SELECT 1 FROM track_tags tt \
+            "SELECT COUNT(*) FROM tracks WHERE removed_at IS NULL AND EXISTS (SELECT 1 FROM track_tags tt \
              WHERE tt.track_id = tracks.id AND LOWER(tt.tag) IN (?1, ?2))"
         );
         assert_eq!(
@@ -640,7 +660,10 @@ mod tests {
             },
             ..Default::default()
         });
-        assert!(!built.count_sql.contains("WHERE"));
+        assert_eq!(
+            built.count_sql,
+            "SELECT COUNT(*) FROM tracks WHERE removed_at IS NULL"
+        );
         assert_eq!(built.params.len(), 2);
         assert!(TrackFilters {
             tag: vec![" ".into()],
@@ -957,7 +980,7 @@ mod tests {
         });
         assert_eq!(
             built.count_sql,
-            "SELECT COUNT(*) FROM tracks WHERE energy >= ?1"
+            "SELECT COUNT(*) FROM tracks WHERE removed_at IS NULL AND energy >= ?1"
         );
         assert_eq!(
             built.params,
@@ -976,7 +999,7 @@ mod tests {
         });
         assert_eq!(
             built.count_sql,
-            "SELECT COUNT(*) FROM tracks WHERE energy <= ?1"
+            "SELECT COUNT(*) FROM tracks WHERE removed_at IS NULL AND energy <= ?1"
         );
         assert_eq!(
             built.params,
@@ -996,7 +1019,7 @@ mod tests {
         });
         assert_eq!(
             built.count_sql,
-            "SELECT COUNT(*) FROM tracks WHERE energy >= ?1 AND energy <= ?2"
+            "SELECT COUNT(*) FROM tracks WHERE removed_at IS NULL AND energy >= ?1 AND energy <= ?2"
         );
         assert_eq!(
             built.params,
@@ -1024,7 +1047,7 @@ mod tests {
         });
         assert_eq!(
             built.count_sql,
-            "SELECT COUNT(*) FROM tracks WHERE user_rating >= ?1 AND energy >= ?2 AND energy <= ?3"
+            "SELECT COUNT(*) FROM tracks WHERE removed_at IS NULL AND user_rating >= ?1 AND energy >= ?2 AND energy <= ?3"
         );
         assert_eq!(
             built.params,

@@ -14,6 +14,11 @@ import type {
   SetTrackRatingResponse,
   UndoTrackMetadataRequest,
   UndoTrackMetadataResponse,
+  RemoveTracksRequest,
+  RemoveTracksResponse,
+  UndoRemoveTracksRequest,
+  UndoRemoveTracksResponse,
+  RevealInFileManagerRequest,
   ScanProgressEvent,
   ScanCompletedEvent,
   AnalyzeLibraryRequest,
@@ -134,6 +139,47 @@ export async function undoTrackMetadata(
   }
   const { invoke } = await import("@tauri-apps/api/core");
   return invoke<UndoTrackMetadataResponse>("undo_track_metadata", { request: req });
+}
+
+// --- Soft-remove, reveal and copy path (T2.1.10 Batch B/C) ---
+
+/**
+ * Takes tracks out of the library index. Nothing on disk is touched: the
+ * backend stamps `removed_at`, keeps the row with its cues and tags, and writes
+ * the snapshot that `undoRemoveTracks` needs.
+ */
+export async function removeTracks(req: RemoveTracksRequest): Promise<RemoveTracksResponse> {
+  if (!isTauri) {
+    console.warn("[Mock API] Tauri not detected, ignoring remove");
+    return { undoId: null, removed: 0 };
+  }
+  const { invoke } = await import("@tauri-apps/api/core");
+  return invoke<RemoveTracksResponse>("remove_tracks", { request: req });
+}
+
+/** Puts the tracks a remove took out of the library back in. */
+export async function undoRemoveTracks(
+  req: UndoRemoveTracksRequest
+): Promise<UndoRemoveTracksResponse> {
+  if (!isTauri) {
+    console.warn("[Mock API] Tauri not detected, ignoring undo");
+    return { restored: 0, skipped: 0 };
+  }
+  const { invoke } = await import("@tauri-apps/api/core");
+  return invoke<UndoRemoveTracksResponse>("undo_remove_tracks", { request: req });
+}
+
+/**
+ * Opens the OS file manager at the track's location. The path is passed to the
+ * shell, never read or written by the app.
+ */
+export async function revealInFileManager(req: RevealInFileManagerRequest): Promise<boolean> {
+  if (!isTauri) {
+    console.warn("[Mock API] Tauri not detected, ignoring reveal");
+    return false;
+  }
+  const { invoke } = await import("@tauri-apps/api/core");
+  return invoke<boolean>("reveal_in_file_manager", { request: req });
 }
 
 /**

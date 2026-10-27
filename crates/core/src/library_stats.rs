@@ -10,7 +10,9 @@
 //! * the SQL text is unit-testable in `core`;
 //! * the desktop layer can reuse the same statements later without a copy.
 //!
-//! Every statement is a `SELECT`. Nothing in this module can write.
+//! Every statement is a `SELECT` over present tracks, so a soft-removed row is
+//! counted nowhere and the summary stays in step with the list. Nothing in this
+//! module can write.
 
 /// One labelled count in a library summary.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -28,11 +30,12 @@ pub struct StatQuery {
 /// list agree on what "complete" means. A second fold rule here would let the
 /// summary and the list disagree about the same track.
 pub const STATUS_BREAKDOWN_SQL: &str = "SELECT LOWER(analysis_status) AS status, \
-     COUNT(*) AS n FROM tracks GROUP BY LOWER(analysis_status) ORDER BY status";
+     COUNT(*) AS n FROM tracks WHERE removed_at IS NULL \
+     GROUP BY LOWER(analysis_status) ORDER BY status";
 
 /// The scalar counts that make up a library summary, in output order.
 ///
-/// * `total` — every imported track.
+/// * `total` — every track still in the library.
 /// * `missing_bpm` / `missing_key` — tracks the analyser has not filled in.
 /// * `analyzed` — tracks the analyser completed.
 /// * `unrated` — tracks the DJ has not rated.
@@ -44,33 +47,33 @@ pub fn stat_queries() -> Vec<StatQuery> {
     vec![
         StatQuery {
             key: "total",
-            sql: "SELECT COUNT(*) FROM tracks",
+            sql: "SELECT COUNT(*) FROM tracks WHERE removed_at IS NULL",
         },
         StatQuery {
             key: "analyzed",
-            sql: "SELECT COUNT(*) FROM tracks WHERE LOWER(analysis_status) = 'complete'",
+            sql: "SELECT COUNT(*) FROM tracks WHERE removed_at IS NULL AND LOWER(analysis_status) = 'complete'",
         },
         StatQuery {
             key: "missing_bpm",
-            sql: "SELECT COUNT(*) FROM tracks WHERE bpm IS NULL",
+            sql: "SELECT COUNT(*) FROM tracks WHERE removed_at IS NULL AND bpm IS NULL",
         },
         StatQuery {
             key: "missing_key",
-            sql: "SELECT COUNT(*) FROM tracks WHERE key_camelot IS NULL OR TRIM(key_camelot) = ''",
+            sql: "SELECT COUNT(*) FROM tracks WHERE removed_at IS NULL AND (key_camelot IS NULL OR TRIM(key_camelot) = '')",
         },
         StatQuery {
             key: "unrated",
-            sql: "SELECT COUNT(*) FROM tracks WHERE user_rating IS NULL",
+            sql: "SELECT COUNT(*) FROM tracks WHERE removed_at IS NULL AND user_rating IS NULL",
         },
         StatQuery {
             key: "duplicate_groups",
             sql: "SELECT COUNT(*) FROM (SELECT file_hash FROM tracks \
-                  GROUP BY file_hash HAVING COUNT(*) > 1)",
+                  WHERE removed_at IS NULL GROUP BY file_hash HAVING COUNT(*) > 1)",
         },
         StatQuery {
             key: "duplicate_files",
             sql: "SELECT COALESCE(SUM(copies), 0) FROM (SELECT COUNT(*) AS copies FROM tracks \
-                  GROUP BY file_hash HAVING COUNT(*) > 1)",
+                  WHERE removed_at IS NULL GROUP BY file_hash HAVING COUNT(*) > 1)",
         },
     ]
 }
@@ -124,8 +127,26 @@ mod tests {
     fn status_breakdown_is_a_select_grouped_by_status() {
         let sql = STATUS_BREAKDOWN_SQL.to_ascii_uppercase();
         assert!(sql.starts_with("SELECT"));
+        assert!(sql.contains("WHERE REMOVED_AT IS NULL"));
         assert!(sql.contains("GROUP BY LOWER(ANALYSIS_STATUS)"));
-        assert!(!sql.contains("WHERE"));
+    }
+
+    #[test]
+    fn every_stat_counts_present_tracks_only() {
+        // A soft-removed track still has its row, so an unfiltered count would
+        // report tracks the Library view cannot show. The list query already
+        // filters `removed_at IS NULL`; if the stats drift from it, `dj-query
+        // --stats` and `dj-query --status complete` disagree about the same
+        // library.
+        for stat in stat_queries() {
+            assert!(
+                stat.sql.contains("removed_at IS NULL"),
+                "stat {} must exclude soft-removed tracks: {}",
+                stat.key,
+                stat.sql
+            );
+        }
+        assert!(STATUS_BREAKDOWN_SQL.contains("removed_at IS NULL"));
     }
 
     #[test]
