@@ -22,7 +22,7 @@ optional.
 | Rust crates | `crates/core`, `crates/analysis` (symphonia, ort/ONNX, rusqlite)            |
 | API         | Fastify 5 — `apps/api`                                                      |
 | Shared      | `packages/shared` (types/contracts used by both sides)                      |
-| Tooling     | pnpm workspace (`pnpm@10`), Prettier, ESLint, Vitest, `cargo`               |
+| Tooling     | pnpm workspace (`pnpm@10`), Prettier, ESLint, `node --test`, `cargo`        |
 
 ## Commands
 
@@ -32,7 +32,7 @@ optional.
 | API dev           | `pnpm dev:api`                                 |
 | Lint everything   | `pnpm lint`                                    |
 | Type-check        | `pnpm typecheck`                               |
-| Front-end tests   | `pnpm test` (Vitest)                           |
+| Front-end tests   | `pnpm test` (`node --test`)                    |
 | Rust format/lint  | `pnpm rust:fmt` · `pnpm rust:clippy`           |
 | Rust tests        | `pnpm rust:test` (use `rust:test:portable` when the ONNX runtime is unavailable) |
 | Full local gate   | `pnpm ci:local`                                |

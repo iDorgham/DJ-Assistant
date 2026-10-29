@@ -12,6 +12,8 @@ rusqlite = { version = "0.40", features = ["bundled"] }
 # The Tauri-free core, for the shared query builder and the library summary
 # statements. It has no default features, so it pulls in no database code.
 dj-assistant-core = { path = "../../crates/core" }
+# The undo snapshots are JSON columns; the bulk-write contract reads them back.
+serde_json = "1.0"
 
 [lib]
 path = "src/lib.rs"
