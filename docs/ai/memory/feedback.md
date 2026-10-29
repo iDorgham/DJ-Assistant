@@ -146,16 +146,18 @@ gap on this box — its harness does not load.
 
 ## F-012 · What the library UI can and cannot be verified with here (2026-10-29)
 
-- **A Vite browser tab is worse than a mock — it is empty.** Without Tauri IPC
-  the library loads 0 tracks, so no table, selection or row dialog can be
-  reached at all. Do not plan "verify in the browser" for library views.
-- **Computer Use cannot emit a modifier click.** `click` takes no `ctrlKey`/
-  `shiftKey`, `press_key` cannot hold a modifier, and a `drag` arrives without
-  `shiftKey`. Selection in the library table is mouse-modifier-only
-  (`applyRowSelection`), so multi-select has no automated route.
-- **What does work:** `pnpm tauri dev` drives the real app against the real
-  database, and single-row flows are fully automatable there — the T2.1.3
-  Apply → Undo round-trip was verified that way, net-zero on the user's library.
-  Pure logic behind a dialog stays testable with `node --test` in `src/lib`.
+**A Vite browser tab is worse than a mock — it is empty.** Without Tauri IPC the
+library loads 0 tracks, so no table, selection or row dialog can be reached at
+all. Do not plan "verify in the browser" for library views.
+
+**Computer Use cannot emit a modifier click.** `click` takes no `ctrlKey` or
+`shiftKey`, `press_key` cannot hold a modifier, and a `drag` arrives without
+`shiftKey`. Selection in the library table is mouse-modifier-only
+(`applyRowSelection`), so multi-select has no automated route.
+
+**What does work:** `pnpm tauri dev` drives the real app against the real
+database, and single-row flows are fully automatable there — the T2.1.3
+Apply → Undo round-trip was verified that way, net-zero on the user's library.
+Pure logic behind a dialog stays testable with `node --test` in `src/lib`.
 **Rule:** when a check needs multi-select, hand that two-click step to the user
 instead of concluding the UI is untestable.
