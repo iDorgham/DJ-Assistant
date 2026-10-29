@@ -1,43 +1,54 @@
-import { useRef, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import type { KeyboardEvent as ReactKeyboardEvent } from "react";
 import { X } from "lucide-react";
 
+import type { UpdateTrackMetadataRequest } from "@dj-assistant/shared";
+
 import { ModalShell } from "./ModalShell";
 import {
-  metadataEditorValues,
-  normalizeTags,
-  validateMetadataValues,
-  type MetadataEditorValues,
-  type MetadataSource,
-} from "../lib/tags";
+  buildBulkDiff,
+  buildBulkPatch,
+  bulkSeedValues,
+  surveyFields,
+  validateBulkValues,
+  type BulkDiffRow,
+  type BulkField,
+  type FieldSurvey,
+} from "../lib/metadata-bulk";
+import { normalizeTags, type MetadataEditorValues, type MetadataSource } from "../lib/tags";
 
 /**
- * The metadata editor (T2.1.7 / T2.1.13, `docs/ui/03-LIBRARY-VIEW.md` §3.5).
+ * The metadata editor (T2.1.3 bulk edit; T2.1.7 / T2.1.13,
+ * `docs/ui/03-LIBRARY-VIEW.md` §3.5).
  *
  * One dialog covers the fields the spec lists for "Edit tags…": title, artist,
- * album, genre, label, year, the custom tags and the free-text comment.
+ * album, genre, label, year, the custom tags and the free-text comment — and it
+ * serves one track and a whole selection with the same code.
  *
- * The dialog is deliberately dumb: it edits a local draft and hands the
- * values to `onSave`. The write, the "nothing changed" check and the Undo
- * snapshot all belong to the caller, so the same dialog serves one track and a
- * multi-track selection.
+ * What makes a selection safe is that the dialog never holds a value the user
+ * did not choose. A field the tracks disagree on opens **empty** with a
+ * `Mixed (N values)` placeholder, and only the fields the user actually edits
+ * go into the write, so setting a comment on fifty tracks cannot quietly stamp
+ * the first one's genre over the other forty-nine. The rules themselves live in
+ * `lib/metadata-bulk`, where they are unit tested without a DOM.
  *
- * A multi-selection shows the *focused* track's values and applies them to
- * every selected track — the same semantics the rating and energy writes use.
+ * A multi-track write is previewed before it runs: the user sees the fields the
+ * save carries and what each one replaces. The write, the "nothing changed"
+ * check and the Undo snapshot still belong to the caller.
  */
 interface MetadataEditorProps {
-  /** The track the editor was opened on; seeds the draft. */
-  track: MetadataSource;
-  /** How many tracks the save applies to — shown in the header. */
-  targetCount: number;
-  /** Called with the edited values; the caller performs the write. */
-  onSave: (values: MetadataEditorValues) => void;
+  /** The loaded rows the write applies to — one track, or the whole selection. */
+  targets: MetadataSource[];
+  /** The ids the write is sent for. Resolved by the caller from the selection. */
+  trackIds: string[];
+  /** Called with the ready-to-send patch; the caller performs the write. */
+  onSave: (patch: UpdateTrackMetadataRequest) => void;
   /** Closes the dialog without saving. */
   onClose: () => void;
 }
 
 const FIELDS: Array<{
-  key: "title" | "artist" | "album" | "genre" | "label" | "year";
+  key: Exclude<BulkField, "tags" | "comments">;
   label: string;
   placeholder: string;
 }> = [
@@ -52,24 +63,41 @@ const FIELDS: Array<{
 const INPUT_CLASS =
   "w-full rounded-md border border-dj-border bg-dj-elevated px-2.5 py-1.5 text-xs text-dj-text placeholder:text-dj-text-muted focus:border-dj-accent focus:outline-hidden";
 
-export function MetadataEditor({ track, targetCount, onSave, onClose }: MetadataEditorProps) {
-  const [values, setValues] = useState<MetadataEditorValues>(() => metadataEditorValues(track));
+/** What a field reads as when the selection does not agree on one value. */
+function fieldHint(survey: FieldSurvey, bulk: boolean): string | undefined {
+  if (!bulk) return undefined;
+  if (survey.state === "mixed") return `Mixed (${survey.count} values)`;
+  if (survey.state === "blank") return "Not set";
+  return undefined;
+}
+
+export function MetadataEditor({ targets, trackIds, onSave, onClose }: MetadataEditorProps) {
+  const bulk = targets.length > 1;
+  const survey = useMemo(() => surveyFields(targets), [targets]);
+  // The values the dialog opened with. The write is the difference between the
+  // draft and this, so a field the user never touched is never sent.
+  const [seed, setSeed] = useState<MetadataEditorValues>(() => bulkSeedValues(targets));
+  const [values, setValues] = useState<MetadataEditorValues>(() => bulkSeedValues(targets));
   const [tagDraft, setTagDraft] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [preview, setPreview] = useState<BulkDiffRow[] | null>(null);
   const tagInputRef = useRef<HTMLInputElement>(null);
 
-  // The draft is seeded from the track, and reseeded only when a **different**
-  // track is opened. Keying on the track's identity rather than on the object
-  // matters: a scan or an analysis job that finishes while the dialog is open
-  // replaces the library rows, and an object-keyed seed would silently throw
-  // the edits away.
-  const seedKey = track.id ?? track.title;
+  // The draft is seeded from the selection, and reseeded only when a
+  // **different** selection is opened. Keying on the ids rather than on the
+  // array matters: a scan or an analysis job that finishes while the dialog is
+  // open replaces the library rows, and an object-keyed seed would silently
+  // throw the edits away.
+  const seedKey = targets.map((entry) => entry.id ?? entry.title).join(",");
   const [seededKey, setSeededKey] = useState(seedKey);
   if (seededKey !== seedKey) {
+    const next = bulkSeedValues(targets);
     setSeededKey(seedKey);
-    setValues(metadataEditorValues(track));
+    setSeed(next);
+    setValues(next);
     setTagDraft("");
     setError(null);
+    setPreview(null);
   }
 
   const addTag = (raw: string) => {
@@ -101,16 +129,87 @@ export function MetadataEditor({ track, targetCount, onSave, onClose }: Metadata
     }
   };
 
+  const commit = () => {
+    onSave(buildBulkPatch(trackIds, seed, { ...values, tags: normalizeTags(values.tags) }));
+  };
+
   const submit = (event: React.FormEvent) => {
     event.preventDefault();
-    const problem = validateMetadataValues(values);
+    const problem = validateBulkValues(seed, values);
     if (problem) {
       setError(problem);
       return;
     }
     setError(null);
-    onSave({ ...values, tags: normalizeTags(values.tags) });
+    const rows = buildBulkDiff(seed, { ...values, tags: normalizeTags(values.tags) }, survey);
+    // A selection is previewed before it is written; a save with nothing to
+    // change has nothing to preview, and the caller's "nothing changed" rule
+    // handles it.
+    if (bulk && rows.length > 0) {
+      setPreview(rows);
+      return;
+    }
+    commit();
   };
+
+  if (preview) {
+    return (
+      <ModalShell
+        onClose={onClose}
+        ariaLabel="Confirm metadata changes"
+        panelClassName="w-[460px] max-w-full max-h-full overflow-y-auto bg-dj-panel border border-dj-border rounded-lg shadow-2xl"
+      >
+        <div className="flex items-center justify-between border-b border-dj-border px-4 py-3">
+          <div>
+            <p className="text-sm font-semibold text-dj-text">Apply to {targets.length} tracks</p>
+            <p className="text-[11px] text-dj-text-muted">
+              Only these fields change. Everything else is left as each track has it.
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            className="p-1.5 rounded-md hover:bg-dj-hover text-dj-text-secondary transition"
+            title="Close (Esc)"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+
+        <ul className="divide-y divide-dj-border px-4">
+          {preview.map((row) => (
+            <li key={row.field} className="flex items-baseline gap-3 py-2">
+              <span className="w-16 shrink-0 text-[11px] font-semibold uppercase tracking-wider text-dj-text-muted">
+                {row.label}
+              </span>
+              <span className="min-w-0 flex-1 text-xs text-dj-text-secondary">
+                <span className="break-words">{row.before}</span>
+                <span className="mx-1.5 text-dj-text-muted">→</span>
+                <span className="break-words text-dj-text">{row.after}</span>
+              </span>
+            </li>
+          ))}
+        </ul>
+
+        <div className="mt-3 flex items-center justify-end gap-2 border-t border-dj-border px-4 py-3">
+          <button
+            type="button"
+            onClick={() => setPreview(null)}
+            className="rounded-md border border-dj-border bg-dj-elevated px-3 py-1.5 text-xs text-dj-text-secondary transition hover:bg-dj-hover"
+          >
+            Back
+          </button>
+          <button
+            type="button"
+            onClick={commit}
+            className="rounded-md bg-dj-accent px-3 py-1.5 text-xs font-medium text-dj-on-accent shadow-sm shadow-dj-accent/25 transition hover:bg-dj-accent-strong"
+          >
+            Apply changes
+          </button>
+        </div>
+      </ModalShell>
+    );
+  }
 
   return (
     <ModalShell
@@ -123,9 +222,9 @@ export function MetadataEditor({ track, targetCount, onSave, onClose }: Metadata
           <div className="min-w-0">
             <p className="text-sm font-semibold text-dj-text">Edit metadata</p>
             <p className="text-[11px] text-dj-text-muted">
-              {targetCount === 1
-                ? track.title || "Untitled"
-                : `Applies to ${targetCount} selected tracks`}
+              {bulk
+                ? `Applies to ${targets.length} selected tracks`
+                : targets[0]?.title || "Untitled"}
             </p>
           </div>
           <button
@@ -139,6 +238,13 @@ export function MetadataEditor({ track, targetCount, onSave, onClose }: Metadata
         </div>
 
         <div className="space-y-3 px-4 py-3">
+          {bulk && (
+            <p className="rounded-sm border border-dj-border bg-dj-elevated px-2 py-1.5 text-[11px] text-dj-text-muted">
+              A field the tracks disagree on opens empty. Fill it in to write that value to all{" "}
+              {targets.length}; leave it empty to keep each track&apos;s own.
+            </p>
+          )}
+
           <div className="grid grid-cols-2 gap-3">
             {FIELDS.map((field) => (
               <label key={field.key} className="block">
@@ -149,7 +255,7 @@ export function MetadataEditor({ track, targetCount, onSave, onClose }: Metadata
                   type="text"
                   inputMode={field.key === "year" ? "numeric" : undefined}
                   value={values[field.key]}
-                  placeholder={field.placeholder}
+                  placeholder={fieldHint(survey[field.key], bulk) ?? field.placeholder}
                   onChange={(event) =>
                     setValues((current) => ({
                       ...current,
@@ -191,7 +297,11 @@ export function MetadataEditor({ track, targetCount, onSave, onClose }: Metadata
                 onChange={(event) => setTagDraft(event.target.value)}
                 onKeyDown={onTagKeyDown}
                 onBlur={() => addTag(tagDraft)}
-                placeholder={values.tags.length === 0 ? "peak, warmup…" : "Add a tag"}
+                placeholder={
+                  values.tags.length > 0
+                    ? "Add a tag"
+                    : (fieldHint(survey.tags, bulk) ?? "peak, warmup…")
+                }
                 aria-label="Add a custom tag"
                 className="min-w-[6rem] flex-1 bg-transparent text-[11px] text-dj-text placeholder:text-dj-text-muted focus:outline-hidden"
               />
@@ -208,7 +318,7 @@ export function MetadataEditor({ track, targetCount, onSave, onClose }: Metadata
             <textarea
               rows={4}
               value={values.comments}
-              placeholder="Your note about this track"
+              placeholder={fieldHint(survey.comments, bulk) ?? "Your note about this track"}
               onChange={(event) =>
                 setValues((current) => ({ ...current, comments: event.target.value }))
               }
@@ -234,9 +344,13 @@ export function MetadataEditor({ track, targetCount, onSave, onClose }: Metadata
           <button
             type="submit"
             className="rounded-md bg-dj-accent px-3 py-1.5 text-xs font-medium text-dj-on-accent shadow-sm shadow-dj-accent/25 transition hover:bg-dj-accent-strong"
-            title="Save the metadata (Undo is offered afterwards)"
+            title={
+              bulk
+                ? "Review the changes before they are applied"
+                : "Save the metadata (Undo is offered afterwards)"
+            }
           >
-            Save
+            {bulk ? "Review changes" : "Save"}
           </button>
         </div>
       </form>

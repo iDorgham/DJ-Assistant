@@ -13,9 +13,12 @@ use dj_assistant_core::library_remove::{
     undo_statements, SkillRun, Statement, TrackState, MARK_UNDONE_SQL, REMOVE_SKILL_NAME,
     RESTORE_SKILL_NAME, UNDO_READ_SQL,
 };
+use dj_assistant_core::library_writes::{
+    patch_columns, plan_metadata_undo, plan_metadata_write, read_patch_statement, write_skill_run,
+    MetadataPatch, WriteStatement, WriteValue, CURRENT_TAGS_SQL,
+};
 use dj_assistant_core::patch::{
-    check_metadata_undoable, number_value, tags_match, text_value, METADATA_SKILL_NAME,
-    PATCH_COLUMNS, RATING_SKILL_NAME,
+    check_metadata_undoable, tags_match, METADATA_SKILL_NAME, RATING_SKILL_NAME,
 };
 use dj_assistant_core::reveal::reveal_command;
 
@@ -39,12 +42,6 @@ use crate::security::validate_and_canonicalize_dir;
 /// 200-row windows; a larger cap would let a stray request materialize the
 /// whole library in memory.
 const MAX_LIST_LIMIT: i64 = 1000;
-
-/// Highest star rating `tracks.user_rating` stores (`0` clears the rating).
-const MAX_TRACK_RATING: i64 = 5;
-
-/// Highest energy level `tracks.energy` stores (`0` clears the energy).
-const MAX_TRACK_ENERGY: i64 = 10;
 
 /// Summary columns shared by `list_tracks` and `get_track`, in `TrackSummary` order.
 const TRACK_SUMMARY_COLUMNS: &str =
@@ -772,164 +769,13 @@ pub async fn provider_status(
     })
 }
 
-// --- Track metadata write path: rating + energy (T2.1.4 / T2.1.6) ---
+// --- Track metadata write path: bulk edit (T2.1.3) + rating/energy/tags ---
 //
-// The scalar metadata columns a write may touch, and the rules that decide
-// what a value means, live in the core crate (`dj_assistant_core::patch`),
-// where their tests run on every toolchain.
-
-/// The metadata a write may touch.
-///
-/// `None` leaves a column untouched. For the numeric columns `Some(0)` clears
-/// the value (both are stored as NULL and 0 is not a valid rating or energy
-/// level); for the text columns an empty string clears it the same way.
-///
-/// The tag list is a **set**, not a scalar: `Some(vec![])` removes every tag
-/// of the track and `Some(vec!["peak"])` replaces the whole set.
-#[derive(Debug, Clone, Default)]
-struct MetadataPatch {
-    title: Option<String>,
-    artist: Option<String>,
-    album: Option<String>,
-    genre: Option<String>,
-    label: Option<String>,
-    year: Option<i64>,
-    comments: Option<String>,
-    rating: Option<i64>,
-    energy: Option<i64>,
-    tags: Option<Vec<String>>,
-}
-
-/// The value a patch writes to one column.
-#[derive(Debug, Clone, PartialEq)]
-enum ColumnValue {
-    /// A text column. `None` clears it (the column becomes NULL).
-    Text(Option<String>),
-    /// A numeric column. `None` clears it (the column becomes NULL).
-    Number(Option<i64>),
-}
-
-impl ColumnValue {
-    /// The bound SQL value for this column.
-    fn to_sql(&self) -> rusqlite::types::Value {
-        match self {
-            ColumnValue::Text(Some(text)) => rusqlite::types::Value::Text(text.clone()),
-            ColumnValue::Text(None) => rusqlite::types::Value::Null,
-            ColumnValue::Number(Some(number)) => rusqlite::types::Value::Integer(*number),
-            ColumnValue::Number(None) => rusqlite::types::Value::Null,
-        }
-    }
-}
-
-/// The metadata a write may touch.
-///
-/// The rules that decide what a value means — an empty text clears the
-/// column, a zero number clears it — live in the core crate
-/// (`dj_assistant_core::patch`), where their tests run on every toolchain:
-/// the desktop crate's own test harness does not load on
-/// `stable-x86_64-pc-windows-gnu`.
-impl MetadataPatch {
-    /// The value the patch writes to `column`, or `None` when the patch does
-    /// not touch that column at all.
-    fn value_for(&self, column: &str) -> Option<ColumnValue> {
-        match column {
-            "title" => self
-                .title
-                .as_deref()
-                .map(|v| ColumnValue::Text(text_value(v))),
-            "artist" => self
-                .artist
-                .as_deref()
-                .map(|v| ColumnValue::Text(text_value(v))),
-            "album" => self
-                .album
-                .as_deref()
-                .map(|v| ColumnValue::Text(text_value(v))),
-            "genre" => self
-                .genre
-                .as_deref()
-                .map(|v| ColumnValue::Text(text_value(v))),
-            "label" => self
-                .label
-                .as_deref()
-                .map(|v| ColumnValue::Text(text_value(v))),
-            "comments" => self
-                .comments
-                .as_deref()
-                .map(|v| ColumnValue::Text(text_value(v))),
-            "year" => self.year.map(|v| ColumnValue::Number(number_value(v))),
-            "user_rating" => self.rating.map(|v| ColumnValue::Number(number_value(v))),
-            "energy" => self.energy.map(|v| ColumnValue::Number(number_value(v))),
-            _ => None,
-        }
-    }
-
-    /// Rejects values the columns cannot hold, before anything is written.
-    fn validate(&self) -> Result<(), String> {
-        if let Some(rating) = self.rating {
-            if !(0..=MAX_TRACK_RATING).contains(&rating) {
-                return Err(format!("rating must be between 0 and {MAX_TRACK_RATING}"));
-            }
-        }
-        if let Some(energy) = self.energy {
-            if !(0..=MAX_TRACK_ENERGY).contains(&energy) {
-                return Err(format!("energy must be between 0 and {MAX_TRACK_ENERGY}"));
-            }
-        }
-        if let Some(year) = self.year {
-            if year != 0 && !(1000..=9999).contains(&year) {
-                return Err("year must be between 1000 and 9999".to_string());
-            }
-        }
-        // The title and the artist name the track in the table; emptying one
-        // of them would leave a row the user cannot identify.
-        for (label, value) in [("title", &self.title), ("artist", &self.artist)] {
-            if let Some(value) = value {
-                if value.trim().is_empty() {
-                    return Err(format!("{label} cannot be empty"));
-                }
-            }
-        }
-        if self.is_empty() {
-            return Err("nothing to update".to_string());
-        }
-        Ok(())
-    }
-
-    /// True when the patch would not touch a single column or tag.
-    fn is_empty(&self) -> bool {
-        PATCH_COLUMNS
-            .iter()
-            .all(|column| self.value_for(column).is_none())
-            && self.tags.is_none()
-    }
-
-    /// The normalised tag set the patch writes, or `None` when it leaves the
-    /// tags untouched.
-    ///
-    /// The set is normalised here — trimmed, lower-cased, de-duplicated — so
-    /// the database and the filter always agree on what a tag is.
-    fn normalized_tags(&self) -> Option<Vec<String>> {
-        self.tags
-            .as_ref()
-            .map(|tags| dj_assistant_core::normalize_tags(tags))
-    }
-}
-
-/// The value a patch writes to `column`, or `None` when the patch leaves the
-/// column alone — or when the row already holds the requested value.
-///
-/// The second case is what keeps the undo snapshot honest: a value that does
-/// not change is neither written nor recorded, so there is nothing to
-/// restore, and the track is not counted as updated.
-fn changed_value(
-    patch: &MetadataPatch,
-    column: &str,
-    current: &rusqlite::types::Value,
-) -> Option<rusqlite::types::Value> {
-    let stored = patch.value_for(column)?.to_sql();
-    (stored != *current).then_some(stored)
-}
+// What a patch means, which columns it touches, and what an undo restores all
+// live in `dj_assistant_core::library_writes`, where their tests run on every
+// toolchain — the desktop crate's own test harness does not load on
+// `stable-x86_64-pc-windows-gnu`. This layer is the executor: it binds the
+// planned statements to a transaction and runs them.
 
 /// Writes metadata to one or more tracks.
 ///
@@ -964,7 +810,7 @@ pub async fn update_track_metadata(
         db_guard.conn_mut(),
         METADATA_SKILL_NAME,
         &request.track_ids,
-        patch,
+        &patch,
     )?;
 
     Ok(UpdateTrackMetadataResponse { undo_id, updated })
@@ -994,7 +840,7 @@ pub async fn set_track_rating(
         db_guard.conn_mut(),
         RATING_SKILL_NAME,
         &request.track_ids,
-        patch,
+        &patch,
     )?;
 
     Ok(SetTrackRatingResponse { undo_id, updated })
@@ -1043,80 +889,48 @@ pub async fn undo_track_metadata(
     let before_raw =
         before_raw.ok_or_else(|| format!("undo snapshot {} has no snapshot", request.undo_id))?;
     let before: serde_json::Value = serde_json::from_str(&before_raw).map_err(|e| e.to_string())?;
-    let snapshot = before
-        .as_object()
-        .ok_or_else(|| format!("undo snapshot {} has a corrupt snapshot", request.undo_id))?;
 
-    // The state the write produced. It is what the current values are checked
-    // against, so an undo never overwrites a newer edit.
-    let after: serde_json::Map<String, serde_json::Value> = match after_raw {
-        Some(raw) => {
-            let parsed: serde_json::Value =
-                serde_json::from_str(&raw).map_err(|e| e.to_string())?;
-            parsed.as_object().cloned().ok_or_else(|| {
-                format!(
-                    "undo snapshot {} has a corrupt after-state",
-                    request.undo_id
-                )
-            })?
-        }
-        None => serde_json::Map::new(),
+    // The state the write produced. It is what the restores are guarded on, so
+    // an undo never overwrites a newer edit.
+    let after: serde_json::Value = match after_raw {
+        Some(raw) => serde_json::from_str(&raw).map_err(|e| e.to_string())?,
+        None => serde_json::Value::Null,
     };
+
+    let planned = plan_metadata_undo(&before, &after)
+        .map_err(|reason| format!("undo snapshot {}: {reason}", request.undo_id))?;
 
     let mut restored = 0usize;
     let mut skipped = 0usize;
-    for (track_id, values) in snapshot {
-        // The columns this snapshot touches. Only those are read and written
-        // back, so an undo never touches anything else. `tags` is not a
-        // column — it is a set of rows in `track_tags`.
-        let columns: Vec<&str> = PATCH_COLUMNS
-            .iter()
-            .copied()
-            .filter(|column| values.get(*column).is_some())
-            .collect();
-        let restores_tags = values.get("tags").is_some();
-        if columns.is_empty() && !restores_tags {
-            continue;
-        }
-
-        // A newer edit won: the snapshot no longer describes the current
-        // values, so it must not overwrite them.
-        if !snapshot_still_current(&tx, track_id, &columns, after.get(track_id))? {
-            skipped += 1;
-            continue;
-        }
+    for entry in &planned {
+        // Both guards are checked before anything is written, so a track is
+        // either fully restored or left exactly as the newer edit left it.
+        //
         // The tag set is a set: a newer edit that added or removed a tag
-        // changed the set, and the snapshot must not overwrite it either.
-        if restores_tags && !tags_still_current(&tx, track_id, after.get(track_id))? {
-            skipped += 1;
-            continue;
-        }
-
-        // `?1` is always the track id; the snapshotted columns are bound.
-        if !columns.is_empty() {
-            let mut assignments: Vec<String> = Vec::new();
-            let mut params: Vec<rusqlite::types::Value> = vec![track_id.clone().into()];
-            for column in &columns {
-                if let Some(value) = values.get(*column) {
-                    params.push(json_to_sql_value(value));
-                    assignments.push(format!("{column} = ?{}", params.len()));
-                }
+        // changed it, and the snapshot must not overwrite that either.
+        if let Some(expected_tags) = &entry.expected_tags {
+            let current = current_tags(&tx, &entry.track_id)?;
+            if !tags_match(&current, expected_tags) {
+                skipped += 1;
+                continue;
             }
-            let sql = format!(
-                "UPDATE tracks SET {}, updated_at = datetime('now') WHERE id = ?1",
-                assignments.join(", ")
-            );
-            tx.execute(&sql, rusqlite::params_from_iter(params.iter()))
-                .map_err(|e| e.to_string())?;
+        }
+        // The scalar restore carries the write's after-state in its WHERE
+        // clause: zero rows means the track was edited again after the
+        // snapshot, or has since left the library.
+        if let Some(restore) = &entry.restore {
+            if execute_write(&tx, restore)? == 0 {
+                skipped += 1;
+                continue;
+            }
         }
 
         // The tag set is restored as a whole: the current rows are dropped and
         // the snapshot's rows are re-inserted. The delete and the inserts
         // share this transaction with the scalar restore, so a track never
         // keeps half of its old set.
-        if restores_tags {
-            let restored_tags = snapshot_tags(values.get("tags"));
-            rewrite_tags(&tx, track_id, &restored_tags)?;
+        for statement in &entry.tag_statements {
+            execute_write(&tx, statement)?;
         }
 
         restored += 1;
@@ -1450,571 +1264,183 @@ pub async fn reveal_in_file_manager(request: RevealInFileManagerRequest) -> Resu
     Ok(true)
 }
 
-/// True when the track's current values still match the state the snapshot
-/// recorded *after* its write.
-///
-/// A mismatch means the track was edited again after the snapshot was taken,
-/// so restoring the snapshot would overwrite the newer edit.
-fn snapshot_still_current(
-    tx: &rusqlite::Transaction<'_>,
-    track_id: &str,
-    columns: &[&str],
-    expected: Option<&serde_json::Value>,
-) -> Result<bool, String> {
-    let expected = match expected.and_then(serde_json::Value::as_object) {
-        Some(values) => values,
-        // Without an after-state there is nothing to compare against, so the
-        // snapshot cannot prove it still describes the current values.
-        None => return Ok(false),
-    };
-    if columns.is_empty() {
-        // Nothing scalar to compare — the tag set is checked separately.
-        return Ok(true);
-    }
-
-    // Column names come from the snapshot's own keys, never from user input.
-    let sql = format!("SELECT {} FROM tracks WHERE id = ?1", columns.join(", "));
-    let current: Vec<rusqlite::types::Value> = match tx.query_row(&sql, [track_id], |row| {
-        let mut values = Vec::with_capacity(columns.len());
-        for index in 0..columns.len() {
-            values.push(row.get::<_, rusqlite::types::Value>(index)?);
-        }
-        Ok(values)
-    }) {
-        Ok(values) => values,
-        // The track is gone: there is nothing left to restore.
-        Err(rusqlite::Error::QueryReturnedNoRows) => return Ok(false),
-        Err(e) => return Err(e.to_string()),
-    };
-
-    Ok(values_match_snapshot(columns, &current, expected))
-}
-
-/// True when the current column values still match the state the snapshot
-/// recorded after its write.
-///
-/// A mismatch means the track was edited again after the snapshot was taken,
-/// so restoring the snapshot would overwrite that newer edit.
-fn values_match_snapshot(
-    columns: &[&str],
-    current: &[rusqlite::types::Value],
-    expected: &serde_json::Map<String, serde_json::Value>,
-) -> bool {
-    columns.iter().zip(current.iter()).all(|(column, value)| {
-        let recorded = expected
-            .get(*column)
-            .map(json_to_sql_value)
-            .unwrap_or(rusqlite::types::Value::Null);
-        recorded == *value
-    })
-}
-
-/// True when the track's current tag set still matches the set the snapshot
-/// recorded *after* its write.
-///
-/// A tag set is a set, not a scalar: a newer edit that added or removed a tag
-/// changed the set, and restoring the older set would overwrite that edit.
-fn tags_still_current(
-    tx: &rusqlite::Transaction<'_>,
-    track_id: &str,
-    expected: Option<&serde_json::Value>,
-) -> Result<bool, String> {
-    let current = current_tags(tx, track_id)?;
-    Ok(tag_set_matches_snapshot(&current, expected))
-}
-
-/// True when the current tag set still matches the set the snapshot recorded
-/// after its write.
-///
-/// A tag set is a set, not a scalar: a newer edit that added or removed a tag
-/// changed the set, and restoring the older set would overwrite that edit.
-/// Without an after-state there is nothing to compare against, so the
-/// snapshot cannot prove it still describes the current set.
-fn tag_set_matches_snapshot(current: &[String], expected: Option<&serde_json::Value>) -> bool {
-    let Some(expected_tags) = expected.and_then(|value| value.get("tags")) else {
-        return false;
-    };
-    let Some(expected_tags) = expected_tags.as_array() else {
-        return false;
-    };
-    let expected_tags: Vec<String> = expected_tags
-        .iter()
-        .filter_map(|value| value.as_str().map(str::to_string))
-        .collect();
-    // The set rule lives in the core crate, where its test runs.
-    tags_match(current, &expected_tags)
-}
-
-/// The tags of one track, in the order the read path returns them.
+/// The tags of one track, in the order the snapshot recorded them.
 fn current_tags(tx: &rusqlite::Transaction<'_>, track_id: &str) -> Result<Vec<String>, String> {
-    let mut stmt = tx
-        .prepare("SELECT tag FROM track_tags WHERE track_id = ?1 ORDER BY tag ASC")
-        .map_err(|e| e.to_string())?;
+    let mut stmt = tx.prepare(CURRENT_TAGS_SQL).map_err(|e| e.to_string())?;
     let rows = stmt
         .query_map([track_id], |row| row.get::<_, String>(0))
         .map_err(|e| e.to_string())?;
     Ok(rows.flatten().collect())
 }
 
-/// The tag set a snapshot records, as a list.
-fn snapshot_tags(value: Option<&serde_json::Value>) -> Vec<String> {
-    value
-        .and_then(|value| value.as_array())
-        .map(|values| {
-            values
-                .iter()
-                .filter_map(|value| value.as_str().map(str::to_string))
-                .collect()
-        })
-        .unwrap_or_default()
+/// The current tag set of every track the write is about to touch.
+///
+/// Only read when the patch carries tags: a rating edit over a thousand-track
+/// selection should not pay for a thousand tag lookups.
+fn current_tag_sets(
+    tx: &rusqlite::Transaction<'_>,
+    track_ids: &[String],
+) -> Result<Vec<(String, Vec<String>)>, String> {
+    track_ids
+        .iter()
+        .map(|id| current_tags(tx, id).map(|tags| (id.clone(), tags)))
+        .collect()
 }
 
-/// Replaces a track's tag rows with `tags`.
+/// Runs a statement planned in `core` — SQL text plus its bound parameters.
 ///
-/// The delete and the inserts share the caller's transaction, so a track
-/// never keeps half of its old set.
-fn rewrite_tags(
-    tx: &rusqlite::Transaction<'_>,
-    track_id: &str,
-    tags: &[String],
-) -> Result<(), String> {
-    tx.execute("DELETE FROM track_tags WHERE track_id = ?1", [track_id])
-        .map_err(|e| e.to_string())?;
-    for tag in tags {
-        tx.execute(
-            "INSERT OR IGNORE INTO track_tags (track_id, tag) VALUES (?1, ?2)",
-            rusqlite::params![track_id, tag],
-        )
-        .map_err(|e| e.to_string())?;
+/// The desktop layer is the executor and nothing else: every decision about
+/// what a write does lives in `crates/core`, where it is unit-testable. Values
+/// are bound, never interpolated, so a track id or a tag can only be data.
+fn execute_write(tx: &rusqlite::Transaction<'_>, stmt: &WriteStatement) -> Result<usize, String> {
+    let params: Vec<rusqlite::types::Value> = stmt.params.iter().map(bind_value).collect();
+    tx.execute(&stmt.sql, rusqlite::params_from_iter(params.iter()))
+        .map_err(|e| e.to_string())
+}
+
+/// Maps a planned value onto the SQLite type it binds as.
+fn bind_value(value: &WriteValue) -> rusqlite::types::Value {
+    match value {
+        WriteValue::Null => rusqlite::types::Value::Null,
+        WriteValue::Text(text) => rusqlite::types::Value::Text(text.clone()),
+        WriteValue::Int(number) => rusqlite::types::Value::Integer(*number),
     }
-    Ok(())
+}
+
+/// Reads a column back as the type `core` plans writes against.
+///
+/// A REAL or BLOB in a patched column is data the snapshot cannot round-trip,
+/// so it reads as NULL — the same degradation [`WriteValue::from_json`] applies
+/// when a snapshot is replayed, which keeps a write's "already matches" test
+/// and its undo guard agreeing on the same value.
+fn read_value(value: rusqlite::types::Value) -> WriteValue {
+    match value {
+        rusqlite::types::Value::Integer(number) => WriteValue::Int(number),
+        rusqlite::types::Value::Text(text) => WriteValue::Text(text),
+        _ => WriteValue::Null,
+    }
 }
 
 /// Applies a metadata patch and records the undo snapshot.
 ///
-/// The track UPDATE, the tag rewrite and the `skill_runs` INSERT share one
-/// transaction: a crash between them would leave the library changed with no
-/// way back. Only the columns and the tag set the patch really changed are
-/// snapshotted, so an undo restores exactly what the write changed.
+/// The track UPDATEs, the tag rewrites and the one `skill_runs` INSERT share a
+/// single transaction: a crash between them would leave the library changed
+/// with no way back. Only the columns and the tag sets the patch really changed
+/// are snapshotted, so an undo restores exactly what the write changed.
 ///
 /// The returned count is the number of tracks whose value actually changed: a
 /// track that already held the requested value is not written, not counted and
-/// not snapshotted.
+/// not snapshotted. The same path serves one track and a bulk selection.
 fn apply_metadata_patch(
     conn: &mut rusqlite::Connection,
-    skill_name: &str,
+    skill_name: &'static str,
     track_ids: &[String],
-    patch: MetadataPatch,
+    patch: &MetadataPatch,
 ) -> Result<(String, usize), String> {
+    // The scalar columns this patch touches. The names come from the fixed
+    // allow-list in `core`, never from user input.
+    let columns = patch_columns(patch);
+    // Ids are bound, never interpolated into the SQL text.
+    let read = read_patch_statement(track_ids, &columns).map_err(|e| e.to_string())?;
+
     let tx = conn.transaction().map_err(|e| e.to_string())?;
 
-    // The scalar columns this patch touches. The names come from the fixed
-    // allow-list, never from user input.
-    let columns: Vec<&str> = PATCH_COLUMNS
-        .iter()
-        .copied()
-        .filter(|column| patch.value_for(column).is_some())
-        .collect();
-    let new_tags = patch.normalized_tags();
-
-    // Ids are bound, never interpolated into the SQL text.
-    let placeholders = std::iter::repeat_n("?", track_ids.len())
-        .collect::<Vec<_>>()
-        .join(", ");
-    let select_list = if columns.is_empty() {
-        "id".to_string()
-    } else {
-        format!("id, {}", columns.join(", "))
-    };
-    let select_sql = format!("SELECT {select_list} FROM tracks WHERE id IN ({placeholders})");
-    let rows: Vec<(String, Vec<rusqlite::types::Value>)> = {
-        let mut stmt = tx.prepare(&select_sql).map_err(|e| e.to_string())?;
-        // A row that fails to map is an error, not a row to skip.
+    // The rows the selection names, with the patched columns as they stand. An
+    // id the library does not know matches no row, so a stale bulk selection
+    // applies to what still exists.
+    let params: Vec<rusqlite::types::Value> = read.params.iter().map(bind_value).collect();
+    let rows: Vec<(String, Vec<WriteValue>)> = {
+        let mut stmt = tx.prepare(&read.sql).map_err(|e| e.to_string())?;
         let collected = stmt
-            .query_map(rusqlite::params_from_iter(track_ids.iter()), |row| {
+            .query_map(rusqlite::params_from_iter(params.iter()), |row| {
                 let mut values = Vec::with_capacity(columns.len());
                 for index in 0..columns.len() {
-                    values.push(row.get::<_, rusqlite::types::Value>(index + 1)?);
+                    values.push(read_value(row.get::<_, rusqlite::types::Value>(index + 1)?));
                 }
                 Ok((row.get::<_, String>(0)?, values))
             })
             .map_err(|e| e.to_string())?
+            // A row that fails to map is an error, not a row to skip.
             .collect::<Result<Vec<_>, _>>()
             .map_err(|e| e.to_string())?;
         collected
     };
 
+    let tag_sets = if patch.normalized_tags().is_some() {
+        let ids: Vec<String> = rows.iter().map(|(id, _)| id.clone()).collect();
+        current_tag_sets(&tx, &ids)?
+    } else {
+        Vec::new()
+    };
+
+    let planned = plan_metadata_write(&rows, &tag_sets, &columns, patch);
+
     let mut before = serde_json::Map::new();
     let mut after = serde_json::Map::new();
-    let mut updated = 0usize;
-
-    for (track_id, current_values) in &rows {
-        let mut assignments: Vec<String> = Vec::new();
-        let mut params: Vec<rusqlite::types::Value> = vec![track_id.clone().into()];
-        let mut before_values = serde_json::Map::new();
-        let mut after_values = serde_json::Map::new();
-
-        for (index, column) in columns.iter().enumerate() {
-            let column = *column;
-            let current = &current_values[index];
-            // Only a column whose value really differs is written and
-            // snapshotted. A track that already holds the requested value is
-            // left alone: the write would change nothing, so it is neither
-            // counted as updated nor recorded in the snapshot (there is
-            // nothing to restore).
-            let Some(stored) = changed_value(&patch, column, current) else {
-                continue;
-            };
-            params.push(stored.clone());
-            assignments.push(format!("{column} = ?{}", params.len()));
-            before_values.insert(column.to_string(), sql_value_to_json(current));
-            after_values.insert(column.to_string(), sql_value_to_json(&stored));
+    for entry in &planned {
+        if let Some(update) = &entry.update {
+            execute_write(&tx, update)?;
         }
-
-        // The tag set is compared as a whole: a track whose tags already match
-        // is left alone, exactly like a column whose value already matches.
-        let mut tags_changed = false;
-        if let Some(new_tags) = &new_tags {
-            let previous_tags = current_tags(&tx, track_id)?;
-            if previous_tags != *new_tags {
-                tags_changed = true;
-                before_values.insert(
-                    "tags".to_string(),
-                    serde_json::Value::Array(
-                        previous_tags
-                            .iter()
-                            .map(|tag| serde_json::Value::from(tag.clone()))
-                            .collect(),
-                    ),
-                );
-                after_values.insert(
-                    "tags".to_string(),
-                    serde_json::Value::Array(
-                        new_tags
-                            .iter()
-                            .map(|tag| serde_json::Value::from(tag.clone()))
-                            .collect(),
-                    ),
-                );
-            }
+        for statement in &entry.tag_statements {
+            execute_write(&tx, statement)?;
         }
-
-        if assignments.is_empty() && !tags_changed {
-            continue;
-        }
-
-        if !assignments.is_empty() {
-            let sql = format!(
-                "UPDATE tracks SET {}, updated_at = datetime('now') WHERE id = ?1",
-                assignments.join(", ")
-            );
-            tx.execute(&sql, rusqlite::params_from_iter(params.iter()))
-                .map_err(|e| e.to_string())?;
-        }
-
-        if tags_changed {
-            rewrite_tags(&tx, track_id, new_tags.as_deref().unwrap_or(&[]))?;
-        }
-
-        updated += 1;
-        before.insert(track_id.clone(), serde_json::Value::Object(before_values));
-        after.insert(track_id.clone(), serde_json::Value::Object(after_values));
+        before.insert(
+            entry.track_id.clone(),
+            serde_json::Value::Object(entry.before.clone()),
+        );
+        after.insert(
+            entry.track_id.clone(),
+            serde_json::Value::Object(entry.after.clone()),
+        );
     }
 
     let undo_id = Uuid::new_v4().to_string();
-    let input_summary = serde_json::json!({
-        "trackIds": track_ids,
-        "rating": patch.rating,
-        "energy": patch.energy,
-        "title": patch.title,
-        "artist": patch.artist,
-        "album": patch.album,
-        "genre": patch.genre,
-        "label": patch.label,
-        "year": patch.year,
-        "comments": patch.comments,
-        "tags": patch.tags,
-    });
-    tx.execute(
-        "INSERT INTO skill_runs (
-            id, workspace_id, skill_name, status, input_summary, before_state, after_state,
-            error, created_at
-        ) VALUES (?1, 'default', ?2, 'success', ?3, ?4, ?5, NULL, datetime('now'))",
-        rusqlite::params![
-            undo_id,
-            skill_name,
-            input_summary.to_string(),
-            serde_json::Value::Object(before).to_string(),
-            serde_json::Value::Object(after).to_string(),
-        ],
-    )
-    .map_err(|e| e.to_string())?;
+    let run = write_skill_run(&undo_id, skill_name, track_ids, patch, before, after);
+    tx.execute(&run.sql, rusqlite::params_from_iter(run.params.iter()))
+        .map_err(|e| e.to_string())?;
 
     tx.commit().map_err(|e| e.to_string())?;
 
-    Ok((undo_id, updated))
-}
-
-/// Converts a bound SQL value into the JSON shape the snapshot stores.
-fn sql_value_to_json(value: &rusqlite::types::Value) -> serde_json::Value {
-    match value {
-        rusqlite::types::Value::Null => serde_json::Value::Null,
-        rusqlite::types::Value::Integer(number) => serde_json::Value::from(*number),
-        rusqlite::types::Value::Real(number) => serde_json::Value::from(*number),
-        rusqlite::types::Value::Text(text) => serde_json::Value::from(text.clone()),
-        // No patched column is a blob, and a blob would not survive the JSON
-        // snapshot faithfully — it is stored as null rather than mangled.
-        rusqlite::types::Value::Blob(_) => serde_json::Value::Null,
-    }
-}
-
-/// Converts a snapshot value back into a bound SQL value. JSON `null` restores
-/// as NULL, a string as text and a number as an integer.
-fn json_to_sql_value(value: &serde_json::Value) -> rusqlite::types::Value {
-    match value {
-        serde_json::Value::Null => rusqlite::types::Value::Null,
-        serde_json::Value::Number(number) => number
-            .as_i64()
-            .map(rusqlite::types::Value::Integer)
-            .or_else(|| number.as_f64().map(rusqlite::types::Value::Real))
-            .unwrap_or(rusqlite::types::Value::Null),
-        serde_json::Value::String(text) => rusqlite::types::Value::Text(text.clone()),
-        _ => rusqlite::types::Value::Null,
-    }
+    Ok((undo_id, planned.len()))
 }
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-
-    fn text(value: &str) -> rusqlite::types::Value {
-        rusqlite::types::Value::Text(value.to_string())
-    }
-
-    fn int(value: i64) -> rusqlite::types::Value {
-        rusqlite::types::Value::Integer(value)
-    }
-
-    /// The snapshot's after-state, as the undo path reads it.
-    fn snapshot_map(value: serde_json::Value) -> serde_json::Map<String, serde_json::Value> {
-        value
-            .as_object()
-            .cloned()
-            .expect("the after-state must be a JSON object")
-    }
+    use super::{bind_value, read_value, WriteValue};
 
     #[test]
-    fn the_patch_allow_list_is_closed() {
-        // The column names are interpolated into the SQL text, so the list is
-        // the only thing that keeps a user-supplied name out of it. The list
-        // itself lives in the core crate, where the test runs on every
-        // toolchain.
+    fn a_planned_value_binds_as_the_type_it_describes() {
         assert_eq!(
-            PATCH_COLUMNS,
-            [
-                "title",
-                "artist",
-                "album",
-                "genre",
-                "label",
-                "year",
-                "comments",
-                "user_rating",
-                "energy",
-            ]
-        );
-    }
-
-    #[test]
-    fn a_text_value_is_trimmed_and_an_empty_one_clears_the_column() {
-        assert_eq!(
-            text_value("  Night Drive  "),
-            Some("Night Drive".to_string())
-        );
-        assert_eq!(text_value("   "), None);
-    }
-
-    #[test]
-    fn a_zero_number_clears_the_column() {
-        assert_eq!(number_value(0), None);
-        assert_eq!(number_value(4), Some(4));
-    }
-
-    #[test]
-    fn value_for_maps_every_editable_column() {
-        let patch = MetadataPatch {
-            title: Some(" Night Drive ".into()),
-            year: Some(2026),
-            rating: Some(3),
-            ..Default::default()
-        };
-        assert_eq!(
-            patch.value_for("title"),
-            Some(ColumnValue::Text(Some("Night Drive".into())))
+            bind_value(&WriteValue::Text("Night Drive".into())),
+            rusqlite::types::Value::Text("Night Drive".to_string())
         );
         assert_eq!(
-            patch.value_for("year"),
-            Some(ColumnValue::Number(Some(2026)))
+            bind_value(&WriteValue::Int(3)),
+            rusqlite::types::Value::Integer(3)
+        );
+        assert_eq!(bind_value(&WriteValue::Null), rusqlite::types::Value::Null);
+    }
+
+    #[test]
+    fn a_column_that_cannot_round_trip_through_the_snapshot_reads_as_null() {
+        assert_eq!(
+            read_value(rusqlite::types::Value::Text("House".into())),
+            WriteValue::Text("House".to_string())
         );
         assert_eq!(
-            patch.value_for("user_rating"),
-            Some(ColumnValue::Number(Some(3)))
+            read_value(rusqlite::types::Value::Integer(3)),
+            WriteValue::Int(3)
+        );
+        assert_eq!(read_value(rusqlite::types::Value::Null), WriteValue::Null);
+        // A patched column holds integer or text; anything else would be
+        // written back mangled, so it is treated as no value at all.
+        assert_eq!(
+            read_value(rusqlite::types::Value::Real(3.5)),
+            WriteValue::Null
         );
         assert_eq!(
-            patch.value_for("genre"),
-            None,
-            "an untouched column is absent"
+            read_value(rusqlite::types::Value::Blob(vec![1])),
+            WriteValue::Null
         );
-        assert_eq!(patch.value_for("energy"), None);
-    }
-
-    #[test]
-    fn an_empty_text_field_clears_its_column() {
-        let patch = MetadataPatch {
-            genre: Some("   ".into()),
-            ..Default::default()
-        };
-        assert_eq!(patch.value_for("genre"), Some(ColumnValue::Text(None)));
-    }
-
-    #[test]
-    fn validate_rejects_values_the_columns_cannot_hold() {
-        assert!(MetadataPatch {
-            rating: Some(6),
-            ..Default::default()
-        }
-        .validate()
-        .is_err());
-        assert!(MetadataPatch {
-            energy: Some(11),
-            ..Default::default()
-        }
-        .validate()
-        .is_err());
-        assert!(MetadataPatch {
-            year: Some(99),
-            ..Default::default()
-        }
-        .validate()
-        .is_err());
-        assert!(MetadataPatch {
-            title: Some("   ".into()),
-            ..Default::default()
-        }
-        .validate()
-        .is_err());
-        assert!(MetadataPatch::default().validate().is_err());
-    }
-
-    #[test]
-    fn a_tag_only_patch_is_a_real_change() {
-        // Clearing every tag is a change, so the patch is not empty and the
-        // write is not refused.
-        let patch = MetadataPatch {
-            tags: Some(Vec::new()),
-            ..Default::default()
-        };
-        assert!(!patch.is_empty());
-        assert!(patch.validate().is_ok());
-    }
-
-    #[test]
-    fn the_tag_set_is_normalised_before_it_is_stored() {
-        let patch = MetadataPatch {
-            tags: Some(vec![" Peak ".into(), "warmup".into(), "peak".into()]),
-            ..Default::default()
-        };
-        assert_eq!(
-            patch.normalized_tags(),
-            Some(vec!["peak".to_string(), "warmup".to_string()])
-        );
-    }
-
-    #[test]
-    fn a_value_that_already_matches_is_not_written() {
-        let patch = MetadataPatch {
-            title: Some("Night Drive".into()),
-            ..Default::default()
-        };
-        assert_eq!(changed_value(&patch, "title", &text("Night Drive")), None);
-        assert_eq!(
-            changed_value(&patch, "title", &text("Day Break")),
-            Some(text("Night Drive"))
-        );
-        assert_eq!(
-            changed_value(&patch, "genre", &text("House")),
-            None,
-            "a column the patch does not touch is never written"
-        );
-    }
-
-    #[test]
-    fn clearing_a_column_that_holds_a_value_is_a_change() {
-        let patch = MetadataPatch {
-            genre: Some(String::new()),
-            ..Default::default()
-        };
-        assert_eq!(
-            changed_value(&patch, "genre", &text("House")),
-            Some(rusqlite::types::Value::Null)
-        );
-        assert_eq!(
-            changed_value(&patch, "genre", &rusqlite::types::Value::Null),
-            None,
-            "a column that is already empty needs no write"
-        );
-    }
-
-    #[test]
-    fn the_snapshot_matches_only_while_the_values_are_unchanged() {
-        let expected = snapshot_map(serde_json::json!({ "title": "Night", "user_rating": 3 }));
-        assert!(values_match_snapshot(
-            &["title", "user_rating"],
-            &[text("Night"), int(3)],
-            &expected
-        ));
-        assert!(
-            !values_match_snapshot(&["title", "user_rating"], &[text("Day"), int(3)], &expected),
-            "a newer edit must not be overwritten by an older snapshot"
-        );
-        assert!(
-            !values_match_snapshot(
-                &["title", "user_rating"],
-                &[text("Night"), int(4)],
-                &expected
-            ),
-            "a changed rating is a newer edit too"
-        );
-    }
-
-    #[test]
-    fn the_tag_set_matches_only_while_the_set_is_unchanged() {
-        let expected = serde_json::json!({ "tags": ["peak", "warmup"] });
-        assert!(tag_set_matches_snapshot(
-            &["peak".to_string(), "warmup".to_string()],
-            Some(&expected)
-        ));
-        assert!(
-            !tag_set_matches_snapshot(&["peak".to_string(), "build".to_string()], Some(&expected)),
-            "a tag added after the snapshot must not be overwritten"
-        );
-        assert!(
-            !tag_set_matches_snapshot(&["peak".to_string()], Some(&expected)),
-            "a removed tag must not come back"
-        );
-        assert!(
-            !tag_set_matches_snapshot(&["peak".to_string(), "warmup".to_string()], None),
-            "without an after-state the snapshot cannot prove it is current"
-        );
-    }
-
-    #[test]
-    fn a_snapshot_reads_its_tag_set_from_the_json_array() {
-        assert_eq!(
-            snapshot_tags(Some(&serde_json::json!(["peak", "warmup"]))),
-            vec!["peak".to_string(), "warmup".to_string()]
-        );
-        assert!(snapshot_tags(None).is_empty());
-        assert!(snapshot_tags(Some(&serde_json::json!("peak"))).is_empty());
     }
 }

@@ -22,6 +22,7 @@ import type {
   ListTracksSortBy,
   RemovedTrack,
   SortDirection,
+  UpdateTrackMetadataRequest,
 } from "@dj-assistant/shared";
 import {
   openFolderDialog,
@@ -162,7 +163,6 @@ import { TagChips } from "./components/TagChips";
 import { RowContextMenu } from "./components/RowContextMenu";
 import { MetadataEditor } from "./components/MetadataEditor";
 import { SettingsView } from "./components/SettingsView";
-import { buildMetadataUpdatePayload, type MetadataEditorValues } from "./lib/tags";
 import { previewEngine } from "./lib/audio-engine";
 
 const NAV_ITEMS: { label: string; icon: LucideIcon; view: PrimaryView; shortcut: string }[] = [
@@ -2025,28 +2025,46 @@ export default function App() {
   // level, so it inherits the same "nothing changed" rule and the same Undo
   // toast — including the undo of a whole tag set.
   /**
-   * Saves editor values to the selection if it contains the editor track, or to that track alone.
-   * Does nothing without an editor track; otherwise closes the editor before saving, refreshes
-   * the library on success, and offers Undo for changed values. Caught failures show an error status.
+   * The rows the editor shows and the ids it writes, resolved from the selection.
+   *
+   * A multi-selection applies to the whole selection; a single row applies to
+   * that row alone. Same rule as the rating and the energy level. The ids are
+   * the write's truth and the rows are what the survey can read, so a selected
+   * track the page has not loaded is still written — the backend ignores an id
+   * it does not know rather than failing the batch.
    */
-  const handleSaveMetadata = async (values: MetadataEditorValues) => {
+  const editorScope = useMemo(() => {
+    if (!editorTrack) return { targets: [] as TrackSummary[], trackIds: [] as string[] };
+    if (!selection.includes(editorTrack.id))
+      return { targets: [editorTrack], trackIds: [editorTrack.id] };
+    const byId = new Map(tracks.map((entry) => [entry.id, entry]));
+    const rows = selection
+      .map((id) => byId.get(id))
+      .filter((entry): entry is TrackSummary => entry !== undefined);
+    // The focused row is always in the survey, even if its id has left the
+    // loaded collection: the dialog must not open on an empty selection.
+    return { targets: rows.length > 0 ? rows : [editorTrack], trackIds: selection };
+  }, [editorTrack, selection, tracks]);
+
+  /**
+   * Sends the patch the editor built, refreshes the library and offers Undo for
+   * what actually changed. Caught failures show an error status.
+   */
+  const handleSaveMetadata = async (patch: UpdateTrackMetadataRequest) => {
     // The editor holds its own snapshot: the panel can open a track that is not
     // on the current page (a player track, a related track), so resolving the id
     // against `tracks` would silently drop the save.
     if (!editorTrack) return;
     const track = editorTrack;
-    // A multi-selection applies to the whole selection; a single row applies
-    // to that row alone. Same rule as the rating and the energy level.
-    const trackIds = selection.includes(track.id) ? selection : [track.id];
     setEditorTrack(null);
     try {
-      const res = await updateTrackMetadata(buildMetadataUpdatePayload(trackIds, values));
+      const res = await updateTrackMetadata(patch);
       refreshLibrary();
       pushStatus(describeMetadataWrite("metadata", res.updated));
       const undoMessage = describeMetadataUndo(
         "metadata",
         res.updated,
-        trackIds.length,
+        patch.trackIds.length,
         track.title
       );
       if (undoMessage) offerUndo(res.undoId, undoMessage);
@@ -3616,8 +3634,8 @@ export default function App() {
 
       {editorTrack && (
         <MetadataEditor
-          track={editorTrack}
-          targetCount={selection.includes(editorTrack.id) ? selection.length : 1}
+          targets={editorScope.targets}
+          trackIds={editorScope.trackIds}
           onSave={handleSaveMetadata}
           onClose={() => setEditorTrack(null)}
         />

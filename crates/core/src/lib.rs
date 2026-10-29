@@ -17,6 +17,7 @@ pub mod library_reads;
 pub mod library_remove;
 pub mod library_schema;
 pub mod library_stats;
+pub mod library_writes;
 pub mod metadata;
 pub mod mp3;
 pub mod patch;
@@ -54,6 +55,12 @@ pub use library_remove::{
 };
 pub use library_schema::LibrarySchema;
 pub use library_stats::{stat_queries, status_breakdown_sql, StatQuery};
+pub use library_writes::{
+    changed_value, input_doc as metadata_input_doc, patch_columns, plan_metadata_undo,
+    plan_metadata_write, read_patch_statement, rewrite_tags_statements, write_skill_run,
+    ColumnValue, MetadataPatch, PlannedTrackRestore, PlannedTrackWrite, WriteStatement, WriteValue,
+    CURRENT_TAGS_SQL, MAX_TRACK_ENERGY, MAX_TRACK_RATING,
+};
 pub use metadata::{
     cache_artwork, camelot_from_key, extract_metadata, CachedArtwork, EmbeddedArtwork,
     ExtractedMetadata,
