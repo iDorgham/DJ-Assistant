@@ -161,3 +161,18 @@ Apply → Undo round-trip was verified that way, net-zero on the user's library.
 Pure logic behind a dialog stays testable with `node --test` in `src/lib`.
 **Rule:** when a check needs multi-select, hand that two-click step to the user
 instead of concluding the UI is untestable.
+
+## F-013 · Check which commit the reviews ran against before answering them (2026-11-08)
+
+A full review round on PR #70 — 6 cubic P2 findings plus 16 DeepSource threads —
+was written against `dc3ddac6`, while the fixes already existed **locally** as
+the unpushed `797e1823`. Re-implementing them would have been pure waste; the
+job was to push, then verify each finding at HEAD.
+
+**Rule:** before acting on review findings, compare `gh pr view --json
+headRefOid` with `git rev-parse HEAD`. If they differ the threads are stale.
+Then re-fetch them after each push: the bots open a fresh round, GitHub re-maps
+the old threads' line numbers onto the new file, and cubic resolves its own
+threads once it sees the fix — the set of "open conversations" is not stable
+across minutes. Mechanical note: `resolveReviewThread` takes `threadId`, not
+`id`.
