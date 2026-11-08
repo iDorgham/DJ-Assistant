@@ -164,7 +164,7 @@ const DEFINITIONS: Record<ColumnId, ColumnDefinition> = {
     id: "key",
     label: "Key",
     // Wide enough for "12A · 12m" (both-notation mode) plus the cell padding.
-    defaultWidth: 104,
+    defaultWidth: 140,
     align: "center",
     sortable: "key",
     identity: false,
