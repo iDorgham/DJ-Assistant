@@ -1341,8 +1341,8 @@ fn apply_metadata_patch(
     // allow-list in `core`, never from user input.
     let columns = patch_columns(patch);
     // Ids are bound, never interpolated into the SQL text. A selection larger
-    // than SQLite's variable ceiling is split into several statements, so the
-    // read is a list the executor runs and concatenates.
+    // than core's conservative batch size is split into several statements, so
+    // the read is a list the executor runs and concatenates.
     let reads = read_patch_statement(track_ids, &columns).map_err(|e| e.to_string())?;
 
     let tx = conn.transaction().map_err(|e| e.to_string())?;

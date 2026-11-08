@@ -827,7 +827,7 @@ mod tests {
         // Trimming could turn an unknown id into a known one and write to a
         // track the caller never named, so the padding has to survive.
         let padded = " t1 ".to_string();
-        let statements = read_patch_statement(&[padded.clone()], &["title"]).unwrap();
+        let statements = read_patch_statement(std::slice::from_ref(&padded), &["title"]).unwrap();
         assert_eq!(statements[0].params, vec![WriteValue::Text(padded)]);
 
         // A blank selection must fail rather than build no statement at all,
