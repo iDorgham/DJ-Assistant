@@ -1519,7 +1519,7 @@ export default function App() {
     }
     setFilterError(null);
     setFilters(normalized ?? {});
-    setCompatibleOnly(draftCompatibleOnly && compatibleKeys.length > 0);
+    setCompatibleOnly(draftCompatibleOnly);
     setFiltersOpen(false);
   };
 
