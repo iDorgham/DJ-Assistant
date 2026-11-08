@@ -3,8 +3,10 @@ import {
   Activity,
   ArrowRight,
   Disc3,
+  Filter,
   FolderOpen,
   Info,
+  Music,
   PanelLeft,
   Play,
   RefreshCw,
@@ -12,6 +14,17 @@ import {
   Sun,
 } from "lucide-react";
 
+import {
+  COMPATIBILITY_MODES,
+  COMPATIBILITY_MODE_LABELS,
+  type CompatibilityMode,
+} from "../lib/harmonic";
+import {
+  KEY_NOTATIONS,
+  KEY_NOTATION_EXAMPLES,
+  KEY_NOTATION_LABELS,
+  type KeyNotation,
+} from "../lib/key-format";
 import { THEME_LABELS, nextTheme } from "../lib/theme";
 import type { ThemeMode } from "../lib/ui-state";
 
@@ -19,9 +32,13 @@ interface SettingsViewProps {
   theme: ThemeMode;
   navCollapsed: boolean;
   playerVisible: boolean;
+  keyNotation: KeyNotation;
+  compatibilityMode: CompatibilityMode;
   onCycleTheme: () => void;
   onToggleNav: () => void;
   onTogglePlayer: () => void;
+  onSetKeyNotation: (notation: KeyNotation) => void;
+  onSetCompatibilityMode: (mode: CompatibilityMode) => void;
   onOpenImport: () => void;
   onOpenAnalysis: () => void;
   onOpenBackup: () => void;
@@ -63,13 +80,67 @@ function SettingRow({
   );
 }
 
+function ChoiceRow<T extends string>({
+  icon: Icon,
+  title,
+  description,
+  choices,
+  labels,
+  value,
+  onSelect,
+}: {
+  icon: LucideIcon;
+  title: string;
+  description: string;
+  choices: readonly T[];
+  labels: Record<T, string>;
+  value: T;
+  onSelect: (choice: T) => void;
+}) {
+  return (
+    <div className="flex items-start gap-3 px-4 py-3">
+      <div className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center border border-dj-border bg-dj-elevated">
+        <Icon className="h-4 w-4 text-dj-text-secondary" aria-hidden="true" />
+      </div>
+      <div className="min-w-0 flex-1">
+        <p className="text-xs font-medium text-dj-text">{title}</p>
+        <p className="mt-0.5 text-[11px] leading-relaxed text-dj-text-secondary">{description}</p>
+      </div>
+      <div role="group" aria-label={title} className="mt-0.5 flex shrink-0 gap-1">
+        {choices.map((choice) => {
+          const selected = choice === value;
+          return (
+            <button
+              key={choice}
+              type="button"
+              aria-pressed={selected}
+              onClick={() => onSelect(choice)}
+              className={`border px-2 py-1 text-[11px] font-medium transition focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-dj-accent ${
+                selected
+                  ? "border-dj-accent bg-dj-accent/15 text-dj-accent"
+                  : "border-dj-border bg-dj-panel text-dj-text-secondary hover:bg-dj-hover hover:text-dj-text"
+              }`}
+            >
+              {labels[choice]}
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 export function SettingsView({
   theme,
   navCollapsed,
   playerVisible,
+  keyNotation,
+  compatibilityMode,
   onCycleTheme,
   onToggleNav,
   onTogglePlayer,
+  onSetKeyNotation,
+  onSetCompatibilityMode,
   onOpenImport,
   onOpenAnalysis,
   onOpenBackup,
@@ -157,6 +228,35 @@ export function SettingsView({
               description="The Studio surface is a planned workspace; the shared player dock is available from every tab now."
               actionLabel="Open"
               onAction={onOpenStudio}
+            />
+          </div>
+        </section>
+
+        <section aria-labelledby="settings-key">
+          <h2
+            id="settings-key"
+            className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-dj-text-muted"
+          >
+            Key display
+          </h2>
+          <div className="divide-y divide-dj-border border border-dj-border bg-dj-panel">
+            <ChoiceRow
+              icon={Music}
+              title="Notation"
+              description={`The key column shows ${KEY_NOTATION_EXAMPLES[keyNotation]}. Camelot drives the harmonic colours; 1m / 1d is the compact Open Key style.`}
+              choices={KEY_NOTATIONS}
+              labels={KEY_NOTATION_LABELS}
+              value={keyNotation}
+              onSelect={onSetKeyNotation}
+            />
+            <ChoiceRow
+              icon={Filter}
+              title="Compatible only"
+              description={`${COMPATIBILITY_MODE_LABELS[compatibilityMode]} follows the same key, the relative major/minor and ±1${compatibilityMode === "wide" ? ", plus ±2" : ""}. The reference is the playing track, or the selected track when nothing is playing.`}
+              choices={COMPATIBILITY_MODES}
+              labels={COMPATIBILITY_MODE_LABELS}
+              value={compatibilityMode}
+              onSelect={onSetCompatibilityMode}
             />
           </div>
         </section>

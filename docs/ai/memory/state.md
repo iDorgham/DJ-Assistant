@@ -4,7 +4,7 @@ Ephemeral. Newest first. **Rotate aggressively** — if a line would still be tr
 in two weeks, it belongs in [`decisions.md`](./decisions.md); if it is just a
 fact, it belongs in [`facts.md`](./facts.md). Delete anything stale.
 
-## 2026-10-29 · T2.1.3 bulk-metadata slice complete (PR #65)
+## 2026-10-29 · T2.1.3 bulk metadata + T2.1.8 key pills (PR #65)
 
 - **T2.1.3 is code-complete on `feature/bulk-metadata-edit` / PR #65.** Beyond
   the committed bulk dialog (`d9b5ba1a`), the missing spec §6 `BulkActionBar`
@@ -18,12 +18,17 @@ fact, it belongs in [`facts.md`](./facts.md). Delete anything stale.
   `PHASE2_LIBRARY_PLAYER_IMPLEMENTATION_PLAN.md` (Slice 2 known gap + Slice 9
   row) and `docs/ui/11-IMPLEMENTATION-CHECKLIST.md` (BulkActionBar, editor,
   Label/Year, TagChips).
+- **T2.1.8 key pills (Slice 3B) implemented 2026-10-29** on
+  `feat/T2.1.8-key-pills`, stacked on this branch: pure `harmonic.ts` +
+  `key-format.ts` modules with tests, the relation-tinted `KeyPill`, Settings →
+  Key display (Camelot / 1m1d / both, Strict/Wide) persisted in `UiState`, and a
+  Compatible-only filter that reuses `keyCamelot` (no Rust/SQL change). Desktop
+  `node --test` is now **214 tests**; typecheck, build, ESLint and Prettier pass.
 - **Still open:** select-all and keyboard scope (`Ctrl/Cmd+A`), the blocked
-  shared bulk actions, and the native multi-select QA pass — modifier clicks
-  cannot be automated (F-012), so the T2.1.3 box stays unticked.
-- **Next:** T2.1.8 key pills (Slice 3B) — `harmonic.ts` + `key-format.ts` pure
-  modules with tests, `KeyPill`, Settings key-display (Camelot / 1m1d / both),
-  Strict-vs-Wide compatible-only filter. It still waits on the Settings surface.
+  shared bulk actions, the native multi-select QA pass, and the T2.1.8
+  running-window QA (5A colours, live preference switch, compatible filter
+  against a real library). Modifier clicks and native checks cannot be
+  automated (F-012), so both task boxes stay unticked.
 
 ## 2026-10-24 · PR #53–#56 merged; main synced; QA still open
 

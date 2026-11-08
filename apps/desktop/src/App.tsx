@@ -150,6 +150,13 @@ import {
   type AppView,
   type PrimaryView,
 } from "./lib/ui-state";
+import {
+  camelotRelation,
+  compatibleCamelotKeys,
+  COMPATIBILITY_MODE_LABELS,
+  type CompatibilityMode,
+} from "./lib/harmonic";
+import type { KeyNotation } from "./lib/key-format";
 import { rowHeightForColumns, shouldLoadMore, virtualWindow } from "./lib/virtual-window";
 import { nextTheme, resolveTheme, THEME_LABELS } from "./lib/theme";
 import { PreviewPlayer } from "./components/preview-player";
@@ -159,6 +166,7 @@ import { TrackPanel } from "./components/track-panel/TrackPanel";
 import { BulkActionBar } from "./components/BulkActionBar";
 import { ColumnPicker } from "./components/ColumnPicker";
 import { EnergyBars } from "./components/EnergyBars";
+import { KeyPill } from "./components/KeyPill";
 import { StarRating } from "./components/StarRating";
 import { TagChips } from "./components/TagChips";
 import { RowContextMenu } from "./components/RowContextMenu";
@@ -431,6 +439,9 @@ function TrackCell({
   onRate,
   onSetEnergy,
   onSelectTag,
+  keyNotation,
+  keyReference,
+  theme,
 }: {
   id: ColumnId;
   track: TrackSummary;
@@ -441,6 +452,11 @@ function TrackCell({
   onSetEnergy?: (track: TrackSummary, energy: number | null) => void;
   /** Filters the library by the clicked tag (T2.1.7). */
   onSelectTag?: (tag: string) => void;
+  /** Key notation preference (T2.1.8). */
+  keyNotation?: KeyNotation;
+  /** Camelot code of the playing or selected track, if there is one. */
+  keyReference?: string | null;
+  theme?: "dark" | "light";
 }) {
   const definition = columnDefinition(id);
   const base = `py-2.5 px-4 overflow-hidden whitespace-nowrap text-ellipsis ${
@@ -502,6 +518,22 @@ function TrackCell({
     );
   }
 
+  if (id === "key") {
+    const relation =
+      keyReference && track.keyCamelot ? camelotRelation(keyReference, track.keyCamelot) : null;
+    return (
+      <td className="py-2.5 px-4 text-center">
+        <KeyPill
+          keyCamelot={track.keyCamelot}
+          keyClassical={track.keyClassical}
+          notation={keyNotation}
+          relation={relation}
+          theme={theme}
+        />
+      </td>
+    );
+  }
+
   if (id === "status") {
     const chip = ANALYSIS_STATUS_CHIP[track.analysisStatus] ?? ANALYSIS_STATUS_CHIP.pending;
     const StatusIcon = chip.icon;
@@ -552,6 +584,8 @@ function LibraryFilterPanel({
   draft,
   genres,
   error,
+  referenceKey,
+  compatibilityMode,
   onChange,
   onApply,
   onReset,
@@ -560,12 +594,20 @@ function LibraryFilterPanel({
   draft: ListTracksFilters;
   genres: GenreCount[];
   error: string | null;
+  /** Camelot code of the playing or selected track; enables Compatible only. */
+  referenceKey: string | null;
+  compatibilityMode: CompatibilityMode;
   onChange: (next: ListTracksFilters) => void;
   onApply: () => void;
   onReset: () => void;
   onClose: () => void;
 }) {
   const numberOrUndefined = (raw: string) => (raw.trim() === "" ? undefined : Number(raw));
+  const compatibleKeys = compatibleCamelotKeys(referenceKey, compatibilityMode);
+  const compatibleOnly =
+    compatibleKeys.length > 0 &&
+    compatibleKeys.length === (draft.keyCamelot?.length ?? 0) &&
+    compatibleKeys.every((key) => hasFilterValue(draft.keyCamelot, key));
 
   return (
     <div
@@ -617,6 +659,39 @@ function LibraryFilterPanel({
               className="w-full rounded-md border border-dj-border bg-dj-elevated px-2.5 py-1.5 text-xs text-dj-text placeholder:text-dj-text-muted focus:border-dj-accent focus:outline-hidden"
             />
           </div>
+        </div>
+
+        {/* Compatible only (T2.1.8). It translates the reference key into the
+            existing keyCamelot filter, so the SQL path and the server stay
+            unchanged. A manual key click below makes the box fall out of sync
+            and the derived state unticks it. */}
+        <div>
+          <label
+            className={`flex items-start gap-2 rounded-sm border border-dj-border bg-dj-elevated px-2 py-1.5 ${
+              compatibleKeys.length > 0 ? "cursor-pointer" : "opacity-60"
+            }`}
+          >
+            <input
+              type="checkbox"
+              checked={compatibleOnly}
+              disabled={compatibleKeys.length === 0}
+              onChange={(event) =>
+                onChange({
+                  ...draft,
+                  keyCamelot: event.target.checked ? compatibleKeys : undefined,
+                })
+              }
+              className="mt-0.5 accent-dj-accent"
+            />
+            <span className="min-w-0">
+              <span className="block text-[11px] font-medium text-dj-text">Compatible only</span>
+              <span className="block text-[10px] text-dj-text-muted">
+                {referenceKey
+                  ? `${referenceKey} · ${COMPATIBILITY_MODE_LABELS[compatibilityMode]} — same, relative and ±1${compatibilityMode === "wide" ? ", plus ±2" : ""}`
+                  : "Play or select a track with a key to use this filter"}
+              </span>
+            </span>
+          </label>
         </div>
 
         {/* Camelot keys */}
@@ -1079,6 +1154,11 @@ export default function App() {
   // metadata reloads reorder the table, so a stored index would point at a
   // different track by the time the user Shift-clicks.
   const [selectionAnchor, setSelectionAnchor] = useState<string | null>(null);
+  // Harmonic reference for the key pills and the Compatible only filter
+  // (T2.1.8): the playing track wins, the first selected row is the fallback.
+  const selectedTrack =
+    selection.length > 0 ? (tracks.find((entry) => entry.id === selection[0]) ?? null) : null;
+  const keyReference = playingTrack?.keyCamelot ?? selectedTrack?.keyCamelot ?? null;
   // The pending *panel open* of a plain row click. The selection applies
   // immediately; only the open waits out the double-click window, so a quick
   // edit after selecting a row cannot still target the previous selection.
@@ -2592,6 +2672,8 @@ export default function App() {
                       draft={draftFilters}
                       genres={genres}
                       error={filterError}
+                      referenceKey={keyReference}
+                      compatibilityMode={ui.compatibilityMode}
                       onChange={setDraftFilters}
                       onApply={applyFilters}
                       onReset={resetFilters}
@@ -2875,6 +2957,9 @@ export default function App() {
                                   onRate={handleSetRating}
                                   onSetEnergy={handleSetEnergy}
                                   onSelectTag={handleFilterByTag}
+                                  keyNotation={ui.keyNotation}
+                                  keyReference={keyReference}
+                                  theme={resolveTheme(ui.theme, systemPrefersDark)}
                                 />
                               ))}
                             </tr>
@@ -3498,9 +3583,15 @@ export default function App() {
               theme={ui.theme}
               navCollapsed={ui.navCollapsed}
               playerVisible={ui.playerMode !== "hidden"}
+              keyNotation={ui.keyNotation}
+              compatibilityMode={ui.compatibilityMode}
               onCycleTheme={() => dispatch({ type: "setTheme", theme: nextTheme(ui.theme) })}
               onToggleNav={() => dispatch({ type: "toggleNav" })}
               onTogglePlayer={() => dispatch({ type: "togglePlayer" })}
+              onSetKeyNotation={(keyNotation) => dispatch({ type: "setKeyNotation", keyNotation })}
+              onSetCompatibilityMode={(compatibilityMode) =>
+                dispatch({ type: "setCompatibilityMode", compatibilityMode })
+              }
               onOpenImport={() => handleViewChange("import")}
               onOpenAnalysis={() => handleViewChange("analysis")}
               onOpenBackup={() => handleViewChange("backup")}

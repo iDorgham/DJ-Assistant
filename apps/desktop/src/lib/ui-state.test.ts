@@ -102,6 +102,8 @@ test("persist omits nothing and stores under the versioned key", () => {
       theme: "light",
       playerMode: "full",
       lastVisiblePlayerMode: "full",
+      keyNotation: "both",
+      compatibilityMode: "wide",
     },
     storage
   );
@@ -111,6 +113,8 @@ test("persist omits nothing and stores under the versioned key", () => {
     theme: "light",
     playerMode: "full",
     lastVisiblePlayerMode: "full",
+    keyNotation: "both",
+    compatibilityMode: "wide",
   });
 });
 
@@ -204,6 +208,45 @@ test("hidden legacy session restores full instead of extended", () => {
 test("unknown action leaves state untouched", () => {
   // @ts-expect-error deliberate unknown action
   assert.deepEqual(reduceUiState(DEFAULT_UI_STATE, { type: "explode" }), DEFAULT_UI_STATE);
+});
+
+test("key notation and compatibility default and validate", () => {
+  assert.equal(DEFAULT_UI_STATE.keyNotation, "camelot");
+  assert.equal(DEFAULT_UI_STATE.compatibilityMode, "strict");
+
+  const both = reduceUiState(DEFAULT_UI_STATE, { type: "setKeyNotation", keyNotation: "both" });
+  assert.equal(both.keyNotation, "both");
+  const wide = reduceUiState(both, {
+    type: "setCompatibilityMode",
+    compatibilityMode: "wide",
+  });
+  assert.equal(wide.compatibilityMode, "wide");
+
+  const badNotation = { type: "setKeyNotation", keyNotation: "solfege" };
+  // @ts-expect-error runtime must reject an unknown notation too
+  assert.equal(reduceUiState(DEFAULT_UI_STATE, badNotation).keyNotation, "camelot");
+  const badMode = { type: "setCompatibilityMode", compatibilityMode: "loose" };
+  // @ts-expect-error runtime must reject an unknown mode too
+  assert.equal(reduceUiState(DEFAULT_UI_STATE, badMode).compatibilityMode, "strict");
+});
+
+test("key preferences round-trip and reject stale persisted values", () => {
+  const storage = fakeStorage();
+  const state = reduceUiState(
+    reduceUiState(DEFAULT_UI_STATE, { type: "setKeyNotation", keyNotation: "classical" }),
+    { type: "setCompatibilityMode", compatibilityMode: "wide" }
+  );
+  persistUiState(state, storage);
+  const restored = initUiState(storage);
+  assert.equal(restored.keyNotation, "classical");
+  assert.equal(restored.compatibilityMode, "wide");
+
+  const stale = fakeStorage({
+    [UI_STATE_STORAGE_KEY]: JSON.stringify({ keyNotation: "solfege", compatibilityMode: "loose" }),
+  });
+  const fallback = initUiState(stale);
+  assert.equal(fallback.keyNotation, "camelot");
+  assert.equal(fallback.compatibilityMode, "strict");
 });
 
 test("resolvePlayerHeight keeps each presentation inside its range", () => {
