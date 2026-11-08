@@ -238,8 +238,8 @@ landed on head `d76573a5` (47 threads, none left open): the Compatible-only
 filter is now an intent kept separate from the applied key list (so a new
 reference or a Strict/Wide change re-derives the keys), the Key chip's × drops
 that intent with it, Apply no longer clears it when the reference is missing, a
-stranded intent stays un-checkable in the panel instead of needing a full reset,
-and the pill text uses the theme primary token so every relation tint clears
+stranded intent stays enabled and removable instead of needing a full reset, and
+the pill text uses the theme primary token so every relation tint clears
 4.5:1. Desktop `node --test` is at **219 tests**.
 
 **Split (decided 2026-10-22):** **3A = tags + comments** (T2.1.7, T2.1.13),
@@ -276,7 +276,7 @@ decisions (a `track_tags` table; the user comment **overwrites**
 - `key-format` + `harmonic` modules, both pure and unit-tested.
 - Preference: Camelot | 1m/1d | both, persisted in `UiState` (Settings → Key display).
 - `KeyPill` relation vs **playing** track (or selected if nothing playing): same, ±1, relative, wide ±2, incompatible; fill strength follows `docs/ui/01-DESIGN-SYSTEM.md` §4.
-- Compatible-only filter uses same rules (Strict vs Wide) and reuses the existing `keyCamelot` filter, so no Rust/SQL change. The *intent* is stored separately from the applied key list (`dropsCompatibleIntent` in `lib/library.ts`): the list is re-derived on every render, so clearing the Key chip drops the intent with it instead of re-deriving the same keys. A committed intent whose reference is lost stays **inert but removable** — `canToggleCompatibleOnly` keeps the panel checkbox un-checkable (the list is not applied, so there is no derived chip either) and `projectCompatibleDraftKeys` leaves manual key picks alone when unchecking without a reference.
+- Compatible-only filter uses same rules (Strict vs Wide) and reuses the existing `keyCamelot` filter, so no Rust/SQL change. The *intent* is stored separately from the applied key list (`dropsCompatibleIntent` in `lib/library.ts`): the list is re-derived on every render, so clearing the Key chip drops the intent with it instead of re-deriving the same keys. A committed intent whose reference is lost stays **inert but removable** — `canToggleCompatibleOnly` keeps the panel checkbox enabled so the intent can be switched off (the list is not applied, so there is no derived chip either) and `projectCompatibleDraftKeys` leaves manual key picks alone when unchecking without a reference.
 
 **DoD**
 - [ ] Playing 5A colors 5A / 4A / 6A / 5B correctly

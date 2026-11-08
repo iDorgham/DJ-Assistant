@@ -406,9 +406,9 @@ test("a committed Compatible-only intent stays removable without a reference", (
   // Turning the filter on needs a harmonic reference…
   assert.equal(canToggleCompatibleOnly([], false), false);
 
-  // …but an intent that is already on must always be uncheckable: losing the
-  // reference (playback ends, selection cleared) would otherwise leave the box
-  // checked and disabled, with Reset as the only way out.
+  // …but an intent that is already on must stay enabled and removable: losing
+  // the reference (playback ends, selection cleared) would otherwise leave the
+  // box checked and disabled, with Reset as the only way out.
   assert.equal(canToggleCompatibleOnly([], true), true);
   assert.equal(canToggleCompatibleOnly(["8A", "9A", "7A"], true), true);
   assert.equal(canToggleCompatibleOnly(["8A", "9A", "7A"], false), true);

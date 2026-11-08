@@ -15,9 +15,9 @@ fact, it belongs in [`facts.md`](./facts.md). Delete anything stale.
   (`aef4c88f`). Graphite's P2 on a **stranded Compatible-only intent** — the
   panel reopened checked *and* disabled once the reference was lost, and with no
   derived keys there was no chip to clear either, so Reset was the only escape;
-  the box now stays un-checkable whenever the intent is on, and unchecking it
-  without a reference leaves manual key picks alone (`d76573a5`, desktop
-  `node --test` 217 → 219). Two `js/wrapper/iife` threads then landed on the
+  the box now stays enabled and removable whenever the intent is on, and
+  unchecking it without a reference leaves manual key picks alone (`d76573a5`,
+  desktop `node --test` 217 → 219). Two `js/wrapper/iife` threads then landed on
   `export function`s that fix added — the documented false positive, answered
   with no code change.
 - **What the round changed:** `797e1823` turned Compatible-only into a committed
