@@ -8,11 +8,11 @@ Use this as the UI build order and acceptance gate.
 
 ## Phase A — Foundations
 
-- [x] Design tokens (color L0–L3, text, accent, space, radius, type)  
-- [x] ThemeProvider dark/light/system  
-- [x] DensityProvider compact/comfortable  
-- [x] Lucide icon setup  
-- [ ] IBM Plex Sans + IBM Plex Mono font loading  
+- [x] Design tokens (color L0–L3, text, accent, space, radius, type)
+- [x] ThemeProvider dark/light/system
+- [ ] DensityProvider compact/comfortable — **not implemented**: there is no density concept in the desktop today (no `density` prop, no density preference in `UiState`, no density provider component). The row height is fixed per column set (`rowHeightForColumns`). Leave this unchecked until a density mode ships.
+- [x] Lucide icon setup
+- [ ] IBM Plex Sans + IBM Plex Mono font loading
 - [x] Motion helpers + reduced-motion  
 
 ## Phase B — Shell
@@ -40,8 +40,8 @@ Use this as the UI build order and acceptance gate.
 - [ ] **ArtworkThumb** — hover play overlay; real embedded art per track  
 - [x] Label + Year columns — present in `library-columns.ts`, default Off (T2.1.7)  
 - [ ] **MixSuggestionsPanel** (right dock) + Options bar button  
-- [x] **TrackContextMenu** per view (Library ≠ Preparation ≠ Auto) (PR #60)  
-- [x] Library menu: Play, Analyze, Edit tags, Fix tags, Add to playlist, Find in playlists, Mix suggestions, Find smaller/similar online, Find new tracks online, Remove from library — Play, Edit tags, Rate, column toggles, Reveal, Copy path, Remove live with soft delete; other items disabled stubs (PR #60)  
+- [ ] **TrackContextMenu** per view — the Library `RowContextMenu` ships (PR #60), but the Preparation and Auto views do not exist in the desktop app yet, so there is nothing for their distinct menus to attach to. Stays unchecked until those views and their menus ship.
+- [x] Library menu: Play, Analyze, Edit tags, Fix tags, Add to playlist, Find in playlists, Mix suggestions, Find smaller/similar online, Find new tracks online, Remove from library — Play, Edit tags, Rate, column toggles, Reveal, Copy path, Remove live with soft delete; other items disabled stubs (PR #60)
 - [x] **Edit tags…** editor — title / artist / album / genre / label / year / tags / **comment** — `MetadataEditor`, single-row and bulk, dirty-field diff (T2.1.7/T2.1.13/T2.1.3)  
 - [x] Column toggles (Energy, Tags, Rating, Label, Year, Artwork) persist  
 - [x] BulkActionBar + Undo toast — the Undo toast ships with the rating/energy write path (Slice 2); the bar ships with T2.1.3 (PR #65). Select-all and the shared bulk actions remain open  
@@ -49,8 +49,9 @@ Use this as the UI build order and acceptance gate.
 
 ## Phase D — Player
 
-- [x] PlayerDock Mini / Full / Hidden + Player view (layout/presentations PR #54; real audio/peaks open T2.4)  
-- [ ] **WaveformDetailed** = zoomed viewport that **scrolls/moves** with playhead (not full-track strip)  
+- [x] PlayerDock Mini / Full / Hidden — the dock ships with all three modes via PR #54; `PlayerMode` is `"hidden" | "mini" | "full"` (`ui-state.ts:55`)
+- [ ] Full-window **Player view** — the spec's third presentation is not the Full dock: there is no separate player route or `PlayerMode` value for it, so it stays unchecked until a dedicated full-window Player view ships
+- [ ] **WaveformDetailed** = zoomed viewport that **scrolls/moves** with playhead (not full-track strip)
 - [ ] **WaveformOverview** = full-track map + zoom-window highlight (distinct from detailed)  
 - [ ] Per-track peak data (never shared waveform for all files)  
 - [ ] Real audio decode/playback per file (no shared metronome/sample)  

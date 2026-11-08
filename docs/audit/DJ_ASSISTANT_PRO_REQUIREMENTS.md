@@ -3,8 +3,12 @@
 
 **Audience:** Core Rust & Frontend Engineers, Audio DSP Engineers, Product Owners  
 **Target Product:** DJ Assistant (`D:\Work\AI\Projects\DJ Assistant`)  
-**Status:** Canonical Engineering Blueprint  
-**Location:** `docs/audits/` (mirrored in `factory` and `DJ Assistant`)
+**Status:** External input — unverified against this repository's code  
+**Location:** `docs/audit/` (repository-local copy; the original lives under `D:\Work\AI\Projects\factory`)
+
+---
+
+> **External input.** This document was supplied from outside this repository and has **not** been verified against the shipped code. The audit index (`docs/audit/README.md`) does not index it, and `06` §6, item 5 records it as open to error. The one exception is its §2.1 claim about compilation errors in `commands.rs`/`scanner.rs`: that was checked against the code on 2026-11-08 and is **stale** — see the RESOLVED note in §2.1. Every other claim here still needs verification before anyone acts on it.
 
 ---
 
@@ -16,10 +20,20 @@ DJ Assistant must transition from a functional prototype with simulated previewi
 
 ## 2. Immediate Codebase Fixes (Blockers)
 
-### 2.1 Compilation Errors in `commands.rs` and `scanner.rs`
-**Issue:** `TrackSummary` struct in `apps/desktop/src-tauri/src/models.rs` was updated in migration 007 with three new fields (`label: Option<String>`, `tags: Vec<String>`, `year: Option<i64>`). The constructor call sites in `commands.rs` (line 168) and `scanner.rs` (line 147) were not updated, breaking `cargo check` and `tauri dev`.
+### 2.1 Compilation Errors in `commands.rs` and `scanner.rs` — **RESOLVED**
 
-**Required Edit:**
+> This section described the state of the external input when it was written. It is
+> retained for history, but the blocker it names no longer exists: migration 007's
+> `label` / `tags` / `year` fields are present at every `TrackSummary` construction
+> site. `map_track_summary_at` (`commands.rs:243-270`) reads them — `row.get(base + 7)`
+> and `row.get(base + 8)` at `252-253` — and the custom tags are filled by the grouped
+> `load_tags` query (`commands.rs:178`), while `scanner.rs:147-175` populates them
+> (`label: None`, `year: meta.year.map(...)`, `tags: Vec::new()`). Do not apply the
+> snippet below — it predates the fix.
+
+**Issue (historical):** `TrackSummary` struct in `apps/desktop/src-tauri/src/models.rs` was updated in migration 007 with three new fields (`label: Option<String>`, `tags: Vec<String>`, `year: Option<i64>`). The constructor call sites in `commands.rs` and `scanner.rs` were not updated, breaking `cargo check` and `tauri dev`.
+
+**Required Edit (historical — already applied):**
 In `apps/desktop/src-tauri/src/commands.rs` and `scanner.rs`:
 ```rust
 // In get_track and scanner summary mapping:
@@ -42,12 +56,16 @@ TrackSummary {
     user_rating: row.get(15)?,
     energy: row.get(16)?,
     comments: row.get(17)?,
-    tags: tags_for_track,     // <-- Add custom tags list
+    tags: Vec::new(),          // <-- Filled from the grouped load_tags() map, not inline
     artwork_hash: row.get(18)?,
     created_at: row.get(19)?,
     updated_at: row.get(20)?,
 }
 ```
+
+The real tag read is `load_tags(conn, track_ids: &[String]) -> HashMap<String, Vec<String>>`
+(`commands.rs:178`): a join would duplicate a track per tag, so the tags come from a
+second grouped query and are merged into each summary by id.
 
 ---
 

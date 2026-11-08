@@ -3,8 +3,12 @@
 
 **Audience:** Factory Core Architects, AI Workflow Engineers, Audio Systems Developers  
 **Target Product:** Factory (`D:\Work\AI\Projects\factory`)  
-**Status:** Canonical Engineering Specification  
-**Location:** `docs/audits/` (mirrored in `factory` and `DJ Assistant`)
+**Status:** External input — unverified against this repository's code  
+**Location:** `docs/audit/` (repository-local copy; the original lives under `D:\Work\AI\Projects\factory`)
+
+---
+
+> **External input.** This document was supplied from outside this repository and has **not** been verified against the shipped code. Treat every claim as a proposal, not as repository guidance. The audit index (`docs/audit/README.md`) does not index it, and `06` §6, item 5 records it as open to error.
 
 ---
 

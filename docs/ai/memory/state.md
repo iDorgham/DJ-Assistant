@@ -4,6 +4,54 @@ Ephemeral. Newest first. **Rotate aggressively** — if a line would still be tr
 in two weeks, it belongs in [`decisions.md`](./decisions.md); if it is just a
 fact, it belongs in [`facts.md`](./facts.md). Delete anything stale.
 
+## 2026-11-08 · Docs-honesty sweep finished on `chore/review-followup-sweep`
+
+- **The uncommitted sweep is now a branch off `origin/main`.** PR #65 is merged
+  (`9551aa41`) and local `main` was stale at PR #64, so the work moved to
+  `chore/review-followup-sweep` rather than onto the merged feature branch.
+  `sync.mjs` conflicted with cubic's inline `path.basename` check (`054a49a0`,
+  already in `main`): resolved in favour of the shared **`assertSkillName`**
+  helper, which also rejects empty/non-string names and absolute paths, plus
+  five tests including one that proves the mirror is never created on a
+  traversal name.
+- **Every citation the sweep introduced was re-verified against the working
+  tree, and several were wrong.** Fixed: `capmap_phase0.md` invented an
+  `onReorder` prop and still said "Shipped: only Edit tags" and cited an
+  `actionTakenRef` that no longer exists (focus restore is unconditional via
+  `restoreFocusRef`, `RowContextMenu.tsx:202-208`); the `commands.rs` remove /
+  undo / restore / reveal citations pointed at the `#[tauri::command]` line, not
+  the `fn` (now `964` / `1041` / `1137` / `1224`); the `TrackSummary` mapping is
+  `map_track_summary_at` at `243-270`, not `217-244` — the `load_cues` extraction
+  shifted the file by 26 lines; `library_writes.rs` rules are `16-25` and the
+  undo guard `485-600`.
+- **False claims removed, not just reworded:** `reset_qa_baseline.sql` advertised
+  a "fail-closed" `QA_COPY_PATH` guard that does not exist (plain SQL cannot read
+  its own target path) — replaced with the explicit `sqlite3 <copy> < script`
+  instruction; `check_schema.py` claimed it "never opens the production
+  database" when it opens whatever path it is given. The UI checklist's
+  PlayerDock box was `[x]` while its own text said "keep this unchecked" — split
+  into a ticked dock entry and an unticked **full-window Player view** entry
+  (`PlayerMode` really is `"hidden" | "mini" | "full"`, `ui-state.ts:55`).
+  `06`'s follow-up 3 still said T2.2 was "blocked on clustering only", which its
+  own corrected C-5 contradicts.
+- **Checks:** `pnpm lint` (0 errors, the 2 pre-existing Player `exhaustive-deps`
+  warnings), `pnpm typecheck`, `cargo fmt --all --check`,
+  `cargo clippy -p dj-assistant-desktop --all-targets -- -D warnings`,
+  `pnpm agent:doctor` (0 hard problems) all pass. Tests now total **306**
+  (224 desktop, 70 agent [69 pass + 1 skipped], 10 tooling, 2 API) — supersedes
+  the 295/219 counts in the entry below. `check_schema.py` compiles and the
+  reset SQL was exercised against an in-memory table: 0 non-null ratings/energy
+  afterwards, all 3 rows kept.
+- **New finding, left for the human:** `apps/desktop/src/components/RowContextMenu.test.tsx`
+  is seven `assert.equal(true, true)` placeholders, and the desktop test script
+  globs `src/**/*.test.ts` — so the file **never runs** and is not part of the
+  224. It is false confidence, not coverage; deleting or implementing it is a
+  decision for the human, so this session only records it.
+- **Still open:** the native running-window QA gates below are unchanged — no
+  task box was ticked. `facts.md` no longer cites `D-015`, and `D-015` is
+  committed in `main`, so the entry below's "uncommitted decisions.md" caveat is
+  resolved.
+
 ## 2026-11-08 · PR #70 review round closed (T2.1.8 key pills)
 
 - **48 review threads on PR #70, all answered and resolved**; the branch head is

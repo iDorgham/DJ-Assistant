@@ -28,17 +28,21 @@ The report's **direction is right**: prep speed and DJ trust before AI-theatre. 
 
 ### C-1 · Instant results are blocked by the renderer, not the queue — the highest-leverage line in the document
 
-The pipeline already emits per track: `analysis.rs:155-166` fires `analysis:progress` after **every** track. `api.ts:487` receives it. `App.tsx:1774-1781` stores it. And `refreshLibrary()` runs **only** on `analysis:completed` (`App.tsx:1789`).
+The pipeline already emits per track: `analysis.rs:155-166` fires `analysis:progress` after
+**every** track. `api.ts:487` receives it. `App.tsx:1826-1834` stores it. And
+`refreshLibrary()` runs **only** on `analysis:completed` (`App.tsx:1835-1842`).
 
-So for the entire run the DJ sees a progress bar and one filename (`App.tsx:2764-2783`) over a table that never changes — while the rows it wants are already written in SQLite. The complaint is real; its cause is self-inflicted in the renderer.
+So for the entire run the DJ sees a progress bar and one filename (`App.tsx:2825-2843`) over a
+table that never changes — while the rows it wants are already written in SQLite. The complaint is
+real; its cause is self-inflicted in the renderer.
 
 The precise delta, because it is smaller than the report implies: `AnalysisProgressEvent` (`models.rs:193-201`) carries `job_id, processed, total, track_id, file_path, analysis_status, error` — **no result columns**. Live patching therefore needs either the payload widened with `bpm`/`key_camelot`/`loudness_lufs`, or a per-event single-track refetch. Both are frontend-plus-IPC-shape work, no queue architecture.
 
 ### C-2 · The throughput bottleneck is concurrency, which the report never mentions
 
-`run_analysis_queue` (`analysis.rs:101`) is one `thread::spawn` draining a `Vec` sequentially, and the full pass decodes the whole file up front (`pipeline.rs:94`) before five DSP passes. Decode dominates and is embarrassingly parallel. If "4–8 minutes for 40–80 tracks" is real, N workers are what changes it — ordering only decides *which* track you see first.
+`run_analysis_queue` (`analysis.rs:95-101`) is one `thread::spawn` draining a `Vec` sequentially, and the full pass decodes the whole file up front (`pipeline.rs:94`) before five DSP passes. Decode dominates and is embarrassingly parallel. If "4–8 minutes for 40–80 tracks" is real, N workers are what changes it — ordering only decides *which* track you see first.
 
-Adjacent defect worth fixing in the same change: `analysis_candidates` (`library_reads.rs:140-158`) builds the work list with **no `ORDER BY` at all**, so the queue runs in whatever order SQLite returns. `library_writes.rs:244` pins `ORDER BY id` precisely because an unordered snapshot makes undo order-dependent. The read path should hold to the same rule.
+Adjacent defect worth fixing in the same change: `analysis_candidates` (`library_reads.rs:140-158`) builds the work list with **no `ORDER BY` at all**, so the queue runs in whatever order SQLite returns. `library_writes.rs:287` pins `ORDER BY id` precisely because an unordered snapshot makes undo order-dependent. The read path should hold to the same rule.
 
 ### C-3 · There is no ML analysis pipeline to scale
 
@@ -46,15 +50,30 @@ The only model asset is the 61-byte `y = Relu(x)` smoke graph (`registry.rs:31-4
 
 ### C-4 · The Wizard ends at a step that is not built
 
-`App.tsx:3619` states it verbatim: *"rekordbox sync arrives in Stage 9; playlist-only USB export in Stage 11."* Publish, Sync and Studio are placeholder panels. `state.md` records `dj-rekordbox` as **staged, not started**, blocked on the DJ's own `rekordbox.xml` because Pioneer's `master.db` is encrypted — the XML export is the only readable interchange, and it is the whole promise.
+`App.tsx:3675` states it verbatim: *"rekordbox sync arrives in Stage 9; playlist-only USB export in Stage 11."* Publish, Sync and Studio are placeholder panels. `state.md` records `dj-rekordbox` as **staged, not started**, blocked on the DJ's own `rekordbox.xml` because Pioneer's `master.db` is encrypted — the XML export is the only readable interchange, and it is the whole promise.
 
 A linear Wizard over an unfinished last mile demos well and delivers nothing. `docs/plan/06-delivery/implementation-slices.md` puts USB export at Stage 11 of 12.
 
-### C-5 · Tag Surgeon is ~60% built; clustering is the only new part
+### C-5 · Tag Surgeon is at 0%; the reusable preview→apply→undo plumbing is ~60% built
 
-Shipped: bulk edit with a live diff preview (`metadata-bulk.ts:197-208`, T2.1.3); a reversible write where the updates and the `skill_runs` before/after snapshot share **one transaction**, with an undo that refuses to overwrite a newer edit (`library_writes.rs:11-24`, `423-471`); tag sets as the first non-scalar snapshot (D-013); `track_tags` built explicitly as the Surgeon's base (`migrations/007_track_tags_table.sql:5`). Present and **deliberately disabled**: "Fix tags" (`library-menu.ts:92`, `bulk-actions.ts:60`) — "Tag cleaning arrives with the Tag Surgeon (T2.2)".
+Shipped: bulk edit with a live diff preview (`metadata-bulk.ts:197-208`, T2.1.3); a reversible write where
+the updates and the `skill_runs` before/after snapshot share **one transaction**, with an undo that refuses
+to overwrite a newer edit (`library_writes.rs:16-25` for the rules, `library_writes.rs:342-425` for the write
+planner and `library_writes.rs:485-600` for the undo guard); tag sets as the first non-scalar snapshot
+(D-013); `track_tags` built explicitly as the Surgeon's base (`migrations/007_track_tags_table.sql:1-10`).
+Present and **deliberately disabled**: "Fix tags" (`library-menu.ts:92`, `bulk-actions.ts:60`) — "Tag
+cleaning arrives with the Tag Surgeon (T2.2)".
 
-Missing: all of it new — no Levenshtein, no phonetic/metaphone, no clustering anywhere in the product (the `fuzzy` hits in `enrichment.rs`, `streaming.rs`, `charts.rs` are remote-provider metadata matching, not local cleaning).
+The plumbing above is **T2.1.x, not T2.2**. The Tag Surgeon's own task ledger
+(`docs/sdd/04-TASKS.md:127-132`) still lists **all six** of its capabilities as open — T2.2.1 fuzzy
+clustering, T2.2.2 canonical-name suggestion, T2.2.3 preview diff UI, T2.2.4 bulk apply with confirmation,
+T2.2.5 alias table + auto-map, T2.2.6 undo/history for bulk tag operations. So the Surgeon itself is at
+**0%**, and the 60% figure belongs to the shared reversible infrastructure it will reuse, not to the
+Surgeon. Sequencing the roadmap off "60% built" understates the remaining work by a full feature set.
+
+Missing: all of it new — no Levenshtein, no phonetic/metaphone, no clustering anywhere in the product (the
+`fuzzy` hits in `enrichment.rs`, `streaming.rs`, `charts.rs` are remote-provider metadata matching, not local
+cleaning).
 
 ### C-6 · Transition Confidence has no set to attach to, but its explanation primitive already exists
 
@@ -81,7 +100,7 @@ Real primary tabs (`App.tsx:180-187`): Library, Playlists, Discover, Statistics,
 
 ## 4. The omission that gates everything
 
-The report plans four months of new surface and never mentions **acceptance debt**. Per `docs/ai/memory/state.md`: Stage 1 shell, Slice 2, Slice 3A and T2.1.8 are all code-complete and **not one task box is ticked**, because the DoD gate is manual QA in the native Tauri window and no agent can click it (F-012). There is no React component test harness — logic lives in pure `lib/*.ts` under `node --test` (219 tests). On this machine `cargo test -p dj-assistant-desktop` cannot even start (`STATUS_ENTRYPOINT_NOT_FOUND`; `pnpm rust:test:portable` is the workaround).
+The report plans four months of new surface and never mentions **acceptance debt**. Per `docs/ai/memory/state.md`: Stage 1 shell, Slice 2, Slice 3A and T2.1.8 are all code-complete and **not one task box is ticked**, because the DoD gate is manual QA in the native Tauri window and no agent can click it (F-012). There is no React component test harness — logic lives in pure `lib/*.ts` under `node --test` (224 tests as of 2026-11-08). On this machine `cargo test -p dj-assistant-desktop` cannot even start (`STATUS_ENTRYPOINT_NOT_FOUND`; `pnpm rust:test:portable` is the workaround).
 
 Every Month-1 item in the report adds unaccepted surface to a pile that currently cannot be signed off. Scale mismatch compounds it: the plan is written for 50k–300k libraries; the working library is 94 tracks.
 
@@ -113,10 +132,10 @@ Every Month-1 item in the report adds unaccepted surface to a pile that currentl
 ## 6. Follow-ups this document creates
 
 1. Decide #1's shape: widen `AnalysisProgressEvent` vs. per-event single-track refetch. Widening touches the contract; check `API_CONTRACTS.md` and `packages/shared` for drift before choosing.
-2. Record C-2's missing `ORDER BY` as a defect, not a feature — it is the same class of non-determinism `library_writes.rs:244` already guards against.
-3. Note in `docs/sdd/04-TASKS.md` that T2.2 (Tag Surgeon) is blocked on clustering only, since the reversible path is delivered.
+2. Record C-2's missing `ORDER BY` as a defect, not a feature — it is the same class of non-determinism `library_writes.rs:287` already guards against.
+3. Note in `docs/sdd/04-TASKS.md` that the shared preview→apply→undo plumbing T2.2 will reuse is delivered, but **all six** T2.2.1–T2.2.6 capabilities are still new work (C-5) — the Surgeon is not "blocked on clustering only".
 4. `README.md` and `index.html` still promise exports "for rekordbox, Serato, or CDJ" in present tense. Either soften them or file the gap against Stage 9/11.
-5. The three Nov-8 documents in this directory (`PROFESSIONAL_DJ_SYSTEM_AUDIT.md`, `DJ_ASSISTANT_PRO_REQUIREMENTS.md`, `FACTORY_AI_FOR_DJ_ECOSYSTEM.md`) are external inputs, unindexed and unverified against code. `DJ_ASSISTANT_PRO_REQUIREMENTS.md` claims compilation errors in `commands.rs`/`scanner.rs` — verify before anyone acts on it.
+5. The three Nov-8 documents in this directory (`PROFESSIONAL_DJ_SYSTEM_AUDIT.md`, `DJ_ASSISTANT_PRO_REQUIREMENTS.md`, `FACTORY_AI_FOR_DJ_ECOSYSTEM.md`) are external inputs and are now banner-marked as unverified against code. The one claim that was checkable — `DJ_ASSISTANT_PRO_REQUIREMENTS.md` §2.1's compilation errors in `commands.rs`/`scanner.rs` — was verified on 2026-11-08 and is **stale**: the migration-007 fields are present at every construction site, and both documents now mark the item RESOLVED. The rest of their claims remain unverified.
 
 ## Docs to edit
 

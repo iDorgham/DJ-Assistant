@@ -3,8 +3,12 @@
 
 **Date:** November 2026  
 **Audience:** Lead Architect, Product Owner, Core Engineering, Professional DJ End-Users  
-**Status:** Canonical Audit & Technical Specification  
-**Location:** `docs/audits/` (mirrored in `factory` and `DJ Assistant`)
+**Status:** External input — unverified against this repository's code  
+**Location:** `docs/audit/` (repository-local copy; the original lives under `D:\Work\AI\Projects\factory`)
+
+---
+
+> **External input.** This document was supplied from outside this repository and has **not** been verified against the shipped code. The audit index (`docs/audit/README.md`) does not index it, and `06` §6, item 5 records it as open to error. Its action-plan references point at repository-local files in this directory, not at a `docs/audits/` path. The one checked exception is §3.3 item 6: the compilation-breakage claim was verified against the code on 2026-11-08 and is marked **Resolved** there.
 
 ---
 
@@ -77,8 +81,7 @@ To evaluate whether a tool meets professional DJ standards, we must measure agai
    - The analysis engine assumes a single, fixed BPM across the entire file. It lacks elastic/warp markers for tracks with live instrumentation or drifting tempos.
 5. **No Split-Cue / Multi-Channel Audio Routing**:
    - Web Audio output is hardcoded to the system default stereo output. Professional DJs require multi-channel interface selection (Channel 1/2 for Master, Channel 3/4 for Headphones).
-6. **Compilation Breakages**:
-   - Current Rust desktop code has compilation errors in `commands.rs` and `scanner.rs` due to missing `label`, `tags`, and `year` fields in `TrackSummary`.
+6. ~~**Compilation Breakages**~~ — **Resolved.** Migration 007's `label` / `tags` / `year` fields are present at every `TrackSummary` construction site: `map_track_summary_at` (`commands.rs:243-270`) reads them (`row.get(base + 7)` / `row.get(base + 8)` at `252-253`, with the custom tags filled by the grouped `load_tags` query at `178`), and `scanner.rs:147-175` populates them (`label: None`, `year: meta.year.map(...)`, `tags: Vec::new()`). This item was carried over from an earlier state of the external input and is retained here only so the audit does not ask engineers to fix code that is already present.
 
 ---
 

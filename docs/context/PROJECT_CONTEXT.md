@@ -510,7 +510,9 @@ Wired in `apps/desktop/src-tauri/src/lib.rs`:
 | `undo_track_metadata` | Restore metadata from a `skill_runs` snapshot with drift guard |
 | `set_track_rating` | Convenience single/batch rating update with undo snapshot |
 | `remove_tracks` | Soft delete tracks by stamping `removed_at` in a transaction with undo snapshot |
-| `restore_tracks` | Restore soft-deleted tracks via undo |
+| `restore_tracks` | Restore soft-deleted tracks from the Removed view; a write of its own that snapshots the before-state, so Undo of the restore puts the *original* stamp back instead of inventing a new removal time |
+| `undo_remove_tracks` | The undo endpoint for `remove_tracks` (and for `restore_tracks`, since the snapshot records which direction it was written in) |
+| `list_removed_tracks` | The only read in the app that asks for the rows every other library read filters out; its length is the toolbar count |
 | `provider_match_set` / `provider_export_playlist` | Generic multi-provider match/export contract (TM.1; Spotify re-implementation waits on TP) |
 | `chart_import_snapshot` / `chart_list` | Versioned chart ingest (idempotent) + taste-filtered listing (TD.3, migration 005) |
 

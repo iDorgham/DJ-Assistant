@@ -219,8 +219,8 @@ product documentation.
 place. Qoder reads its own directory instead, so the DJ-domain and stack skills
 were invisible in Qoder sessions. `pnpm skills:sync --write` (→
 `scripts/skills/sync.mjs`) copies the `hot` list from `skills.policy.json` into
-`.qoder/skills`. The mirror holds the hot set and **not** all 116 installed
-skills, because every skill a tool advertises costs the model tokens on every
+`.qoder/skills`. The mirror holds the hot set and **not** the whole installed
+library, because every skill a tool advertises costs the model tokens on every
 step (D-012) — a full mirror would double that spend for skills this project
 already marked unused. Like the agent and command mirrors it is gitignored, is
 never hand-edited, and nothing in the sync deletes: an entry outside the
