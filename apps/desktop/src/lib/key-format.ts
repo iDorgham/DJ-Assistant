@@ -31,6 +31,23 @@ export function classicalFromCamelot(key: string | null | undefined): string | n
   return `${parsed.number}${parsed.letter === "A" ? "m" : "d"}`;
 }
 
+/** Trim to a value or `null`, so a preference never keeps stray whitespace. */
+function nonEmpty(value: string | null | undefined): string | null {
+  const trimmed = value?.trim();
+  return trimmed ? trimmed : null;
+}
+
+/** Both notations, collapsing the duplicate when they resolve to the same key. */
+function bothNotation(
+  camelot: string | null,
+  classical: string | null,
+  openKey: string | null
+): string {
+  if (!camelot) return classical ?? "—";
+  const secondary = classical && classical !== openKey ? classical : openKey;
+  return secondary ? `${camelot} · ${secondary}` : camelot;
+}
+
 /**
  * Render one track's key in the preferred notation.
  *
@@ -42,18 +59,17 @@ export function formatKeyForNotation(
   keyClassical: string | null | undefined,
   notation: KeyNotation = "camelot"
 ): string {
-  const camelot = keyCamelot?.trim() || null;
-  const classical = keyClassical?.trim() || null;
+  const camelot = nonEmpty(keyCamelot);
+  const classical = nonEmpty(keyClassical);
   const openKey = classicalFromCamelot(camelot);
 
   switch (notation) {
-    case "camelot":
-      return camelot ?? classical ?? "—";
     case "classical":
       return openKey ?? classical ?? "—";
     case "both":
-      if (camelot && classical && classical !== openKey) return `${camelot} · ${classical}`;
-      if (camelot && openKey) return `${camelot} · ${openKey}`;
+      return bothNotation(camelot, classical, openKey);
+    case "camelot":
+    default:
       return camelot ?? classical ?? "—";
   }
 }

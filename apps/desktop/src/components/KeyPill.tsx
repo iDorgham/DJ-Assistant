@@ -1,4 +1,4 @@
-import { camelotColor } from "../lib/camelot";
+import { camelotColor, type CamelotColor } from "../lib/camelot";
 import { RELATION_LABELS, type HarmonicMatch } from "../lib/harmonic";
 import { formatKeyForNotation, type KeyNotation } from "../lib/key-format";
 
@@ -43,6 +43,27 @@ const RELATION_TONE: Record<HarmonicMatch, RelationTone> = {
 const PILL_BASE =
   "inline-flex min-w-[2.75rem] max-w-full items-center justify-center overflow-hidden text-ellipsis whitespace-nowrap rounded-none border px-1.5 py-0.5 font-mono text-[11px]";
 
+interface PillStyle {
+  backgroundColor: string;
+  borderColor: string;
+}
+
+/**
+ * The hue stays in the fill and border, while the text uses the theme's
+ * primary text token. That keeps every relation readable at 4.5:1 or better in
+ * both themes; tinting the text with the same pastel hue does not.
+ */
+function pillStyle(palette: CamelotColor | null, tone: RelationTone | null): PillStyle | undefined {
+  if (!palette || tone?.muted) return undefined;
+  if (!tone) {
+    return { backgroundColor: palette.background, borderColor: palette.border };
+  }
+  return {
+    backgroundColor: `${palette.hex}${tone.background}`,
+    borderColor: `${palette.hex}${tone.border}`,
+  };
+}
+
 export function KeyPill({
   keyCamelot,
   keyClassical,
@@ -57,33 +78,18 @@ export function KeyPill({
 
   const palette = camelotColor(keyCamelot, theme);
   const tone = relation ? RELATION_TONE[relation] : null;
-  const muted = tone?.muted ?? false;
-
-  const style =
-    palette && !muted
-      ? tone
-        ? {
-            color: palette.hex,
-            backgroundColor: `${palette.hex}${tone.background}`,
-            borderColor: `${palette.hex}${tone.border}`,
-          }
-        : {
-            color: palette.hex,
-            backgroundColor: palette.background,
-            borderColor: palette.border,
-          }
-      : undefined;
-
-  const neutral = !palette || muted;
+  const neutral = !palette || (tone?.muted ?? false);
   const fullText = formatKeyForNotation(keyCamelot, keyClassical, "both");
   const title = relation ? `${fullText} — ${RELATION_LABELS[relation]}` : fullText;
 
   return (
     <span
       className={`${PILL_BASE} ${
-        neutral ? "border-dj-border bg-transparent text-dj-text-muted" : "border-transparent"
+        neutral
+          ? "border-dj-border bg-transparent text-dj-text-muted"
+          : "border-transparent text-dj-text"
       }`}
-      style={style}
+      style={pillStyle(palette, tone)}
       title={title}
     >
       {text}

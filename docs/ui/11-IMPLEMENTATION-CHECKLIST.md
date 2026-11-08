@@ -32,8 +32,8 @@ Use this as the UI build order and acceptance gate.
 - [ ] ColumnPicker show/hide/reorder/**resize** (widths persist)  
 - [ ] **LibrarySourceTabs** — All Library · Categories · Playlists · Browser · Flash/Storage  
 - [ ] SearchField  
-- [x] FilterBar + chips + Compatible only - Compatible only reuses the `keyCamelot` filter (T2.1.8; running-window QA pending)  
-- [x] KeyPill - Camelot 1A-12B + classical 1m/1d (preference) - relation-tinted pill; notation persisted in Settings (T2.1.8; running-window QA pending)  
+- [ ] FilterBar + chips + Compatible only - Compatible only reuses the `keyCamelot` filter (T2.1.8; running-window QA pending)  
+- [ ] KeyPill - Camelot 1A-12B + classical 1m/1d (preference) - relation-tinted pill; notation persisted in Settings (T2.1.8; running-window QA pending)  
 - [x] **EnergyBars** (1–10 charging-bar meter) — click a segment to set, click it again to clear (T2.1.6)  
 - [x] **TagChips** (compact chips + overflow) — click a chip to filter (T2.1.7; running-window QA pending)  
 - [x] **StarRating** — editable 5 stars — click to set, click the same star again to clear, keys `1`–`5` / `0` (T2.1.4)  

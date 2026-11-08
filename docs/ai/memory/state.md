@@ -18,12 +18,11 @@ fact, it belongs in [`facts.md`](./facts.md). Delete anything stale.
   `PHASE2_LIBRARY_PLAYER_IMPLEMENTATION_PLAN.md` (Slice 2 known gap + Slice 9
   row) and `docs/ui/11-IMPLEMENTATION-CHECKLIST.md` (BulkActionBar, editor,
   Label/Year, TagChips).
-- **T2.1.8 key pills (Slice 3B) implemented 2026-10-29** on
-  `feat/T2.1.8-key-pills`, stacked on this branch: pure `harmonic.ts` +
+- **T2.1.8 key pills (Slice 3B) implemented 2026-10-29:** pure `harmonic.ts` +
   `key-format.ts` modules with tests, the relation-tinted `KeyPill`, Settings →
   Key display (Camelot / 1m1d / both, Strict/Wide) persisted in `UiState`, and a
   Compatible-only filter that reuses `keyCamelot` (no Rust/SQL change). Desktop
-  `node --test` is now **214 tests**; typecheck, build, ESLint and Prettier pass.
+  `node --test` is now **216 tests**; typecheck, build, ESLint and Prettier pass.
 - **Still open:** select-all and keyboard scope (`Ctrl/Cmd+A`), the blocked
   shared bulk actions, the native multi-select QA pass, and the T2.1.8
   running-window QA (5A colours, live preference switch, compatible filter

@@ -130,6 +130,49 @@ function ChoiceRow<T extends string>({
   );
 }
 
+function KeyDisplaySection({
+  keyNotation,
+  compatibilityMode,
+  onSetKeyNotation,
+  onSetCompatibilityMode,
+}: {
+  keyNotation: KeyNotation;
+  compatibilityMode: CompatibilityMode;
+  onSetKeyNotation: (notation: KeyNotation) => void;
+  onSetCompatibilityMode: (mode: CompatibilityMode) => void;
+}) {
+  return (
+    <section aria-labelledby="settings-key">
+      <h2
+        id="settings-key"
+        className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-dj-text-muted"
+      >
+        Key display
+      </h2>
+      <div className="divide-y divide-dj-border border border-dj-border bg-dj-panel">
+        <ChoiceRow
+          icon={Music}
+          title="Notation"
+          description={`The key column shows ${KEY_NOTATION_EXAMPLES[keyNotation]}. Camelot drives the harmonic colours; 1m / 1d is the compact Open Key style.`}
+          choices={KEY_NOTATIONS}
+          labels={KEY_NOTATION_LABELS}
+          value={keyNotation}
+          onSelect={onSetKeyNotation}
+        />
+        <ChoiceRow
+          icon={Filter}
+          title="Compatible only"
+          description={`${COMPATIBILITY_MODE_LABELS[compatibilityMode]} follows the same key, the relative major/minor and ±1${compatibilityMode === "wide" ? ", plus ±2" : ""}. The reference is the playing track, or the selected track when nothing is playing.`}
+          choices={COMPATIBILITY_MODES}
+          labels={COMPATIBILITY_MODE_LABELS}
+          value={compatibilityMode}
+          onSelect={onSetCompatibilityMode}
+        />
+      </div>
+    </section>
+  );
+}
+
 export function SettingsView({
   theme,
   navCollapsed,
@@ -232,34 +275,12 @@ export function SettingsView({
           </div>
         </section>
 
-        <section aria-labelledby="settings-key">
-          <h2
-            id="settings-key"
-            className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-dj-text-muted"
-          >
-            Key display
-          </h2>
-          <div className="divide-y divide-dj-border border border-dj-border bg-dj-panel">
-            <ChoiceRow
-              icon={Music}
-              title="Notation"
-              description={`The key column shows ${KEY_NOTATION_EXAMPLES[keyNotation]}. Camelot drives the harmonic colours; 1m / 1d is the compact Open Key style.`}
-              choices={KEY_NOTATIONS}
-              labels={KEY_NOTATION_LABELS}
-              value={keyNotation}
-              onSelect={onSetKeyNotation}
-            />
-            <ChoiceRow
-              icon={Filter}
-              title="Compatible only"
-              description={`${COMPATIBILITY_MODE_LABELS[compatibilityMode]} follows the same key, the relative major/minor and ±1${compatibilityMode === "wide" ? ", plus ±2" : ""}. The reference is the playing track, or the selected track when nothing is playing.`}
-              choices={COMPATIBILITY_MODES}
-              labels={COMPATIBILITY_MODE_LABELS}
-              value={compatibilityMode}
-              onSelect={onSetCompatibilityMode}
-            />
-          </div>
-        </section>
+        <KeyDisplaySection
+          keyNotation={keyNotation}
+          compatibilityMode={compatibilityMode}
+          onSetKeyNotation={onSetKeyNotation}
+          onSetCompatibilityMode={onSetCompatibilityMode}
+        />
 
         <section aria-labelledby="settings-apps">
           <h2

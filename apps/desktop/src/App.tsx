@@ -586,7 +586,9 @@ function LibraryFilterPanel({
   error,
   referenceKey,
   compatibilityMode,
+  compatibleOnly,
   onChange,
+  onCompatibleOnlyChange,
   onApply,
   onReset,
   onClose,
@@ -597,17 +599,16 @@ function LibraryFilterPanel({
   /** Camelot code of the playing or selected track; enables Compatible only. */
   referenceKey: string | null;
   compatibilityMode: CompatibilityMode;
+  /** The committed compatibility intent, kept separate from the key chips. */
+  compatibleOnly: boolean;
   onChange: (next: ListTracksFilters) => void;
+  onCompatibleOnlyChange: (checked: boolean) => void;
   onApply: () => void;
   onReset: () => void;
   onClose: () => void;
 }) {
   const numberOrUndefined = (raw: string) => (raw.trim() === "" ? undefined : Number(raw));
   const compatibleKeys = compatibleCamelotKeys(referenceKey, compatibilityMode);
-  const compatibleOnly =
-    compatibleKeys.length > 0 &&
-    compatibleKeys.length === (draft.keyCamelot?.length ?? 0) &&
-    compatibleKeys.every((key) => hasFilterValue(draft.keyCamelot, key));
 
   return (
     <div
@@ -663,8 +664,9 @@ function LibraryFilterPanel({
 
         {/* Compatible only (T2.1.8). It translates the reference key into the
             existing keyCamelot filter, so the SQL path and the server stay
-            unchanged. A manual key click below makes the box fall out of sync
-            and the derived state unticks it. */}
+            unchanged. The intent is committed separately from the chips, so a
+            new playing/selected track or a Strict/Wide change re-derives the
+            applied keys instead of leaving the old snapshot in place. */}
         <div>
           <label
             className={`flex items-start gap-2 rounded-sm border border-dj-border bg-dj-elevated px-2 py-1.5 ${
@@ -675,12 +677,7 @@ function LibraryFilterPanel({
               type="checkbox"
               checked={compatibleOnly}
               disabled={compatibleKeys.length === 0}
-              onChange={(event) =>
-                onChange({
-                  ...draft,
-                  keyCamelot: event.target.checked ? compatibleKeys : undefined,
-                })
-              }
+              onChange={(event) => onCompatibleOnlyChange(event.target.checked)}
               className="mt-0.5 accent-dj-accent"
             />
             <span className="min-w-0">
@@ -1104,6 +1101,10 @@ export default function App() {
   // stays correct past the 200-row page instead of filtering a partial window.
   const [filters, setFilters] = useState<ListTracksFilters>({});
   const [draftFilters, setDraftFilters] = useState<ListTracksFilters>({});
+  // Compatibility is an intent, not a snapshot: the applied key list is
+  // re-derived whenever the reference track or Strict/Wide mode changes.
+  const [compatibleOnly, setCompatibleOnly] = useState(false);
+  const [draftCompatibleOnly, setDraftCompatibleOnly] = useState(false);
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [filterError, setFilterError] = useState<string | null>(null);
   const [genres, setGenres] = useState<GenreCount[]>([]);
@@ -1159,6 +1160,10 @@ export default function App() {
   const selectedTrack =
     selection.length > 0 ? (tracks.find((entry) => entry.id === selection[0]) ?? null) : null;
   const keyReference = playingTrack?.keyCamelot ?? selectedTrack?.keyCamelot ?? null;
+  const compatibleKeys = useMemo(
+    () => compatibleCamelotKeys(keyReference, ui.compatibilityMode),
+    [keyReference, ui.compatibilityMode]
+  );
   // The pending *panel open* of a plain row click. The selection applies
   // immediately; only the open waits out the double-click window, so a quick
   // edit after selecting a row cannot still target the previous selection.
@@ -1236,7 +1241,14 @@ export default function App() {
 
   // Filters and sort are part of the query key; `reloadToken` is not, so a
   // rating edit refreshes the loaded rows without looking like a new query.
-  const normalizedFilters = useMemo(() => normalizeFilters(filters), [filters]);
+  const effectiveFilters = useMemo(() => {
+    if (!compatibleOnly) return filters;
+    // A missing reference (nothing playing or selected) disables the derived
+    // key filter instead of freezing the last compatible snapshot.
+    if (compatibleKeys.length === 0) return { ...filters, keyCamelot: undefined };
+    return { ...filters, keyCamelot: compatibleKeys };
+  }, [filters, compatibleOnly, compatibleKeys]);
+  const normalizedFilters = useMemo(() => normalizeFilters(effectiveFilters), [effectiveFilters]);
   const queryKey = useMemo(
     () => `${JSON.stringify(normalizedFilters ?? {})}|${sortBy ?? ""}|${sortBy ? sortDir : ""}`,
     [normalizedFilters, sortBy, sortDir]
@@ -1457,10 +1469,25 @@ export default function App() {
   };
 
   const openFilters = () => {
-    setDraftFilters(filters);
+    setDraftFilters(effectiveFilters);
+    setDraftCompatibleOnly(compatibleOnly);
     setFilterError(null);
     setColumnsOpen(false);
     setFiltersOpen(true);
+  };
+
+  /** A manual key-chip edit overrides the Compatible-only intent. */
+  const handleFilterDraftChange = (next: ListTracksFilters) => {
+    if (next.keyCamelot !== draftFilters.keyCamelot) setDraftCompatibleOnly(false);
+    setDraftFilters(next);
+  };
+
+  const handleCompatibleOnlyChange = (checked: boolean) => {
+    setDraftCompatibleOnly(checked);
+    setDraftFilters((current) => ({
+      ...current,
+      keyCamelot: checked ? compatibleKeys : undefined,
+    }));
   };
 
   const applyFilters = () => {
@@ -1491,12 +1518,15 @@ export default function App() {
     }
     setFilterError(null);
     setFilters(normalized ?? {});
+    setCompatibleOnly(draftCompatibleOnly && compatibleKeys.length > 0);
     setFiltersOpen(false);
   };
 
   const resetFilters = () => {
     setDraftFilters({});
+    setDraftCompatibleOnly(false);
     setFilters({});
+    setCompatibleOnly(false);
     setFilterError(null);
     setFiltersOpen(false);
     // Sort is a separate control — resetting filters must not reset sort.
@@ -2287,8 +2317,8 @@ export default function App() {
     }, "");
     setColumns((current) => setColumnWidth(current, id, autoFitWidth(longest, definition)));
   };
-  const filterCount = activeFilterCount(filters);
-  const filterSummary = describeFilterParts(filters);
+  const filterCount = activeFilterCount(effectiveFilters);
+  const filterSummary = describeFilterParts(effectiveFilters);
   // True when the (server-side) page behind `filteredTracks` is narrowed either by
   // the filter panel or by the live search box; used to tell "no tracks" apart
   // from "no matches for the current query".
@@ -2674,7 +2704,9 @@ export default function App() {
                       error={filterError}
                       referenceKey={keyReference}
                       compatibilityMode={ui.compatibilityMode}
-                      onChange={setDraftFilters}
+                      compatibleOnly={draftCompatibleOnly}
+                      onChange={handleFilterDraftChange}
+                      onCompatibleOnlyChange={handleCompatibleOnlyChange}
                       onApply={applyFilters}
                       onReset={resetFilters}
                       onClose={() => setFiltersOpen(false)}

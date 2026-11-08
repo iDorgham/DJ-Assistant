@@ -231,9 +231,9 @@ Slice 7 real audio ──► Slice 8 dual-wave + transport
 
 **Status:** 3A (tags + comments) **merged 2026-10-23** via PR #53 (squash
 `03991d3c`). Manual running-window QA is pending, so T2.1.7 and T2.1.13 stay
-unticked. 3B (key pills, T2.1.8) is **implemented 2026-10-29** on
-`feat/T2.1.8-key-pills`, stacked on the T2.1.3 branch (PR #65); running-window
-QA is pending, so its box stays unticked.
+unticked. 3B (key pills, T2.1.8) is **implemented 2026-10-29** in PR #70,
+stacked on the T2.1.3 branch (PR #65); running-window QA is pending, so its box
+stays unticked.
 
 **Split (decided 2026-10-22):** **3A = tags + comments** (T2.1.7, T2.1.13),
 **3B = key pills** (T2.1.8). 3B was deferred because the key-format preference
@@ -276,7 +276,7 @@ decisions (a `track_tags` table; the user comment **overwrites**
 - [ ] Tag chip filters table
 - [ ] Comment edited in the metadata editor persists and is searchable *(T2.1.13)*
 - [ ] Preference switch updates column without reload
-- [x] Pure function tests for all Camelot relations (12×12 matrix sample)
+- [x] Pure function tests for all Camelot relations (full wheel matrix)
 
 **Enhancement:** Optional left row border for “mixable with playing track”.
 

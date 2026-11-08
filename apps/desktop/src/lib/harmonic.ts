@@ -41,6 +41,19 @@ function wrapNumber(value: number): number {
   return ((value - 1 + 12) % 12) + 1;
 }
 
+/** Shortest distance between two numbers on the 12-step wheel. */
+function ringDistance(from: number, to: number): number {
+  const direct = Math.abs(from - to);
+  return Math.min(direct, 12 - direct);
+}
+
+/** Classify a same-ring move by its distance. */
+function sameRingRelation(distance: number): HarmonicMatch {
+  if (distance === 1) return "adjacent";
+  if (distance === 2) return "wide";
+  return "incompatible";
+}
+
 /**
  * Classify `candidate` against `reference`. The direction does not matter:
  * ±1 and ±2 are symmetric, and "relative" only asks whether the number
@@ -62,13 +75,7 @@ export function camelotRelation(
   // compatible set, even when the numbers are one apart.
   if (from.letter !== to.letter) return "incompatible";
 
-  const distance = Math.min(
-    Math.abs(from.number - to.number),
-    12 - Math.abs(from.number - to.number)
-  );
-  if (distance === 1) return "adjacent";
-  if (distance === 2) return "wide";
-  return "incompatible";
+  return sameRingRelation(ringDistance(from.number, to.number));
 }
 
 /** True when a relation is mixable in the chosen mode. */
@@ -107,9 +114,9 @@ export function compatibleCamelotKeys(
   }
 
   return [...keys].sort((left, right) => {
-    const a = parseCamelot(left);
-    const b = parseCamelot(right);
-    if (!a || !b) return left.localeCompare(right);
-    return a.number - b.number || a.letter.localeCompare(b.letter);
+    const leftKey = parseCamelot(left);
+    const rightKey = parseCamelot(right);
+    if (!leftKey || !rightKey) return left.localeCompare(right);
+    return leftKey.number - rightKey.number || leftKey.letter.localeCompare(rightKey.letter);
   });
 }

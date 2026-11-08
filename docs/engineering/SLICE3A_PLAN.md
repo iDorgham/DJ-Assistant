@@ -3,9 +3,8 @@
 **Status:** implemented, QA pending (2026-10-22)  
 **Scope:** 3A = tag chips, the tag filter and the comment edit surface.  
 **3B = T2.1.8** (key pills, harmonic relations, the key-format preference) is a
-separate increment - it shipped on 2026-10-29 in `feat/T2.1.8-key-pills`; the
-Settings → Key display surface it needed now exists. Running-window QA is
-pending.
+separate increment - it shipped on 2026-10-29 in PR #70; the Settings → Key
+display surface it needed now exists. Running-window QA is pending.
 
 ---
 

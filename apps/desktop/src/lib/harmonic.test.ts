@@ -66,6 +66,53 @@ test("the compatible set wraps at the edges of the wheel", () => {
   assert.deepEqual(compatibleCamelotKeys("1B", "wide"), ["1A", "1B", "2B", "3B", "11B", "12B"]);
 });
 
+test("the full wheel matrix matches the relation rules", () => {
+  const keys = Array.from({ length: 12 }, (_, index) => [`${index + 1}A`, `${index + 1}B`]).flat();
+
+  for (const reference of keys) {
+    for (const candidate of keys) {
+      const referenceNumber = Number.parseInt(reference, 10);
+      const candidateNumber = Number.parseInt(candidate, 10);
+      const direct = Math.abs(referenceNumber - candidateNumber);
+      const distance = Math.min(direct, 12 - direct);
+      const sameNumber = referenceNumber === candidateNumber;
+      const sameLetter = reference.slice(-1) === candidate.slice(-1);
+
+      const expected =
+        reference === candidate
+          ? "same"
+          : sameNumber
+            ? "relative"
+            : !sameLetter
+              ? "incompatible"
+              : distance === 1
+                ? "adjacent"
+                : distance === 2
+                  ? "wide"
+                  : "incompatible";
+
+      assert.equal(camelotRelation(reference, candidate), expected, `${reference} -> ${candidate}`);
+      assert.equal(camelotRelation(candidate, reference), expected, `${candidate} -> ${reference}`);
+    }
+  }
+});
+
+test("the compatible set matches the relation rules across the whole wheel", () => {
+  const keys = Array.from({ length: 12 }, (_, index) => [`${index + 1}A`, `${index + 1}B`]).flat();
+  const byWheel = (left: string, right: string) =>
+    Number.parseInt(left, 10) - Number.parseInt(right, 10) ||
+    left.slice(-1).localeCompare(right.slice(-1));
+
+  for (const mode of ["strict", "wide"] as const) {
+    for (const reference of keys) {
+      const expected = keys
+        .filter((candidate) => isCompatible(camelotRelation(reference, candidate), mode))
+        .sort(byWheel);
+      assert.deepEqual(compatibleCamelotKeys(reference, mode), expected, `${reference} ${mode}`);
+    }
+  }
+});
+
 test("an unreadable reference has no compatible set", () => {
   assert.deepEqual(compatibleCamelotKeys(null, "wide"), []);
   assert.deepEqual(compatibleCamelotKeys("not-a-key"), []);
