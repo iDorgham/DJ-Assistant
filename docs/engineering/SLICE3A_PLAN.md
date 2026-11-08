@@ -14,7 +14,7 @@ display surface it needed now exists. Running-window QA is pending.
 | --- | --- | --- |
 | Where the user's comment lives | It **overwrites** `tracks.comments` | The file's original comment is replaced by the first edit. The reversible write path snapshots the previous value, so the first edit stays undoable. `tracks.notes` remains unused. |
 | Where tags live | A **`track_tags` table** | Rows per tag: plain-SQL filtering, an index on the tag, and the natural base for the Tag Surgeon (T2.2) later. |
-| How the slice is cut | **3A = T2.1.7 + T2.1.13**, 3B = T2.1.8 | 3B was deferred because a Settings surface for the key preference did not exist yet; 3B is now implemented (2026-10-29) on a branch stacked over the T2.1.3 work. |
+| How the slice is cut | **3A = T2.1.7 + T2.1.13**, 3B = T2.1.8 | 3B was deferred because a Settings surface for the key preference did not exist yet; 3B is now implemented (2026-10-29, PR #70 — review round closed 2026-11-08) on a branch stacked over the T2.1.3 work. |
 | Where the editor is reached | A **row context menu** (right-click), per docs/ui/03 §3.5 | The menu ships only the actions that exist — "Edit tags…" — so the other spec items can be plugged in later. It is a new surface: positioning, Escape, focus return, keyboard access. |
 | Which fields the editor covers | Title, artist, album, genre, **label**, **year**, custom tags, comment | `year` is already in the schema and populated for 90 of 94 tracks, so it costs a `TrackSummary` change only. `label` needs a one-line `ALTER` and has **no import source** — it is a field the user types. |
 

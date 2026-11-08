@@ -4,6 +4,40 @@ Ephemeral. Newest first. **Rotate aggressively** — if a line would still be tr
 in two weeks, it belongs in [`decisions.md`](./decisions.md); if it is just a
 fact, it belongs in [`facts.md`](./facts.md). Delete anything stale.
 
+## 2026-11-08 · PR #70 review round closed (T2.1.8 key pills)
+
+- **All 43 review threads on PR #70 are answered and resolved**; the branch head
+  is `88b64c78`. The round first ran against a stale commit — the fixes were
+  local while every review read `dc3ddac6` — so the job was to push, then verify
+  each finding at HEAD (F-013).
+- **What the round changed:** `797e1823` turned Compatible-only into a committed
+  **intent** held separately from the derived `keyCamelot` list, widened the key
+  column so the `both` notation fits, moved the pill text onto the theme primary
+  token so every relation tint clears 4.5:1, and added the full-wheel relation
+  and compatible-set matrix tests. `f360b175` fixed the regression that round
+  exposed — the Key chip's × cleared only the applied list, so the derived keys
+  returned on the next render and the chip was unremovable; the intent now drops
+  with the chip (`dropsCompatibleIntent`). `0bf2c593` and `88b64c78` were made on
+  GitHub: F-013 trimmed to one line, and Apply no longer clears the intent when
+  the harmonic reference is missing.
+- **DeepSource JavaScript:** `js/wrapper/iife` fires on ordinary top-level
+  functions in ES modules and the complexity rule reports "medium" at 6, so PRs
+  #65 and #70 carry the FAILURE while Dependabot PRs pass. Agreed with the human
+  on 2026-11-08: mark those checkers Ignored in the DeepSource dashboard instead
+  of reshaping code to satisfy them. Nothing is branch-protected, so the check
+  blocks nothing.
+- **cubic's three memory P2s:** the `feedback.md` one is fixed. The `facts.md`
+  DeepSource entry now keeps only the durable dashboard limitation — the PR
+  evidence and the dated agreement moved here. `facts.md`'s `D-015` citation
+  still points at a decision that exists only in an **uncommitted**
+  `decisions.md` in this working tree; it becomes valid when that edit lands.
+- **Docs refreshed for the round:** `docs/sdd/04-TASKS.md` (the T2.1.8 note and
+  the reconciliation header), the Phase 2 plan Slice 3 status,
+  `docs/ui/11-IMPLEMENTATION-CHECKLIST.md` and `SLICE3A_PLAN.md`. **No task box
+  was ticked** — the native running-window QA (5A colours, the live preference
+  switch, the compatible filter against a real library) is still the gate for
+  T2.1.3 and T2.1.8, and desktop `node --test` is at **217 tests**.
+
 ## 2026-10-29 · T2.1.3 bulk metadata + T2.1.8 key pills (PR #65)
 
 - **T2.1.3 is code-complete on `feature/bulk-metadata-edit` / PR #65.** Beyond
