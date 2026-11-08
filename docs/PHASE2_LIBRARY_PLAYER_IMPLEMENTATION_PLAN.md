@@ -223,7 +223,7 @@ Slice 7 real audio ──► Slice 8 dual-wave + transport
 
 **Enhancement:** Inline energy edit (click bars or context “Set energy”) with same undo path — T2.1.6. — *shipped: clicking a segment sets the level, clicking it again clears it.*
 
-**Known gap:** the full bulk-metadata flow (BulkActionBar, select-all, per-field bulk dialog) stays in **T2.1.3**; Slice 2 ships only the table multi-select subset.
+**Known gap:** the full bulk-metadata flow shipped in **T2.1.3** (PR #65): the BulkActionBar, and the bulk metadata dialog with mixed-value display and a dirty-field-only preview diff. **Select-all remains open**, as do the blocked Analyze / Smart Tag Cleanup / add-to-playlist-set / export bulk actions, which render disabled with their reasons. Slice 2 ships only the table multi-select subset.
 
 ---
 
@@ -391,7 +391,7 @@ decisions (a `track_tags` table; the user comment **overwrites**
 | Item | Notes |
 |------|--------|
 | T2.1.1 Search fields | title, artist, album, genre, tags, label, year, filename, comment |
-| T2.1.3 Bulk select + bulk metadata | Undo for bulk rating/tags/energy/comments |
+| T2.1.3 Bulk select + bulk metadata | Undo for bulk rating/tags/energy/comments. **BulkActionBar + bulk metadata dialog shipped (PR #65)**; select-all and the shared bulk actions stay open. |
 | Virtualized track table | **Shipped (PR #56, `ed8d1046`)** — windowed Library body with spacer rows and 500-row pages; the Slice 1 DoD item above and `docs/ui/11-IMPLEMENTATION-CHECKLIST.md` Phase C “TrackTable virtualized” are satisfied. |
 | Virtualization perf | 30k-track native smoke shipped with PR #56 (179 ms to Library + 200 rows; 17.5 ms average / 16.9 ms p95 frame time); keep 5k–20k column-toggle checks open |
 | a11y | Star/Energy names; menu keyboard; focus rings; reduced motion on player height |

@@ -4,6 +4,27 @@ Ephemeral. Newest first. **Rotate aggressively** — if a line would still be tr
 in two weeks, it belongs in [`decisions.md`](./decisions.md); if it is just a
 fact, it belongs in [`facts.md`](./facts.md). Delete anything stale.
 
+## 2026-10-29 · T2.1.3 bulk-metadata slice complete (PR #65)
+
+- **T2.1.3 is code-complete on `feature/bulk-metadata-edit` / PR #65.** Beyond
+  the committed bulk dialog (`d9b5ba1a`), the missing spec §6 `BulkActionBar`
+  now ships: scope line, live Edit metadata… / Rate / Clear selection, and
+  Analyze / Smart Tag Cleanup / add-to-playlist-set / Export selection as
+  `aria-disabled` with reasons derived from `library-menu.ts`. It shows at
+  `count >= 2`, not `> 0`, because a plain row click always leaves one row
+  selected and a permanent bar hurts density (documented in `bulk-actions.ts`).
+  Desktop `node --test` is now **196 tests**; typecheck, ESLint and Prettier pass.
+- **Docs reconciled:** `docs/sdd/04-TASKS.md` (T2.1.3 annotation),
+  `PHASE2_LIBRARY_PLAYER_IMPLEMENTATION_PLAN.md` (Slice 2 known gap + Slice 9
+  row) and `docs/ui/11-IMPLEMENTATION-CHECKLIST.md` (BulkActionBar, editor,
+  Label/Year, TagChips).
+- **Still open:** select-all and keyboard scope (`Ctrl/Cmd+A`), the blocked
+  shared bulk actions, and the native multi-select QA pass — modifier clicks
+  cannot be automated (F-012), so the T2.1.3 box stays unticked.
+- **Next:** T2.1.8 key pills (Slice 3B) — `harmonic.ts` + `key-format.ts` pure
+  modules with tests, `KeyPill`, Settings key-display (Camelot / 1m1d / both),
+  Strict-vs-Wide compatible-only filter. It still waits on the Settings surface.
+
 ## 2026-10-24 · PR #53–#56 merged; main synced; QA still open
 
 - **Four pull requests are merged.** PR #53 (Stage 1 shell, Slice 3A, the v1

@@ -35,16 +35,16 @@ Use this as the UI build order and acceptance gate.
 - [ ] FilterBar + chips + Compatible only  
 - [ ] KeyPill — Camelot 1A–12B + classical 1m/1d (preference)  
 - [x] **EnergyBars** (1–10 charging-bar meter) — click a segment to set, click it again to clear (T2.1.6)  
-- [ ] **TagChips** (compact chips + overflow)  
+- [x] **TagChips** (compact chips + overflow) — click a chip to filter (T2.1.7; running-window QA pending)  
 - [x] **StarRating** — editable 5 stars — click to set, click the same star again to clear, keys `1`–`5` / `0` (T2.1.4)  
 - [ ] **ArtworkThumb** — hover play overlay; real embedded art per track  
-- [ ] Label + Year columns  
+- [x] Label + Year columns — present in `library-columns.ts`, default Off (T2.1.7)  
 - [ ] **MixSuggestionsPanel** (right dock) + Options bar button  
 - [ ] **TrackContextMenu** per view (Library ≠ Preparation ≠ Auto)  
 - [ ] Library menu: Play, Analyze, Edit tags, Fix tags, Add to playlist, Find in playlists, Mix suggestions, Find smaller/similar online, Find new tracks online, Remove from library  
-- [ ] **Edit tags…** editor — title / artist / album / genre / label / year / tags / **comment**  
+- [x] **Edit tags…** editor — title / artist / album / genre / label / year / tags / **comment** — `MetadataEditor`, single-row and bulk, dirty-field diff (T2.1.7/T2.1.13/T2.1.3)  
 - [x] Column toggles (Energy, Tags, Rating, Label, Year, Artwork) persist  
-- [ ] BulkActionBar + Undo toast — the Undo toast ships with the rating/energy write path (Slice 2); the BulkActionBar itself is still open (T2.1.3)  
+- [x] BulkActionBar + Undo toast — the Undo toast ships with the rating/energy write path (Slice 2); the bar ships with T2.1.3 (PR #65). Select-all and the shared bulk actions remain open  
 - [ ] Empty states  
 
 ## Phase D — Player

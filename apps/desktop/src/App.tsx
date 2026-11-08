@@ -156,6 +156,7 @@ import { PreviewPlayer } from "./components/preview-player";
 import { ModalShell } from "./components/ModalShell";
 import { ArtworkThumb } from "./components/ArtworkThumb";
 import { TrackPanel } from "./components/track-panel/TrackPanel";
+import { BulkActionBar } from "./components/BulkActionBar";
 import { ColumnPicker } from "./components/ColumnPicker";
 import { EnergyBars } from "./components/EnergyBars";
 import { StarRating } from "./components/StarRating";
@@ -2691,28 +2692,35 @@ export default function App() {
                   </div>
                 )}
 
-                {/* Multi-select indicator (T2.1.4/T2.1.6): a rating or energy
-                    edit applies to every selected track. */}
+                {/* Bulk action bar (T2.1.3, docs/ui/03 §6). It shows the scope
+                    first and wires the bulk writes that exist; the rest are
+                    blocked with their reason. */}
                 {selection.length > 1 && (
-                  <div className="flex items-center gap-2 border-b border-dj-border bg-dj-panel px-5 py-1.5 text-[11px] text-dj-text-secondary">
-                    <span className="font-mono text-dj-accent">{selection.length} selected</span>
-                    <span className="text-dj-text-muted">
-                      Rating and energy edits apply to all of them.
-                    </span>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        // The anchor goes with the selection: a Shift-click must
-                        // not build a range from a dropped selection.
-                        setSelection([]);
-                        setSelectionAnchor(null);
-                      }}
-                      className="ml-auto text-dj-text-muted hover:text-dj-text-secondary underline decoration-dotted"
-                      title="Drop the multi-selection"
-                    >
-                      clear selection
-                    </button>
-                  </div>
+                  <BulkActionBar
+                    count={selection.length}
+                    onEditMetadata={() => {
+                      const primary = tracks.find((entry) => entry.id === selection[0]);
+                      if (!primary) {
+                        pushStatus("Couldn't open the selection — reload the library", "error");
+                        return;
+                      }
+                      openMetadataEditor(primary);
+                    }}
+                    onRate={(rating) => {
+                      const primary = tracks.find((entry) => entry.id === selection[0]);
+                      if (!primary) {
+                        pushStatus("Couldn't save the rating — reload the library", "error");
+                        return;
+                      }
+                      void handleSetRating(primary, rating);
+                    }}
+                    onClear={() => {
+                      // The anchor goes with the selection: a Shift-click must
+                      // not build a range from a dropped selection.
+                      setSelection([]);
+                      setSelectionAnchor(null);
+                    }}
+                  />
                 )}
 
                 {/* Track List Table */}
