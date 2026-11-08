@@ -1,5 +1,3 @@
 {
-    "recommendations": [
-        "kroperuk.vscode-github-actions"
-    ]
+  "recommendations": ["kroperuk.vscode-github-actions"]
 }

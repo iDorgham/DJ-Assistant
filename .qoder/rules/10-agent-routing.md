@@ -36,6 +36,10 @@ pnpm agent:doctor         # registry vs. disk, mirror drift, memory weight
 
 Never hand-edit a mirror; the next sync will overwrite it.
 
+Skills follow the same rule: Qoder reads `.qoder/skills/`, which is a gitignored
+mirror of the `hot` set in `skills.policy.json`, refreshed with
+`pnpm skills:sync --write` (dry run without `--write`).
+
 ## Communication
 
 The delegation contract, the `RESULT` handoff block, the board semantics, and

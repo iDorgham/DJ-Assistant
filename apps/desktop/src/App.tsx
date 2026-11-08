@@ -22,11 +22,13 @@ import type {
   ListTracksSortBy,
   RemovedTrack,
   SortDirection,
+  UpdateTrackMetadataRequest,
 } from "@dj-assistant/shared";
 import {
   openFolderDialog,
   scanFolder,
   listTracks,
+  getTrack,
   listGenres,
   analyzeLibrary,
   listenToAnalysisProgress,
@@ -96,11 +98,13 @@ import {
   ANALYSIS_STATUS_OPTIONS,
   CAMELOT_KEYS,
   activeFilterCount,
+  canToggleCompatibleOnly,
   clearFilterGroup,
   defaultSortDirection,
   describeFilterParts,
   describeMetadataUndo,
   describeMetadataWrite,
+  dropsCompatibleIntent,
   filterTracks,
   formatBpm,
   formatDuration,
@@ -109,6 +113,7 @@ import {
   formatMissingField,
   hasFilterValue,
   normalizeFilters,
+  projectCompatibleDraftKeys,
   scanPercent,
   toggleFilterValue,
   truncateComment,
@@ -149,20 +154,28 @@ import {
   type AppView,
   type PrimaryView,
 } from "./lib/ui-state";
+import {
+  camelotRelation,
+  compatibleCamelotKeys,
+  COMPATIBILITY_MODE_LABELS,
+  type CompatibilityMode,
+} from "./lib/harmonic";
+import { formatKeyForNotation, type KeyNotation } from "./lib/key-format";
 import { rowHeightForColumns, shouldLoadMore, virtualWindow } from "./lib/virtual-window";
 import { nextTheme, resolveTheme, THEME_LABELS } from "./lib/theme";
 import { PreviewPlayer } from "./components/preview-player";
 import { ModalShell } from "./components/ModalShell";
 import { ArtworkThumb } from "./components/ArtworkThumb";
 import { TrackPanel } from "./components/track-panel/TrackPanel";
+import { BulkActionBar } from "./components/BulkActionBar";
 import { ColumnPicker } from "./components/ColumnPicker";
 import { EnergyBars } from "./components/EnergyBars";
+import { KeyPill } from "./components/KeyPill";
 import { StarRating } from "./components/StarRating";
 import { TagChips } from "./components/TagChips";
 import { RowContextMenu } from "./components/RowContextMenu";
 import { MetadataEditor } from "./components/MetadataEditor";
 import { SettingsView } from "./components/SettingsView";
-import { buildMetadataUpdatePayload, type MetadataEditorValues } from "./lib/tags";
 import { previewEngine } from "./lib/audio-engine";
 
 const NAV_ITEMS: { label: string; icon: LucideIcon; view: PrimaryView; shortcut: string }[] = [
@@ -430,6 +443,10 @@ function TrackCell({
   onRate,
   onSetEnergy,
   onSelectTag,
+  keyNotation,
+  keyReference,
+  compatibilityMode,
+  theme,
 }: {
   id: ColumnId;
   track: TrackSummary;
@@ -440,6 +457,12 @@ function TrackCell({
   onSetEnergy?: (track: TrackSummary, energy: number | null) => void;
   /** Filters the library by the clicked tag (T2.1.7). */
   onSelectTag?: (tag: string) => void;
+  /** Key notation preference (T2.1.8). */
+  keyNotation?: KeyNotation;
+  /** Camelot code of the playing or selected track, if there is one. */
+  keyReference?: string | null;
+  compatibilityMode?: CompatibilityMode;
+  theme?: "dark" | "light";
 }) {
   const definition = columnDefinition(id);
   const base = `py-2.5 px-4 overflow-hidden whitespace-nowrap text-ellipsis ${
@@ -451,7 +474,7 @@ function TrackCell({
     return (
       <td className="py-1.5 px-2 text-center">
         <div className="mx-auto w-fit">
-          <ArtworkThumb trackId={track.id} hasArtwork={!!track.artworkHash} />
+          <ArtworkThumb trackId={track.id} hasArtwork={Boolean(track.artworkHash)} />
         </div>
       </td>
     );
@@ -496,6 +519,24 @@ function TrackCell({
           tags={track.tags}
           label={`Tags for ${track.title || "Untitled"}`}
           onSelect={onSelectTag}
+        />
+      </td>
+    );
+  }
+
+  if (id === "key") {
+    const relation =
+      keyReference && track.keyCamelot
+        ? camelotRelation(keyReference, track.keyCamelot, compatibilityMode)
+        : null;
+    return (
+      <td className="py-2.5 px-4 text-center">
+        <KeyPill
+          keyCamelot={track.keyCamelot}
+          keyClassical={track.keyClassical}
+          notation={keyNotation}
+          relation={relation}
+          theme={theme}
         />
       </td>
     );
@@ -551,7 +592,11 @@ function LibraryFilterPanel({
   draft,
   genres,
   error,
+  referenceKey,
+  compatibilityMode,
+  compatibleOnly,
   onChange,
+  onCompatibleOnlyChange,
   onApply,
   onReset,
   onClose,
@@ -559,12 +604,20 @@ function LibraryFilterPanel({
   draft: ListTracksFilters;
   genres: GenreCount[];
   error: string | null;
+  /** Camelot code of the playing or selected track; enables Compatible only. */
+  referenceKey: string | null;
+  compatibilityMode: CompatibilityMode;
+  /** The committed compatibility intent, kept separate from the key chips. */
+  compatibleOnly: boolean;
   onChange: (next: ListTracksFilters) => void;
+  onCompatibleOnlyChange: (checked: boolean) => void;
   onApply: () => void;
   onReset: () => void;
   onClose: () => void;
 }) {
   const numberOrUndefined = (raw: string) => (raw.trim() === "" ? undefined : Number(raw));
+  const compatibleKeys = compatibleCamelotKeys(referenceKey, compatibilityMode);
+  const canToggleCompatible = canToggleCompatibleOnly(compatibleKeys, compatibleOnly);
 
   return (
     <div
@@ -616,6 +669,35 @@ function LibraryFilterPanel({
               className="w-full rounded-md border border-dj-border bg-dj-elevated px-2.5 py-1.5 text-xs text-dj-text placeholder:text-dj-text-muted focus:border-dj-accent focus:outline-hidden"
             />
           </div>
+        </div>
+
+        {/* Compatible only (T2.1.8). It translates the reference key into the
+            existing keyCamelot filter, so the SQL path and the server stay
+            unchanged. The intent is committed separately from the chips, so a
+            new playing/selected track or a Strict/Wide change re-derives the
+            applied keys instead of leaving the old snapshot in place. */}
+        <div>
+          <label
+            className={`flex items-start gap-2 rounded-sm border border-dj-border bg-dj-elevated px-2 py-1.5 ${
+              canToggleCompatible ? "cursor-pointer" : "opacity-60"
+            }`}
+          >
+            <input
+              type="checkbox"
+              checked={compatibleOnly}
+              disabled={!canToggleCompatible}
+              onChange={(event) => onCompatibleOnlyChange(event.target.checked)}
+              className="mt-0.5 accent-dj-accent"
+            />
+            <span className="min-w-0">
+              <span className="block text-[11px] font-medium text-dj-text">Compatible only</span>
+              <span className="block text-[10px] text-dj-text-muted">
+                {referenceKey
+                  ? `${referenceKey} · ${COMPATIBILITY_MODE_LABELS[compatibilityMode]} — same, relative and ±1${compatibilityMode === "wide" ? ", plus ±2" : ""}`
+                  : "Play or select a track with a key to use this filter"}
+              </span>
+            </span>
+          </label>
         </div>
 
         {/* Camelot keys */}
@@ -1028,6 +1110,11 @@ export default function App() {
   // stays correct past the 200-row page instead of filtering a partial window.
   const [filters, setFilters] = useState<ListTracksFilters>({});
   const [draftFilters, setDraftFilters] = useState<ListTracksFilters>({});
+  // Compatibility is an intent, not a snapshot: the applied key list is
+  // re-derived whenever the reference track or Strict/Wide mode changes.
+  const [compatibleOnly, setCompatibleOnly] = useState(false);
+  const [draftCompatibleOnly, setDraftCompatibleOnly] = useState(false);
+  const manualDraftKeys = useRef<string[] | undefined>(undefined);
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [filterError, setFilterError] = useState<string | null>(null);
   const [genres, setGenres] = useState<GenreCount[]>([]);
@@ -1078,6 +1165,47 @@ export default function App() {
   // metadata reloads reorder the table, so a stored index would point at a
   // different track by the time the user Shift-clicks.
   const [selectionAnchor, setSelectionAnchor] = useState<string | null>(null);
+  // Harmonic reference for the key pills and the Compatible only filter
+  // (T2.1.8): the playing track wins, the first selected row is the fallback.
+  const [selectedReference, setSelectedReference] = useState<TrackSummary | null>(null);
+  const selectedId = selection[0] ?? null;
+  const visibleSelectedTrack = tracks.find((entry) => entry.id === selectedId);
+  const selectedTrack =
+    (selectedReference?.id === selectedId ? selectedReference : null) ?? visibleSelectedTrack;
+  useEffect(() => {
+    if (visibleSelectedTrack) setSelectedReference(visibleSelectedTrack);
+  }, [visibleSelectedTrack]);
+
+  // Fetch by identity so analysis updates reach references outside the current page.
+  const playingId = playingTrack?.id ?? null;
+  useEffect(() => {
+    let cancelled = false;
+    for (const trackId of new Set([selectedId, playingId])) {
+      if (!trackId) continue;
+      getTrack({ trackId })
+        .then(({ track }) => {
+          if (cancelled) return;
+          if (trackId === selectedId) setSelectedReference(track);
+          if (trackId === playingId) setPlayingTrack(track);
+        })
+        .catch(() => {
+          // Retain the last known reference when a refresh is unavailable.
+        });
+    }
+    return () => {
+      cancelled = true;
+    };
+  }, [selectedId, playingId, reloadToken]);
+  const keyReference = playingTrack?.keyCamelot ?? selectedTrack?.keyCamelot ?? null;
+  const compatibleKeys = useMemo(
+    () => compatibleCamelotKeys(keyReference, ui.compatibilityMode),
+    [keyReference, ui.compatibilityMode]
+  );
+  useEffect(() => {
+    if (filtersOpen && draftCompatibleOnly) {
+      setDraftFilters((current) => projectCompatibleDraftKeys(current, compatibleKeys, true));
+    }
+  }, [filtersOpen, draftCompatibleOnly, compatibleKeys]);
   // The pending *panel open* of a plain row click. The selection applies
   // immediately; only the open waits out the double-click window, so a quick
   // edit after selecting a row cannot still target the previous selection.
@@ -1155,7 +1283,14 @@ export default function App() {
 
   // Filters and sort are part of the query key; `reloadToken` is not, so a
   // rating edit refreshes the loaded rows without looking like a new query.
-  const normalizedFilters = useMemo(() => normalizeFilters(filters), [filters]);
+  const effectiveFilters = useMemo(() => {
+    if (!compatibleOnly) return filters;
+    // A missing reference (nothing playing or selected) disables the derived
+    // key filter instead of freezing the last compatible snapshot.
+    if (compatibleKeys.length === 0) return { ...filters, keyCamelot: undefined };
+    return { ...filters, keyCamelot: compatibleKeys };
+  }, [filters, compatibleOnly, compatibleKeys]);
+  const normalizedFilters = useMemo(() => normalizeFilters(effectiveFilters), [effectiveFilters]);
   const queryKey = useMemo(
     () => `${JSON.stringify(normalizedFilters ?? {})}|${sortBy ?? ""}|${sortBy ? sortDir : ""}`,
     [normalizedFilters, sortBy, sortDir]
@@ -1275,7 +1410,9 @@ export default function App() {
     measure();
     const observer = new ResizeObserver(measure);
     observer.observe(scrollElement);
-    return () => observer.disconnect();
+    return () => {
+      observer.disconnect();
+    };
   }, [scrollElement]);
 
   useEffect(
@@ -1376,10 +1513,32 @@ export default function App() {
   };
 
   const openFilters = () => {
-    setDraftFilters(filters);
+    manualDraftKeys.current = compatibleOnly ? undefined : effectiveFilters.keyCamelot;
+    setDraftFilters(effectiveFilters);
+    setDraftCompatibleOnly(compatibleOnly);
     setFilterError(null);
     setColumnsOpen(false);
     setFiltersOpen(true);
+  };
+
+  /** A manual key-chip edit overrides the Compatible-only intent. */
+  const handleFilterDraftChange = (next: ListTracksFilters) => {
+    if (next.keyCamelot !== draftFilters.keyCamelot) setDraftCompatibleOnly(false);
+    setDraftFilters(next);
+  };
+
+  const handleCompatibleOnlyChange = (checked: boolean) => {
+    if (checked && !draftCompatibleOnly) manualDraftKeys.current = draftFilters.keyCamelot;
+    setDraftCompatibleOnly(checked);
+    setDraftFilters((current) =>
+      projectCompatibleDraftKeys(
+        current,
+        compatibleKeys,
+        checked,
+        draftCompatibleOnly,
+        manualDraftKeys.current
+      )
+    );
   };
 
   const applyFilters = () => {
@@ -1410,15 +1569,32 @@ export default function App() {
     }
     setFilterError(null);
     setFilters(normalized ?? {});
+    setCompatibleOnly(draftCompatibleOnly);
     setFiltersOpen(false);
   };
 
   const resetFilters = () => {
     setDraftFilters({});
+    setDraftCompatibleOnly(false);
     setFilters({});
+    setCompatibleOnly(false);
     setFilterError(null);
     setFiltersOpen(false);
     // Sort is a separate control — resetting filters must not reset sort.
+  };
+
+  /**
+   * A chip's × removes one filter group. The Key group is special while the
+   * Compatible-only intent is on: its applied list is derived, so the intent
+   * has to go with the chip or the same keys come back on the next render.
+   */
+  const clearFilterChip = (group: Parameters<typeof clearFilterGroup>[1]) => {
+    if (dropsCompatibleIntent(group, compatibleOnly)) {
+      setCompatibleOnly(false);
+      setDraftCompatibleOnly(false);
+    }
+    setFilters((current) => clearFilterGroup(current, group));
+    setDraftFilters((current) => clearFilterGroup(current, group));
   };
 
   const toggleSort = (key: ListTracksSortBy) => {
@@ -1619,10 +1795,11 @@ export default function App() {
 
     listenToScanProgress((payload) => {
       setProgress(payload);
-      if (payload.importedTrack) {
+      const importedTrack = payload.importedTrack;
+      if (importedTrack) {
         setTracks((prev) => {
-          if (prev.some((t) => t.id === payload.importedTrack!.id)) return prev;
-          return [payload.importedTrack!, ...prev];
+          if (prev.some((t) => t.id === importedTrack.id)) return prev;
+          return [importedTrack, ...prev];
         });
       }
     }).then((fn) => {
@@ -1882,11 +2059,11 @@ export default function App() {
   const handleUndo = () => {
     if (!pendingUndo) return;
     if (pendingUndo.kind === "remove") {
-      void handleUndoRemove();
+      handleUndoRemove();
     } else if (pendingUndo.kind === "restore") {
-      void handleUndoRestore();
+      handleUndoRestore();
     } else {
-      void handleUndoMetadata();
+      handleUndoMetadata();
     }
   };
 
@@ -2025,28 +2202,46 @@ export default function App() {
   // level, so it inherits the same "nothing changed" rule and the same Undo
   // toast — including the undo of a whole tag set.
   /**
-   * Saves editor values to the selection if it contains the editor track, or to that track alone.
-   * Does nothing without an editor track; otherwise closes the editor before saving, refreshes
-   * the library on success, and offers Undo for changed values. Caught failures show an error status.
+   * The rows the editor shows and the ids it writes, resolved from the selection.
+   *
+   * A multi-selection applies to the whole selection; a single row applies to
+   * that row alone. Same rule as the rating and the energy level. The ids are
+   * the write's truth and the rows are what the survey can read, so a selected
+   * track the page has not loaded is still written — the backend ignores an id
+   * it does not know rather than failing the batch.
    */
-  const handleSaveMetadata = async (values: MetadataEditorValues) => {
+  const editorScope = useMemo(() => {
+    if (!editorTrack) return { targets: [] as TrackSummary[], trackIds: [] as string[] };
+    if (!selection.includes(editorTrack.id))
+      return { targets: [editorTrack], trackIds: [editorTrack.id] };
+    const byId = new Map(tracks.map((entry) => [entry.id, entry]));
+    const rows = selection
+      .map((id) => byId.get(id))
+      .filter((entry): entry is TrackSummary => entry !== undefined);
+    // The focused row is always in the survey, even if its id has left the
+    // loaded collection: the dialog must not open on an empty selection.
+    return { targets: rows.length > 0 ? rows : [editorTrack], trackIds: selection };
+  }, [editorTrack, selection, tracks]);
+
+  /**
+   * Sends the patch the editor built, refreshes the library and offers Undo for
+   * what actually changed. Caught failures show an error status.
+   */
+  const handleSaveMetadata = async (patch: UpdateTrackMetadataRequest) => {
     // The editor holds its own snapshot: the panel can open a track that is not
     // on the current page (a player track, a related track), so resolving the id
     // against `tracks` would silently drop the save.
     if (!editorTrack) return;
     const track = editorTrack;
-    // A multi-selection applies to the whole selection; a single row applies
-    // to that row alone. Same rule as the rating and the energy level.
-    const trackIds = selection.includes(track.id) ? selection : [track.id];
     setEditorTrack(null);
     try {
-      const res = await updateTrackMetadata(buildMetadataUpdatePayload(trackIds, values));
+      const res = await updateTrackMetadata(patch);
       refreshLibrary();
       pushStatus(describeMetadataWrite("metadata", res.updated));
       const undoMessage = describeMetadataUndo(
         "metadata",
         res.updated,
-        trackIds.length,
+        patch.trackIds.length,
         track.title
       );
       if (undoMessage) offerUndo(res.undoId, undoMessage);
@@ -2183,13 +2378,16 @@ export default function App() {
   const handleAutoFitColumn = (id: ColumnId) => {
     const definition = columnDefinition(id);
     const longest = filteredTracks.reduce((text, track) => {
-      const cell = trackColumnText(track, id);
+      const cell =
+        id === "key"
+          ? formatKeyForNotation(track.keyCamelot, track.keyClassical, ui.keyNotation)
+          : trackColumnText(track, id);
       return cell.length > text.length ? cell : text;
     }, "");
     setColumns((current) => setColumnWidth(current, id, autoFitWidth(longest, definition)));
   };
-  const filterCount = activeFilterCount(filters);
-  const filterSummary = describeFilterParts(filters);
+  const filterCount = activeFilterCount(effectiveFilters);
+  const filterSummary = describeFilterParts(effectiveFilters);
   // True when the (server-side) page behind `filteredTracks` is narrowed either by
   // the filter panel or by the live search box; used to tell "no tracks" apart
   // from "no matches for the current query".
@@ -2573,7 +2771,11 @@ export default function App() {
                       draft={draftFilters}
                       genres={genres}
                       error={filterError}
-                      onChange={setDraftFilters}
+                      referenceKey={keyReference}
+                      compatibilityMode={ui.compatibilityMode}
+                      compatibleOnly={draftCompatibleOnly}
+                      onChange={handleFilterDraftChange}
+                      onCompatibleOnlyChange={handleCompatibleOnlyChange}
                       onApply={applyFilters}
                       onReset={resetFilters}
                       onClose={() => setFiltersOpen(false)}
@@ -2652,9 +2854,7 @@ export default function App() {
                         {part.label}
                         <button
                           type="button"
-                          onClick={() =>
-                            setFilters((current) => clearFilterGroup(current, part.group))
-                          }
+                          onClick={() => clearFilterChip(part.group)}
                           title={`Remove the ${part.group} filter`}
                           aria-label={`Remove the ${part.group} filter`}
                           className="rounded-sm p-px text-dj-accent/70 transition hover:text-dj-accent"
@@ -2673,28 +2873,35 @@ export default function App() {
                   </div>
                 )}
 
-                {/* Multi-select indicator (T2.1.4/T2.1.6): a rating or energy
-                    edit applies to every selected track. */}
+                {/* Bulk action bar (T2.1.3, docs/ui/03 §6). It shows the scope
+                    first and wires the bulk writes that exist; the rest are
+                    blocked with their reason. */}
                 {selection.length > 1 && (
-                  <div className="flex items-center gap-2 border-b border-dj-border bg-dj-panel px-5 py-1.5 text-[11px] text-dj-text-secondary">
-                    <span className="font-mono text-dj-accent">{selection.length} selected</span>
-                    <span className="text-dj-text-muted">
-                      Rating and energy edits apply to all of them.
-                    </span>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        // The anchor goes with the selection: a Shift-click must
-                        // not build a range from a dropped selection.
-                        setSelection([]);
-                        setSelectionAnchor(null);
-                      }}
-                      className="ml-auto text-dj-text-muted hover:text-dj-text-secondary underline decoration-dotted"
-                      title="Drop the multi-selection"
-                    >
-                      clear selection
-                    </button>
-                  </div>
+                  <BulkActionBar
+                    count={selection.length}
+                    onEditMetadata={() => {
+                      const primary = tracks.find((entry) => selection.includes(entry.id));
+                      if (!primary) {
+                        pushStatus("Couldn't open the selection — reload the library", "error");
+                        return;
+                      }
+                      openMetadataEditor(primary);
+                    }}
+                    onRate={(rating) => {
+                      const primary = tracks.find((entry) => selection.includes(entry.id));
+                      if (!primary) {
+                        pushStatus("Couldn't save the rating — reload the library", "error");
+                        return;
+                      }
+                      handleSetRating(primary, rating);
+                    }}
+                    onClear={() => {
+                      // The anchor goes with the selection: a Shift-click must
+                      // not build a range from a dropped selection.
+                      setSelection([]);
+                      setSelectionAnchor(null);
+                    }}
+                  />
                 )}
 
                 {/* Track List Table */}
@@ -2849,6 +3056,10 @@ export default function App() {
                                   onRate={handleSetRating}
                                   onSetEnergy={handleSetEnergy}
                                   onSelectTag={handleFilterByTag}
+                                  keyNotation={ui.keyNotation}
+                                  keyReference={keyReference}
+                                  compatibilityMode={ui.compatibilityMode}
+                                  theme={resolveTheme(ui.theme, systemPrefersDark)}
                                 />
                               ))}
                             </tr>
@@ -2996,7 +3207,7 @@ export default function App() {
                           </p>
                           <button
                             type="button"
-                            onClick={() => void handleRestore(removed.map((track) => track.id))}
+                            onClick={() => handleRestore(removed.map((track) => track.id))}
                             disabled={restoringIds.length > 0}
                             className="inline-flex items-center gap-1 rounded-sm border border-dj-accent/40 bg-dj-accent/10 px-2 py-1 text-[11px] font-medium text-dj-accent transition hover:bg-dj-accent/15 disabled:opacity-50"
                           >
@@ -3024,7 +3235,7 @@ export default function App() {
                               </div>
                               <button
                                 type="button"
-                                onClick={() => void handleRestore([track.id])}
+                                onClick={() => handleRestore([track.id])}
                                 disabled={restoringIds.length > 0}
                                 className="inline-flex shrink-0 items-center gap-1 rounded-sm border border-dj-border bg-dj-panel px-2 py-1 text-[11px] text-dj-text transition hover:bg-dj-hover hover:text-dj-accent disabled:opacity-50"
                                 title="Put this track back in the library (Undo stays available in the toast)"
@@ -3472,9 +3683,15 @@ export default function App() {
               theme={ui.theme}
               navCollapsed={ui.navCollapsed}
               playerVisible={ui.playerMode !== "hidden"}
+              keyNotation={ui.keyNotation}
+              compatibilityMode={ui.compatibilityMode}
               onCycleTheme={() => dispatch({ type: "setTheme", theme: nextTheme(ui.theme) })}
               onToggleNav={() => dispatch({ type: "toggleNav" })}
               onTogglePlayer={() => dispatch({ type: "togglePlayer" })}
+              onSetKeyNotation={(keyNotation) => dispatch({ type: "setKeyNotation", keyNotation })}
+              onSetCompatibilityMode={(compatibilityMode) =>
+                dispatch({ type: "setCompatibilityMode", compatibilityMode })
+              }
               onOpenImport={() => handleViewChange("import")}
               onOpenAnalysis={() => handleViewChange("analysis")}
               onOpenBackup={() => handleViewChange("backup")}
@@ -3568,7 +3785,7 @@ export default function App() {
             </button>
             <button
               type="button"
-              onClick={() => void handleRemoveConfirmed()}
+              onClick={() => handleRemoveConfirmed()}
               className="rounded-md bg-dj-danger px-3 py-1.5 text-xs font-medium text-dj-on-accent transition hover:bg-dj-danger/85"
               title="Soft-remove from the library index — the file on disk is untouched"
             >
@@ -3608,16 +3825,16 @@ export default function App() {
             setContextMenu(null);
           }}
           canHideColumnFn={canHideColumn}
-          onReveal={() => void handleRevealTrack(contextMenu.track)}
-          onCopyPath={() => void handleCopyPath(contextMenu.track)}
+          onReveal={() => handleRevealTrack(contextMenu.track)}
+          onCopyPath={() => handleCopyPath(contextMenu.track)}
           onRemove={() => openRemoveConfirm(contextMenu.track)}
         />
       )}
 
       {editorTrack && (
         <MetadataEditor
-          track={editorTrack}
-          targetCount={selection.includes(editorTrack.id) ? selection.length : 1}
+          targets={editorScope.targets}
+          trackIds={editorScope.trackIds}
           onSave={handleSaveMetadata}
           onClose={() => setEditorTrack(null)}
         />

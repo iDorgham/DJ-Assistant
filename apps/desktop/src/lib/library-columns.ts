@@ -87,6 +87,7 @@ const CELL_PADDING_PX = 32;
 const HEADER_SORT_PX = 16;
 /** Extra width the cell's own widget adds around its text. */
 const CELL_CHROME_PX: Partial<Record<ColumnId, number>> = {
+  key: 14, // KeyPill: 12px horizontal padding plus two 1px borders.
   // Chip `px-2` + status icon `w-3` + `space-x-1`.
   status: 16 + 12 + 4,
   // Pill `px-1.5` plus its border on each side.
@@ -162,7 +163,9 @@ const DEFINITIONS: Record<ColumnId, ColumnDefinition> = {
   key: {
     id: "key",
     label: "Key",
-    defaultWidth: 72,
+    // Covers "12A · 12m" and the longer classical fallback Both mode renders
+    // for an imported key ("F# natural minor": 16 * 7 + 32 + 14 = 158px).
+    defaultWidth: 160,
     align: "center",
     sortable: "key",
     identity: false,
@@ -555,9 +558,27 @@ export function loadLibraryColumns(view: AppView, storage?: StorageLike): Column
     return resetLibraryColumns();
   }
   if (!raw) return resetLibraryColumns();
-  const validated = validateColumnConfig(parseJson(raw));
+  const payload = parseJson(raw);
+  const versioned =
+    payload !== null &&
+    typeof payload === "object" &&
+    "version" in payload &&
+    payload.version === 2;
+  const validated = validateColumnConfig(
+    versioned && "columns" in payload ? payload.columns : payload
+  );
   if (validated === null) return resetLibraryColumns();
-  return mergeWithDefaults(validated);
+  // Legacy arrays did not distinguish an untouched default from a resize.
+  // Version new saves so a deliberate 72px resize stays intact thereafter.
+  return mergeWithDefaults(
+    versioned
+      ? validated
+      : validated.map((column) =>
+          column.id === "key" && column.width === 72
+            ? { ...column, width: DEFINITIONS.key.defaultWidth }
+            : column
+        )
+  );
 }
 
 function parseJson(raw: string): unknown {
@@ -577,7 +598,10 @@ export function saveLibraryColumns(
   const store = storage ?? defaultStorage();
   if (!store) return;
   try {
-    store.setItem(columnStorageKey(view), JSON.stringify(mergeWithDefaults([...columns])));
+    store.setItem(
+      columnStorageKey(view),
+      JSON.stringify({ version: 2, columns: mergeWithDefaults([...columns]) })
+    );
   } catch {
     // Best-effort, like `persistUiState`: blocked or full storage must not break the table.
   }

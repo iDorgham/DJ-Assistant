@@ -5,6 +5,7 @@ import type { TrackSummary } from "@dj-assistant/shared";
 
 import {
   activeFilterCount,
+  canToggleCompatibleOnly,
   clampEnergy,
   clampRating,
   clearFilterGroup,
@@ -13,6 +14,7 @@ import {
   describeFilters,
   describeMetadataUndo,
   describeMetadataWrite,
+  dropsCompatibleIntent,
   filterTracks,
   formatBpm,
   formatDuration,
@@ -22,6 +24,7 @@ import {
   hasFilterValue,
   matchesQuery,
   normalizeFilters,
+  projectCompatibleDraftKeys,
   scanPercent,
   shortHash,
   SORT_OPTIONS,
@@ -384,4 +387,70 @@ test("describeMetadataUndo names the track only for a single-track edit", () => 
   );
   assert.equal(describeMetadataUndo("rating", 3, 4, "Nightcall"), "Rated 3 tracks");
   assert.equal(describeMetadataUndo("energy", 2, 4, "Nightcall"), "Set energy on 2 tracks");
+});
+
+test("clearing the Key chip drops the Compatible-only intent", () => {
+  // The applied key list is derived from the intent, so a chip that only
+  // clears `keyCamelot` would re-derive the same keys and never go away.
+  assert.equal(dropsCompatibleIntent("key", true), true);
+
+  // Without the intent the derived list is not in play, and no other group
+  // is derived from it.
+  assert.equal(dropsCompatibleIntent("key", false), false);
+  for (const group of ["bpm", "status", "genre", "tag", "rating", "energy"] as const) {
+    assert.equal(dropsCompatibleIntent(group, true), false, `${group} is not the derived group`);
+  }
+});
+
+test("a committed Compatible-only intent stays removable without a reference", () => {
+  // Turning the filter on needs a harmonic reference…
+  assert.equal(canToggleCompatibleOnly([], false), false);
+
+  // …but an intent that is already on must stay enabled and removable: losing
+  // the reference (playback ends, selection cleared) would otherwise leave the
+  // box checked and disabled, with Reset as the only way out.
+  assert.equal(canToggleCompatibleOnly([], true), true);
+  assert.equal(canToggleCompatibleOnly(["8A", "9A", "7A"], true), true);
+  assert.equal(canToggleCompatibleOnly(["8A", "9A", "7A"], false), true);
+});
+
+test("unchecking Compatible-only only removes the keys it applied", () => {
+  // Checking applies the derived wheel around the reference key.
+  assert.deepEqual(
+    projectCompatibleDraftKeys({ keyCamelot: ["5B"] }, ["8A", "9A"], true).keyCamelot,
+    ["8A", "9A"],
+    "the derived list replaces the draft's keys"
+  );
+
+  // Unchecking with a reference removes exactly that derived list.
+  assert.equal(
+    projectCompatibleDraftKeys({ keyCamelot: ["8A", "9A"] }, ["8A", "9A"], false, true).keyCamelot,
+    undefined,
+    "the derived keys go back where they came from"
+  );
+
+  // Without a reference nothing was ever applied, so the draft's own picks stay.
+  assert.deepEqual(
+    projectCompatibleDraftKeys({ keyCamelot: ["5B"] }, [], false).keyCamelot,
+    ["5B"],
+    "manual key picks survive unchecking a stranded intent"
+  );
+
+  // Other groups are never touched.
+  assert.deepEqual(projectCompatibleDraftKeys({ genre: ["Techno"], bpmMin: 120 }, ["8A"], true), {
+    genre: ["Techno"],
+    bpmMin: 120,
+    keyCamelot: ["8A"],
+  });
+});
+
+test("draft key provenance survives reference loss and preserves manual choices", () => {
+  const derived = { keyCamelot: ["8A", "9A"], genre: ["Techno"] };
+  assert.deepEqual(projectCompatibleDraftKeys(derived, [], false, true), {
+    genre: ["Techno"],
+    keyCamelot: undefined,
+  });
+  assert.deepEqual(projectCompatibleDraftKeys(derived, [], false, true, ["5B"]).keyCamelot, ["5B"]);
+  const manual = { keyCamelot: ["5B"] };
+  assert.equal(projectCompatibleDraftKeys(manual, ["8A"], false), manual);
 });

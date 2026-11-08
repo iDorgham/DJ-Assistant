@@ -181,6 +181,14 @@ is a ranking, not a visibility filter — see §4.
   `.opencode/agents` and `.opencode/commands`; every other tool directory is a
   mirror. Edit the canonical file, then `pnpm agent:sync --write`. `pnpm
   agent:doctor` reports drift.
+- **Skills mirror the same way, but only the hot set.** `.opencode/skills` is
+  this project's skill library and OpenCode reads it directly; a tool that reads
+  its own directory instead needs a copy. `pnpm skills:sync --write` mirrors the
+  `hot` list into `.qoder/skills` — not the whole library, because every skill a
+  tool advertises costs the model tokens on every step (D-012). The mirror is
+  gitignored and never hand-edited; refresh it after `npx skills add`, a
+  `skills:prune --restore`, or any edit to the hot list. See
+  [D-015](./memory/decisions.md).
 - **Skills are advisory, not authority.** For anything UI-facing,
   [`docs/ui/01-DESIGN-SYSTEM.md`](../ui/01-DESIGN-SYSTEM.md) and the rest of
   [`docs/ui/`](../ui/README.md) win over any generic design skill.
@@ -208,6 +216,7 @@ is a ranking, not a visibility filter — see §4.
 | See what the prune list would remove | `pnpm skills:prune` |
 | Apply the prune list (into a backup) | `pnpm skills:prune --apply` |
 | Put a pruned skill back | `pnpm skills:prune --restore <backup-dir>` |
+| Refresh a tool's copy of the hot skills | `pnpm skills:sync --write` |
 | Agent-layer health | `pnpm agent:doctor` |
 | Update every tool's copy of the agent files | `pnpm agent:sync --write` |
 | Record something durable | `/remember <what>` |
@@ -215,7 +224,8 @@ is a ranking, not a visibility filter — see §4.
 
 After editing `skills.policy.json`, run `pnpm skills:inventory` so the manifest
 and [`SKILL_ROUTING.md`](./SKILL_ROUTING.md) stay in sync. After editing an
-agent or command file, run `pnpm agent:sync --write`. After a session that
+agent or command file, run `pnpm agent:sync --write`; after changing the hot
+list, also run `pnpm skills:sync --write`. After a session that
 produced something worth keeping, run `/remember` so `state.md` does not rot.
 
 ---

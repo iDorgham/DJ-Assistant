@@ -6,9 +6,11 @@
  * `crates/core/src/tags.rs` — trimmed, blanks dropped, ASCII-lowercased,
  * de-duplicated and sorted — so the editor and the database can never hold
  * two spellings of the same tag.
+ *
+ * The editor's write rules moved to `lib/metadata-bulk` with T2.1.3: what the
+ * dialog seeds, what it validates and what it sends all depend on whether the
+ * target is one track or a selection, which is not a per-track helper.
  */
-
-import type { UpdateTrackMetadataRequest } from "@dj-assistant/shared";
 
 /**
  * ASCII-only lower-casing.
@@ -97,62 +99,4 @@ export interface MetadataSource {
   year?: number | null;
   tags?: string[];
   comments?: string | null;
-}
-
-/**
- * The track's current values, in the editor's shape.
- *
- * `tags` is copied, not aliased: the editor edits its own list and must not
- * mutate the row the table is rendering.
- */
-export function metadataEditorValues(track: MetadataSource): MetadataEditorValues {
-  return {
-    title: track.title ?? "",
-    artist: track.artist ?? "",
-    album: track.album ?? "",
-    genre: track.genre ?? "",
-    label: track.label ?? "",
-    year: track.year != null ? String(track.year) : "",
-    tags: [...(track.tags ?? [])],
-    comments: track.comments ?? "",
-  };
-}
-
-/** The first problem with the values, or `null` when they can be saved. */
-export function validateMetadataValues(values: MetadataEditorValues): string | null {
-  if (!values.title.trim()) return "Title cannot be empty.";
-  if (!values.artist.trim()) return "Artist cannot be empty.";
-  const year = values.year.trim();
-  if (year) {
-    if (!/^\d{4}$/.test(year)) return "Year must be four digits.";
-    if (Number(year) < 1000 || Number(year) > 9999) return "Year must be between 1000 and 9999.";
-  }
-  return null;
-}
-
-/**
- * The write payload for the metadata editor.
- *
- * Every field the editor owns is sent, and the backend writes only the values
- * that really differ — so an untouched field is never rewritten, and an empty
- * field clears its column. The tag list is the **complete** set: it replaces
- * whatever the track carried.
- */
-export function buildMetadataUpdatePayload(
-  trackIds: string[],
-  values: MetadataEditorValues
-): UpdateTrackMetadataRequest {
-  const year = values.year.trim();
-  return {
-    trackIds,
-    title: values.title.trim(),
-    artist: values.artist.trim(),
-    album: values.album.trim(),
-    genre: values.genre.trim(),
-    label: values.label.trim(),
-    // `0` is the backend's "clear the year" value.
-    year: year ? Number(year) : 0,
-    comments: values.comments,
-    tags: normalizeTags(values.tags),
-  };
 }

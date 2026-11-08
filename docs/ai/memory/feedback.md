@@ -111,3 +111,75 @@ system — here: the window is the `tauri dev` shell, the database is
 observation **and** the independent check; a mock-backed session is not
 evidence. See F-009 in [`state.md`](./state.md) and the checklist in
 [`docs/engineering/SLICE2_MANUAL_QA_CHECKLIST.md`](../../engineering/SLICE2_MANUAL_QA_CHECKLIST.md).
+
+## F-010 · Never stash to "check something else" in this worktree (2026-10-27)
+
+A shell command that was only meant to read an exit code ended with a stray
+`git stash push --include-untracked -- .`. In this worktree that swept the
+**other sessions' in-flight files** into an Agent-created stash, together with
+the day's own edits. The tree went empty mid-task. `git stash apply` plus a
+file-by-file check against the stash's own list restored every listed path,
+and only the created entry was dropped; the pre-existing stashes were left
+alone.
+**Rule:** no stash of any kind as an exploratory step. When a unique-tagged
+stash is genuinely required, list its paths first, restore with `apply` (never
+`pop`), confirm every listed path is back, and drop only the entry created in
+this session — `git stash` is a numbered queue shared with the other sessions.
+**Also:** the branch shown at session start is a snapshot. This session began
+labelled `fix/issue-61-cli-migration-tolerance` while the checkout was already
+`main` — re-read `git branch --show-current` before any branch-sensitive
+command, not the header.
+
+## F-011 · A `crates/core` planner is untested until `tests/schema` runs it (2026-10-29)
+
+`library_writes::read_patch_statement` built `WHERE id IN (?2, ?3, …)` while
+binding only the ids at `?1…?n`. The in-module unit tests passed — they assert
+SQL *text*. The first execution against real SQLite (T2.1.3) failed outright:
+`Wrong number of parameters passed to query. Got 1, needed 2`. Every metadata
+edit in the app would have errored, not just the new bulk path.
+**Rule:** core holds SQL as data and never runs it, so a new or edited planner
+function there needs a case in `tests/schema/tests/` that executes the built
+statement against `open_migrated()`. An assertion on the SQL string is not
+verification of the bind order. The desktop crate's own tests cannot fill this
+gap — its harness does not load. See the harness limit in
+[`conventions.md`](./conventions.md).
+
+## F-012 · What the library UI can and cannot be verified with here (2026-10-29)
+
+**A Vite browser tab is worse than a mock — it is empty.** Without Tauri IPC the
+library loads 0 tracks, so no table, selection or row dialog can be reached at
+all. Do not plan "verify in the browser" for library views.
+
+**Computer Use cannot emit a modifier click.** `click` takes no `ctrlKey` or
+`shiftKey`, `press_key` cannot hold a modifier, and a `drag` arrives without
+`shiftKey`. Selection in the library table is mouse-modifier-only
+(`applyRowSelection`), so multi-select has no automated route.
+
+**What does work:** `pnpm tauri dev` drives the real app against the real
+database, and single-row flows are fully automatable there — the T2.1.3
+Apply → Undo round-trip was verified that way, net-zero on the user's library.
+Pure logic behind a dialog stays testable with `node --test` in `src/lib`.
+**Rule:** when a check needs multi-select, hand that two-click step to the user
+instead of concluding the UI is untestable.
+
+## F-013 · Check which commit the reviews ran against before answering them (2026-11-08)
+
+Review comments can target a stale commit, so verify the PR head before acting on them.
+
+<!-- coderabbit-ai-generated:v1 -->
+
+<!-- coderabbit-ai-generated-section:v1:e8d72c1959bb5cfb6cf50592c731fa7fa486aa5834387dd60820345ddb13739d -->
+
+**Rule:** compare `gh pr view --json headRefOid` with `git rev-parse HEAD`.
+A mismatch can mean the local checkout is outdated; it does not make the
+findings stale. Inspect the PR head and the commit targeted by each review,
+then verify each finding against the PR head. A review of an older commit
+may still describe an unresolved issue; dismiss it as stale only when the
+current code no longer has the reported problem.
+Then re-fetch threads after each push: the bots open a fresh round, GitHub re-maps
+the old threads' line numbers onto the new file, and cubic resolves its own
+threads once it sees the fix — the set of "open conversations" is not stable
+across minutes. Mechanical note: `resolveReviewThread` takes `threadId`, not
+`id`.
+
+<!-- /coderabbit-ai-generated:v1 -->

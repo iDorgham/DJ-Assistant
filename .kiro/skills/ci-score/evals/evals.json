@@ -2,9 +2,7 @@
   "_note": "B3 trigger/behavior scenarios + the B4 validation layers. Routing cases complement evals/prompt-routing.json (the OD-L4 contract).",
   "evals": [
     {
-      "skills": [
-        "ci-score"
-      ],
+      "skills": ["ci-score"],
       "query": "grade my CI",
       "setup": "cwd is a full local checkout of a repo with GitHub Actions workflows",
       "should_trigger": true,
@@ -16,9 +14,7 @@
       ]
     },
     {
-      "skills": [
-        "ci-score"
-      ],
+      "skills": ["ci-score"],
       "query": "what's our CI score",
       "setup": "cwd is NOT inside a git checkout (or the target path is a plain directory)",
       "should_trigger": true,
@@ -30,9 +26,7 @@
       ]
     },
     {
-      "skills": [
-        "ci-score"
-      ],
+      "skills": ["ci-score"],
       "query": "audit our CI against best practices, then fix the top issue",
       "setup": "full local checkout whose repo fails at least one check",
       "should_trigger": true,
@@ -43,9 +37,7 @@
       ]
     },
     {
-      "skills": [
-        "ci-score"
-      ],
+      "skills": ["ci-score"],
       "query": "why is CI slow on this repo",
       "should_trigger": false,
       "expected_behavior": [

@@ -85,6 +85,7 @@ CLAUDE.local.md
 .kilo/commands/
 .qoder/agents/
 .qoder/commands/
+.qoder/skills/
 .kiro/agents/
 .kiro/commands/
 .github/prompts/

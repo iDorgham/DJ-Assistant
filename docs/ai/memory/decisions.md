@@ -212,3 +212,21 @@ decision to record, not something to resolve by silently mixing both.
 versioned copy the implementation would have no stable reference.
 **Reverses if:** the plan is superseded, retired, or merged into the canonical
 product documentation.
+
+## D-015 · Qoder reads a hot-set mirror of the skill library (2026-10-27)
+
+`.opencode/skills` is this project's skill library and OpenCode reads it in
+place. Qoder reads its own directory instead, so the DJ-domain and stack skills
+were invisible in Qoder sessions. `pnpm skills:sync --write` (→
+`scripts/skills/sync.mjs`) copies the `hot` list from `skills.policy.json` into
+`.qoder/skills`. The mirror holds the hot set and **not** all 116 installed
+skills, because every skill a tool advertises costs the model tokens on every
+step (D-012) — a full mirror would double that spend for skills this project
+already marked unused. Like the agent and command mirrors it is gitignored, is
+never hand-edited, and nothing in the sync deletes: an entry outside the
+requested set stays where it is.
+**Why:** the capability was written for one tool only, and the same
+single-source-plus-mirrors rule the agent layer already follows was cheaper than
+duplicating curation per tool.
+**Reverses if:** Qoder learns to read `.opencode/skills` directly, or the
+advertise cost per skill stops being the dominant spend.

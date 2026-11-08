@@ -4,6 +4,97 @@ Ephemeral. Newest first. **Rotate aggressively** — if a line would still be tr
 in two weeks, it belongs in [`decisions.md`](./decisions.md); if it is just a
 fact, it belongs in [`facts.md`](./facts.md). Delete anything stale.
 
+## 2026-11-08 · PR #70 review round closed (T2.1.8 key pills)
+
+- **48 review threads on PR #70, all answered and resolved**; the branch head is
+  `144292e0`. The round first ran against a stale commit — the fixes were
+  local while every review read `dc3ddac6` — so the job was to push, then verify
+  each finding at HEAD (F-013).
+- **Follow-ups the closed round kept producing:** cubic's P2 on the `facts.md`
+  DeepSource wording, narrowed so it no longer dismisses every finding
+  (`aef4c88f`), and its P3 on calling the stranded intent "un-checkable" —
+  reworded to "enabled and removable" everywhere, docs only (`144292e0`).
+  Graphite's P2 on a **stranded Compatible-only intent** — the panel
+  reopened checked *and* disabled once the reference was lost, and with no
+  derived keys there was no chip to clear either, so Reset was the only escape;
+  the box now stays enabled and removable whenever the intent is on, and
+  unchecking it without a reference leaves manual key picks alone (`d76573a5`,
+  desktop `node --test` 217 → 219). Two `js/wrapper/iife` threads then landed on
+  `export function`s that fix added — the documented false positive, answered
+  with no code change.
+- **What the round changed:** `797e1823` turned Compatible-only into a committed
+  **intent** held separately from the derived `keyCamelot` list, widened the key
+  column so the `both` notation fits, moved the pill text onto the theme primary
+  token so every relation tint clears 4.5:1, and added the full-wheel relation
+  and compatible-set matrix tests. `f360b175` fixed the regression that round
+  exposed — the Key chip's × cleared only the applied list, so the derived keys
+  returned on the next render and the chip was unremovable; the intent now drops
+  with the chip (`dropsCompatibleIntent`). `0bf2c593` and `88b64c78` were made on
+  GitHub: F-013 trimmed to one line, and Apply no longer clears the intent when
+  the harmonic reference is missing.
+- **DeepSource JavaScript:** `js/wrapper/iife` fires on ordinary top-level
+  functions in ES modules and the complexity rule reports "medium" at 6, so PRs
+  #65 and #70 carry the FAILURE while Dependabot PRs pass. Agreed with the human
+  on 2026-11-08: mark those checkers Ignored in the DeepSource dashboard instead
+  of reshaping code to satisfy them. Nothing is branch-protected, so the check
+  blocks nothing.
+- **cubic's three memory P2s:** the `feedback.md` one is fixed. The `facts.md`
+  DeepSource entry keeps only the durable dashboard fact — the PR evidence and
+  the dated agreement moved here — and, after cubic's follow-up P2 on the same
+  file, it names the two false-positive checkers instead of implying every
+  DeepSource finding is a dashboard setting. `facts.md`'s `D-015` citation still
+  points at a decision that exists only in an **uncommitted** `decisions.md` in
+  this working tree; it becomes valid when that edit lands.
+- **Docs and context sweep complete (2026-11-08):** `docs/context/PROJECT_CONTEXT.md`
+  brought up to date with PR #60 (context menu + soft remove migration 008), PR #65
+  (bulk metadata edit + BulkActionBar), PR #70 (key pills + harmonic relations),
+  migrations 006–008, new IPC commands, and audit report assessment;
+  `PHASE2_LIBRARY_PLAYER_IMPLEMENTATION_PLAN.md` and `docs/ui/11-IMPLEMENTATION-CHECKLIST.md`
+  reconciled. Full automated test suite passes at **295 tests** (219 desktop,
+  64 agent [+1 skipped], 10 tooling, 2 API).
+- **Next development targets in Phase 2:**
+  1. **Slice 4 — Artwork column (T2.1.9):** cached thumbnail with missing-art
+     placeholder, hover-play overlay that loads track, default off, no cross-track
+     bleed during rapid scroll.
+  2. **Slice 5 — Left-nav library sources (T2.1.12):** All Library · Categories ·
+     Playlists · Browser · Flash/Storage driving `list_tracks` source/sourceId.
+  3. **Slice 6 — Mix Suggestions dock (T2.1.11):** ranked candidates from
+     harmonic distance, BPM delta, energy delta with reason chips, preview / add
+     actions, resizable dock with persisted width.
+  4. **Slices 7 & 8 — Real audio playback & peaks cache (T2.4.1–T2.4.5):** replace
+     synthesized preview wave with real per-track peaks cache and Symphonia audio
+     engine playback on dedicated audio thread.
+- **QA status / DoD gates:** No task box was ticked — native running-window QA
+  (5A colours, live preference switch, compatible filter against real library,
+  multi-select modifier clicks, Stage 1 shell) requires the native running app
+  (F-012) and remains the exit gate for T2.1.0, T2.1.2, T2.1.4, T2.1.6, T2.1.7,
+  T2.1.13, T2.1.3 and T2.1.8.
+
+## 2026-10-29 · T2.1.3 bulk metadata + T2.1.8 key pills (PR #65)
+
+- **T2.1.3 is code-complete on `feature/bulk-metadata-edit` / PR #65.** Beyond
+  the committed bulk dialog (`d9b5ba1a`), the missing spec §6 `BulkActionBar`
+  now ships: scope line, live Edit metadata… / Rate / Clear selection, and
+  Analyze / Smart Tag Cleanup / add-to-playlist-set / Export selection as
+  `aria-disabled` with reasons derived from `library-menu.ts`. It shows at
+  `count >= 2`, not `> 0`, because a plain row click always leaves one row
+  selected and a permanent bar hurts density (documented in `bulk-actions.ts`).
+  Desktop `node --test` is now **196 tests**; typecheck, ESLint and Prettier pass.
+- **Docs reconciled:** `docs/sdd/04-TASKS.md` (T2.1.3 annotation),
+  `PHASE2_LIBRARY_PLAYER_IMPLEMENTATION_PLAN.md` (Slice 2 known gap + Slice 9
+  row) and `docs/ui/11-IMPLEMENTATION-CHECKLIST.md` (BulkActionBar, editor,
+  Label/Year, TagChips).
+- **T2.1.8 key pills (Slice 3B) implemented 2026-10-29:** pure `harmonic.ts` +
+  `key-format.ts` modules with tests, the relation-tinted `KeyPill`, Settings →
+  Key display (Camelot / 1m1d / both, Strict/Wide) persisted in `UiState`, and a
+  Compatible-only filter that reuses `keyCamelot` (no Rust/SQL change). Desktop
+  `node --test` is now **217 tests**; typecheck, build, ESLint and Prettier pass.
+- **Still open:** select-all and keyboard scope (`Ctrl/Cmd+A`), the blocked
+  shared bulk actions, the native multi-select QA pass, and the T2.1.8
+  running-window QA (5A colours, live preference switch, compatible filter
+  against a real library). Modifier clicks and native checks cannot be
+  automated (F-012), so both task boxes stay unticked.
+
 ## 2026-10-24 · PR #53–#56 merged; main synced; QA still open
 
 - **Four pull requests are merged.** PR #53 (Stage 1 shell, Slice 3A, the v1

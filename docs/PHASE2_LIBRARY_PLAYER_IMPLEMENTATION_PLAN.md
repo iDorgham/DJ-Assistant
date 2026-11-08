@@ -1,7 +1,7 @@
 # Phase 2 — Library UX & Player Implementation Plan
 
 **Scope:** T2.1.5 → T2.4 (plus supporting T2.1.1 / T2.1.3 / T2.1.4 as needed)  
-**Status:** Living plan · **Date:** 2026-10-24  
+**Status:** Living plan · **Date:** 2026-11-08  
 **UI source of truth:** `docs/ui/` (00–03, 06, 09, 11, 12) + `docs/UI_UX_PLAYER_AND_LAYOUT_SPEC.md` v1.9+  
 **Tasks:** `docs/sdd/04-TASKS.md` · **Acceptance:** `docs/sdd/05-ACCEPTANCE.md` P2.1 / P2.1a–d  
 **Does not include:** T2.5 Spectrum Visualizer (optional polish), Tag Surgeon engine (T2.2), Cue Master generation (T2.3.5)
@@ -141,13 +141,13 @@ These get unit tests **first** (TDD-friendly).
 | 0 | Baseline merge — **done (PR #53, `03991d3c`, 2026-10-23)** | T2.1.0, T2.1.2 | — | — |
 | 1 | Column framework — **done (PR #49, `d037128b`)** | **T2.1.5** | S | — |
 | 2 | Rating + Energy — **done (Slice 2, 2026-10-21)** | **T2.1.4** (rating), **T2.1.6** (energy) | S–M | After 1 |
-| 3 | Tags + Comments — **3A done (PR #53, 2026-10-23); 3B pending** | **T2.1.7**, **T2.1.13** (3A), **T2.1.8** (3B) | M | After 1; key needs playing id |
+| 3 | Tags + Comments + Key — **3A done (PR #53, 2026-10-23); 3B done (PR #70, closed 2026-11-08)** | **T2.1.7**, **T2.1.13** (3A), **T2.1.8** (3B) | M | After 1; key needs playing id |
 | 4 | Artwork | **T2.1.9** | S | After 1 |
-| 5 | Context menu + nav sources | **T2.1.10**, **T2.1.12** | M | After 2–4 |
+| 5 | Context menu + nav sources — **T2.1.10 shipped (PR #60, 2026-10-27); T2.1.12 open** | **T2.1.10**, **T2.1.12** | M | After 2–4 |
 | 6 | Mix Suggestions | **T2.1.11** | M | After 3 + 5 |
 | 7 | Player modes + real audio — **dock presentations shipped (PR #54); real audio/peaks open** | **T2.4.1**, **T2.4.3** | M | After play path (5) |
 | 8 | Dual-wave + transport — **preview UI shipped (PR #54) over synthesized peaks; real peaks/audio open** | **T2.4.2**, **T2.4.4**, **T2.4.5** | L | After 7 |
-| 9 | Hardening (optional same sprint) | a11y, perf, **row virtualization**, search fields T2.1.1, bulk T2.1.3 | M | Continuous |
+| 9 | Hardening — **bulk T2.1.3 code-complete (PR #65); row virtualization shipped (PR #56)** | a11y, perf, **row virtualization**, search fields T2.1.1, bulk T2.1.3 | M | Continuous |
 
 S ≈ 1–2d · M ≈ 2–4d · L ≈ 4–7d (one mid-level engineer).
 
@@ -223,7 +223,7 @@ Slice 7 real audio ──► Slice 8 dual-wave + transport
 
 **Enhancement:** Inline energy edit (click bars or context “Set energy”) with same undo path — T2.1.6. — *shipped: clicking a segment sets the level, clicking it again clears it.*
 
-**Known gap:** the full bulk-metadata flow (BulkActionBar, select-all, per-field bulk dialog) stays in **T2.1.3**; Slice 2 ships only the table multi-select subset.
+**Known gap:** the full bulk-metadata flow shipped in **T2.1.3** (PR #65): the BulkActionBar, and the bulk metadata dialog with mixed-value display and a dirty-field-only preview diff. **Select-all remains open**, as do the blocked Analyze / Smart Tag Cleanup / add-to-playlist-set / export bulk actions, which render disabled with their reasons. Slice 2 ships only the table multi-select subset.
 
 ---
 
@@ -231,13 +231,22 @@ Slice 7 real audio ──► Slice 8 dual-wave + transport
 
 **Status:** 3A (tags + comments) **merged 2026-10-23** via PR #53 (squash
 `03991d3c`). Manual running-window QA is pending, so T2.1.7 and T2.1.13 stay
-unticked. 3B (key pills, T2.1.8) is **not started** — it waits on the
-key-format Settings surface.
+unticked. 3B (key pills, T2.1.8) is **implemented 2026-10-29** in PR #70,
+stacked on the T2.1.3 branch (PR #65); running-window QA is pending, so its box
+stays unticked. Its review round **closed 2026-11-08**, and three follow-ups
+landed since; the implementation is included in the current PR head. The
+Compatible-only filter is now an intent kept separate from the applied key list
+(so a new reference or a Strict/Wide change re-derives the keys), the Key
+chip's × drops that intent with it, Apply no longer clears it when the
+reference is missing, a stranded intent stays enabled and removable instead of
+needing a full reset, and the pill text uses the theme primary token so every
+relation tint clears 4.5:1. Desktop `node --test` is at **222 tests**.
 
 **Split (decided 2026-10-22):** **3A = tags + comments** (T2.1.7, T2.1.13),
-**3B = key pills** (T2.1.8). 3B is deferred because the key-format preference
-needs a Settings surface the app does not have yet. The implementation plan for
-3A is [`SLICE3A_PLAN.md`](engineering/SLICE3A_PLAN.md) — it records the locked
+**3B = key pills** (T2.1.8). 3B was deferred because the key-format preference
+needed a Settings surface the app did not have; that surface now exists
+(Settings → Key display). The implementation plan for 3A is
+[`SLICE3A_PLAN.md`](engineering/SLICE3A_PLAN.md) — it records the locked
 decisions (a `track_tags` table; the user comment **overwrites**
 `tracks.comments`) and the exact work list.
 
@@ -263,18 +272,18 @@ decisions (a `track_tags` table; the user comment **overwrites**
   `tracks.comments`** (the import-sourced value); `tracks.notes` stays unused.
 - `comment` joins the T2.1.1 search fields, and so do the tag values.
 
-**Key**
-- `key-format` + `harmonic` modules.
-- Preference: Camelot | 1m/1d | both (Settings → Library).
-- `KeyPill` relation vs **playing** track (or selected if nothing playing): same, ±1, relative, wide ±2, incompatible.
-- Compatible-only filter uses same rules (Strict vs Wide).
+**Key (3B, implemented 2026-10-29)**
+- `key-format` + `harmonic` modules, both pure and unit-tested.
+- Preference: Camelot | 1m/1d | both, persisted in `UiState` (Settings → Key display).
+- `KeyPill` relation vs **playing** track (or selected if nothing playing): same, ±1, relative, wide ±2, incompatible; fill strength follows `docs/ui/01-DESIGN-SYSTEM.md` §4.
+- Compatible-only filter uses same rules (Strict vs Wide) and reuses the existing `keyCamelot` filter, so no Rust/SQL change. The *intent* is stored separately from the applied key list (`dropsCompatibleIntent` in `lib/library.ts`): the list is re-derived on every render, so clearing the Key chip drops the intent with it instead of re-deriving the same keys. A committed intent whose reference is lost stays **inert but removable** — `canToggleCompatibleOnly` keeps the panel checkbox enabled so the intent can be switched off (the list is not applied, so there is no derived chip either) and `projectCompatibleDraftKeys` leaves manual key picks alone when unchecking without a reference.
 
 **DoD**
 - [ ] Playing 5A colors 5A / 4A / 6A / 5B correctly
 - [ ] Tag chip filters table
 - [ ] Comment edited in the metadata editor persists and is searchable *(T2.1.13)*
 - [ ] Preference switch updates column without reload
-- [ ] Pure function tests for all Camelot relations (12×12 matrix sample)
+- [x] Pure function tests for all Camelot relations (full wheel matrix)
 
 **Enhancement:** Optional left row border for “mixable with playing track”.
 
@@ -298,6 +307,8 @@ decisions (a `track_tags` table; the user comment **overwrites**
 ---
 
 ### Slice 5 — Context menu + left-nav sources (T2.1.10, T2.1.12)
+
+**Status:** T2.1.10 context menu **shipped in PR #60** (squash `495a0c21`, 2026-10-27) with soft delete (migration 008 `tracks.removed_at` + `skill_runs` transactional snapshot & undo), Play, Rate, Edit tags, column toggles, Reveal, Copy path. T2.1.12 (left-nav sources) remains open.
 
 **Library `TrackContextMenu`**
 - Play, Analyze, Edit tags, Fix tags (stub → T2.2), Rate submenu, Add to playlist/set, Find in playlists, Mix suggestions, column toggles (Energy/Tags/Rating/Label/Year/Artwork), Reveal in Finder/Explorer, Copy path, Remove from library (soft + Undo).
@@ -391,7 +402,7 @@ decisions (a `track_tags` table; the user comment **overwrites**
 | Item | Notes |
 |------|--------|
 | T2.1.1 Search fields | title, artist, album, genre, tags, label, year, filename, comment |
-| T2.1.3 Bulk select + bulk metadata | Undo for bulk rating/tags/energy/comments |
+| T2.1.3 Bulk select + bulk metadata | Undo for bulk rating/tags/energy/comments. **BulkActionBar + bulk metadata dialog shipped (PR #65)**; select-all and the shared bulk actions stay open. |
 | Virtualized track table | **Shipped (PR #56, `ed8d1046`)** — windowed Library body with spacer rows and 500-row pages; the Slice 1 DoD item above and `docs/ui/11-IMPLEMENTATION-CHECKLIST.md` Phase C “TrackTable virtualized” are satisfied. |
 | Virtualization perf | 30k-track native smoke shipped with PR #56 (179 ms to Library + 200 rows; 17.5 ms average / 16.9 ms p95 frame time); keep 5k–20k column-toggle checks open |
 | a11y | Star/Energy names; menu keyboard; focus rings; reduced motion on player height |

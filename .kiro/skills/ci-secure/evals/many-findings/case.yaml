@@ -65,7 +65,7 @@ graders:
   - type: tool_used
     name: selection-table-built-from-the-render-plan
     tool: Bash
-    input_match: '--render-plan'
+    input_match: "--render-plan"
     min: 1
 
   - type: llm

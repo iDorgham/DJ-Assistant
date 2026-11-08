@@ -29,6 +29,8 @@ export default tseslint.config(
       // code, parked by `pnpm skills:prune --apply`.
       ".opencode/skills/**",
       ".opencode/skills-backup/**",
+      // The Qoder mirror of the same hot skills, written by `pnpm skills:sync`.
+      ".qoder/skills/**",
     ],
   },
 
