@@ -240,7 +240,7 @@ Compatible-only filter is now an intent kept separate from the applied key list
 chip's × drops that intent with it, Apply no longer clears it when the
 reference is missing, a stranded intent stays enabled and removable instead of
 needing a full reset, and the pill text uses the theme primary token so every
-relation tint clears 4.5:1. Desktop `node --test` is at **219 tests**.
+relation tint clears 4.5:1. Desktop `node --test` is at **222 tests**.
 
 **Split (decided 2026-10-22):** **3A = tags + comments** (T2.1.7, T2.1.13),
 **3B = key pills** (T2.1.8). 3B was deferred because the key-format preference
