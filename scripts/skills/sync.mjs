@@ -59,6 +59,9 @@ export function signature(dir) {
 /** Where each requested skill stands: `create`, `update`, `unchanged` or `missing`. */
 export function plan(names, sourceDir, targetDir) {
   return names.map((name) => {
+    if (name !== path.basename(name) || name === "." || name === "..") {
+      throw new Error(`invalid skill name: ${name}`);
+    }
     const from = path.join(sourceDir, name);
     const to = path.join(targetDir, name);
     if (!fs.existsSync(from)) return { name, action: "missing" };
