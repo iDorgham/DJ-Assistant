@@ -19,13 +19,16 @@ not inferable by reading the code.
 - The approved v1 product plan is mirrored at `docs/plan/` with 52 locked
   decisions (`D-001–D-052`, scoped to that tree) and a discussion log at
   `docs/plan/06-delivery/discussions.md`. This is separate from the repository
-  memory ledger's `D-001–D-014`.
+  memory ledger's `D-001–D-015`.
 - The skill library this routing layer scores against is **machine-global**: it
   lives outside the repo, a fresh clone has none of it, and nothing in
   build/test/CI depends on it. Its size and location are workstation facts —
   they belong in `AGENTS.local.md`, not here.
 - `.freebuff/`, `.qodo/`, `.kombai/`, `.superpowers/`, `.opencode-notes/` are
   **gitignored** local AI-tooling state. `.opencode/` and `.kiro/` are tracked.
+- Each AI tool reads **its own** skills directory: OpenCode reads
+  `.opencode/skills`, Qoder reads `.qoder/skills`. A skill absent from the tool's
+  own directory is invisible to it (D-015).
 - A project-local OpenCode plugin under `.opencode/plugins/` makes OpenCode drop
   the discovered skills from the model list — that directory is forbidden.
 - A skill hidden with `metadata.opencode/autoinvoke: false` is **not loadable**
@@ -69,3 +72,14 @@ not inferable by reading the code.
   refuses when it still holds content. It may also be **older than the code**
   (a library last opened before the newest migration), so the CLI reads
   `PRAGMA table_info(tracks)` and adapts.
+- **`DeepSource: JavaScript` is configured outside the repo**: there is no
+  `.deepsource.toml`, so the JS checker set lives in the DeepSource dashboard and
+  cannot be changed from here. That is not the same as the findings being wrong —
+  treat each one on its merits. The two that this project has documented as
+  false positives so far: `js/wrapper/iife` ("function declaration in the global
+  scope") fires on top-level function declarations in ES modules, exported ones
+  included, since its text is ESLint's `no-implicit-globals` — which by design
+  does not apply to ES modules. And
+  `js/maintainability/cyclomatic-complexity` reports "medium" at a complexity of
+  6. No branch protection is set, so the check blocks nothing; which PRs
+  currently carry the FAILURE is in [`state.md`](./state.md).

@@ -161,3 +161,15 @@ Apply → Undo round-trip was verified that way, net-zero on the user's library.
 Pure logic behind a dialog stays testable with `node --test` in `src/lib`.
 **Rule:** when a check needs multi-select, hand that two-click step to the user
 instead of concluding the UI is untestable.
+
+## F-013 · Check which commit the reviews ran against before answering them (2026-11-08)
+
+Review comments can target a stale commit, so verify the PR head before acting on them.
+
+**Rule:** before acting on review findings, compare `gh pr view --json
+headRefOid` with `git rev-parse HEAD`. If they differ the threads are stale.
+Then re-fetch them after each push: the bots open a fresh round, GitHub re-maps
+the old threads' line numbers onto the new file, and cubic resolves its own
+threads once it sees the fix — the set of "open conversations" is not stable
+across minutes. Mechanical note: `resolveReviewThread` takes `threadId`, not
+`id`.

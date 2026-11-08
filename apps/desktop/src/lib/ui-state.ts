@@ -1,3 +1,6 @@
+import { COMPATIBILITY_MODES, type CompatibilityMode } from "./harmonic.ts";
+import { KEY_NOTATIONS, type KeyNotation } from "./key-format.ts";
+
 export type PrimaryView =
   "library" | "playlists" | "discover" | "statistics" | "publish" | "settings";
 
@@ -78,6 +81,10 @@ export interface UiState {
   playerMode: PlayerMode;
   /** Restored when the player is toggled back from Hidden. */
   lastVisiblePlayerMode: VisiblePlayerMode;
+  /** Key column notation (T2.1.8): Camelot, 1m/1d, or both. */
+  keyNotation: KeyNotation;
+  /** Compatible-only scope: Strict (same/relative/±1) or Wide (adds ±2). */
+  compatibilityMode: CompatibilityMode;
 }
 
 export type UiAction =
@@ -85,7 +92,9 @@ export type UiAction =
   | { type: "toggleNav" }
   | { type: "setTheme"; theme: ThemeMode }
   | { type: "setPlayerMode"; mode: PlayerMode }
-  | { type: "togglePlayer" };
+  | { type: "togglePlayer" }
+  | { type: "setKeyNotation"; keyNotation: KeyNotation }
+  | { type: "setCompatibilityMode"; compatibilityMode: CompatibilityMode };
 
 export interface StorageLike {
   getItem(key: string): string | null;
@@ -100,6 +109,8 @@ export const DEFAULT_UI_STATE: UiState = {
   theme: "dark",
   playerMode: "mini",
   lastVisiblePlayerMode: "mini",
+  keyNotation: "camelot",
+  compatibilityMode: "strict",
 };
 
 const VIEWS: readonly AppView[] = ALL_VIEWS;
@@ -152,6 +163,14 @@ export function reduceUiState(state: UiState, action: UiAction): UiState {
         ...state,
         playerMode: state.playerMode === "hidden" ? state.lastVisiblePlayerMode : "hidden",
       };
+    case "setKeyNotation": {
+      const keyNotation = oneOf(action.keyNotation, KEY_NOTATIONS);
+      return keyNotation ? { ...state, keyNotation } : state;
+    }
+    case "setCompatibilityMode": {
+      const compatibilityMode = oneOf(action.compatibilityMode, COMPATIBILITY_MODES);
+      return compatibilityMode ? { ...state, compatibilityMode } : state;
+    }
     default:
       return state;
   }
@@ -190,6 +209,9 @@ export function initUiState(storage?: StorageLike): UiState {
       lastVisiblePlayerMode:
         persistedVisiblePlayerMode(record.lastVisiblePlayerMode) ??
         DEFAULT_UI_STATE.lastVisiblePlayerMode,
+      keyNotation: oneOf(record.keyNotation, KEY_NOTATIONS) ?? DEFAULT_UI_STATE.keyNotation,
+      compatibilityMode:
+        oneOf(record.compatibilityMode, COMPATIBILITY_MODES) ?? DEFAULT_UI_STATE.compatibilityMode,
     };
   } catch {
     return { ...DEFAULT_UI_STATE };

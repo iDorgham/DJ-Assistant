@@ -221,6 +221,46 @@ export function describeFilterParts(filters: ListTracksFilters | undefined): Fil
 }
 
 /**
+ * Whether removing a filter group has to drop the Compatible-only intent
+ * (T2.1.8).
+ *
+ * The applied `keyCamelot` list is derived from that intent on every render,
+ * so clearing the Key chip alone would re-derive the same keys and leave the
+ * chip impossible to remove.
+ */
+export function dropsCompatibleIntent(group: FilterGroup, compatibleOnly: boolean): boolean {
+  return compatibleOnly && group === "key";
+}
+
+/**
+ * Whether the Compatible-only checkbox can be toggled (T2.1.8).
+ *
+ * Turning the filter on needs a harmonic reference, but an intent that is
+ * already on must stay removable — losing the reference would otherwise leave
+ * the box checked and disabled with no Key chip to clear it either.
+ */
+export function canToggleCompatibleOnly(compatibleKeys: string[], checked: boolean): boolean {
+  return compatibleKeys.length > 0 || checked;
+}
+
+/**
+ * The filter draft after the Compatible-only checkbox changes (T2.1.8).
+ *
+ * Checking applies the wheel around the reference key and unchecking removes
+ * exactly that list. With no reference nothing was ever applied, so the
+ * draft's own key picks survive.
+ */
+export function projectCompatibleDraftKeys(
+  draft: ListTracksFilters,
+  compatibleKeys: string[],
+  checked: boolean
+): ListTracksFilters {
+  if (checked) return { ...draft, keyCamelot: compatibleKeys };
+  if (compatibleKeys.length === 0) return draft;
+  return { ...draft, keyCamelot: undefined };
+}
+
+/**
  * Drops one filter group, leaving the others untouched.
  *
  * This is what the chip's × button calls: removing the tag filter must not

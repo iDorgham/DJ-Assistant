@@ -231,13 +231,22 @@ Slice 7 real audio ──► Slice 8 dual-wave + transport
 
 **Status:** 3A (tags + comments) **merged 2026-10-23** via PR #53 (squash
 `03991d3c`). Manual running-window QA is pending, so T2.1.7 and T2.1.13 stay
-unticked. 3B (key pills, T2.1.8) is **not started** — it waits on the
-key-format Settings surface.
+unticked. 3B (key pills, T2.1.8) is **implemented 2026-10-29** in PR #70,
+stacked on the T2.1.3 branch (PR #65); running-window QA is pending, so its box
+stays unticked. Its review round **closed 2026-11-08**, and three follow-ups
+landed since — the head is now `144292e0` with 48 threads, none left open. The
+Compatible-only filter is now an intent kept separate from the applied key list
+(so a new reference or a Strict/Wide change re-derives the keys), the Key
+chip's × drops that intent with it, Apply no longer clears it when the
+reference is missing, a stranded intent stays enabled and removable instead of
+needing a full reset, and the pill text uses the theme primary token so every
+relation tint clears 4.5:1. Desktop `node --test` is at **219 tests**.
 
 **Split (decided 2026-10-22):** **3A = tags + comments** (T2.1.7, T2.1.13),
-**3B = key pills** (T2.1.8). 3B is deferred because the key-format preference
-needs a Settings surface the app does not have yet. The implementation plan for
-3A is [`SLICE3A_PLAN.md`](engineering/SLICE3A_PLAN.md) — it records the locked
+**3B = key pills** (T2.1.8). 3B was deferred because the key-format preference
+needed a Settings surface the app did not have; that surface now exists
+(Settings → Key display). The implementation plan for 3A is
+[`SLICE3A_PLAN.md`](engineering/SLICE3A_PLAN.md) — it records the locked
 decisions (a `track_tags` table; the user comment **overwrites**
 `tracks.comments`) and the exact work list.
 
@@ -263,18 +272,18 @@ decisions (a `track_tags` table; the user comment **overwrites**
   `tracks.comments`** (the import-sourced value); `tracks.notes` stays unused.
 - `comment` joins the T2.1.1 search fields, and so do the tag values.
 
-**Key**
-- `key-format` + `harmonic` modules.
-- Preference: Camelot | 1m/1d | both (Settings → Library).
-- `KeyPill` relation vs **playing** track (or selected if nothing playing): same, ±1, relative, wide ±2, incompatible.
-- Compatible-only filter uses same rules (Strict vs Wide).
+**Key (3B, implemented 2026-10-29)**
+- `key-format` + `harmonic` modules, both pure and unit-tested.
+- Preference: Camelot | 1m/1d | both, persisted in `UiState` (Settings → Key display).
+- `KeyPill` relation vs **playing** track (or selected if nothing playing): same, ±1, relative, wide ±2, incompatible; fill strength follows `docs/ui/01-DESIGN-SYSTEM.md` §4.
+- Compatible-only filter uses same rules (Strict vs Wide) and reuses the existing `keyCamelot` filter, so no Rust/SQL change. The *intent* is stored separately from the applied key list (`dropsCompatibleIntent` in `lib/library.ts`): the list is re-derived on every render, so clearing the Key chip drops the intent with it instead of re-deriving the same keys. A committed intent whose reference is lost stays **inert but removable** — `canToggleCompatibleOnly` keeps the panel checkbox enabled so the intent can be switched off (the list is not applied, so there is no derived chip either) and `projectCompatibleDraftKeys` leaves manual key picks alone when unchecking without a reference.
 
 **DoD**
 - [ ] Playing 5A colors 5A / 4A / 6A / 5B correctly
 - [ ] Tag chip filters table
 - [ ] Comment edited in the metadata editor persists and is searchable *(T2.1.13)*
 - [ ] Preference switch updates column without reload
-- [ ] Pure function tests for all Camelot relations (12×12 matrix sample)
+- [x] Pure function tests for all Camelot relations (full wheel matrix)
 
 **Enhancement:** Optional left row border for “mixable with playing track”.
 

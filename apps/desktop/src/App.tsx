@@ -97,11 +97,13 @@ import {
   ANALYSIS_STATUS_OPTIONS,
   CAMELOT_KEYS,
   activeFilterCount,
+  canToggleCompatibleOnly,
   clearFilterGroup,
   defaultSortDirection,
   describeFilterParts,
   describeMetadataUndo,
   describeMetadataWrite,
+  dropsCompatibleIntent,
   filterTracks,
   formatBpm,
   formatDuration,
@@ -110,6 +112,7 @@ import {
   formatMissingField,
   hasFilterValue,
   normalizeFilters,
+  projectCompatibleDraftKeys,
   scanPercent,
   toggleFilterValue,
   truncateComment,
@@ -150,6 +153,13 @@ import {
   type AppView,
   type PrimaryView,
 } from "./lib/ui-state";
+import {
+  camelotRelation,
+  compatibleCamelotKeys,
+  COMPATIBILITY_MODE_LABELS,
+  type CompatibilityMode,
+} from "./lib/harmonic";
+import type { KeyNotation } from "./lib/key-format";
 import { rowHeightForColumns, shouldLoadMore, virtualWindow } from "./lib/virtual-window";
 import { nextTheme, resolveTheme, THEME_LABELS } from "./lib/theme";
 import { PreviewPlayer } from "./components/preview-player";
@@ -159,6 +169,7 @@ import { TrackPanel } from "./components/track-panel/TrackPanel";
 import { BulkActionBar } from "./components/BulkActionBar";
 import { ColumnPicker } from "./components/ColumnPicker";
 import { EnergyBars } from "./components/EnergyBars";
+import { KeyPill } from "./components/KeyPill";
 import { StarRating } from "./components/StarRating";
 import { TagChips } from "./components/TagChips";
 import { RowContextMenu } from "./components/RowContextMenu";
@@ -431,6 +442,9 @@ function TrackCell({
   onRate,
   onSetEnergy,
   onSelectTag,
+  keyNotation,
+  keyReference,
+  theme,
 }: {
   id: ColumnId;
   track: TrackSummary;
@@ -441,6 +455,11 @@ function TrackCell({
   onSetEnergy?: (track: TrackSummary, energy: number | null) => void;
   /** Filters the library by the clicked tag (T2.1.7). */
   onSelectTag?: (tag: string) => void;
+  /** Key notation preference (T2.1.8). */
+  keyNotation?: KeyNotation;
+  /** Camelot code of the playing or selected track, if there is one. */
+  keyReference?: string | null;
+  theme?: "dark" | "light";
 }) {
   const definition = columnDefinition(id);
   const base = `py-2.5 px-4 overflow-hidden whitespace-nowrap text-ellipsis ${
@@ -502,6 +521,22 @@ function TrackCell({
     );
   }
 
+  if (id === "key") {
+    const relation =
+      keyReference && track.keyCamelot ? camelotRelation(keyReference, track.keyCamelot) : null;
+    return (
+      <td className="py-2.5 px-4 text-center">
+        <KeyPill
+          keyCamelot={track.keyCamelot}
+          keyClassical={track.keyClassical}
+          notation={keyNotation}
+          relation={relation}
+          theme={theme}
+        />
+      </td>
+    );
+  }
+
   if (id === "status") {
     const chip = ANALYSIS_STATUS_CHIP[track.analysisStatus] ?? ANALYSIS_STATUS_CHIP.pending;
     const StatusIcon = chip.icon;
@@ -552,7 +587,11 @@ function LibraryFilterPanel({
   draft,
   genres,
   error,
+  referenceKey,
+  compatibilityMode,
+  compatibleOnly,
   onChange,
+  onCompatibleOnlyChange,
   onApply,
   onReset,
   onClose,
@@ -560,12 +599,20 @@ function LibraryFilterPanel({
   draft: ListTracksFilters;
   genres: GenreCount[];
   error: string | null;
+  /** Camelot code of the playing or selected track; enables Compatible only. */
+  referenceKey: string | null;
+  compatibilityMode: CompatibilityMode;
+  /** The committed compatibility intent, kept separate from the key chips. */
+  compatibleOnly: boolean;
   onChange: (next: ListTracksFilters) => void;
+  onCompatibleOnlyChange: (checked: boolean) => void;
   onApply: () => void;
   onReset: () => void;
   onClose: () => void;
 }) {
   const numberOrUndefined = (raw: string) => (raw.trim() === "" ? undefined : Number(raw));
+  const compatibleKeys = compatibleCamelotKeys(referenceKey, compatibilityMode);
+  const canToggleCompatible = canToggleCompatibleOnly(compatibleKeys, compatibleOnly);
 
   return (
     <div
@@ -617,6 +664,35 @@ function LibraryFilterPanel({
               className="w-full rounded-md border border-dj-border bg-dj-elevated px-2.5 py-1.5 text-xs text-dj-text placeholder:text-dj-text-muted focus:border-dj-accent focus:outline-hidden"
             />
           </div>
+        </div>
+
+        {/* Compatible only (T2.1.8). It translates the reference key into the
+            existing keyCamelot filter, so the SQL path and the server stay
+            unchanged. The intent is committed separately from the chips, so a
+            new playing/selected track or a Strict/Wide change re-derives the
+            applied keys instead of leaving the old snapshot in place. */}
+        <div>
+          <label
+            className={`flex items-start gap-2 rounded-sm border border-dj-border bg-dj-elevated px-2 py-1.5 ${
+              canToggleCompatible ? "cursor-pointer" : "opacity-60"
+            }`}
+          >
+            <input
+              type="checkbox"
+              checked={compatibleOnly}
+              disabled={!canToggleCompatible}
+              onChange={(event) => onCompatibleOnlyChange(event.target.checked)}
+              className="mt-0.5 accent-dj-accent"
+            />
+            <span className="min-w-0">
+              <span className="block text-[11px] font-medium text-dj-text">Compatible only</span>
+              <span className="block text-[10px] text-dj-text-muted">
+                {referenceKey
+                  ? `${referenceKey} · ${COMPATIBILITY_MODE_LABELS[compatibilityMode]} — same, relative and ±1${compatibilityMode === "wide" ? ", plus ±2" : ""}`
+                  : "Play or select a track with a key to use this filter"}
+              </span>
+            </span>
+          </label>
         </div>
 
         {/* Camelot keys */}
@@ -1029,6 +1105,10 @@ export default function App() {
   // stays correct past the 200-row page instead of filtering a partial window.
   const [filters, setFilters] = useState<ListTracksFilters>({});
   const [draftFilters, setDraftFilters] = useState<ListTracksFilters>({});
+  // Compatibility is an intent, not a snapshot: the applied key list is
+  // re-derived whenever the reference track or Strict/Wide mode changes.
+  const [compatibleOnly, setCompatibleOnly] = useState(false);
+  const [draftCompatibleOnly, setDraftCompatibleOnly] = useState(false);
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [filterError, setFilterError] = useState<string | null>(null);
   const [genres, setGenres] = useState<GenreCount[]>([]);
@@ -1079,6 +1159,15 @@ export default function App() {
   // metadata reloads reorder the table, so a stored index would point at a
   // different track by the time the user Shift-clicks.
   const [selectionAnchor, setSelectionAnchor] = useState<string | null>(null);
+  // Harmonic reference for the key pills and the Compatible only filter
+  // (T2.1.8): the playing track wins, the first selected row is the fallback.
+  const selectedTrack =
+    selection.length > 0 ? (tracks.find((entry) => entry.id === selection[0]) ?? null) : null;
+  const keyReference = playingTrack?.keyCamelot ?? selectedTrack?.keyCamelot ?? null;
+  const compatibleKeys = useMemo(
+    () => compatibleCamelotKeys(keyReference, ui.compatibilityMode),
+    [keyReference, ui.compatibilityMode]
+  );
   // The pending *panel open* of a plain row click. The selection applies
   // immediately; only the open waits out the double-click window, so a quick
   // edit after selecting a row cannot still target the previous selection.
@@ -1156,7 +1245,14 @@ export default function App() {
 
   // Filters and sort are part of the query key; `reloadToken` is not, so a
   // rating edit refreshes the loaded rows without looking like a new query.
-  const normalizedFilters = useMemo(() => normalizeFilters(filters), [filters]);
+  const effectiveFilters = useMemo(() => {
+    if (!compatibleOnly) return filters;
+    // A missing reference (nothing playing or selected) disables the derived
+    // key filter instead of freezing the last compatible snapshot.
+    if (compatibleKeys.length === 0) return { ...filters, keyCamelot: undefined };
+    return { ...filters, keyCamelot: compatibleKeys };
+  }, [filters, compatibleOnly, compatibleKeys]);
+  const normalizedFilters = useMemo(() => normalizeFilters(effectiveFilters), [effectiveFilters]);
   const queryKey = useMemo(
     () => `${JSON.stringify(normalizedFilters ?? {})}|${sortBy ?? ""}|${sortBy ? sortDir : ""}`,
     [normalizedFilters, sortBy, sortDir]
@@ -1377,10 +1473,22 @@ export default function App() {
   };
 
   const openFilters = () => {
-    setDraftFilters(filters);
+    setDraftFilters(effectiveFilters);
+    setDraftCompatibleOnly(compatibleOnly);
     setFilterError(null);
     setColumnsOpen(false);
     setFiltersOpen(true);
+  };
+
+  /** A manual key-chip edit overrides the Compatible-only intent. */
+  const handleFilterDraftChange = (next: ListTracksFilters) => {
+    if (next.keyCamelot !== draftFilters.keyCamelot) setDraftCompatibleOnly(false);
+    setDraftFilters(next);
+  };
+
+  const handleCompatibleOnlyChange = (checked: boolean) => {
+    setDraftCompatibleOnly(checked);
+    setDraftFilters((current) => projectCompatibleDraftKeys(current, compatibleKeys, checked));
   };
 
   const applyFilters = () => {
@@ -1411,15 +1519,31 @@ export default function App() {
     }
     setFilterError(null);
     setFilters(normalized ?? {});
+    setCompatibleOnly(draftCompatibleOnly);
     setFiltersOpen(false);
   };
 
   const resetFilters = () => {
     setDraftFilters({});
+    setDraftCompatibleOnly(false);
     setFilters({});
+    setCompatibleOnly(false);
     setFilterError(null);
     setFiltersOpen(false);
     // Sort is a separate control — resetting filters must not reset sort.
+  };
+
+  /**
+   * A chip's × removes one filter group. The Key group is special while the
+   * Compatible-only intent is on: its applied list is derived, so the intent
+   * has to go with the chip or the same keys come back on the next render.
+   */
+  const clearFilterChip = (group: Parameters<typeof clearFilterGroup>[1]) => {
+    if (dropsCompatibleIntent(group, compatibleOnly)) {
+      setCompatibleOnly(false);
+      setDraftCompatibleOnly(false);
+    }
+    setFilters((current) => clearFilterGroup(current, group));
   };
 
   const toggleSort = (key: ListTracksSortBy) => {
@@ -2207,8 +2331,8 @@ export default function App() {
     }, "");
     setColumns((current) => setColumnWidth(current, id, autoFitWidth(longest, definition)));
   };
-  const filterCount = activeFilterCount(filters);
-  const filterSummary = describeFilterParts(filters);
+  const filterCount = activeFilterCount(effectiveFilters);
+  const filterSummary = describeFilterParts(effectiveFilters);
   // True when the (server-side) page behind `filteredTracks` is narrowed either by
   // the filter panel or by the live search box; used to tell "no tracks" apart
   // from "no matches for the current query".
@@ -2592,7 +2716,11 @@ export default function App() {
                       draft={draftFilters}
                       genres={genres}
                       error={filterError}
-                      onChange={setDraftFilters}
+                      referenceKey={keyReference}
+                      compatibilityMode={ui.compatibilityMode}
+                      compatibleOnly={draftCompatibleOnly}
+                      onChange={handleFilterDraftChange}
+                      onCompatibleOnlyChange={handleCompatibleOnlyChange}
                       onApply={applyFilters}
                       onReset={resetFilters}
                       onClose={() => setFiltersOpen(false)}
@@ -2671,9 +2799,7 @@ export default function App() {
                         {part.label}
                         <button
                           type="button"
-                          onClick={() =>
-                            setFilters((current) => clearFilterGroup(current, part.group))
-                          }
+                          onClick={() => clearFilterChip(part.group)}
                           title={`Remove the ${part.group} filter`}
                           aria-label={`Remove the ${part.group} filter`}
                           className="rounded-sm p-px text-dj-accent/70 transition hover:text-dj-accent"
@@ -2875,6 +3001,9 @@ export default function App() {
                                   onRate={handleSetRating}
                                   onSetEnergy={handleSetEnergy}
                                   onSelectTag={handleFilterByTag}
+                                  keyNotation={ui.keyNotation}
+                                  keyReference={keyReference}
+                                  theme={resolveTheme(ui.theme, systemPrefersDark)}
                                 />
                               ))}
                             </tr>
@@ -3498,9 +3627,15 @@ export default function App() {
               theme={ui.theme}
               navCollapsed={ui.navCollapsed}
               playerVisible={ui.playerMode !== "hidden"}
+              keyNotation={ui.keyNotation}
+              compatibilityMode={ui.compatibilityMode}
               onCycleTheme={() => dispatch({ type: "setTheme", theme: nextTheme(ui.theme) })}
               onToggleNav={() => dispatch({ type: "toggleNav" })}
               onTogglePlayer={() => dispatch({ type: "togglePlayer" })}
+              onSetKeyNotation={(keyNotation) => dispatch({ type: "setKeyNotation", keyNotation })}
+              onSetCompatibilityMode={(compatibilityMode) =>
+                dispatch({ type: "setCompatibilityMode", compatibilityMode })
+              }
               onOpenImport={() => handleViewChange("import")}
               onOpenAnalysis={() => handleViewChange("analysis")}
               onOpenBackup={() => handleViewChange("backup")}
