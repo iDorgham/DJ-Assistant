@@ -30,6 +30,28 @@ const QODER_SKILLS = path.join(ROOT, ".qoder", "skills");
 const argv = process.argv.slice(2);
 const write = argv.includes("--write");
 
+/**
+ * A skill name is a single directory name — never a path. A malformed entry
+ * (`.`, `..`, a separator, or an absolute root) would let a hot-list edit
+ * escape `.qoder/skills` and delete or overwrite an arbitrary sibling
+ * directory on `--write`, so it is rejected before either path is built.
+ */
+export function assertSkillName(name) {
+  if (typeof name !== "string" || name === "") {
+    throw new Error(`invalid skill name: ${JSON.stringify(name)}`);
+  }
+  if (name === "." || name === "..") {
+    throw new Error(`invalid skill name: ${JSON.stringify(name)}`);
+  }
+  if (name.includes("/") || name.includes("\\")) {
+    throw new Error(`invalid skill name: ${JSON.stringify(name)}`);
+  }
+  if (path.isAbsolute(name)) {
+    throw new Error(`invalid skill name: ${JSON.stringify(name)}`);
+  }
+  return name;
+}
+
 /* ------------------------------------------------------------------- plan */
 
 /**
@@ -59,9 +81,7 @@ export function signature(dir) {
 /** Where each requested skill stands: `create`, `update`, `unchanged` or `missing`. */
 export function plan(names, sourceDir, targetDir) {
   return names.map((name) => {
-    if (name !== path.basename(name) || name === "." || name === "..") {
-      throw new Error(`invalid skill name: ${name}`);
-    }
+    assertSkillName(name);
     const from = path.join(sourceDir, name);
     const to = path.join(targetDir, name);
     if (!fs.existsSync(from)) return { name, action: "missing" };
@@ -75,6 +95,9 @@ export function plan(names, sourceDir, targetDir) {
  * is removed before the copy so a file the source no longer has cannot survive
  * in it; entries outside `names` are not touched. Returns the same plan the
  * dry run prints, so a caller can tell what was skipped from what was copied.
+ *
+ * Every name is validated as a single directory before either path is built,
+ * so a malformed hot-list entry cannot escape `.qoder/skills`.
  */
 export function apply(names, sourceDir, targetDir) {
   const entries = plan(names, sourceDir, targetDir);
