@@ -6,14 +6,16 @@ fact, it belongs in [`facts.md`](./facts.md). Delete anything stale.
 
 ## 2026-11-08 · PR #70 review round closed (T2.1.8 key pills)
 
-- **47 review threads on PR #70, all answered and resolved**; the branch head is
-  `d76573a5`. The round first ran against a stale commit — the fixes were
+- **48 review threads on PR #70, all answered and resolved**; the branch head is
+  `144292e0`. The round first ran against a stale commit — the fixes were
   local while every review read `dc3ddac6` — so the job was to push, then verify
   each finding at HEAD (F-013).
 - **Follow-ups the closed round kept producing:** cubic's P2 on the `facts.md`
   DeepSource wording, narrowed so it no longer dismisses every finding
-  (`aef4c88f`). Graphite's P2 on a **stranded Compatible-only intent** — the
-  panel reopened checked *and* disabled once the reference was lost, and with no
+  (`aef4c88f`), and its P3 on calling the stranded intent "un-checkable" —
+  reworded to "enabled and removable" everywhere, docs only (`144292e0`).
+  Graphite's P2 on a **stranded Compatible-only intent** — the panel
+  reopened checked *and* disabled once the reference was lost, and with no
   derived keys there was no chip to clear either, so Reset was the only escape;
   the box now stays enabled and removable whenever the intent is on, and
   unchecking it without a reference leaves manual key picks alone (`d76573a5`,
