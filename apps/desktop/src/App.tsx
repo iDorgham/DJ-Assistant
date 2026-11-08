@@ -1592,6 +1592,7 @@ export default function App() {
       setDraftCompatibleOnly(false);
     }
     setFilters((current) => clearFilterGroup(current, group));
+    setDraftFilters((current) => clearFilterGroup(current, group));
   };
 
   const toggleSort = (key: ListTracksSortBy) => {
