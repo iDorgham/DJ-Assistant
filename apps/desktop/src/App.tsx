@@ -97,6 +97,7 @@ import {
   ANALYSIS_STATUS_OPTIONS,
   CAMELOT_KEYS,
   activeFilterCount,
+  canToggleCompatibleOnly,
   clearFilterGroup,
   defaultSortDirection,
   describeFilterParts,
@@ -111,6 +112,7 @@ import {
   formatMissingField,
   hasFilterValue,
   normalizeFilters,
+  projectCompatibleDraftKeys,
   scanPercent,
   toggleFilterValue,
   truncateComment,
@@ -610,6 +612,7 @@ function LibraryFilterPanel({
 }) {
   const numberOrUndefined = (raw: string) => (raw.trim() === "" ? undefined : Number(raw));
   const compatibleKeys = compatibleCamelotKeys(referenceKey, compatibilityMode);
+  const canToggleCompatible = canToggleCompatibleOnly(compatibleKeys, compatibleOnly);
 
   return (
     <div
@@ -671,13 +674,13 @@ function LibraryFilterPanel({
         <div>
           <label
             className={`flex items-start gap-2 rounded-sm border border-dj-border bg-dj-elevated px-2 py-1.5 ${
-              compatibleKeys.length > 0 ? "cursor-pointer" : "opacity-60"
+              canToggleCompatible ? "cursor-pointer" : "opacity-60"
             }`}
           >
             <input
               type="checkbox"
               checked={compatibleOnly}
-              disabled={compatibleKeys.length === 0}
+              disabled={!canToggleCompatible}
               onChange={(event) => onCompatibleOnlyChange(event.target.checked)}
               className="mt-0.5 accent-dj-accent"
             />
@@ -1485,10 +1488,7 @@ export default function App() {
 
   const handleCompatibleOnlyChange = (checked: boolean) => {
     setDraftCompatibleOnly(checked);
-    setDraftFilters((current) => ({
-      ...current,
-      keyCamelot: checked ? compatibleKeys : undefined,
-    }));
+    setDraftFilters((current) => projectCompatibleDraftKeys(current, compatibleKeys, checked));
   };
 
   const applyFilters = () => {
