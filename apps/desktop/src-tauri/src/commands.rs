@@ -1340,31 +1340,39 @@ fn apply_metadata_patch(
     // The scalar columns this patch touches. The names come from the fixed
     // allow-list in `core`, never from user input.
     let columns = patch_columns(patch);
-    // Ids are bound, never interpolated into the SQL text.
-    let read = read_patch_statement(track_ids, &columns).map_err(|e| e.to_string())?;
+    // Ids are bound, never interpolated into the SQL text. A selection larger
+    // than SQLite's variable ceiling is split into several statements, so the
+    // read is a list the executor runs and concatenates.
+    let reads = read_patch_statement(track_ids, &columns).map_err(|e| e.to_string())?;
 
     let tx = conn.transaction().map_err(|e| e.to_string())?;
 
     // The rows the selection names, with the patched columns as they stand. An
     // id the library does not know matches no row, so a stale bulk selection
     // applies to what still exists.
-    let params: Vec<rusqlite::types::Value> = read.params.iter().map(bind_value).collect();
-    let rows: Vec<(String, Vec<WriteValue>)> = {
-        let mut stmt = tx.prepare(&read.sql).map_err(|e| e.to_string())?;
-        let collected = stmt
-            .query_map(rusqlite::params_from_iter(params.iter()), |row| {
-                let mut values = Vec::with_capacity(columns.len());
-                for index in 0..columns.len() {
-                    values.push(read_value(row.get::<_, rusqlite::types::Value>(index + 1)?));
-                }
-                Ok((row.get::<_, String>(0)?, values))
-            })
-            .map_err(|e| e.to_string())?
-            // A row that fails to map is an error, not a row to skip.
-            .collect::<Result<Vec<_>, _>>()
-            .map_err(|e| e.to_string())?;
-        collected
-    };
+    let mut rows: Vec<(String, Vec<WriteValue>)> = Vec::new();
+    for read in &reads {
+        let params: Vec<rusqlite::types::Value> = read.params.iter().map(bind_value).collect();
+        // The iterator borrows the prepared statement, so it is collected into
+        // a local before the statement is dropped.
+        let collected = {
+            let mut stmt = tx.prepare(&read.sql).map_err(|e| e.to_string())?;
+            let collected = stmt
+                .query_map(rusqlite::params_from_iter(params.iter()), |row| {
+                    let mut values = Vec::with_capacity(columns.len());
+                    for index in 0..columns.len() {
+                        values.push(read_value(row.get::<_, rusqlite::types::Value>(index + 1)?));
+                    }
+                    Ok((row.get::<_, String>(0)?, values))
+                })
+                .map_err(|e| e.to_string())?
+                // A row that fails to map is an error, not a row to skip.
+                .collect::<Result<Vec<_>, _>>()
+                .map_err(|e| e.to_string())?;
+            collected
+        };
+        rows.extend(collected);
+    }
 
     let tag_sets = if patch.normalized_tags().is_some() {
         let ids: Vec<String> = rows.iter().map(|(id, _)| id.clone()).collect();

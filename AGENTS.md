@@ -32,7 +32,7 @@ optional.
 | API dev           | `pnpm dev:api`                                 |
 | Lint everything   | `pnpm lint`                                    |
 | Type-check        | `pnpm typecheck`                               |
-| Front-end tests   | `pnpm test` (`node --test`)                    |
+| Front-end tests   | `pnpm --filter @dj-assistant/desktop test` (`node --test`) |
 | Rust format/lint  | `pnpm rust:fmt` · `pnpm rust:clippy`           |
 | Rust tests        | `pnpm rust:test` (use `rust:test:portable` when the ONNX runtime is unavailable) |
 | Full local gate   | `pnpm ci:local`                                |

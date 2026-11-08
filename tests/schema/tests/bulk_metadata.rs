@@ -40,34 +40,40 @@ fn execute(conn: &Connection, stmt: &WriteStatement) -> usize {
         .unwrap_or_else(|e| panic!("core statement must run as built: {e}\n{}", stmt.sql))
 }
 
-/// Reads the selection through the statement core built, as `(id, column values)`.
+/// Reads the selection through the statements core built, as `(id, column values)`.
 ///
 /// This is the executor's first move and the one the bind order has to be right
-/// for — a placeholder one off drops a track here, quietly.
+/// for — a placeholder one off drops a track here, quietly. A selection larger
+/// than SQLite's variable ceiling is split across several statements, so this
+/// runs every one and concatenates the rows in the order core sorted them.
 fn read_selection(
     conn: &Connection,
-    stmt: &WriteStatement,
+    stmts: &[WriteStatement],
     width: usize,
 ) -> Vec<(String, Vec<WriteValue>)> {
-    let params: Vec<rusqlite::types::Value> = stmt.params.iter().map(bind).collect();
-    let mut cursor = conn
-        .prepare(&stmt.sql)
-        .unwrap_or_else(|e| panic!("core SQL must prepare: {e}\n{}", stmt.sql));
-    let rows = cursor
-        .query_map(rusqlite::params_from_iter(params.iter()), |row| {
-            let id = row.get::<_, String>(0)?;
-            let values = (1..=width)
-                .map(|index| match row.get::<_, rusqlite::types::Value>(index) {
-                    Ok(rusqlite::types::Value::Integer(number)) => WriteValue::Int(number),
-                    Ok(rusqlite::types::Value::Text(text)) => WriteValue::Text(text),
-                    _ => WriteValue::Null,
-                })
-                .collect::<Vec<WriteValue>>();
-            Ok((id, values))
-        })
-        .unwrap_or_else(|e| panic!("core statement must run as built: {e}\n{}", stmt.sql));
-    rows.collect::<Result<Vec<_>, _>>()
-        .expect("every column must read")
+    let mut rows = Vec::new();
+    for stmt in stmts {
+        let params: Vec<rusqlite::types::Value> = stmt.params.iter().map(bind).collect();
+        let collected = conn
+            .prepare(&stmt.sql)
+            .unwrap_or_else(|e| panic!("core SQL must prepare: {e}\n{}", stmt.sql))
+            .query_map(rusqlite::params_from_iter(params.iter()), |row| {
+                let id = row.get::<_, String>(0)?;
+                let values = (1..=width)
+                    .map(|index| match row.get::<_, rusqlite::types::Value>(index) {
+                        Ok(rusqlite::types::Value::Integer(number)) => WriteValue::Int(number),
+                        Ok(rusqlite::types::Value::Text(text)) => WriteValue::Text(text),
+                        _ => WriteValue::Null,
+                    })
+                    .collect::<Vec<WriteValue>>();
+                Ok((id, values))
+            })
+            .unwrap_or_else(|e| panic!("core statement must run as built: {e}\n{}", stmt.sql))
+            .collect::<Result<Vec<_>, _>>()
+            .expect("every column must read");
+        rows.extend(collected);
+    }
+    rows
 }
 
 /// Inserts a track carrying the values a bulk selection would show.
@@ -140,8 +146,8 @@ fn same_set(left: &[String], right: &[String]) -> bool {
 /// Returns the undo id and the number of tracks the plan decided to touch.
 fn apply_patch(conn: &Connection, ids: &[String], patch: &MetadataPatch) -> (String, usize) {
     let columns = patch_columns(patch);
-    let read = read_patch_statement(ids, &columns).expect("the read must build");
-    let selected = read_selection(conn, &read, columns.len());
+    let reads = read_patch_statement(ids, &columns).expect("the read must build");
+    let selected = read_selection(conn, &reads, columns.len());
 
     let tag_sets = if patch.tags.is_some() {
         selected
@@ -263,8 +269,8 @@ fn a_bulk_patch_reads_back_the_whole_selection() {
     // The bind-order guard: a placeholder one off returns fewer rows than the
     // selection named, and the missing track is silently left out of the write.
     let conn = three_tracks();
-    let read = read_patch_statement(&three_ids(), &["genre"]).expect("the read must build");
-    let selected = read_selection(&conn, &read, 1);
+    let reads = read_patch_statement(&three_ids(), &["genre"]).expect("the read must build");
+    let selected = read_selection(&conn, &reads, 1);
 
     assert_eq!(
         selected
@@ -273,7 +279,7 @@ fn a_bulk_patch_reads_back_the_whole_selection() {
             .collect::<Vec<_>>(),
         vec!["t1", "t2", "t3"],
         "every selected track must be read\n{}",
-        read.sql
+        reads[0].sql
     );
 }
 
@@ -487,4 +493,35 @@ fn the_snapshot_records_only_the_columns_the_patch_carried() {
         vec!["comments"],
         "only the written column is snapshotted"
     );
+}
+
+#[test]
+fn a_selection_larger_than_the_clause_limit_reads_back_in_chunks() {
+    // rusqlite's default variable ceiling is 999, so a 1000-track selection is
+    // split into two statements. The read must still return every track — a
+    // single statement there is refused by SQLite and the edit would silently
+    // touch nothing.
+    let conn = open_migrated();
+    for index in 0..1000 {
+        seed(
+            &conn,
+            &format!("t{index:04}"),
+            &format!("Track {index}"),
+            "House",
+            2024,
+            &[],
+        );
+    }
+    let ids: Vec<String> = (0..1000).map(|i| format!("t{i:04}")).collect();
+    let reads = read_patch_statement(&ids, &["genre"]).expect("the read must build");
+    assert_eq!(reads.len(), 2, "1000 ids need two statements");
+    let selected = read_selection(&conn, &reads, 1);
+    assert_eq!(
+        selected.len(),
+        1000,
+        "every selected track must be read across the chunks"
+    );
+    // The ids were sorted by core, so the concatenation is deterministic.
+    assert_eq!(selected[0].0, "t0000");
+    assert_eq!(selected[999].0, "t0999");
 }

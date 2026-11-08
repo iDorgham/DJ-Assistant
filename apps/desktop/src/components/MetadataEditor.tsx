@@ -72,7 +72,12 @@ function fieldHint(survey: FieldSurvey, bulk: boolean): string | undefined {
 }
 
 export function MetadataEditor({ targets, trackIds, onSave, onClose }: MetadataEditorProps) {
-  const bulk = targets.length > 1;
+  // The bulk decision and the preview header count the selection the write is
+  // sent for — that is `trackIds`, which the caller resolved from the table
+  // selection. The loaded rows (`targets`) are only what the dialog can read
+  // field values from, so a selection that includes unloaded rows still shows
+  // the right count while the row-derived values stay scoped to what exists.
+  const bulk = trackIds.length > 1;
   const survey = useMemo(() => surveyFields(targets), [targets]);
   // The values the dialog opened with. The write is the difference between the
   // draft and this, so a field the user never touched is never sent.
@@ -155,13 +160,14 @@ export function MetadataEditor({ targets, trackIds, onSave, onClose }: MetadataE
   if (preview) {
     return (
       <ModalShell
+        key="preview"
         onClose={onClose}
         ariaLabel="Confirm metadata changes"
         panelClassName="w-[460px] max-w-full max-h-full overflow-y-auto bg-dj-panel border border-dj-border rounded-lg shadow-2xl"
       >
         <div className="flex items-center justify-between border-b border-dj-border px-4 py-3">
           <div>
-            <p className="text-sm font-semibold text-dj-text">Apply to {targets.length} tracks</p>
+            <p className="text-sm font-semibold text-dj-text">Apply to {trackIds.length} tracks</p>
             <p className="text-[11px] text-dj-text-muted">
               Only these fields change. Everything else is left as each track has it.
             </p>
@@ -223,7 +229,7 @@ export function MetadataEditor({ targets, trackIds, onSave, onClose }: MetadataE
             <p className="text-sm font-semibold text-dj-text">Edit metadata</p>
             <p className="text-[11px] text-dj-text-muted">
               {bulk
-                ? `Applies to ${targets.length} selected tracks`
+                ? `Applies to ${trackIds.length} selected tracks`
                 : targets[0]?.title || "Untitled"}
             </p>
           </div>

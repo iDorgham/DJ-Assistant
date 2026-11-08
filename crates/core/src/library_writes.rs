@@ -238,6 +238,13 @@ pub fn changed_value(
 pub const CURRENT_TAGS_SQL: &str =
     "SELECT tag FROM track_tags WHERE track_id = ?1 ORDER BY tag ASC";
 
+/// The most ids one `IN (...)` clause may name before SQLite refuses the query.
+///
+/// rusqlite's default `SQLITE_MAX_VARIABLE_NUMBER` is 999, so a selection of
+/// more than that needs several statements. The number is kept here so the
+/// chunk size and the placeholder base cannot drift apart.
+pub const MAX_IN_CLAUSE_IDS: usize = 999;
+
 /// The read half of the write: the tracks the selection names, with the values
 /// of `columns` as they stand.
 ///
@@ -245,29 +252,46 @@ pub const CURRENT_TAGS_SQL: &str =
 /// every run, which makes the recorded state comparable. Ids the library does
 /// not know simply match no row: a bulk selection is applied to what exists.
 ///
-/// The ids are the statement's only parameters, so the placeholders run from
-/// `?1`: rusqlite counts the parameters a statement declares, and a base of
-/// `?2` leaves one bound to nothing and the query rejected.
+/// The ids are a statement's only parameters, so each statement's placeholders
+/// run from `?1`. A selection larger than [`MAX_IN_CLAUSE_IDS`] is split into
+/// fixed-size chunks; the caller executes every statement and concatenates the
+/// rows, which is why this returns a `Vec` rather than one statement.
+///
+/// The ids are sorted and de-duplicated before chunking so the concatenated
+/// result is deterministic regardless of how the selection was ordered.
 pub fn read_patch_statement(
     track_ids: &[String],
     columns: &[&str],
-) -> Result<WriteStatement, String> {
+) -> Result<Vec<WriteStatement>, String> {
     if track_ids.is_empty() {
         return Err("no tracks selected".to_string());
     }
-    let placeholders = placeholders(track_ids, 1);
+    let mut ids: Vec<String> = track_ids
+        .iter()
+        .map(|id| id.trim().to_string())
+        .filter(|id| !id.is_empty())
+        .collect();
+    ids.sort();
+    ids.dedup();
+
     let select_list = if columns.is_empty() {
         "id".to_string()
     } else {
         format!("id, {}", columns.join(", "))
     };
-    Ok(WriteStatement {
-        sql: format!("SELECT {select_list} FROM tracks WHERE id IN ({placeholders}) ORDER BY id"),
-        params: track_ids
-            .iter()
-            .map(|id| WriteValue::Text(id.clone()))
-            .collect(),
-    })
+    Ok(ids
+        .chunks(MAX_IN_CLAUSE_IDS)
+        .map(|chunk| WriteStatement {
+            sql: format!(
+                "SELECT {select_list} FROM tracks WHERE id IN ({}) ORDER BY id",
+                placeholders(chunk.len(), 1)
+            ),
+            params: chunk
+                .iter()
+                .map(|id| WriteValue::Text(id.clone()))
+                .collect(),
+        })
+        .collect())
 }
 
 /// Replaces a track's tag rows with `tags`.
@@ -575,8 +599,8 @@ pub fn plan_metadata_undo(
 }
 
 /// `?start, ?start+1, ...` — one placeholder per value, in bind order.
-fn placeholders(values: &[String], start: usize) -> String {
-    (0..values.len())
+fn placeholders(count: usize, start: usize) -> String {
+    (0..count)
         .map(|i| format!("?{}", start + i))
         .collect::<Vec<_>>()
         .join(", ")
@@ -587,7 +611,7 @@ mod tests {
     use super::{
         changed_value, input_doc, plan_metadata_undo, plan_metadata_write, read_patch_statement,
         rewrite_tags_statements, ColumnValue, MetadataPatch, WriteValue, CURRENT_TAGS_SQL,
-        MAX_TRACK_ENERGY, MAX_TRACK_RATING,
+        MAX_IN_CLAUSE_IDS, MAX_TRACK_ENERGY, MAX_TRACK_RATING,
     };
     use crate::patch::{check_metadata_undoable, PATCH_COLUMNS};
     use crate::tags::normalize_tags;
@@ -774,24 +798,72 @@ mod tests {
 
     #[test]
     fn the_read_names_every_id_as_a_parameter() {
-        let statement = read_patch_statement(
+        // Two ids land in one statement; the ids are the only parameters, so
+        // they bind from ?1. Asserting the exact clause is the point: a base of
+        // ?2 declares one parameter more than the executor ever binds, and
+        // rusqlite rejects the query.
+        let statements = read_patch_statement(
             &["a".to_string(), "b".to_string()],
             &["title", "user_rating"],
         )
         .unwrap();
+        assert_eq!(statements.len(), 1, "two ids fit in one statement");
+        let statement = &statements[0];
         assert_eq!(statement.params.len(), 2);
         assert!(statement
             .sql
             .contains("SELECT id, title, user_rating FROM tracks"));
-        // The ids are the only parameters, so they bind from ?1. Asserting the
-        // exact clause is the point: a base of ?2 declares one parameter more
-        // than the executor ever binds, and rusqlite rejects the query.
         assert!(
             statement.sql.contains("WHERE id IN (?1, ?2) ORDER BY id"),
             "{}",
             statement.sql
         );
         assert!(read_patch_statement(&[], &["title"]).is_err());
+    }
+
+    #[test]
+    fn a_selection_larger_than_the_clause_limit_is_split() {
+        // 1000 ids exceed rusqlite's default 999-variable ceiling, so the read
+        // must come back as two statements whose concatenated rows still cover
+        // every id — a single statement there is refused by SQLite.
+        let ids: Vec<String> = (0..1000).map(|i| format!("t{i}")).collect();
+        let statements = read_patch_statement(&ids, &["title"]).unwrap();
+        assert_eq!(statements.len(), 2, "1000 ids need two statements");
+        assert_eq!(statements[0].params.len(), MAX_IN_CLAUSE_IDS);
+        assert_eq!(statements[1].params.len(), 1);
+        // The ids are sorted and de-duplicated, so the first chunk holds the
+        // lowest ones and the second holds the highest.
+        assert_eq!(statements[0].params[0], WriteValue::Text("t0".to_string()));
+        assert_eq!(
+            statements[1].params[0],
+            WriteValue::Text("t999".to_string())
+        );
+    }
+
+    #[test]
+    fn duplicate_and_unsorted_ids_collapse_to_one_chunk() {
+        // The caller's order and repeats must not affect the plan: the read
+        // sorts and de-duplicates so the concatenated rows are deterministic.
+        let ids = vec![
+            "t2".to_string(),
+            "t1".to_string(),
+            "t2".to_string(),
+            "t3".to_string(),
+        ];
+        let statements = read_patch_statement(&ids, &[]).unwrap();
+        assert_eq!(statements.len(), 1);
+        assert_eq!(statements[0].params.len(), 3);
+        assert_eq!(
+            statements[0]
+                .params
+                .iter()
+                .map(|p| match p {
+                    WriteValue::Text(text) => text.as_str(),
+                    _ => "?",
+                })
+                .collect::<Vec<_>>(),
+            ["t1", "t2", "t3"]
+        );
     }
 
     #[test]

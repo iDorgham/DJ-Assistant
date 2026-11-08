@@ -116,12 +116,11 @@ evidence. See F-009 in [`state.md`](./state.md) and the checklist in
 
 A shell command that was only meant to read an exit code ended with a stray
 `git stash push --include-untracked -- .`. In this worktree that swept the
-**other sessions' in-flight files** — `AI_RULES.md`, `capmap_phase0.md`,
-`check_schema.py`, `scripts/reset_qa_baseline.sql`, two unmerged component
-tests — into an Agent-created stash, together with the day's own edits. The
-tree went empty mid-task. `git stash apply` plus a file-by-file check against
-the stash's own list restored all 17 paths, and only the created entry was
-dropped; the two pre-existing stashes were left alone.
+**other sessions' in-flight files** into an Agent-created stash, together with
+the day's own edits. The tree went empty mid-task. `git stash apply` plus a
+file-by-file check against the stash's own list restored every listed path,
+and only the created entry was dropped; the pre-existing stashes were left
+alone.
 **Rule:** no stash of any kind as an exploratory step. When a unique-tagged
 stash is genuinely required, list its paths first, restore with `apply` (never
 `pop`), confirm every listed path is back, and drop only the entry created in
@@ -134,15 +133,16 @@ command, not the header.
 ## F-011 · A `crates/core` planner is untested until `tests/schema` runs it (2026-10-29)
 
 `library_writes::read_patch_statement` built `WHERE id IN (?2, ?3, …)` while
-binding only the ids at `?1…?n`. Twenty-six in-module unit tests passed — they
-assert SQL *text*. The first execution against real SQLite (T2.1.3) failed
-outright: `Wrong number of parameters passed to query. Got 1, needed 2`. Every
-metadata edit in the app would have errored, not just the new bulk path.
+binding only the ids at `?1…?n`. The in-module unit tests passed — they assert
+SQL *text*. The first execution against real SQLite (T2.1.3) failed outright:
+`Wrong number of parameters passed to query. Got 1, needed 2`. Every metadata
+edit in the app would have errored, not just the new bulk path.
 **Rule:** core holds SQL as data and never runs it, so a new or edited planner
 function there needs a case in `tests/schema/tests/` that executes the built
 statement against `open_migrated()`. An assertion on the SQL string is not
 verification of the bind order. The desktop crate's own tests cannot fill this
-gap on this box — its harness does not load.
+gap — its harness does not load. See the harness limit in
+[`conventions.md`](./conventions.md).
 
 ## F-012 · What the library UI can and cannot be verified with here (2026-10-29)
 

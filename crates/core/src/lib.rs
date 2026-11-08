@@ -59,7 +59,7 @@ pub use library_writes::{
     changed_value, input_doc as metadata_input_doc, patch_columns, plan_metadata_undo,
     plan_metadata_write, read_patch_statement, rewrite_tags_statements, write_skill_run,
     ColumnValue, MetadataPatch, PlannedTrackRestore, PlannedTrackWrite, WriteStatement, WriteValue,
-    CURRENT_TAGS_SQL, MAX_TRACK_ENERGY, MAX_TRACK_RATING,
+    CURRENT_TAGS_SQL, MAX_IN_CLAUSE_IDS, MAX_TRACK_ENERGY, MAX_TRACK_RATING,
 };
 pub use metadata::{
     cache_artwork, camelot_from_key, extract_metadata, CachedArtwork, EmbeddedArtwork,
