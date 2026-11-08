@@ -782,7 +782,7 @@ mod tests {
     #[test]
     fn clearing_a_column_that_holds_a_value_is_a_change() {
         let patch = MetadataPatch {
-            genre: Some(String::new()),
+            genre: Some(String::default()),
             ..Default::default()
         };
         assert_eq!(

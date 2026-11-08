@@ -112,7 +112,7 @@ fn column(conn: &Connection, id: &str, name: &str) -> String {
         )
         .unwrap_or_else(|e| panic!("{name} must be readable for {id}: {e}"));
     match raw {
-        None | Some(rusqlite::types::Value::Null) => String::new(),
+        None | Some(rusqlite::types::Value::Null) => String::default(),
         Some(rusqlite::types::Value::Text(text)) => text,
         Some(rusqlite::types::Value::Integer(number)) => number.to_string(),
         Some(other) => panic!("{name} holds an unexpected value for {id}: {other:?}"),
@@ -443,7 +443,7 @@ fn undo_is_offered_once() {
     let (undo_id, _) = apply_patch(&conn, &["t1".to_string()], &p);
 
     assert_eq!(undo(&conn, &undo_id), 1);
-    let (skill_name, status, _, _) = conn
+    let (skill_name, status, ..) = conn
         .query_row(UNDO_READ_SQL, [undo_id.as_str()], |row| {
             Ok((
                 row.get::<_, String>(0)?,
