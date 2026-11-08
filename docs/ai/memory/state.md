@@ -6,10 +6,20 @@ fact, it belongs in [`facts.md`](./facts.md). Delete anything stale.
 
 ## 2026-11-08 · PR #70 review round closed (T2.1.8 key pills)
 
-- **All 43 review threads on PR #70 are answered and resolved**; the branch head
-  is `88b64c78`. The round first ran against a stale commit — the fixes were
+- **47 review threads on PR #70, all answered and resolved**; the branch head is
+  `d76573a5`. The round first ran against a stale commit — the fixes were
   local while every review read `dc3ddac6` — so the job was to push, then verify
   each finding at HEAD (F-013).
+- **Follow-ups the closed round kept producing:** cubic's P2 on the `facts.md`
+  DeepSource wording, narrowed so it no longer dismisses every finding
+  (`aef4c88f`). Graphite's P2 on a **stranded Compatible-only intent** — the
+  panel reopened checked *and* disabled once the reference was lost, and with no
+  derived keys there was no chip to clear either, so Reset was the only escape;
+  the box now stays un-checkable whenever the intent is on, and unchecking it
+  without a reference leaves manual key picks alone (`d76573a5`, desktop
+  `node --test` 217 → 219). Two `js/wrapper/iife` threads then landed on the
+  `export function`s that fix added — the documented false positive, answered
+  with no code change.
 - **What the round changed:** `797e1823` turned Compatible-only into a committed
   **intent** held separately from the derived `keyCamelot` list, widened the key
   column so the `both` notation fits, moved the pill text onto the theme primary
@@ -38,7 +48,7 @@ fact, it belongs in [`facts.md`](./facts.md). Delete anything stale.
   `docs/ui/11-IMPLEMENTATION-CHECKLIST.md` and `SLICE3A_PLAN.md`. **No task box
   was ticked** — the native running-window QA (5A colours, the live preference
   switch, the compatible filter against a real library) is still the gate for
-  T2.1.3 and T2.1.8, and desktop `node --test` is at **217 tests**.
+  T2.1.3 and T2.1.8, and desktop `node --test` is at **219 tests**.
 
 ## 2026-10-29 · T2.1.3 bulk metadata + T2.1.8 key pills (PR #65)
 

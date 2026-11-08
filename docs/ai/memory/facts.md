@@ -77,9 +77,9 @@ not inferable by reading the code.
   cannot be changed from here. That is not the same as the findings being wrong —
   treat each one on its merits. The two that this project has documented as
   false positives so far: `js/wrapper/iife` ("function declaration in the global
-  scope") fires on ordinary top-level `function` declarations in ES modules — its
-  text is ESLint's `no-implicit-globals`, which by design does not apply to
-  ES/CommonJS modules — and `js/maintainability/cyclomatic-complexity` reports
-  "medium" at a complexity of 6. No branch protection is set, so the check blocks
-  nothing; which PRs currently carry the FAILURE is in
-  [`state.md`](./state.md).
+  scope") fires on top-level function declarations in ES modules, exported ones
+  included, since its text is ESLint's `no-implicit-globals` — which by design
+  does not apply to ES modules. And
+  `js/maintainability/cyclomatic-complexity` reports "medium" at a complexity of
+  6. No branch protection is set, so the check blocks nothing; which PRs
+  currently carry the FAILURE is in [`state.md`](./state.md).

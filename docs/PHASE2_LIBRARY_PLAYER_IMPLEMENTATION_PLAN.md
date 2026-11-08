@@ -233,12 +233,14 @@ Slice 7 real audio ──► Slice 8 dual-wave + transport
 `03991d3c`). Manual running-window QA is pending, so T2.1.7 and T2.1.13 stay
 unticked. 3B (key pills, T2.1.8) is **implemented 2026-10-29** in PR #70,
 stacked on the T2.1.3 branch (PR #65); running-window QA is pending, so its box
-stays unticked. Its review round **closed 2026-11-08** on head `88b64c78`: the
-Compatible-only filter is now an intent kept separate from the applied key list
-(so a new reference or a Strict/Wide change re-derives the keys), the Key chip's
-× drops that intent with it, Apply no longer clears it when the reference is
-missing, and the pill text uses the theme primary token so every relation tint
-clears 4.5:1. Desktop `node --test` is at **217 tests**.
+stays unticked. Its review round **closed 2026-11-08**, and two follow-ups
+landed on head `d76573a5` (47 threads, none left open): the Compatible-only
+filter is now an intent kept separate from the applied key list (so a new
+reference or a Strict/Wide change re-derives the keys), the Key chip's × drops
+that intent with it, Apply no longer clears it when the reference is missing, a
+stranded intent stays un-checkable in the panel instead of needing a full reset,
+and the pill text uses the theme primary token so every relation tint clears
+4.5:1. Desktop `node --test` is at **219 tests**.
 
 **Split (decided 2026-10-22):** **3A = tags + comments** (T2.1.7, T2.1.13),
 **3B = key pills** (T2.1.8). 3B was deferred because the key-format preference
@@ -274,7 +276,7 @@ decisions (a `track_tags` table; the user comment **overwrites**
 - `key-format` + `harmonic` modules, both pure and unit-tested.
 - Preference: Camelot | 1m/1d | both, persisted in `UiState` (Settings → Key display).
 - `KeyPill` relation vs **playing** track (or selected if nothing playing): same, ±1, relative, wide ±2, incompatible; fill strength follows `docs/ui/01-DESIGN-SYSTEM.md` §4.
-- Compatible-only filter uses same rules (Strict vs Wide) and reuses the existing `keyCamelot` filter, so no Rust/SQL change. The *intent* is stored separately from the applied key list (`dropsCompatibleIntent` in `lib/library.ts`): the list is re-derived on every render, so clearing the Key chip and losing the reference both act on the intent, not on the derived list.
+- Compatible-only filter uses same rules (Strict vs Wide) and reuses the existing `keyCamelot` filter, so no Rust/SQL change. The *intent* is stored separately from the applied key list (`dropsCompatibleIntent` in `lib/library.ts`): the list is re-derived on every render, so clearing the Key chip drops the intent with it instead of re-deriving the same keys. A committed intent whose reference is lost stays **inert but removable** — `canToggleCompatibleOnly` keeps the panel checkbox un-checkable (the list is not applied, so there is no derived chip either) and `projectCompatibleDraftKeys` leaves manual key picks alone when unchecking without a reference.
 
 **DoD**
 - [ ] Playing 5A colors 5A / 4A / 6A / 5B correctly
