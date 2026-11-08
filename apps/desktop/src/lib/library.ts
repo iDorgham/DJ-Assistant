@@ -221,6 +221,18 @@ export function describeFilterParts(filters: ListTracksFilters | undefined): Fil
 }
 
 /**
+ * Whether removing a filter group has to drop the Compatible-only intent
+ * (T2.1.8).
+ *
+ * The applied `keyCamelot` list is derived from that intent on every render,
+ * so clearing the Key chip alone would re-derive the same keys and leave the
+ * chip impossible to remove.
+ */
+export function dropsCompatibleIntent(group: FilterGroup, compatibleOnly: boolean): boolean {
+  return compatibleOnly && group === "key";
+}
+
+/**
  * Drops one filter group, leaving the others untouched.
  *
  * This is what the chip's × button calls: removing the tag filter must not

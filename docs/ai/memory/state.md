@@ -22,7 +22,7 @@ fact, it belongs in [`facts.md`](./facts.md). Delete anything stale.
   `key-format.ts` modules with tests, the relation-tinted `KeyPill`, Settings →
   Key display (Camelot / 1m1d / both, Strict/Wide) persisted in `UiState`, and a
   Compatible-only filter that reuses `keyCamelot` (no Rust/SQL change). Desktop
-  `node --test` is now **216 tests**; typecheck, build, ESLint and Prettier pass.
+  `node --test` is now **217 tests**; typecheck, build, ESLint and Prettier pass.
 - **Still open:** select-all and keyboard scope (`Ctrl/Cmd+A`), the blocked
   shared bulk actions, the native multi-select QA pass, and the T2.1.8
   running-window QA (5A colours, live preference switch, compatible filter

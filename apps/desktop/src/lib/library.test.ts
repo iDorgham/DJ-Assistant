@@ -13,6 +13,7 @@ import {
   describeFilters,
   describeMetadataUndo,
   describeMetadataWrite,
+  dropsCompatibleIntent,
   filterTracks,
   formatBpm,
   formatDuration,
@@ -384,4 +385,17 @@ test("describeMetadataUndo names the track only for a single-track edit", () => 
   );
   assert.equal(describeMetadataUndo("rating", 3, 4, "Nightcall"), "Rated 3 tracks");
   assert.equal(describeMetadataUndo("energy", 2, 4, "Nightcall"), "Set energy on 2 tracks");
+});
+
+test("clearing the Key chip drops the Compatible-only intent", () => {
+  // The applied key list is derived from the intent, so a chip that only
+  // clears `keyCamelot` would re-derive the same keys and never go away.
+  assert.equal(dropsCompatibleIntent("key", true), true);
+
+  // Without the intent the derived list is not in play, and no other group
+  // is derived from it.
+  assert.equal(dropsCompatibleIntent("key", false), false);
+  for (const group of ["bpm", "status", "genre", "tag", "rating", "energy"] as const) {
+    assert.equal(dropsCompatibleIntent(group, true), false, `${group} is not the derived group`);
+  }
 });

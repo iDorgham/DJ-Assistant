@@ -102,6 +102,7 @@ import {
   describeFilterParts,
   describeMetadataUndo,
   describeMetadataWrite,
+  dropsCompatibleIntent,
   filterTracks,
   formatBpm,
   formatDuration,
@@ -1532,6 +1533,19 @@ export default function App() {
     // Sort is a separate control — resetting filters must not reset sort.
   };
 
+  /**
+   * A chip's × removes one filter group. The Key group is special while the
+   * Compatible-only intent is on: its applied list is derived, so the intent
+   * has to go with the chip or the same keys come back on the next render.
+   */
+  const clearFilterChip = (group: Parameters<typeof clearFilterGroup>[1]) => {
+    if (dropsCompatibleIntent(group, compatibleOnly)) {
+      setCompatibleOnly(false);
+      setDraftCompatibleOnly(false);
+    }
+    setFilters((current) => clearFilterGroup(current, group));
+  };
+
   const toggleSort = (key: ListTracksSortBy) => {
     if (sortBy === key) {
       setSortDir((current) => (current === "asc" ? "desc" : "asc"));
@@ -2785,9 +2799,7 @@ export default function App() {
                         {part.label}
                         <button
                           type="button"
-                          onClick={() =>
-                            setFilters((current) => clearFilterGroup(current, part.group))
-                          }
+                          onClick={() => clearFilterChip(part.group)}
                           title={`Remove the ${part.group} filter`}
                           aria-label={`Remove the ${part.group} filter`}
                           className="rounded-sm p-px text-dj-accent/70 transition hover:text-dj-accent"
