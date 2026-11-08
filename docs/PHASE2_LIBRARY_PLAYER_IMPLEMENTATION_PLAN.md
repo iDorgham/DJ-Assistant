@@ -234,7 +234,7 @@ Slice 7 real audio ──► Slice 8 dual-wave + transport
 unticked. 3B (key pills, T2.1.8) is **implemented 2026-10-29** in PR #70,
 stacked on the T2.1.3 branch (PR #65); running-window QA is pending, so its box
 stays unticked. Its review round **closed 2026-11-08**, and three follow-ups
-landed since — the head is now `144292e0` with 48 threads, none left open. The
+landed since; the implementation is included in the current PR head. The
 Compatible-only filter is now an intent kept separate from the applied key list
 (so a new reference or a Strict/Wide change re-derives the keys), the Key
 chip's × drops that intent with it, Apply no longer clears it when the
