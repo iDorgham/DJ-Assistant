@@ -558,9 +558,27 @@ export function loadLibraryColumns(view: AppView, storage?: StorageLike): Column
     return resetLibraryColumns();
   }
   if (!raw) return resetLibraryColumns();
-  const validated = validateColumnConfig(parseJson(raw));
+  const payload = parseJson(raw);
+  const versioned =
+    payload !== null &&
+    typeof payload === "object" &&
+    "version" in payload &&
+    payload.version === 2;
+  const validated = validateColumnConfig(
+    versioned && "columns" in payload ? payload.columns : payload
+  );
   if (validated === null) return resetLibraryColumns();
-  return mergeWithDefaults(validated);
+  // Legacy arrays did not distinguish an untouched default from a resize.
+  // Version new saves so a deliberate 72px resize stays intact thereafter.
+  return mergeWithDefaults(
+    versioned
+      ? validated
+      : validated.map((column) =>
+          column.id === "key" && column.width === 72
+            ? { ...column, width: DEFINITIONS.key.defaultWidth }
+            : column
+        )
+  );
 }
 
 function parseJson(raw: string): unknown {
@@ -580,7 +598,10 @@ export function saveLibraryColumns(
   const store = storage ?? defaultStorage();
   if (!store) return;
   try {
-    store.setItem(columnStorageKey(view), JSON.stringify(mergeWithDefaults([...columns])));
+    store.setItem(
+      columnStorageKey(view),
+      JSON.stringify({ version: 2, columns: mergeWithDefaults([...columns]) })
+    );
   } catch {
     // Best-effort, like `persistUiState`: blocked or full storage must not break the table.
   }

@@ -508,3 +508,32 @@ test("key auto-fit reserves the full Both label and pill chrome", () => {
   const label = "8A · A minor";
   assert.ok(autoFitWidth(label, columnDefinition("key")) >= label.length * 7 + 32 + 12 + 2);
 });
+
+test("stored legacy key defaults grow while customized widths and layout survive", () => {
+  for (const width of [72, 64, 96, 200]) {
+    const storage = fakeStorage();
+    const edited = setColumnWidth(
+      toggleColumnVisible(moveColumn(DEFAULT_LIBRARY_COLUMNS, "key", "title"), "album"),
+      "key",
+      width
+    );
+    storage.setItem("dj-assistant.columns.v1.library", JSON.stringify(edited));
+    const loaded = loadLibraryColumns("library", storage);
+    assert.deepEqual(
+      loaded,
+      edited.map((column) =>
+        column.id === "key" && width === 72
+          ? { ...column, width: columnDefinition("key").defaultWidth }
+          : column
+      )
+    );
+    assert.equal(pick(edited, "key").width, width, "loading must not mutate saved input");
+  }
+});
+
+test("new saves preserve a deliberate 72px key width", () => {
+  const storage = fakeStorage();
+  const edited = setColumnWidth(DEFAULT_LIBRARY_COLUMNS, "key", 72);
+  saveLibraryColumns("library", edited, storage);
+  assert.deepEqual(loadLibraryColumns("library", storage), edited);
+});
