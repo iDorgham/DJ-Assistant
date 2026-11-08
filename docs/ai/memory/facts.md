@@ -72,12 +72,14 @@ not inferable by reading the code.
   refuses when it still holds content. It may also be **older than the code**
   (a library last opened before the newest migration), so the CLI reads
   `PRAGMA table_info(tracks)` and adapts.
-- **`DeepSource: JavaScript` cannot be fixed from inside the repo**: there is no
-  `.deepsource.toml`, so the JS checker set lives in the DeepSource dashboard,
-  and a finding there is a dashboard setting rather than a defect in this
-  project's code. `js/wrapper/iife` ("function declaration in the global scope")
-  fires on ordinary top-level `function` declarations in ES modules — its text is
-  ESLint's `no-implicit-globals`, which by design does not apply to ES/CommonJS
-  modules — and `js/maintainability/cyclomatic-complexity` reports "medium" at a
-  complexity of 6. No branch protection is set, so the check blocks nothing;
-  which PRs currently carry the FAILURE is in [`state.md`](./state.md).
+- **`DeepSource: JavaScript` is configured outside the repo**: there is no
+  `.deepsource.toml`, so the JS checker set lives in the DeepSource dashboard and
+  cannot be changed from here. That is not the same as the findings being wrong —
+  treat each one on its merits. The two that this project has documented as
+  false positives so far: `js/wrapper/iife` ("function declaration in the global
+  scope") fires on ordinary top-level `function` declarations in ES modules — its
+  text is ESLint's `no-implicit-globals`, which by design does not apply to
+  ES/CommonJS modules — and `js/maintainability/cyclomatic-complexity` reports
+  "medium" at a complexity of 6. No branch protection is set, so the check blocks
+  nothing; which PRs currently carry the FAILURE is in
+  [`state.md`](./state.md).

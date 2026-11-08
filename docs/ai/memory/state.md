@@ -27,10 +27,12 @@ fact, it belongs in [`facts.md`](./facts.md). Delete anything stale.
   of reshaping code to satisfy them. Nothing is branch-protected, so the check
   blocks nothing.
 - **cubic's three memory P2s:** the `feedback.md` one is fixed. The `facts.md`
-  DeepSource entry now keeps only the durable dashboard limitation — the PR
-  evidence and the dated agreement moved here. `facts.md`'s `D-015` citation
-  still points at a decision that exists only in an **uncommitted**
-  `decisions.md` in this working tree; it becomes valid when that edit lands.
+  DeepSource entry keeps only the durable dashboard fact — the PR evidence and
+  the dated agreement moved here — and, after cubic's follow-up P2 on the same
+  file, it names the two false-positive checkers instead of implying every
+  DeepSource finding is a dashboard setting. `facts.md`'s `D-015` citation still
+  points at a decision that exists only in an **uncommitted** `decisions.md` in
+  this working tree; it becomes valid when that edit lands.
 - **Docs refreshed for the round:** `docs/sdd/04-TASKS.md` (the T2.1.8 note and
   the reconciliation header), the Phase 2 plan Slice 3 status,
   `docs/ui/11-IMPLEMENTATION-CHECKLIST.md` and `SLICE3A_PLAN.md`. **No task box
