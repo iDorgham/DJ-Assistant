@@ -164,10 +164,7 @@ instead of concluding the UI is untestable.
 
 ## F-013 · Check which commit the reviews ran against before answering them (2026-11-08)
 
-A full review round on PR #70 — 6 cubic P2 findings plus 16 DeepSource threads —
-was written against `dc3ddac6`, while the fixes already existed **locally** as
-the unpushed `797e1823`. Re-implementing them would have been pure waste; the
-job was to push, then verify each finding at HEAD.
+Review comments can target a stale commit, so verify the PR head before acting on them.
 
 **Rule:** before acting on review findings, compare `gh pr view --json
 headRefOid` with `git rev-parse HEAD`. If they differ the threads are stale.
