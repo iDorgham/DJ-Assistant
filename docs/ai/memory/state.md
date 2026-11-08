@@ -4,11 +4,12 @@ Ephemeral. Newest first. **Rotate aggressively** — if a line would still be tr
 in two weeks, it belongs in [`decisions.md`](./decisions.md); if it is just a
 fact, it belongs in [`facts.md`](./facts.md). Delete anything stale.
 
-## 2026-11-08 · Docs-honesty sweep finished on `chore/review-followup-sweep`
+## 2026-11-08 · Docs-honesty sweep finished — PR #71
 
 - **The uncommitted sweep is now a branch off `origin/main`.** PR #65 is merged
   (`9551aa41`) and local `main` was stale at PR #64, so the work moved to
-  `chore/review-followup-sweep` rather than onto the merged feature branch.
+  `chore/review-followup-sweep` → **PR #71** (two commits: `097209c9` tooling,
+  `e9a1f9ac` docs) rather than onto the merged feature branch.
   `sync.mjs` conflicted with cubic's inline `path.basename` check (`054a49a0`,
   already in `main`): resolved in favour of the shared **`assertSkillName`**
   helper, which also rejects empty/non-string names and absolute paths, plus
