@@ -123,3 +123,16 @@ test("every relation has a human label", () => {
     assert.ok(RELATION_LABELS[relation as keyof typeof RELATION_LABELS].length > 0);
   }
 });
+
+test("Strict removes the Wide tint across the wheel while Wide retains it", () => {
+  for (let number = 1; number <= 12; number++) {
+    for (const letter of ["A", "B"]) {
+      const reference = `${number}${letter}`;
+      for (const offset of [-2, 2]) {
+        const candidate = `${((number - 1 + offset + 12) % 12) + 1}${letter}`;
+        assert.equal(camelotRelation(reference, candidate, "strict"), "incompatible");
+        assert.equal(camelotRelation(reference, candidate, "wide"), "wide");
+      }
+    }
+  }
+});

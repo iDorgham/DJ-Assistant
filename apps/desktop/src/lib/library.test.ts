@@ -424,7 +424,7 @@ test("unchecking Compatible-only only removes the keys it applied", () => {
 
   // Unchecking with a reference removes exactly that derived list.
   assert.equal(
-    projectCompatibleDraftKeys({ keyCamelot: ["8A", "9A"] }, ["8A", "9A"], false).keyCamelot,
+    projectCompatibleDraftKeys({ keyCamelot: ["8A", "9A"] }, ["8A", "9A"], false, true).keyCamelot,
     undefined,
     "the derived keys go back where they came from"
   );
@@ -442,4 +442,15 @@ test("unchecking Compatible-only only removes the keys it applied", () => {
     bpmMin: 120,
     keyCamelot: ["8A"],
   });
+});
+
+test("draft key provenance survives reference loss and preserves manual choices", () => {
+  const derived = { keyCamelot: ["8A", "9A"], genre: ["Techno"] };
+  assert.deepEqual(projectCompatibleDraftKeys(derived, [], false, true), {
+    genre: ["Techno"],
+    keyCamelot: undefined,
+  });
+  assert.deepEqual(projectCompatibleDraftKeys(derived, [], false, true, ["5B"]).keyCamelot, ["5B"]);
+  const manual = { keyCamelot: ["5B"] };
+  assert.equal(projectCompatibleDraftKeys(manual, ["8A"], false), manual);
 });

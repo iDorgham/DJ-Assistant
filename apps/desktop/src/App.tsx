@@ -28,6 +28,7 @@ import {
   openFolderDialog,
   scanFolder,
   listTracks,
+  getTrack,
   listGenres,
   analyzeLibrary,
   listenToAnalysisProgress,
@@ -159,7 +160,7 @@ import {
   COMPATIBILITY_MODE_LABELS,
   type CompatibilityMode,
 } from "./lib/harmonic";
-import type { KeyNotation } from "./lib/key-format";
+import { formatKeyForNotation, type KeyNotation } from "./lib/key-format";
 import { rowHeightForColumns, shouldLoadMore, virtualWindow } from "./lib/virtual-window";
 import { nextTheme, resolveTheme, THEME_LABELS } from "./lib/theme";
 import { PreviewPlayer } from "./components/preview-player";
@@ -444,6 +445,7 @@ function TrackCell({
   onSelectTag,
   keyNotation,
   keyReference,
+  compatibilityMode,
   theme,
 }: {
   id: ColumnId;
@@ -459,6 +461,7 @@ function TrackCell({
   keyNotation?: KeyNotation;
   /** Camelot code of the playing or selected track, if there is one. */
   keyReference?: string | null;
+  compatibilityMode?: CompatibilityMode;
   theme?: "dark" | "light";
 }) {
   const definition = columnDefinition(id);
@@ -523,7 +526,9 @@ function TrackCell({
 
   if (id === "key") {
     const relation =
-      keyReference && track.keyCamelot ? camelotRelation(keyReference, track.keyCamelot) : null;
+      keyReference && track.keyCamelot
+        ? camelotRelation(keyReference, track.keyCamelot, compatibilityMode)
+        : null;
     return (
       <td className="py-2.5 px-4 text-center">
         <KeyPill
@@ -1109,6 +1114,7 @@ export default function App() {
   // re-derived whenever the reference track or Strict/Wide mode changes.
   const [compatibleOnly, setCompatibleOnly] = useState(false);
   const [draftCompatibleOnly, setDraftCompatibleOnly] = useState(false);
+  const manualDraftKeys = useRef<string[] | undefined>(undefined);
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [filterError, setFilterError] = useState<string | null>(null);
   const [genres, setGenres] = useState<GenreCount[]>([]);
@@ -1161,13 +1167,45 @@ export default function App() {
   const [selectionAnchor, setSelectionAnchor] = useState<string | null>(null);
   // Harmonic reference for the key pills and the Compatible only filter
   // (T2.1.8): the playing track wins, the first selected row is the fallback.
+  const [selectedReference, setSelectedReference] = useState<TrackSummary | null>(null);
+  const selectedId = selection[0] ?? null;
+  const visibleSelectedTrack = tracks.find((entry) => entry.id === selectedId);
   const selectedTrack =
-    selection.length > 0 ? (tracks.find((entry) => entry.id === selection[0]) ?? null) : null;
+    (selectedReference?.id === selectedId ? selectedReference : null) ?? visibleSelectedTrack;
+  useEffect(() => {
+    if (visibleSelectedTrack) setSelectedReference(visibleSelectedTrack);
+  }, [visibleSelectedTrack]);
+
+  // Fetch by identity so analysis updates reach references outside the current page.
+  const playingId = playingTrack?.id ?? null;
+  useEffect(() => {
+    let cancelled = false;
+    for (const trackId of new Set([selectedId, playingId])) {
+      if (!trackId) continue;
+      getTrack({ trackId })
+        .then(({ track }) => {
+          if (cancelled) return;
+          if (trackId === selectedId) setSelectedReference(track);
+          if (trackId === playingId) setPlayingTrack(track);
+        })
+        .catch(() => {
+          // Retain the last known reference when a refresh is unavailable.
+        });
+    }
+    return () => {
+      cancelled = true;
+    };
+  }, [selectedId, playingId, reloadToken]);
   const keyReference = playingTrack?.keyCamelot ?? selectedTrack?.keyCamelot ?? null;
   const compatibleKeys = useMemo(
     () => compatibleCamelotKeys(keyReference, ui.compatibilityMode),
     [keyReference, ui.compatibilityMode]
   );
+  useEffect(() => {
+    if (filtersOpen && draftCompatibleOnly) {
+      setDraftFilters((current) => projectCompatibleDraftKeys(current, compatibleKeys, true));
+    }
+  }, [filtersOpen, draftCompatibleOnly, compatibleKeys]);
   // The pending *panel open* of a plain row click. The selection applies
   // immediately; only the open waits out the double-click window, so a quick
   // edit after selecting a row cannot still target the previous selection.
@@ -1473,6 +1511,7 @@ export default function App() {
   };
 
   const openFilters = () => {
+    manualDraftKeys.current = compatibleOnly ? undefined : effectiveFilters.keyCamelot;
     setDraftFilters(effectiveFilters);
     setDraftCompatibleOnly(compatibleOnly);
     setFilterError(null);
@@ -1487,8 +1526,17 @@ export default function App() {
   };
 
   const handleCompatibleOnlyChange = (checked: boolean) => {
+    if (checked && !draftCompatibleOnly) manualDraftKeys.current = draftFilters.keyCamelot;
     setDraftCompatibleOnly(checked);
-    setDraftFilters((current) => projectCompatibleDraftKeys(current, compatibleKeys, checked));
+    setDraftFilters((current) =>
+      projectCompatibleDraftKeys(
+        current,
+        compatibleKeys,
+        checked,
+        draftCompatibleOnly,
+        manualDraftKeys.current
+      )
+    );
   };
 
   const applyFilters = () => {
@@ -2326,7 +2374,10 @@ export default function App() {
   const handleAutoFitColumn = (id: ColumnId) => {
     const definition = columnDefinition(id);
     const longest = filteredTracks.reduce((text, track) => {
-      const cell = trackColumnText(track, id);
+      const cell =
+        id === "key"
+          ? formatKeyForNotation(track.keyCamelot, track.keyClassical, ui.keyNotation)
+          : trackColumnText(track, id);
       return cell.length > text.length ? cell : text;
     }, "");
     setColumns((current) => setColumnWidth(current, id, autoFitWidth(longest, definition)));
@@ -3003,6 +3054,7 @@ export default function App() {
                                   onSelectTag={handleFilterByTag}
                                   keyNotation={ui.keyNotation}
                                   keyReference={keyReference}
+                                  compatibilityMode={ui.compatibilityMode}
                                   theme={resolveTheme(ui.theme, systemPrefersDark)}
                                 />
                               ))}

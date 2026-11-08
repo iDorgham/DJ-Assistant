@@ -503,3 +503,8 @@ test("tooltips are absent when there is no extra detail to show", () => {
   assert.equal(trackColumnTooltip(FULL_TRACK, "title"), undefined);
   assert.equal(trackColumnTooltip(FULL_TRACK, "path"), undefined);
 });
+
+test("key auto-fit reserves the full Both label and pill chrome", () => {
+  const label = "8A · A minor";
+  assert.ok(autoFitWidth(label, columnDefinition("key")) >= label.length * 7 + 32 + 12 + 2);
+});

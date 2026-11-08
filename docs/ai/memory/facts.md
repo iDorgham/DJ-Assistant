@@ -16,19 +16,31 @@ not inferable by reading the code.
 - The repo contains **no** Docker, Kubernetes, or AWS/terraform artefacts.
 - `docs/ui/01-DESIGN-SYSTEM.md` is the **authoritative** UI spec — it outranks
   every generic design skill and every design opinion.
+<!-- coderabbit-ai-generated:v1 -->
+
+<!-- coderabbit-ai-generated-section:v1:8028628489e602af99dc6d4696a43966dc5a720d1eac1a0b12a67ffe5e832261 -->
+
 - The approved v1 product plan is mirrored at `docs/plan/` with 52 locked
   decisions (`D-001–D-052`, scoped to that tree) and a discussion log at
   `docs/plan/06-delivery/discussions.md`. This is separate from the repository
-  memory ledger's `D-001–D-015`.
+  memory ledger's `D-001–D-014`.
+
+<!-- /coderabbit-ai-generated:v1 -->
 - The skill library this routing layer scores against is **machine-global**: it
   lives outside the repo, a fresh clone has none of it, and nothing in
   build/test/CI depends on it. Its size and location are workstation facts —
   they belong in `AGENTS.local.md`, not here.
 - `.freebuff/`, `.qodo/`, `.kombai/`, `.superpowers/`, `.opencode-notes/` are
   **gitignored** local AI-tooling state. `.opencode/` and `.kiro/` are tracked.
+<!-- coderabbit-ai-generated:v1 -->
+
+<!-- coderabbit-ai-generated-section:v1:3ff86ac65fa2eaff65a4057991388368b2a17006ac5867115229515d075e2d81 -->
+
 - Each AI tool reads **its own** skills directory: OpenCode reads
   `.opencode/skills`, Qoder reads `.qoder/skills`. A skill absent from the tool's
-  own directory is invisible to it (D-015).
+  own directory is invisible to it.
+
+<!-- /coderabbit-ai-generated:v1 -->
 - A project-local OpenCode plugin under `.opencode/plugins/` makes OpenCode drop
   the discovered skills from the model list — that directory is forbidden.
 - A skill hidden with `metadata.opencode/autoinvoke: false` is **not loadable**

@@ -166,10 +166,20 @@ instead of concluding the UI is untestable.
 
 Review comments can target a stale commit, so verify the PR head before acting on them.
 
-**Rule:** before acting on review findings, compare `gh pr view --json
-headRefOid` with `git rev-parse HEAD`. If they differ the threads are stale.
-Then re-fetch them after each push: the bots open a fresh round, GitHub re-maps
+<!-- coderabbit-ai-generated:v1 -->
+
+<!-- coderabbit-ai-generated-section:v1:e8d72c1959bb5cfb6cf50592c731fa7fa486aa5834387dd60820345ddb13739d -->
+
+**Rule:** compare `gh pr view --json headRefOid` with `git rev-parse HEAD`.
+A mismatch can mean the local checkout is outdated; it does not make the
+findings stale. Inspect the PR head and the commit targeted by each review,
+then verify each finding against the PR head. A review of an older commit
+may still describe an unresolved issue; dismiss it as stale only when the
+current code no longer has the reported problem.
+Then re-fetch threads after each push: the bots open a fresh round, GitHub re-maps
 the old threads' line numbers onto the new file, and cubic resolves its own
 threads once it sees the fix — the set of "open conversations" is not stable
 across minutes. Mechanical note: `resolveReviewThread` takes `threadId`, not
 `id`.
+
+<!-- /coderabbit-ai-generated:v1 -->

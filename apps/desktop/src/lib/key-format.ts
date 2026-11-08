@@ -20,15 +20,15 @@ export const KEY_NOTATION_LABELS: Record<KeyNotation, string> = {
 
 export const KEY_NOTATION_EXAMPLES: Record<KeyNotation, string> = {
   camelot: "8A",
-  classical: "8m",
-  both: "8A · 8m",
+  classical: "1m",
+  both: "8A · 1m",
 };
 
-/** `8A` → `8m`, `8B` → `8d`; `null` when the Camelot code cannot be read. */
+/** `8A` → `1m`, `8B` → `1d`; `null` when the Camelot code cannot be read. */
 export function classicalFromCamelot(key: string | null | undefined): string | null {
   const parsed = parseCamelot(key);
   if (!parsed) return null;
-  return `${parsed.number}${parsed.letter === "A" ? "m" : "d"}`;
+  return `${((parsed.number + 4) % 12) + 1}${parsed.letter === "A" ? "m" : "d"}`;
 }
 
 /** Trim to a value or `null`, so a preference never keeps stray whitespace. */

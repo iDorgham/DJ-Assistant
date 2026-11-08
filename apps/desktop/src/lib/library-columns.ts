@@ -87,6 +87,7 @@ const CELL_PADDING_PX = 32;
 const HEADER_SORT_PX = 16;
 /** Extra width the cell's own widget adds around its text. */
 const CELL_CHROME_PX: Partial<Record<ColumnId, number>> = {
+  key: 14, // KeyPill: 12px horizontal padding plus two 1px borders.
   // Chip `px-2` + status icon `w-3` + `space-x-1`.
   status: 16 + 12 + 4,
   // Pill `px-1.5` plus its border on each side.

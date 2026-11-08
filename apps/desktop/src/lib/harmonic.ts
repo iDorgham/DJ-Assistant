@@ -57,11 +57,13 @@ function sameRingRelation(distance: number): HarmonicMatch {
 /**
  * Classify `candidate` against `reference`. The direction does not matter:
  * ±1 and ±2 are symmetric, and "relative" only asks whether the number
- * matches while the letter differs.
+ * matches while the letter differs. Supplying Strict suppresses Wide-only moves;
+ * omitted mode preserves the geometric classification used by existing callers.
  */
 export function camelotRelation(
   reference: string | null | undefined,
-  candidate: string | null | undefined
+  candidate: string | null | undefined,
+  mode: CompatibilityMode = "wide"
 ): HarmonicMatch {
   const from = parseCamelot(reference);
   const to = parseCamelot(candidate);
@@ -75,7 +77,8 @@ export function camelotRelation(
   // compatible set, even when the numbers are one apart.
   if (from.letter !== to.letter) return "incompatible";
 
-  return sameRingRelation(ringDistance(from.number, to.number));
+  const relation = sameRingRelation(ringDistance(from.number, to.number));
+  return relation === "wide" && mode === "strict" ? "incompatible" : relation;
 }
 
 /** True when a relation is mixable in the chosen mode. */

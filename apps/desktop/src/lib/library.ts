@@ -247,17 +247,19 @@ export function canToggleCompatibleOnly(compatibleKeys: string[], checked: boole
  * The filter draft after the Compatible-only checkbox changes (T2.1.8).
  *
  * Checking applies the wheel around the reference key and unchecking removes
- * exactly that list. With no reference nothing was ever applied, so the
- * draft's own key picks survive.
+ * the derived list, restoring any prior manual picks. Provenance is explicit:
+ * losing the reference must not turn derived keys into ordinary key filters.
  */
 export function projectCompatibleDraftKeys(
   draft: ListTracksFilters,
   compatibleKeys: string[],
-  checked: boolean
+  checked: boolean,
+  derived = false,
+  manualKeys?: string[]
 ): ListTracksFilters {
   if (checked) return { ...draft, keyCamelot: compatibleKeys };
-  if (compatibleKeys.length === 0) return draft;
-  return { ...draft, keyCamelot: undefined };
+  if (!derived) return draft;
+  return { ...draft, keyCamelot: manualKeys };
 }
 
 /**

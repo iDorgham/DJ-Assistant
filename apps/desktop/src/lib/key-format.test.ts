@@ -10,11 +10,13 @@ import {
 } from "./key-format.ts";
 
 test("Camelot codes map to the compact Open Key notation", () => {
-  assert.equal(classicalFromCamelot("1A"), "1m");
-  assert.equal(classicalFromCamelot("1B"), "1d");
-  assert.equal(classicalFromCamelot("8A"), "8m");
-  assert.equal(classicalFromCamelot("12B"), "12d");
-  assert.equal(classicalFromCamelot(" 8a "), "8m");
+  assert.equal(classicalFromCamelot("1A"), "6m");
+  assert.equal(classicalFromCamelot("1B"), "6d");
+  assert.equal(classicalFromCamelot("8A"), "1m");
+  assert.equal(classicalFromCamelot("12B"), "5d");
+  assert.equal(classicalFromCamelot(" 8a "), "1m");
+  assert.equal(classicalFromCamelot("7A"), "12m");
+  assert.equal(classicalFromCamelot("9B"), "2d");
   assert.equal(classicalFromCamelot("nope"), null);
   assert.equal(classicalFromCamelot(null), null);
 });
@@ -26,15 +28,15 @@ test("the Camelot preference shows the Camelot code first", () => {
 });
 
 test("the classical preference shows 1m / 1d and falls back to the full name", () => {
-  assert.equal(formatKeyForNotation("8A", "A minor", "classical"), "8m");
-  assert.equal(formatKeyForNotation("8B", "C major", "classical"), "8d");
+  assert.equal(formatKeyForNotation("8A", "A minor", "classical"), "1m");
+  assert.equal(formatKeyForNotation("8B", "C major", "classical"), "1d");
   assert.equal(formatKeyForNotation(null, "A minor", "classical"), "A minor");
 });
 
 test("both shows the Camelot code and the other notation", () => {
   assert.equal(formatKeyForNotation("8A", "A minor", "both"), "8A · A minor");
-  assert.equal(formatKeyForNotation("8A", null, "both"), "8A · 8m");
-  assert.equal(formatKeyForNotation("8A", "8m", "both"), "8A · 8m");
+  assert.equal(formatKeyForNotation("8A", null, "both"), "8A · 1m");
+  assert.equal(formatKeyForNotation("8A", "1m", "both"), "8A · 1m");
   assert.equal(formatKeyForNotation(null, "A minor", "both"), "A minor");
 });
 
