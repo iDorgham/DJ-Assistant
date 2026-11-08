@@ -342,6 +342,7 @@ Most relevant to this repo: `rust-best-practices` (Rust core/analysis crates),
 | `pnpm skills:audit` | Integrity, duplicate, and curation report (exits non-zero on hard problems). |
 | `pnpm skills:policy` | Dry-run report of the hot/cold split (informational). |
 | `pnpm skills:policy:restore` | Remove any `autoinvoke` flags the policy manages. |
+| `pnpm skills:sync --write` | Mirror the `hot` skills into `.qoder/skills`, the copy Qoder reads. Dry run without `--write`. |
 
 - **Prompt-weight:** all 240 skills are advertised on every step. Hiding is not
   used because a hidden skill is **not loadable** in this environment (see §13),

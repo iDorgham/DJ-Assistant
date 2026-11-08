@@ -44,7 +44,7 @@ graders:
   - type: tool_used
     name: scan-ran-with-the-network-gated-check-disabled
     tool: Bash
-    input_match: '--gh-impostor[ =]off'
+    input_match: "--gh-impostor[ =]off"
     min: 1
 
   # "The scan completes without gh": the nine static vectors need no network, so

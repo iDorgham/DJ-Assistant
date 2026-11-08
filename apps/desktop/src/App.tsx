@@ -474,7 +474,7 @@ function TrackCell({
     return (
       <td className="py-1.5 px-2 text-center">
         <div className="mx-auto w-fit">
-          <ArtworkThumb trackId={track.id} hasArtwork={!!track.artworkHash} />
+          <ArtworkThumb trackId={track.id} hasArtwork={Boolean(track.artworkHash)} />
         </div>
       </td>
     );
@@ -1410,7 +1410,9 @@ export default function App() {
     measure();
     const observer = new ResizeObserver(measure);
     observer.observe(scrollElement);
-    return () => observer.disconnect();
+    return () => {
+      observer.disconnect();
+    };
   }, [scrollElement]);
 
   useEffect(
@@ -1793,10 +1795,11 @@ export default function App() {
 
     listenToScanProgress((payload) => {
       setProgress(payload);
-      if (payload.importedTrack) {
+      const importedTrack = payload.importedTrack;
+      if (importedTrack) {
         setTracks((prev) => {
-          if (prev.some((t) => t.id === payload.importedTrack!.id)) return prev;
-          return [payload.importedTrack!, ...prev];
+          if (prev.some((t) => t.id === importedTrack.id)) return prev;
+          return [importedTrack, ...prev];
         });
       }
     }).then((fn) => {
@@ -2056,11 +2059,11 @@ export default function App() {
   const handleUndo = () => {
     if (!pendingUndo) return;
     if (pendingUndo.kind === "remove") {
-      void handleUndoRemove();
+      handleUndoRemove();
     } else if (pendingUndo.kind === "restore") {
-      void handleUndoRestore();
+      handleUndoRestore();
     } else {
-      void handleUndoMetadata();
+      handleUndoMetadata();
     }
   };
 
@@ -2877,7 +2880,7 @@ export default function App() {
                   <BulkActionBar
                     count={selection.length}
                     onEditMetadata={() => {
-                      const primary = tracks.find((entry) => entry.id === selection[0]);
+                      const primary = tracks.find((entry) => selection.includes(entry.id));
                       if (!primary) {
                         pushStatus("Couldn't open the selection — reload the library", "error");
                         return;
@@ -2885,12 +2888,12 @@ export default function App() {
                       openMetadataEditor(primary);
                     }}
                     onRate={(rating) => {
-                      const primary = tracks.find((entry) => entry.id === selection[0]);
+                      const primary = tracks.find((entry) => selection.includes(entry.id));
                       if (!primary) {
                         pushStatus("Couldn't save the rating — reload the library", "error");
                         return;
                       }
-                      void handleSetRating(primary, rating);
+                      handleSetRating(primary, rating);
                     }}
                     onClear={() => {
                       // The anchor goes with the selection: a Shift-click must
@@ -3204,7 +3207,7 @@ export default function App() {
                           </p>
                           <button
                             type="button"
-                            onClick={() => void handleRestore(removed.map((track) => track.id))}
+                            onClick={() => handleRestore(removed.map((track) => track.id))}
                             disabled={restoringIds.length > 0}
                             className="inline-flex items-center gap-1 rounded-sm border border-dj-accent/40 bg-dj-accent/10 px-2 py-1 text-[11px] font-medium text-dj-accent transition hover:bg-dj-accent/15 disabled:opacity-50"
                           >
@@ -3232,7 +3235,7 @@ export default function App() {
                               </div>
                               <button
                                 type="button"
-                                onClick={() => void handleRestore([track.id])}
+                                onClick={() => handleRestore([track.id])}
                                 disabled={restoringIds.length > 0}
                                 className="inline-flex shrink-0 items-center gap-1 rounded-sm border border-dj-border bg-dj-panel px-2 py-1 text-[11px] text-dj-text transition hover:bg-dj-hover hover:text-dj-accent disabled:opacity-50"
                                 title="Put this track back in the library (Undo stays available in the toast)"
@@ -3782,7 +3785,7 @@ export default function App() {
             </button>
             <button
               type="button"
-              onClick={() => void handleRemoveConfirmed()}
+              onClick={() => handleRemoveConfirmed()}
               className="rounded-md bg-dj-danger px-3 py-1.5 text-xs font-medium text-dj-on-accent transition hover:bg-dj-danger/85"
               title="Soft-remove from the library index — the file on disk is untouched"
             >
@@ -3822,8 +3825,8 @@ export default function App() {
             setContextMenu(null);
           }}
           canHideColumnFn={canHideColumn}
-          onReveal={() => void handleRevealTrack(contextMenu.track)}
-          onCopyPath={() => void handleCopyPath(contextMenu.track)}
+          onReveal={() => handleRevealTrack(contextMenu.track)}
+          onCopyPath={() => handleCopyPath(contextMenu.track)}
           onRemove={() => openRemoveConfirm(contextMenu.track)}
         />
       )}

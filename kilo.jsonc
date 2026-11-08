@@ -1,4 +1,5 @@
 {
+  "$schema": "https://app.kilo.ai/config.json",
   // Kilo Code project config.
   // Project instructions are auto-discovered from ./AGENTS.md (the open standard,
   // shared with Qoder, OpenCode, FreeBuff and DeepSeek Harness). This file only

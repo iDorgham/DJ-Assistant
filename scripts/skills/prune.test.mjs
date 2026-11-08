@@ -64,7 +64,10 @@ function canLink() {
 
 describe("the hot set survives the prune", () => {
   it("names the skills that are both a priority and a removal", () => {
-    const overlap = hotPruneOverlap(["tauri", "react-best-practices"], ["react", "tauri", "nextjs"]);
+    const overlap = hotPruneOverlap(
+      ["tauri", "react-best-practices"],
+      ["react", "tauri", "nextjs"]
+    );
     assert.deepEqual(overlap, ["tauri"]);
   });
 
@@ -183,10 +186,7 @@ describe("every installed copy is found", () => {
     ]);
 
     assert.equal(physical.get("shared-skill").size, 2);
-    assert.deepEqual(
-      [...physical.get("shared-skill").keys()].sort(),
-      ["a", "b"]
-    );
+    assert.deepEqual([...physical.get("shared-skill").keys()].sort(), ["a", "b"]);
   });
 
   it("ignores a directory that holds no skill", () => {

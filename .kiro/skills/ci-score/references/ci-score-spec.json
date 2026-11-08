@@ -3,11 +3,7 @@
   "scope_statement": "CI Score gauges best-practice adherence on CI speed and gate hygiene: a straightforward pass/fail rubric of best-practice checks computed from a repo's workflow configuration.",
   "scope_note": "The score reads CONFIGURATION FACTS a maintainer can verify in their own YAML in seconds. The measured wall-clock report renders beside it and enriches check evidence; measured magnitudes never gate a score in v1. Security stays out of v1 except SHA pinning (owner-named); runner-minute efficiency is reported alongside, not scored.",
   "formula": {
-    "check_states": [
-      "pass",
-      "fail",
-      "not_applicable"
-    ],
+    "check_states": ["pass", "fail", "not_applicable"],
     "score": "round_half_up(100 * checks_passed / checks_applicable) - not_applicable leaves the denominator",
     "rounding": "ROUND HALF UP - floor(x + 0.5). Python's round() is banker's rounding; any reimplementation must agree.",
     "rules": {
@@ -21,79 +17,40 @@
       "grade": "A",
       "min": 85,
       "max": 100,
-      "minus": [
-        85,
-        89
-      ],
-      "bare": [
-        90,
-        94
-      ],
-      "plus": [
-        95,
-        100
-      ]
+      "minus": [85, 89],
+      "bare": [90, 94],
+      "plus": [95, 100]
     },
     {
       "grade": "B",
       "min": 70,
       "max": 84,
-      "minus": [
-        70,
-        74
-      ],
-      "bare": [
-        75,
-        79
-      ],
-      "plus": [
-        80,
-        84
-      ]
+      "minus": [70, 74],
+      "bare": [75, 79],
+      "plus": [80, 84]
     },
     {
       "grade": "C",
       "min": 55,
       "max": 69,
-      "minus": [
-        55,
-        59
-      ],
-      "bare": [
-        60,
-        64
-      ],
-      "plus": [
-        65,
-        69
-      ]
+      "minus": [55, 59],
+      "bare": [60, 64],
+      "plus": [65, 69]
     },
     {
       "grade": "D",
       "min": 40,
       "max": 54,
-      "minus": [
-        40,
-        44
-      ],
-      "bare": [
-        45,
-        49
-      ],
-      "plus": [
-        50,
-        54
-      ]
+      "minus": [40, 44],
+      "bare": [45, 49],
+      "plus": [50, 54]
     },
     {
       "grade": "F",
       "min": 0,
       "max": 39,
       "minus": null,
-      "bare": [
-        0,
-        39
-      ],
+      "bare": [0, 39],
       "plus": null
     }
   ],
@@ -321,8 +278,7 @@
       "blast_radius": "Verified, not assumed. Across the 31-repo calibration set, exactly THREE repos have no test-like job (computable from each committed findings.json's workflow_job_graph): anthropics/claude-code, coollabsio/coolify, adobe/leonardo - every other repo has a test job and scores. The committed findings predate this signal and carry no step-level data, so the build/install-command legs were resolved by re-collecting those three repos' workflows and running the predicate: (a) anthropics/claude-code REFUSES - every job is an issue/PR-management bot (its only apparent build/install signals are false: 'make' as an English word in a bot script, and setup-bun used by the triage bots), so its row becomes 'not scored'; (b) coollabsio/coolify SCORES - it has real build-push (docker image build) jobs; (c) adobe/leonardo SCORES - its pull_request ci.yml runs `pnpm install --frozen-lockfile` (a real install command). So the owner's initial three candidates resolve to ONE refusal on verification: only claude-code. The frozen no-test-job leg matches the committed snapshot for all three; the build/install legs are verified against current (2026-07-28) workflow shapes, whose automation-vs-CI character is stable. NET: one calibration row moves to 'not scored' (claude-code); coolify and leonardo keep their values; every scoring row is unchanged.",
       "scorer_unchanged": "compute_ci_score gains one refusal branch (automation_only, ahead of facts_unavailable, behind no_workflow_yaml); the score arithmetic and the 11-check registry are untouched. The card and report render the refusal through the EXISTING refusal path (heading 'no score: <reason>', no grade, no recommendations, no disclosure) - verified.",
       "timing": "Pre-publication, part of the same v0.1.3 bump as OD-CS19 (this is an unreleased version bump, so extending it is legitimate)."
-    }
-  ,
+    },
     {
       "id": "OD-CS21",
       "status": "DECIDED 2026-07-29 - owner",

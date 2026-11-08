@@ -163,8 +163,9 @@ const DEFINITIONS: Record<ColumnId, ColumnDefinition> = {
   key: {
     id: "key",
     label: "Key",
-    // Wide enough for "12A · 12m" (both-notation mode) plus the cell padding.
-    defaultWidth: 140,
+    // Covers "12A · 12m" and the longer classical fallback Both mode renders
+    // for an imported key ("F# natural minor": 16 * 7 + 32 + 14 = 158px).
+    defaultWidth: 160,
     align: "center",
     sortable: "key",
     identity: false,

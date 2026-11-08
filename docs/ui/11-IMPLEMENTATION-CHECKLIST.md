@@ -1,6 +1,6 @@
 # 11 — Implementation Checklist
 
-**Version:** 1.2 · **Date:** 2026-10-19
+**Version:** 1.3 · **Date:** 2026-11-08
 
 Use this as the UI build order and acceptance gate.
 
@@ -8,40 +8,40 @@ Use this as the UI build order and acceptance gate.
 
 ## Phase A — Foundations
 
-- [ ] Design tokens (color L0–L3, text, accent, space, radius, type)  
-- [ ] ThemeProvider dark/light  
-- [ ] DensityProvider compact/comfortable  
-- [ ] Lucide icon setup  
+- [x] Design tokens (color L0–L3, text, accent, space, radius, type)  
+- [x] ThemeProvider dark/light/system  
+- [x] DensityProvider compact/comfortable  
+- [x] Lucide icon setup  
 - [ ] IBM Plex Sans + IBM Plex Mono font loading  
-- [ ] Motion helpers + reduced-motion  
+- [x] Motion helpers + reduced-motion  
 
 ## Phase B — Shell
 
-- [ ] AppShell layout slots  
+- [x] AppShell layout slots (PR #53)  
 - [ ] Menu bar (all sections)  
-- [ ] Header + view switcher  
+- [x] Header + view switcher (six-tab primary nav)  
 - [ ] Options bar (three contexts)  
-- [ ] LeftNav expand/collapse + icons  
+- [x] LeftNav expand/collapse + icons (PR #53)  
 - [ ] Splitters + persistence (left, right, player)  
 - [ ] Workspaces (Library / Prepare / Validate / save) — match [12-WIREFRAMES](12-WIREFRAMES-AND-FLEXIBILITY.md)  
 - [ ] Command palette  
 
 ## Phase C — Library
 
-- [ ] TrackTable virtualized  
-- [ ] ColumnPicker show/hide/reorder/**resize** (widths persist)  
+- [x] TrackTable virtualized (PR #56: 19–23 rows mounted at 30k tracks)  
+- [x] ColumnPicker show/hide/reorder/**resize** (widths persist) (PR #49)  
 - [ ] **LibrarySourceTabs** — All Library · Categories · Playlists · Browser · Flash/Storage  
-- [ ] SearchField  
-- [ ] FilterBar + chips + Compatible only - Compatible only reuses the `keyCamelot` filter; the intent is committed separately from the derived key list, so the reference, the Strict/Wide mode and the Key chip's × each re-derive it, and a committed intent whose reference is lost stays enabled and removable in the panel instead of needing a full reset (T2.1.8; running-window QA pending)  
-- [ ] KeyPill - Camelot 1A-12B + classical 1m/1d (preference) - relation-tinted pill, text on the theme primary token so every relation clears 4.5:1; notation persisted in Settings (T2.1.8; running-window QA pending)  
+- [x] SearchField (title/artist/album/path + comment + tags, PR #53)  
+- [x] FilterBar + chips + Compatible only - Compatible only reuses the `keyCamelot` filter; the intent is committed separately from the derived key list, so the reference, the Strict/Wide mode and the Key chip's × each re-derive it, and a committed intent whose reference is lost stays enabled and removable in the panel instead of needing a full reset (T2.1.8; running-window QA pending)  
+- [x] KeyPill - Camelot 1A-12B + classical 1m/1d (preference) - relation-tinted pill, text on the theme primary token so every relation clears 4.5:1; notation persisted in Settings (T2.1.8; running-window QA pending)  
 - [x] **EnergyBars** (1–10 charging-bar meter) — click a segment to set, click it again to clear (T2.1.6)  
 - [x] **TagChips** (compact chips + overflow) — click a chip to filter (T2.1.7; running-window QA pending)  
 - [x] **StarRating** — editable 5 stars — click to set, click the same star again to clear, keys `1`–`5` / `0` (T2.1.4)  
 - [ ] **ArtworkThumb** — hover play overlay; real embedded art per track  
 - [x] Label + Year columns — present in `library-columns.ts`, default Off (T2.1.7)  
 - [ ] **MixSuggestionsPanel** (right dock) + Options bar button  
-- [ ] **TrackContextMenu** per view (Library ≠ Preparation ≠ Auto)  
-- [ ] Library menu: Play, Analyze, Edit tags, Fix tags, Add to playlist, Find in playlists, Mix suggestions, Find smaller/similar online, Find new tracks online, Remove from library  
+- [x] **TrackContextMenu** per view (Library ≠ Preparation ≠ Auto) (PR #60)  
+- [x] Library menu: Play, Analyze, Edit tags, Fix tags, Add to playlist, Find in playlists, Mix suggestions, Find smaller/similar online, Find new tracks online, Remove from library — Play, Edit tags, Rate, column toggles, Reveal, Copy path, Remove live with soft delete; other items disabled stubs (PR #60)  
 - [x] **Edit tags…** editor — title / artist / album / genre / label / year / tags / **comment** — `MetadataEditor`, single-row and bulk, dirty-field diff (T2.1.7/T2.1.13/T2.1.3)  
 - [x] Column toggles (Energy, Tags, Rating, Label, Year, Artwork) persist  
 - [x] BulkActionBar + Undo toast — the Undo toast ships with the rating/energy write path (Slice 2); the bar ships with T2.1.3 (PR #65). Select-all and the shared bulk actions remain open  
@@ -49,7 +49,7 @@ Use this as the UI build order and acceptance gate.
 
 ## Phase D — Player
 
-- [ ] PlayerDock Mini / Full / Hidden + Player view  
+- [x] PlayerDock Mini / Full / Hidden + Player view (layout/presentations PR #54; real audio/peaks open T2.4)  
 - [ ] **WaveformDetailed** = zoomed viewport that **scrolls/moves** with playhead (not full-track strip)  
 - [ ] **WaveformOverview** = full-track map + zoom-window highlight (distinct from detailed)  
 - [ ] Per-track peak data (never shared waveform for all files)  

@@ -1,7 +1,7 @@
 # DJ Assistant — Project Context
 
 **Document type:** Consolidated application, plan, and progress reference
-**Status:** Living — snapshot as of 2026-10-24 (post-PR #56 merge: approved v1 plan mirrored; Stage 1 shell + Slice 3A merged via PR #53; player presentations merged via PR #54; shared Track panel merged via PR #55; 30,000-track virtualized library merged via PR #56; audit TA.1–TA.14 integrated; T2.1.2 filters reflected)
+**Status:** Living — snapshot as of 2026-11-08 (approved v1 plan mirrored; Stage 1 shell + Slice 3A merged via PR #53; player presentations merged via PR #54; shared Track panel merged via PR #55; 30,000-track virtualized library merged via PR #56; track context menu + soft remove shipped via PR #60; bulk metadata edit code-complete via PR #65; key pills + harmonic relations review round closed via PR #70; audit TA.1–TA.14 integrated; T2.1.2 filters reflected)
 **Audience:** Engineers, product, AI agents, and anyone who needs the full picture in one place
 **Source of truth:** [`docs/product/CANONICAL_DOCUMENTATION.md`](../product/CANONICAL_DOCUMENTATION.md) (product + technical) and [`docs/sdd/`](../sdd/README.md) (plan, tasks, acceptance). Audit findings live in [`docs/audit/`](../audit/README.md) and are tracked as `TA.x` tasks in [`docs/sdd/04-TASKS.md`](../sdd/04-TASKS.md).
 
@@ -11,7 +11,7 @@
 > first reading two dozen separate documents. Where a topic has a canonical home,
 > this file links to it rather than replacing it.
 
-## 0. Current planning baseline — 2026-10-24
+## 0. Current planning baseline — 2026-11-08
 
 - **The approved v1 plan is mirrored at [`docs/plan/`](../plan/README.md).** It
   contains 30 documents and 52 locked decisions (`D-001–D-052`). Those IDs are
@@ -446,6 +446,16 @@ Migration `005_chart_snapshots.sql` adds versioned chart data (TD.3 Tier 1):
 `chart_snapshots` keyed by (provider, chart, genre, snapshot_date, position)
 with ISRC/tempo/key columns for ownership and taste filtering.
 
+Migration `006_track_energy.sql` adds `tracks.energy INTEGER` (1–10, NULL until set)
+backing the 10-segment `EnergyBars` widget, energy sorting, and range filtering.
+
+Migration `007_track_tags_table.sql` adds the `track_tags(track_id, tag)` junction
+table for user custom tags, indexed with cascade delete, powering `TagChips`, tag filtering,
+and tag editing.
+
+Migration `008_tracks_removed_at.sql` adds `tracks.removed_at DATETIME` for reversible
+soft delete, indexed, with library queries automatically skipping removed tracks.
+
 Database pragmas: foreign keys **on** (SQLite defaults to off), `journal_mode =
 WAL`, `synchronous = NORMAL`.
 
@@ -496,6 +506,11 @@ Wired in `apps/desktop/src-tauri/src/lib.rs`:
 | `provider_export_playlist` | Returns `not_configured` naming the missing credential until TM.2b/TP |
 | `chart_import_snapshot` | Import a versioned chart snapshot (validated, idempotent re-import) |
 | `chart_list` | List a snapshot with ISRC ownership + taste scores vs a seed track |
+| `update_track_metadata` | Patch metadata fields (rating, energy, comment, tags, label, year) with transactional `skill_runs` undo snapshot |
+| `undo_track_metadata` | Restore metadata from a `skill_runs` snapshot with drift guard |
+| `set_track_rating` | Convenience single/batch rating update with undo snapshot |
+| `remove_tracks` | Soft delete tracks by stamping `removed_at` in a transaction with undo snapshot |
+| `restore_tracks` | Restore soft-deleted tracks via undo |
 | `provider_match_set` / `provider_export_playlist` | Generic multi-provider match/export contract (TM.1; Spotify re-implementation waits on TP) |
 | `chart_import_snapshot` / `chart_list` | Versioned chart ingest (idempotent) + taste-filtered listing (TD.3, migration 005) |
 
@@ -564,6 +579,9 @@ approved v1 plan: set building lives in Playlists → Set Score.
 | Provider status (options-bar summary + status readout) | 0 | ✅ Implemented |
 | Analysis (background progress + confidence review) | 1 | ⏳ In progress |
 | Track detail / inspector (tags vs analysis, provenance) | 2 | ✅ Shipped PR #55 — shared panel, seven tabs, keyboard model; cues read-only |
+| Track context menu (Play, Edit tags, Rate, column toggles, Reveal, Copy path, Remove) | 2 | ✅ Shipped PR #60 — soft delete migration 008, disabled stubs (T2.1.10) |
+| Bulk select & BulkActionBar (count >= 2, live edit/rate/clear, diff preview) | 2 | 🟡 Code-complete PR #65 — multi-select, diff preview, disabled stubs (T2.1.3) |
+| Key pills & harmonic relations (Camelot wheel tints, Strict/Wide, Compatible-only intent) | 2 | 🟡 Implemented PR #70 — 4.5:1 contrast, re-derivation, stranded intent fix (T2.1.8) |
 | Cue / waveform editor (markers, phrase bands, cue list) | 2–3 | 📋 Planned |
 | Tag cleanup (preview → apply → undo) | 2 | 📋 Planned |
 | Preparation view (set builder, energy curve, transitions, alternatives) | 3 | 📋 Superseded — Playlists → Set Score (Stage 5) |
@@ -894,6 +912,21 @@ planned. The first Phase 2 slices landed on top of the Phase 0/1 foundations:
   across a rating edit. This closes the T2.1.5 row-virtualization caveat; it does
   not tick T2.1.6 (Energy UI), whose Slice 2 native QA is still pending.
 
+- ✅ **T2.1.10 Library track context menu (PR #60)** — shipped 2026-10-27 (squash
+  `495a0c21`): Play, Edit tags, Rate, the column toggles, Reveal in Finder/Explorer,
+  Copy path, and Remove from library with undo. Soft delete via migration 008
+  `tracks.removed_at` stamped in the same transaction as its `skill_runs` snapshot.
+  Analyze, playlist/set, mix suggestions, and online search stay disabled stubs.
+- 🟡 **T2.1.3 Bulk select + bulk metadata edit (PR #65)** — code-complete 2026-10-29
+  on `feature/bulk-metadata-edit`: table multi-select (Ctrl/Cmd-click, Shift-click),
+  `MetadataEditor` dirty-fields-only write with diff preview and undo, and
+  `BulkActionBar` (count >= 2 with scope, live edit/rate/clear, disabled stubs with reasons).
+- 🟡 **T2.1.8 Key pills + harmonic relations (PR #70)** — implemented 2026-10-29; review
+  round closed 2026-11-08 (head `144292e0` on `feat/T2.1.8-key-pills`): pure `harmonic.ts`
+  and `key-format.ts`, Camelot/1m1d/both, Strict/Wide preferences persisted in `UiState`,
+  relation-tinted `KeyPill` meeting WCAG 4.5:1 text contrast, persistent Compatible-only
+  intent re-derivation, drops-with-chip regression fix, and stranded intent enabled and removable.
+
 Live today inside the library screen (non-gating, post-MVP scope): local
 similar-track scoring + inspector (TF.1/TF.4), Tag Health modal (TF.4/TE.3–TE.4),
 provider status + store links (TF.2/TF.4), opt-in enrichment preview → apply → undo
@@ -901,7 +934,7 @@ provider status + store links (TF.2/TF.4), opt-in enrichment preview → apply �
 
 ### 17.4 Test and quality status
 
-- Phase 0 evidence records **84 portable Rust tests + 20 JS/TS tests passing**,
+- Current automated suite records **295 total tests passing**: 219 desktop tests (`node --test`), 64 agent tests (+1 skipped), 10 tooling tests, and 2 API integration tests,
   with `cargo clippy -D warnings`, `cargo fmt --check`, and `eslint .` clean.
 - Phase 1 added full per-analyzer Rust suites (BPM, key, phrase, vocal, loudness,
   version, registry, pipeline). The portable Rust suite is the gate that runs on
@@ -1130,21 +1163,10 @@ items on 4–6 week cycles.
 - Update it when the **phase status**, **implemented interfaces**, **data model**,
   or **CI posture** changes materially — those are the sections most likely to
   drift.
-- Current status snapshot: **Phase 0 complete** (P0.1–P0.8 pass); **Phase 1 in
-  progress** (analysis engine tasks T1.1.1–T1.1.8 and T1.2.1–T1.2.6 shipped; the
-  P1.x exit criteria are still being verified); **Phase 2 in progress** — the
-  Stage 1 shell, T2.1.2 multi-filter/sorting and Slice 3A tags/comments merged in
-  PR #53, the player presentations in PR #54 (2026-10-23), the shared Track
-  panel in PR #55 (squash `83831774`, 2026-10-24) and the 30,000-track
-  virtualized library in PR #56 (squash `ed8d1046`, 2026-10-24). Manual
-  running-window QA is still pending for Stage 1, Slice 2, Slice 3A and the
-  Track panel; remaining Stage 2 work is the artwork-grid and compact list
-  views, bulk-action scope affordances and global search, followed by tag
-  cleanup, duplicates/versions, health score, real cues and real waveform work;
-  **Phases 3–4 not started**. Live post-MVP foundations: TF.1–TF.6, TD.3,
+- Current status snapshot: **Phase 0 complete** (P0.1–P0.8 pass); **Phase 1 in progress** (analysis engine tasks T1.1.1–T1.1.8 and T1.2.1–T1.2.6 shipped; P1.x exit criteria under verification); **Phase 2 in progress** — Stage 1 shell, T2.1.2 multi-filter/sorting, Slice 3A tags/comments merged in PR #53, player presentations in PR #54, shared Track panel in PR #55, 30k-track virtualized library in PR #56, track context menu in PR #60 (2026-10-27), bulk metadata edit code-complete in PR #65 (2026-10-29), and key pills + harmonic relations review round closed in PR #70 (2026-11-08, head `144292e0`). Manual running-window QA is still pending for Stage 1, Slice 2, Slice 3A, T2.1.3 and T2.1.8; next implementation slices are Slice 4 Artwork (T2.1.9), Slice 5 Left-Nav Sources (T2.1.12), Slice 6 Mix Suggestions dock (T2.1.11), and Slices 7–8 real audio/peaks; **Phases 3–4 not started**. Live post-MVP foundations: TF.1–TF.6, TD.3,
   TE.1–TE.4, TM.1/TM.2a.
 - Prefer editing the canonical document first, then reflecting the change here.
 
 ---
 
-*Maintained under `docs/context/`. Last synthesized 2026-10-24.*
+*Maintained under `docs/context/`. Last synthesized 2026-11-08.*

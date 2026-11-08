@@ -238,11 +238,12 @@ pub fn changed_value(
 pub const CURRENT_TAGS_SQL: &str =
     "SELECT tag FROM track_tags WHERE track_id = ?1 ORDER BY tag ASC";
 
-/// The most ids one `IN (...)` clause may name before SQLite refuses the query.
+/// The application's conservative batch size for one `IN (...)` clause.
 ///
-/// rusqlite's default `SQLITE_MAX_VARIABLE_NUMBER` is 999, so a selection of
-/// more than that needs several statements. The number is kept here so the
-/// chunk size and the placeholder base cannot drift apart.
+/// This is not SQLite's ceiling: since 3.32 the engine defaults to 32766
+/// variables, and a build-time override can move that limit either way. 999 is
+/// the pre-3.32 default, kept as a batch every supported build accepts. It
+/// lives here so the chunk size and the placeholder base cannot drift apart.
 pub const MAX_IN_CLAUSE_IDS: usize = 999;
 
 /// The read half of the write: the tracks the selection names, with the values
@@ -263,14 +264,14 @@ pub fn read_patch_statement(
     track_ids: &[String],
     columns: &[&str],
 ) -> Result<Vec<WriteStatement>, String> {
-    if track_ids.is_empty() {
+    // Ids are opaque: trimming one could turn an unknown id into a known one
+    // and write to a track the caller never named. A blank id is a malformed
+    // selection rather than an id to drop silently — either way the write must
+    // not report success over zero tracks.
+    if track_ids.is_empty() || track_ids.iter().any(|id| id.trim().is_empty()) {
         return Err("no tracks selected".to_string());
     }
-    let mut ids: Vec<String> = track_ids
-        .iter()
-        .map(|id| id.trim().to_string())
-        .filter(|id| !id.is_empty())
-        .collect();
+    let mut ids: Vec<String> = track_ids.to_vec();
     ids.sort();
     ids.dedup();
 
@@ -822,10 +823,32 @@ mod tests {
     }
 
     #[test]
+    fn ids_are_bound_verbatim_and_a_blank_selection_is_refused() {
+        // Trimming could turn an unknown id into a known one and write to a
+        // track the caller never named, so the padding has to survive.
+        let padded = " t1 ".to_string();
+        let statements = read_patch_statement(&[padded.clone()], &["title"]).unwrap();
+        assert_eq!(statements[0].params, vec![WriteValue::Text(padded)]);
+
+        // A blank selection must fail rather than build no statement at all,
+        // which the caller would record as a successful zero-track write.
+        for blank in ["", "   ", "\t"] {
+            assert!(
+                read_patch_statement(&[blank.to_string()], &["title"]).is_err(),
+                "a blank id must be refused"
+            );
+            assert!(
+                read_patch_statement(&["t1".to_string(), blank.to_string()], &["title"]).is_err(),
+                "a selection carrying a blank id must be refused, not silently narrowed"
+            );
+        }
+    }
+
+    #[test]
     fn a_selection_larger_than_the_clause_limit_is_split() {
-        // 1000 ids exceed rusqlite's default 999-variable ceiling, so the read
-        // must come back as two statements whose concatenated rows still cover
-        // every id — a single statement there is refused by SQLite.
+        // 1000 ids exceed the MAX_IN_CLAUSE_IDS batch size, so the read must
+        // come back as two statements whose concatenated rows still cover
+        // every id rather than dropping the ones past the first chunk.
         let ids: Vec<String> = (0..1000).map(|i| format!("t{i}")).collect();
         let statements = read_patch_statement(&ids, &["title"]).unwrap();
         assert_eq!(statements.len(), 2, "1000 ids need two statements");

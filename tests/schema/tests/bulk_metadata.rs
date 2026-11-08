@@ -497,10 +497,9 @@ fn the_snapshot_records_only_the_columns_the_patch_carried() {
 
 #[test]
 fn a_selection_larger_than_the_clause_limit_reads_back_in_chunks() {
-    // rusqlite's default variable ceiling is 999, so a 1000-track selection is
-    // split into two statements. The read must still return every track — a
-    // single statement there is refused by SQLite and the edit would silently
-    // touch nothing.
+    // A 1000-track selection exceeds the MAX_IN_CLAUSE_IDS batch size, so it is
+    // split into two statements. The read must still return every track — one
+    // statement there would silently drop the ids past the first chunk.
     let conn = open_migrated();
     for index in 0..1000 {
         seed(

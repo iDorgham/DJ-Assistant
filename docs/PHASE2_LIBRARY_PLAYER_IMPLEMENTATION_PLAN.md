@@ -1,7 +1,7 @@
 # Phase 2 — Library UX & Player Implementation Plan
 
 **Scope:** T2.1.5 → T2.4 (plus supporting T2.1.1 / T2.1.3 / T2.1.4 as needed)  
-**Status:** Living plan · **Date:** 2026-10-24  
+**Status:** Living plan · **Date:** 2026-11-08  
 **UI source of truth:** `docs/ui/` (00–03, 06, 09, 11, 12) + `docs/UI_UX_PLAYER_AND_LAYOUT_SPEC.md` v1.9+  
 **Tasks:** `docs/sdd/04-TASKS.md` · **Acceptance:** `docs/sdd/05-ACCEPTANCE.md` P2.1 / P2.1a–d  
 **Does not include:** T2.5 Spectrum Visualizer (optional polish), Tag Surgeon engine (T2.2), Cue Master generation (T2.3.5)
@@ -141,13 +141,13 @@ These get unit tests **first** (TDD-friendly).
 | 0 | Baseline merge — **done (PR #53, `03991d3c`, 2026-10-23)** | T2.1.0, T2.1.2 | — | — |
 | 1 | Column framework — **done (PR #49, `d037128b`)** | **T2.1.5** | S | — |
 | 2 | Rating + Energy — **done (Slice 2, 2026-10-21)** | **T2.1.4** (rating), **T2.1.6** (energy) | S–M | After 1 |
-| 3 | Tags + Comments — **3A done (PR #53, 2026-10-23); 3B pending** | **T2.1.7**, **T2.1.13** (3A), **T2.1.8** (3B) | M | After 1; key needs playing id |
+| 3 | Tags + Comments + Key — **3A done (PR #53, 2026-10-23); 3B done (PR #70, closed 2026-11-08)** | **T2.1.7**, **T2.1.13** (3A), **T2.1.8** (3B) | M | After 1; key needs playing id |
 | 4 | Artwork | **T2.1.9** | S | After 1 |
-| 5 | Context menu + nav sources | **T2.1.10**, **T2.1.12** | M | After 2–4 |
+| 5 | Context menu + nav sources — **T2.1.10 shipped (PR #60, 2026-10-27); T2.1.12 open** | **T2.1.10**, **T2.1.12** | M | After 2–4 |
 | 6 | Mix Suggestions | **T2.1.11** | M | After 3 + 5 |
 | 7 | Player modes + real audio — **dock presentations shipped (PR #54); real audio/peaks open** | **T2.4.1**, **T2.4.3** | M | After play path (5) |
 | 8 | Dual-wave + transport — **preview UI shipped (PR #54) over synthesized peaks; real peaks/audio open** | **T2.4.2**, **T2.4.4**, **T2.4.5** | L | After 7 |
-| 9 | Hardening (optional same sprint) | a11y, perf, **row virtualization**, search fields T2.1.1, bulk T2.1.3 | M | Continuous |
+| 9 | Hardening — **bulk T2.1.3 code-complete (PR #65); row virtualization shipped (PR #56)** | a11y, perf, **row virtualization**, search fields T2.1.1, bulk T2.1.3 | M | Continuous |
 
 S ≈ 1–2d · M ≈ 2–4d · L ≈ 4–7d (one mid-level engineer).
 
@@ -307,6 +307,8 @@ decisions (a `track_tags` table; the user comment **overwrites**
 ---
 
 ### Slice 5 — Context menu + left-nav sources (T2.1.10, T2.1.12)
+
+**Status:** T2.1.10 context menu **shipped in PR #60** (squash `495a0c21`, 2026-10-27) with soft delete (migration 008 `tracks.removed_at` + `skill_runs` transactional snapshot & undo), Play, Rate, Edit tags, column toggles, Reveal, Copy path. T2.1.12 (left-nav sources) remains open.
 
 **Library `TrackContextMenu`**
 - Play, Analyze, Edit tags, Fix tags (stub → T2.2), Rate submenu, Add to playlist/set, Find in playlists, Mix suggestions, column toggles (Energy/Tags/Rating/Label/Year/Artwork), Reveal in Finder/Explorer, Copy path, Remove from library (soft + Undo).

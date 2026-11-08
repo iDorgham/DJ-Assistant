@@ -45,12 +45,30 @@ fact, it belongs in [`facts.md`](./facts.md). Delete anything stale.
   DeepSource finding is a dashboard setting. `facts.md`'s `D-015` citation still
   points at a decision that exists only in an **uncommitted** `decisions.md` in
   this working tree; it becomes valid when that edit lands.
-- **Docs refreshed for the round:** `docs/sdd/04-TASKS.md` (the T2.1.8 note and
-  the reconciliation header), the Phase 2 plan Slice 3 status,
-  `docs/ui/11-IMPLEMENTATION-CHECKLIST.md` and `SLICE3A_PLAN.md`. **No task box
-  was ticked** — the native running-window QA (5A colours, the live preference
-  switch, the compatible filter against a real library) is still the gate for
-  T2.1.3 and T2.1.8, and desktop `node --test` is at **219 tests**.
+- **Docs and context sweep complete (2026-11-08):** `docs/context/PROJECT_CONTEXT.md`
+  brought up to date with PR #60 (context menu + soft remove migration 008), PR #65
+  (bulk metadata edit + BulkActionBar), PR #70 (key pills + harmonic relations),
+  migrations 006–008, new IPC commands, and audit report assessment;
+  `PHASE2_LIBRARY_PLAYER_IMPLEMENTATION_PLAN.md` and `docs/ui/11-IMPLEMENTATION-CHECKLIST.md`
+  reconciled. Full automated test suite passes at **295 tests** (219 desktop,
+  64 agent [+1 skipped], 10 tooling, 2 API).
+- **Next development targets in Phase 2:**
+  1. **Slice 4 — Artwork column (T2.1.9):** cached thumbnail with missing-art
+     placeholder, hover-play overlay that loads track, default off, no cross-track
+     bleed during rapid scroll.
+  2. **Slice 5 — Left-nav library sources (T2.1.12):** All Library · Categories ·
+     Playlists · Browser · Flash/Storage driving `list_tracks` source/sourceId.
+  3. **Slice 6 — Mix Suggestions dock (T2.1.11):** ranked candidates from
+     harmonic distance, BPM delta, energy delta with reason chips, preview / add
+     actions, resizable dock with persisted width.
+  4. **Slices 7 & 8 — Real audio playback & peaks cache (T2.4.1–T2.4.5):** replace
+     synthesized preview wave with real per-track peaks cache and Symphonia audio
+     engine playback on dedicated audio thread.
+- **QA status / DoD gates:** No task box was ticked — native running-window QA
+  (5A colours, live preference switch, compatible filter against real library,
+  multi-select modifier clicks, Stage 1 shell) requires the native running app
+  (F-012) and remains the exit gate for T2.1.0, T2.1.2, T2.1.4, T2.1.6, T2.1.7,
+  T2.1.13, T2.1.3 and T2.1.8.
 
 ## 2026-10-29 · T2.1.3 bulk metadata + T2.1.8 key pills (PR #65)
 

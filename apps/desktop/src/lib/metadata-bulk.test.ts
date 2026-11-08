@@ -46,9 +46,12 @@ test("a field every track leaves empty surveys as blank", () => {
 });
 
 test("the tag set is compared as a set, so chip order is not a difference", () => {
-  const a = track({ id: "1", title: "One", tags: ["peak", "warmup"] });
-  const b = track({ id: "2", title: "Two", tags: ["warmup", "peak"] });
-  assert.deepEqual(surveyFields([a, b]).tags, { state: "single", value: "peak, warmup" });
+  const firstTrack = track({ id: "1", title: "One", tags: ["peak", "warmup"] });
+  const secondTrack = track({ id: "2", title: "Two", tags: ["warmup", "peak"] });
+  assert.deepEqual(surveyFields([firstTrack, secondTrack]).tags, {
+    state: "single",
+    value: "peak, warmup",
+  });
 });
 
 test("the dialog seeds an agreed field and leaves a mixed one empty", () => {

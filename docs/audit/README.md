@@ -12,12 +12,16 @@
 - `03-settings-audit.md` — settings/config audit
 - `04-improvements.md` — how to improve (prioritized actions)
 - `05-proposed-specs-functions.md` — suggested new specs and functions
+- `06-strategic-report-assessment.md` — the external "Strategic Enhancement Report" checked against the shipped code: corrections, confirmed claims, reordered plan, metric fixes (2026-11-08)
+
+Unnumbered: `PROFESSIONAL_DJ_SYSTEM_AUDIT.md`, `DJ_ASSISTANT_PRO_REQUIREMENTS.md`, `FACTORY_AI_FOR_DJ_ECOSYSTEM.md` are external inputs — not indexed above, not verified against code, and open to error (see `06` §6.5).
 
 ## Method
 
 1. Read canonical + SDD + architecture + contracts + env + workspace configs.
 2. Compared spec promise vs shipped code (`apps/desktop/src-tauri/src/*.rs`, `apps/desktop/src/App.tsx`, `crates/*`).
 3. Flagged drift, gaps, risks. Proposed fixes ordered by leverage.
+4. For an externally supplied report (`06`), read the code and `docs/ai/memory/state.md` **first** and cite `file:line` per claim, so the assessment cannot inherit the report's own doc-vs-code drift.
 
 ## Status
 

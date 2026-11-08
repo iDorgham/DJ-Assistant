@@ -371,29 +371,21 @@ describe("domain routing", () => {
     }
   );
 
-  it(
-    "does not dilute a real match with the domain defaults",
-    { skip: !has("tauri-ipc") },
-    () => {
-      const brief = buildBrief({ prompt: "add a tauri ipc command", files: [] });
-      assert.equal(brief.skills[0].via, "trigger");
-    }
-  );
+  it("does not dilute a real match with the domain defaults", { skip: !has("tauri-ipc") }, () => {
+    const brief = buildBrief({ prompt: "add a tauri ipc command", files: [] });
+    assert.equal(brief.skills[0].via, "trigger");
+  });
 
-  it(
-    "adds no domain default when the prompt already matched",
-    { skip: !has("tauri-ipc") },
-    () => {
-      // The defaults are a fallback for an empty match set, not a top-up: a
-      // prompt that named a skill already has an answer, and padding the
-      // brief with the domain's defaults would bury it under a guess.
-      const brief = buildBrief({ prompt: "add a tauri ipc command", files: [] });
-      assert.ok(
-        !brief.skills.some((skill) => skill.via === "domain"),
-        brief.skills.map((skill) => skill.id).join(", ")
-      );
-    }
-  );
+  it("adds no domain default when the prompt already matched", { skip: !has("tauri-ipc") }, () => {
+    // The defaults are a fallback for an empty match set, not a top-up: a
+    // prompt that named a skill already has an answer, and padding the
+    // brief with the domain's defaults would bury it under a guess.
+    const brief = buildBrief({ prompt: "add a tauri ipc command", files: [] });
+    assert.ok(
+      !brief.skills.some((skill) => skill.via === "domain"),
+      brief.skills.map((skill) => skill.id).join(", ")
+    );
+  });
 
   it("lets the strongest prompt domain win", () => {
     // "library" is an audio keyword and "table"/"prettier" are interface ones.
