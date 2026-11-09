@@ -57,9 +57,12 @@ optional.
   external audio used in pipeline tests, record and compare its hash before
   and after.
 - Never stage everything with `git add .`; stage only task-related files and
-  preserve unrelated work. Include tracked skill-inventory outputs regenerated
-  by a policy change, but exclude machine-local inventory files and build
-  artifacts.
+  preserve unrelated work. For a `skills.policy.json` change, include
+  `docs/ai/SKILL_ROUTING.md` when regenerated. Include
+  `.opencode/skill-manifest.json` only when generated without the ignored
+  `.opencode/skills/` mirror (the global-source version); with that local
+  mirror present, the manifest is machine-local and must remain unstaged.
+  Exclude the ignored mirror and build artifacts.
 - Don't commit generated artifacts (`target/`, `dist/`, model binaries) or the
   local database.
 
