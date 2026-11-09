@@ -1313,7 +1313,11 @@ export default function App() {
     // manual refresh has no message to protect and must report its result.
     const manualRefresh = reloadCauseRef.current === "manual";
     reloadCauseRef.current = "write";
-    const quietReload = !reset && !manualRefresh;
+    // `reloadToken === 0` is still the initial load: StrictMode replays the
+    // mount effect, the replay sees `reset === false`, and it supersedes the
+    // reporting original by epoch — quieting it too would leave the status at
+    // `Ready` even though the tracks loaded.
+    const quietReload = !reset && !manualRefresh && reloadToken > 0;
 
     const epoch = ++requestEpochRef.current;
     appendInFlightRef.current = false;
