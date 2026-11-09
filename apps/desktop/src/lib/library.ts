@@ -505,12 +505,17 @@ export function describeMetadataUndo(
  * When every track was skipped nothing was undone, and saying “Undone” would
  * be a lie.
  */
-export function describeMetadataUndoResult(restored: number, skipped: number): string {
-  if (restored <= 0 && skipped > 0) {
-    return `Nothing undone — ${skipped} track${skipped === 1 ? "" : "s"} changed since`;
+const trackCountLabel = (count: number) => `${count} track${count === 1 ? "" : "s"}`;
+
+export const describeMetadataUndoResult = (restored: number, skipped: number): string => {
+  if (restored <= 0) {
+    if (skipped > 0) {
+      return `Nothing undone — ${trackCountLabel(skipped)} changed since`;
+    }
+    return `Undone — ${trackCountLabel(restored)} restored`;
   }
-  const tracks = `${restored} track${restored === 1 ? "" : "s"} restored`;
+  const restoredLabel = `${trackCountLabel(restored)} restored`;
   return skipped > 0
-    ? `Undone — ${tracks}, ${skipped} skipped (changed since)`
-    : `Undone — ${tracks}`;
-}
+    ? `Undone — ${restoredLabel}, ${skipped} skipped (changed since)`
+    : `Undone — ${restoredLabel}`;
+};

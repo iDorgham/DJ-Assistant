@@ -30,6 +30,7 @@ interface StarRatingProps {
 }
 
 const STAR_COUNT = 5;
+const isButtonActivationKey = (key: string) => key === "Enter" || key === " ";
 
 /** Clamps an arbitrary value into the 0–5 range the stars can show. */
 function normalize(value: number): number {
@@ -90,7 +91,7 @@ export function StarRating({
     // key-up), and cancelling it would leave the keyboard path dead. Every
     // other key — Escape, Tab, … — keeps bubbling, so the app-level
     // actions (Escape closes the inspector) still work from this control.
-    if (event.key === "Enter" || event.key === " ") {
+    if (isButtonActivationKey(event.key)) {
       event.stopPropagation();
     }
   };
