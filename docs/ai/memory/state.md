@@ -17,8 +17,10 @@ fact, it belongs in [`facts.md`](./facts.md). Delete anything stale.
   undo-status pluralization became shared helpers, the library loader now
   tracks why a reload ran (a write’s own status, including a partial-undo
   warning, survives it; a manual refresh still reports success), and the
-  rating cell’s keyboard state — roving tab stop, clear preview, key
-  descriptions — sits in rating-keys.ts where node --test can prove it.
+  rating cell’s key claims and roving tab stop are pure helpers in
+  rating-keys.ts, proven by node --test — the clear preview and the
+  description strings live in StarRating.tsx, which has no component
+  test harness here.
 
 ## 2026-11-08 · Docs-honesty sweep finished — PR #71
 
