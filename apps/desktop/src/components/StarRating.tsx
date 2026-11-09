@@ -1,8 +1,8 @@
-import { useEffect, useState } from "react";
+import { useEffect, useId, useState } from "react";
 import type { KeyboardEvent } from "react";
 import { Star } from "lucide-react";
 
-import { RATING_WIDGET_ATTRIBUTE, handleRatingKey } from "../lib/rating-keys";
+import { RATING_WIDGET_ATTRIBUTE, handleRatingKey, ratingTabStop } from "../lib/rating-keys";
 
 /**
  * Editable 5-star rating (T2.1.4, `docs/ui/03-LIBRARY-VIEW.md` §3.4).
@@ -49,7 +49,11 @@ export function StarRating({
   // Hover preview: the stars light up to the hovered one so the target of the
   // click is visible before it happens.
   const [hovered, setHovered] = useState<number | null>(null);
+  // Which star the keyboard last landed on. The committed value cannot answer
+  // that for a mixed multi-track selection, where it stays empty.
+  const [focusedStar, setFocusedStar] = useState<number | null>(null);
   const preview = hovered ?? current;
+  const descriptionId = useId();
 
   // The committed value wins over a stale hover target: once a rating is
   // written, the preview drops the hovered star so the widget shows what was
@@ -65,10 +69,15 @@ export function StarRating({
     onChange(star === current ? null : star);
   };
 
-  // Roving tab stop: exactly one star is reachable with Tab, and it starts on
-  // the set rating (or the first star when unrated). The stars stay native
-  // buttons, so Enter/Space keep their standard activation behaviour.
-  const tabStop = current > 0 ? current : 1;
+  // Roving tab stop: exactly one star is reachable with Tab. It starts on the
+  // set rating (or the first star when unrated) and then follows the focused
+  // star. The stars stay native buttons, so Enter/Space keep their standard
+  // activation behaviour.
+  const tabStop = ratingTabStop(focusedStar, current);
+  // The digits are the cell’s contract, not each star’s own shortcut: `5` on
+  // star 2 sets rating 5. So they are described once for the group instead of
+  // advertised on every button.
+  const describesRatingKeys = !readOnly && !!onChange;
 
   const onKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
     if (readOnly || !onChange) return;
@@ -78,10 +87,15 @@ export function StarRating({
     if (action !== undefined) {
       // The keyboard contract sets a rating; only a click toggles it.
       onChange(action);
+      // The keyboard path never moves the pointer, so the preview has to follow
+      // the write: the star just set, or nothing at all once cleared.
+      setHovered(action);
       // Keep the tab stop on the star the user just committed, so Tab leaves
-      // from the control that shows the value.
-      const buttons = event.currentTarget.querySelectorAll("button");
-      buttons[(action ?? 1) - 1]?.focus();
+      // from the control that shows the value. A clear leaves focus where it
+      // is — no star carries the value any more.
+      if (action !== null) {
+        event.currentTarget.querySelectorAll("button")[action - 1]?.focus();
+      }
       return;
     }
     // Enter and Space are the row keys: the widget handles them on the
@@ -100,11 +114,17 @@ export function StarRating({
     <div
       role="group"
       aria-label={label}
+      aria-describedby={describesRatingKeys ? descriptionId : undefined}
       {...{ [RATING_WIDGET_ATTRIBUTE]: "true" }}
       className="inline-flex items-center gap-0.5"
       onKeyDown={onKeyDown}
       onMouseLeave={() => setHovered(null)}
     >
+      {describesRatingKeys ? (
+        <span id={descriptionId} className="sr-only">
+          Press 1 through 5 to set the rating, 0 to clear it.
+        </span>
+      ) : null}
       {Array.from({ length: STAR_COUNT }, (_, index) => {
         const star = index + 1;
         const filled = star <= preview;
@@ -114,11 +134,10 @@ export function StarRating({
             key={star}
             type="button"
             disabled={readOnly}
-            // One tab stop for the whole cell: the star that carries the
-            // current value (or the first when unrated). The others stay
-            // clickable but are skipped by Tab.
+            // One tab stop for the whole cell: the star the keyboard is on,
+            // or the one carrying the value before it has moved. The others
+            // stay clickable but are skipped by Tab.
             tabIndex={star === tabStop ? 0 : -1}
-            aria-keyshortcuts="1 2 3 4 5 0"
             aria-label={
               readOnly
                 ? `Rating ${current} of ${STAR_COUNT}`
@@ -144,6 +163,7 @@ export function StarRating({
               if (!readOnly) setHovered(star);
             }}
             onFocus={() => {
+              setFocusedStar(star);
               if (!readOnly) setHovered(star);
             }}
             onBlur={() => setHovered(null)}

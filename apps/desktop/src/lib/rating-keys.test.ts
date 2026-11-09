@@ -7,6 +7,7 @@ import {
   isRatingKey,
   playerHotCueSlot,
   ratingKeyAction,
+  ratingTabStop,
 } from "./rating-keys.ts";
 
 /** A fake event that records the two cancellation calls the widget makes. */
@@ -162,4 +163,15 @@ test("a simulated player listener stays quiet for the focused rating cell", () =
   }
   // Inside the widget the player still owns 6–8.
   assert.deepEqual(firePlayerKey("6", targetInsideWidget), [6]);
+});
+
+test("ratingTabStop follows the focused star, then the committed rating", () => {
+  // Nothing has taken focus yet: the value carries the stop, else the first star.
+  assert.equal(ratingTabStop(null, 4), 4);
+  assert.equal(ratingTabStop(null, 0), 1);
+  // A mixed multi-track selection keeps the value empty while a star is
+  // focused, so the stop has to move to that star — otherwise Shift+Tab
+  // revisits star 1 instead of leaving the control.
+  assert.equal(ratingTabStop(4, 0), 4);
+  assert.equal(ratingTabStop(1, 3), 1);
 });

@@ -1095,6 +1095,9 @@ export default function App() {
   // The query whose rows are actually in `tracks`; a reload of that query may
   // re-fetch the loaded rows, but a query still waiting for its first page may not.
   const loadedQueryKeyRef = useRef("");
+  // Why the next reload runs: a write already reported its own outcome, a manual
+  // refresh has nothing to protect. The query key alone cannot tell them apart.
+  const reloadCauseRef = useRef<"manual" | "write">("write");
 
   const submitGlobalSearch = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -1303,11 +1306,14 @@ export default function App() {
   useEffect(() => {
     const reset = queryKeyRef.current !== queryKey;
     queryKeyRef.current = queryKey;
-    // A reload of the same query follows a write (rating, energy, metadata,
-    // undo) that already pushed its own outcome. Announcing “Library loaded”
-    // afterwards would replace that message — including the partial-undo
-    // warning that says some tracks were skipped.
-    const quietReload = !reset && loadedQueryKeyRef.current === queryKey;
+    // A write-triggered reload follows a handler (rating, energy, metadata, undo)
+    // that already pushed its own outcome. Announcing the reload afterwards would
+    // replace it — including the partial-undo warning that some tracks were
+    // skipped — and that holds even while a changed query is still loading. A
+    // manual refresh has no message to protect and must report its result.
+    const manualRefresh = reloadCauseRef.current === "manual";
+    reloadCauseRef.current = "write";
+    const quietReload = !reset && !manualRefresh;
 
     const epoch = ++requestEpochRef.current;
     appendInFlightRef.current = false;
@@ -1461,7 +1467,10 @@ export default function App() {
     };
   }, [reloadToken]);
 
-  const refreshLibrary = () => setReloadToken((token) => token + 1);
+  const refreshLibrary = (cause: "manual" | "write" = "write") => {
+    reloadCauseRef.current = cause;
+    setReloadToken((token) => token + 1);
+  };
 
   // The removed view's rows, reloaded with the library: a remove adds one, a
   // restore takes it back, and undoing either changes the set again. Its length
@@ -2709,7 +2718,7 @@ export default function App() {
                   </button>
                   <button
                     type="button"
-                    onClick={refreshLibrary}
+                    onClick={() => refreshLibrary("manual")}
                     disabled={loading || scanning}
                     className="flex h-6 w-6 items-center justify-center rounded-sm border border-dj-border bg-dj-elevated text-dj-text-secondary transition hover:bg-dj-hover disabled:opacity-50"
                     title="Refresh library"

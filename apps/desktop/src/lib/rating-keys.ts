@@ -90,3 +90,17 @@ export function playerHotCueSlot(
   if (key.length !== 1 || key < "1" || key > "8") return null;
   return Number(key);
 }
+
+/**
+ * Which star carries the roving tab stop.
+ *
+ * Exactly one star is reachable with Tab. It starts on the committed rating, or
+ * on the first star when nothing is rated, and then follows the star that last
+ * took focus — a multi-track selection leaves `current` at zero, so the value
+ * alone would strand the stop on star 1 and Shift+Tab would re-enter the cell
+ * instead of leaving it.
+ */
+export function ratingTabStop(focusedStar: number | null, current: number): number {
+  if (focusedStar !== null) return focusedStar;
+  return current > 0 ? current : 1;
+}
