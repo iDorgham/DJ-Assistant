@@ -502,8 +502,13 @@ export function describeMetadataUndo(
  *
  * A track is skipped when it changed again after the write being undone, so
  * the message has to report both halves instead of claiming a clean restore.
+ * When every track was skipped nothing was undone, and saying “Undone” would
+ * be a lie.
  */
 export function describeMetadataUndoResult(restored: number, skipped: number): string {
+  if (restored <= 0 && skipped > 0) {
+    return `Nothing undone — ${skipped} track${skipped === 1 ? "" : "s"} changed since`;
+  }
   const tracks = `${restored} track${restored === 1 ? "" : "s"} restored`;
   return skipped > 0
     ? `Undone — ${tracks}, ${skipped} skipped (changed since)`

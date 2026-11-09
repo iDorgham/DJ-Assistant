@@ -389,6 +389,11 @@ test("describeMetadataUndoResult reports restored and changed-since tracks", () 
     describeMetadataUndoResult(2, 3),
     "Undone — 2 tracks restored, 3 skipped (changed since)"
   );
+  assert.equal(
+    describeMetadataUndoResult(0, 2),
+    "Nothing undone — 2 tracks changed since",
+    "an all-skipped undo must not claim anything was restored"
+  );
 });
 
 test("describeMetadataUndo names the track only for a single-track edit", () => {

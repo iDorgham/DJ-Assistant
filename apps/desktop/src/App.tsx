@@ -1303,6 +1303,11 @@ export default function App() {
   useEffect(() => {
     const reset = queryKeyRef.current !== queryKey;
     queryKeyRef.current = queryKey;
+    // A reload of the same query follows a write (rating, energy, metadata,
+    // undo) that already pushed its own outcome. Announcing “Library loaded”
+    // afterwards would replace that message — including the partial-undo
+    // warning that says some tracks were skipped.
+    const quietReload = !reset && loadedQueryKeyRef.current === queryKey;
 
     const epoch = ++requestEpochRef.current;
     appendInFlightRef.current = false;
@@ -1348,7 +1353,9 @@ export default function App() {
         setTracks(res.tracks);
         setLibraryTotal(res.total);
         loadedQueryKeyRef.current = queryKey;
-        pushStatus(`Library loaded: ${res.total} track${res.total === 1 ? "" : "s"}`);
+        if (!quietReload) {
+          pushStatus(`Library loaded: ${res.total} track${res.total === 1 ? "" : "s"}`);
+        }
       })
       .catch((err) => {
         if (epoch !== requestEpochRef.current) return;

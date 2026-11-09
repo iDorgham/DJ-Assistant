@@ -64,6 +64,11 @@ export function StarRating({
     onChange(star === current ? null : star);
   };
 
+  // Roving tab stop: exactly one star is reachable with Tab, and it starts on
+  // the set rating (or the first star when unrated). The stars stay native
+  // buttons, so Enter/Space keep their standard activation behaviour.
+  const tabStop = current > 0 ? current : 1;
+
   const onKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
     if (readOnly || !onChange) return;
     // Ctrl/Cmd/Alt + digit belongs to the app's global shortcuts (Ctrl/Cmd+1-6
@@ -72,6 +77,10 @@ export function StarRating({
     if (action !== undefined) {
       // The keyboard contract sets a rating; only a click toggles it.
       onChange(action);
+      // Keep the tab stop on the star the user just committed, so Tab leaves
+      // from the control that shows the value.
+      const buttons = event.currentTarget.querySelectorAll("button");
+      buttons[(action ?? 1) - 1]?.focus();
       return;
     }
     // Enter and Space are the row keys: the widget handles them on the
@@ -90,12 +99,8 @@ export function StarRating({
     <div
       role="group"
       aria-label={label}
-      aria-keyshortcuts="1 2 3 4 5 0"
-      // One tab stop for the whole cell: the five stars are not five separate
-      // stops. Focus lands here and the digits work immediately.
-      tabIndex={readOnly ? undefined : 0}
       {...{ [RATING_WIDGET_ATTRIBUTE]: "true" }}
-      className="inline-flex items-center gap-0.5 rounded-sm focus:outline-hidden focus-visible:ring-1 focus-visible:ring-dj-accent"
+      className="inline-flex items-center gap-0.5"
       onKeyDown={onKeyDown}
       onMouseLeave={() => setHovered(null)}
     >
@@ -108,9 +113,11 @@ export function StarRating({
             key={star}
             type="button"
             disabled={readOnly}
-            // The group owns the tab stop; the stars stay clickable but are
-            // not five extra stops on the way through the table.
-            tabIndex={-1}
+            // One tab stop for the whole cell: the star that carries the
+            // current value (or the first when unrated). The others stay
+            // clickable but are skipped by Tab.
+            tabIndex={star === tabStop ? 0 : -1}
+            aria-keyshortcuts="1 2 3 4 5 0"
             aria-label={
               readOnly
                 ? `Rating ${current} of ${STAR_COUNT}`
