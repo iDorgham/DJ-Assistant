@@ -940,8 +940,10 @@ planned. The first Phase 2 slices landed on top of the Phase 0/1 foundations:
   `6`–`8` stay live inside the cell. The metadata-undo status line moved into
   `describeMetadataUndoResult` (changed-since skip and nothing-restored now tested), the library
   loader records why a reload runs so a write's own status survives it, and the header Refresh
-  reports its result. Running-window Pass 2 (rating/energy) has not been run, so T2.1.4 stays
-  unticked.
+  reports its result. Running-window Pass 2 (rating/energy) ran on 2026-11-09, first over
+  UIA and then by hand: 24 rows pass, B1 is a wording gap (`No energy set` is the read-only
+  meter's label, not the library cell's) and A7 is unreachable because the toast keeps a single
+  undo token, so T2.1.4 stays unticked.
 
 Live today inside the library screen (non-gating, post-MVP scope): local
 similar-track scoring + inspector (TF.1/TF.4), Tag Health modal (TF.4/TE.3–TE.4),

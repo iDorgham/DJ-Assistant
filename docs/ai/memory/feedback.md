@@ -183,3 +183,36 @@ across minutes. Mechanical note: `resolveReviewThread` takes `threadId`, not
 `id`.
 
 <!-- /coderabbit-ai-generated:v1 -->
+
+
+## F-014 · The library UI *can* be driven from here — two input paths, one of them CDP (2026-11-09)
+
+Supersedes the "multi-select has no automated route" half of F-012, proven while closing
+Pass 2 of [`../../evidence/2026-11-09-RUNNING-WINDOW-QA.md`](../../evidence/2026-11-09-RUNNING-WINDOW-QA.md).
+
+- **Coordinate input maps 1:1 only in the window's restored geometry.** A maximized window
+  hands back a 1428×768 capture against a 1183-wide window and the first click only
+  restores it, so every star / segment / header click misses. Leave it restored (1183×768).
+- **WebView2 UIA still cannot see the widget buttons** — the `role="group"` meter renders as
+  the opaque `item Rating for <title>` leaf — but real pixels and real keys do reach it: the
+  rating cell is a roving tab stop and `1`–`5` / `0` / Enter / Space all work.
+- **Modifier clicks go through Chrome DevTools Protocol, not Computer Use.** Relaunch with
+  `WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS=--remote-debugging-port=9222`, read
+  `http://127.0.0.1:9222/json/list`, then send `Input.dispatchMouseEvent` with
+  `modifiers: 2`. That is the only route here that built multi-track selections.
+- **The same socket is the console reader**: `Runtime.enable` + `Log.enable`, then collect
+  `Runtime.consoleAPICalled` / `Log.entryAdded` / `Runtime.exceptionThrown`.
+- **Overlay traps**: the track panel (an `aside`, right ~420 px) and the player dock (bottom
+  ~104 px) sit over the table, so a button's DOM rect can be unclickable — verify with
+  `document.elementFromPoint` before each click, and treat row indices as unstable (the list
+  is virtualised and a write refreshes it).
+- **The Undo toast is a 10 s, single-slot affordance.** Drive write → Undo inside one script
+  step, and know that a second write deletes the first token — "undo the first write" has no
+  UI path at all.
+- **Reading the live DB while the app runs**: copy `dj_assistant.db` + `-wal` + `-shm` to a
+  temp directory and open the copy (`dj-query --db`, or `python -c "import sqlite3"`).
+- **Net-zero QA is checkable**: diff `user_rating` / `energy` between a pre-run backup and a
+  post-run copy of the DB — that is what proves the user's library came back untouched.
+
+**Rule:** a Pass row is blocked only after both paths have been tried; "UIA has no element
+index" is no longer evidence that a row needs a human.
