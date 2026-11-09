@@ -2,6 +2,8 @@ import { useEffect, useState } from "react";
 import type { KeyboardEvent } from "react";
 import { Star } from "lucide-react";
 
+import { RATING_WIDGET_ATTRIBUTE, handleRatingKey } from "../lib/rating-keys";
+
 /**
  * Editable 5-star rating (T2.1.4, `docs/ui/03-LIBRARY-VIEW.md` §3.4).
  *
@@ -64,25 +66,12 @@ export function StarRating({
 
   const onKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
     if (readOnly || !onChange) return;
-    const key = event.key;
-    // Ctrl/Cmd/Alt + digit belongs to the app's global shortcuts (Ctrl/Cmd+1-4
-    // switch views) and to the player's hot cues — never to the rating.
-    const modified = event.ctrlKey || event.metaKey || event.altKey;
-    if (modified) return;
-
-    if (key >= "1" && key <= String(STAR_COUNT)) {
-      event.preventDefault();
-      // The digits belong to this widget: stop them here so they never reach
-      // the preview player's window listener, where 1-8 trigger hot cues.
-      event.stopPropagation();
+    // Ctrl/Cmd/Alt + digit belongs to the app's global shortcuts (Ctrl/Cmd+1-6
+    // switch views) — never to the rating.
+    const action = handleRatingKey(event);
+    if (action !== undefined) {
       // The keyboard contract sets a rating; only a click toggles it.
-      onChange(Number(key));
-      return;
-    }
-    if (key === "0") {
-      event.preventDefault();
-      event.stopPropagation();
-      onChange(null);
+      onChange(action);
       return;
     }
     // Enter and Space are the row keys: the widget handles them on the
@@ -92,7 +81,7 @@ export function StarRating({
     // key-up), and cancelling it would leave the keyboard path dead. Every
     // other key — Escape, Tab, … — keeps bubbling, so the app-level
     // actions (Escape closes the inspector) still work from this control.
-    if (key === "Enter" || key === " ") {
+    if (event.key === "Enter" || event.key === " ") {
       event.stopPropagation();
     }
   };
@@ -101,7 +90,12 @@ export function StarRating({
     <div
       role="group"
       aria-label={label}
-      className="inline-flex items-center gap-0.5"
+      aria-keyshortcuts="1 2 3 4 5 0"
+      // One tab stop for the whole cell: the five stars are not five separate
+      // stops. Focus lands here and the digits work immediately.
+      tabIndex={readOnly ? undefined : 0}
+      {...{ [RATING_WIDGET_ATTRIBUTE]: "true" }}
+      className="inline-flex items-center gap-0.5 rounded-sm focus:outline-hidden focus-visible:ring-1 focus-visible:ring-dj-accent"
       onKeyDown={onKeyDown}
       onMouseLeave={() => setHovered(null)}
     >
@@ -114,6 +108,9 @@ export function StarRating({
             key={star}
             type="button"
             disabled={readOnly}
+            // The group owns the tab stop; the stars stay clickable but are
+            // not five extra stops on the way through the table.
+            tabIndex={-1}
             aria-label={
               readOnly
                 ? `Rating ${current} of ${STAR_COUNT}`

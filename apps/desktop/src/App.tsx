@@ -103,6 +103,7 @@ import {
   defaultSortDirection,
   describeFilterParts,
   describeMetadataUndo,
+  describeMetadataUndoResult,
   describeMetadataWrite,
   dropsCompatibleIntent,
   filterTracks,
@@ -2011,11 +2012,7 @@ export default function App() {
     try {
       const res = await undoTrackMetadata({ undoId });
       refreshLibrary();
-      pushStatus(
-        res.skipped > 0
-          ? `Undone — ${res.restored} track${res.restored === 1 ? "" : "s"} restored, ${res.skipped} skipped (changed since)`
-          : `Undone — ${res.restored} track${res.restored === 1 ? "" : "s"} restored`
-      );
+      pushStatus(describeMetadataUndoResult(res.restored, res.skipped));
     } catch (err) {
       console.error("Failed to undo track metadata:", err);
       pushStatus("Couldn't undo that change", "error");

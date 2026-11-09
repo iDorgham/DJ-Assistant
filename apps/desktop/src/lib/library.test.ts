@@ -13,6 +13,7 @@ import {
   describeFilterParts,
   describeFilters,
   describeMetadataUndo,
+  describeMetadataUndoResult,
   describeMetadataWrite,
   dropsCompatibleIntent,
   filterTracks,
@@ -374,6 +375,20 @@ test("describeMetadataWrite reports the changed tracks, not the selection", () =
 test("describeMetadataUndo offers no undo when nothing changed", () => {
   assert.equal(describeMetadataUndo("rating", 0, 1, "Title"), null);
   assert.equal(describeMetadataUndo("energy", 0, 3, "Title"), null);
+});
+
+test("describeMetadataUndoResult reports restored and changed-since tracks", () => {
+  assert.equal(describeMetadataUndoResult(3, 0), "Undone — 3 tracks restored");
+  assert.equal(describeMetadataUndoResult(1, 0), "Undone — 1 track restored");
+  assert.equal(
+    describeMetadataUndoResult(1, 1),
+    "Undone — 1 track restored, 1 skipped (changed since)",
+    "a track edited again after the write is reported, not silently dropped"
+  );
+  assert.equal(
+    describeMetadataUndoResult(2, 3),
+    "Undone — 2 tracks restored, 3 skipped (changed since)"
+  );
 });
 
 test("describeMetadataUndo names the track only for a single-track edit", () => {
