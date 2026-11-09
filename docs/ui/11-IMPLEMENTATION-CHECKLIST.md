@@ -40,7 +40,7 @@ Use this as the UI build order and acceptance gate.
 - [ ] **ArtworkThumb** — hover play overlay; real embedded art per track  
 - [x] Label + Year columns — present in `library-columns.ts`, default Off (T2.1.7)  
 - [ ] **MixSuggestionsPanel** (right dock) + Options bar button  
-- [ ] **TrackContextMenu** per view — the Library `RowContextMenu` ships (PR #60). The Playlists → Set Score menu still needs the applicable track actions from the approved flow (move, replace, add/remove, reorder, cue, analyze, relink, and sync); keep this gate tied to that view and menu, not the superseded Preparation or Auto views.
+- [x] **TrackContextMenu** — the Library `RowContextMenu` ships (PR #60). The approved Playlists → Set Score flow uses suggestion cards with action controls and Why/Confidence, not a second track context menu; superseded Preparation and Auto views do not block this gate.
 - [x] Library menu: Play, Analyze, Edit tags, Fix tags, Add to playlist, Find in playlists, Mix suggestions, Find smaller/similar online, Find new tracks online, Remove from library — Play, Edit tags, Rate, column toggles, Reveal, Copy path, Remove live with soft delete; other items disabled stubs (PR #60)
 - [x] **Edit tags…** editor — title / artist / album / genre / label / year / tags / **comment** — `MetadataEditor`, single-row and bulk, dirty-field diff (T2.1.7/T2.1.13/T2.1.3)  
 - [x] Column toggles (Energy, Tags, Rating, Label, Year, Artwork) persist  
@@ -67,21 +67,16 @@ Use this as the UI build order and acceptance gate.
 - [ ] Expanded / floating Visualizer mode  
 - [ ] Performance caps + Reduce Motion respect  
 
-## Phase E — Preparation
+## Phase E — Preparation (superseded; not a v1 gate)
 
-- [ ] SetTrackList reorder + drag from Library  
-- [ ] SkillsDock + SkillCard Run/Undo  
-- [ ] ConstraintChips  
-- [ ] ExportDialog + preview tree  
-- [ ] GigReadyChecklist  
+The former standalone Preparation view is superseded by the approved Playlists
+workspace. Set Score suggestions use action controls with Why and Confidence;
+the legacy Preparation component list is out of scope and does not gate v1.
 
-## Phase F — Auto Performance
+## Phase F — Auto Performance (superseded; not a v1 gate)
 
-- [ ] Set selector + AUTO on/off  
-- [ ] AutoQueue  
-- [ ] AutoNowPlaying  
-- [ ] SetInsights (energy, key path, warnings)  
-- [ ] Flag issue → Preparation deep link  
+The former Auto Performance view is not part of approved v1 navigation. Its
+legacy component list is out of scope and does not gate v1.
 
 ## Phase G — Settings & overlays
 

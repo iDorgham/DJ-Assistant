@@ -28,8 +28,8 @@
 | [01-DESIGN-SYSTEM.md](01-DESIGN-SYSTEM.md) | Tokens: color, type, space, icons, motion |
 | [02-SHELL-AND-NAVIGATION.md](02-SHELL-AND-NAVIGATION.md) | Menus, header, options bar, nav, workspaces |
 | [03-LIBRARY-VIEW.md](03-LIBRARY-VIEW.md) | Table, search, filters, columns, harmonic keys |
-| [04-PREPARATION-VIEW.md](04-PREPARATION-VIEW.md) | Sets, Skills, sequencing, export, Gig Ready |
-| [05-AUTO-PERFORMANCE-VIEW.md](05-AUTO-PERFORMANCE-VIEW.md) | Auto queue, insights (validation only) |
+| [04-PREPARATION-VIEW.md](04-PREPARATION-VIEW.md) | Superseded legacy Preparation-view spec; not v1 navigation |
+| [05-AUTO-PERFORMANCE-VIEW.md](05-AUTO-PERFORMANCE-VIEW.md) | Superseded legacy Auto Performance spec; not a v1 view |
 | [06-PLAYER.md](06-PLAYER.md) | Functional player reference: transport, waveform, cues, grid |
 | [06A-PLAYER-PRESENTATIONS.md](06A-PLAYER-PRESENTATIONS.md) | **Three presentations, full-player Player view, EQ8 drawer, playlist, bar counter** |
 | [07-SETTINGS.md](07-SETTINGS.md) | Settings categories |
@@ -42,13 +42,12 @@
 
 ---
 
-## Three application views
+## Approved v1 navigation
 
-```
-[ Library ]           → manage collection, tags, analysis
-[ Preparation ]       → playlists, sets, cues, Skills, export
-[ Auto Performance ]  → auto-play set in order to validate flow
-```
+The locked six-tab navigation is documented in the
+[product information architecture](../plan/01-product/information-architecture.md).
+Preparation and Auto Performance are legacy design specs, not separate v1 views.
+Set Score lives inside Playlists and uses suggestion cards with Why and Confidence.
 
 Shared shell: menus · header · options bar · left nav · **flexible docks** · player Mini/Full + Player view.
 

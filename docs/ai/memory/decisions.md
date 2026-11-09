@@ -231,13 +231,8 @@ duplicating curation per tool.
 **Reverses if:** Qoder learns to read `.opencode/skills` directly, or the
 advertise cost per skill stops being the dominant spend.
 
-## D-016 · Qoder hot-set mirror; machine-local counts excluded (2026-11-09)
+## D-016 · Installed-skill count correction (2026-11-09)
 
-`pnpm skills:sync --write` copies the `hot` list from `skills.policy.json` into
-`.qoder/skills`; the durable choice is to mirror that set, not the full source
-library. Installed-skill and hot-set counts are machine-local or transient and
-do not belong in shared memory.
-**Supersedes:** D-015's installed-library wording; retain the hot-set mirror
-decision without recording an inventory count.
-**Reverses if:** Qoder learns to read `.opencode/skills` directly, or the
-advertise cost per skill stops being the dominant spend.
+**Correction:** an installed-skill total in the prior draft was an ephemeral
+inventory figure and is omitted. See D-015 for the retained Qoder mirror
+decision and reversal conditions.

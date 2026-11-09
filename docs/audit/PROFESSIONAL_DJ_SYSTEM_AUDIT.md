@@ -81,7 +81,7 @@ To evaluate whether a tool meets professional DJ standards, we must measure agai
    - The analysis engine assumes a single, fixed BPM across the entire file. It lacks elastic/warp markers for tracks with live instrumentation or drifting tempos.
 5. **No Split-Cue / Multi-Channel Audio Routing**:
    - Web Audio output is hardcoded to the system default stereo output. Professional DJs require multi-channel interface selection (Channel 1/2 for Master, Channel 3/4 for Headphones).
-6. ~~**Compilation Breakages**~~ — **Resolved.** The migration 001/007 `label`, `tags`, and `year` fields are present at every `TrackSummary` construction site: `map_track_summary_at` (`commands.rs:243-270`) reads them (`row.get(base + 7)` / `row.get(base + 8)` at `252-253`, with the custom tags filled by the grouped `load_tags` query at `178`), and `scanner.rs:147-175` populates them (`label: None`, `year: meta.year.map(...)`, `tags: Vec::new()`). This item was carried over from an earlier state of the external input and is retained here only so the audit does not ask engineers to fix code that is already present.
+6. ~~**Compilation Breakages**~~ — **Resolved.** The migration 001/007 `label`, `tags`, and `year` fields are present at every `TrackSummary` construction site: `map_track_summary_at` (`commands.rs:244-271`) reads `label` / `year` (`row.get(base + 7)` / `row.get(base + 8)` at `253-254`), with custom tags loaded by the grouped query in `load_tags` (`commands.rs:191`); `scanner.rs:147-175` populates them (`label: None`, `year: meta.year.map(...)`, `tags: Vec::new()`). This item was carried over from an earlier state of the external input and is retained here only so the audit does not ask engineers to fix code that is already present.
 
 ---
 

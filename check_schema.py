@@ -43,7 +43,10 @@ def check(path: str) -> None:
     """Print the tables, migration versions, and migration-007 feature probes."""
     database_path = Path(path).resolve()
     journal_path = Path(f"{database_path}-journal")
-    uri = f"{database_path.as_uri()}?mode=ro"
+    uri = database_path.as_uri()
+    if database_path.anchor.startswith("\\\\"):
+        uri = uri.replace("file://", "file:////", 1)
+    uri = f"{uri}?mode=ro"
 
     try:
         with closing(sqlite3.connect(uri, uri=True)) as conn:
@@ -79,7 +82,8 @@ def check(path: str) -> None:
             raise
         raise HotJournalRecoveryError(
             "schema check cannot run read-only because the database needs "
-            "hot-journal recovery; run the check on a writable copy"
+            "hot-journal recovery; open a disposable QA copy with SQLite in "
+            "read/write mode to recover the journal, then rerun this checker"
         ) from error
 
 

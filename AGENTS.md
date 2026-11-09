@@ -52,10 +52,14 @@ optional.
 - Do not add or move primary navigation tabs. Set Score belongs inside a
   playlist under Playlists; follow the locked hierarchy in
   `docs/plan/01-product/information-architecture.md`.
-- For changes to import, analysis, or export pipelines, verify source audio
-  hashes remain unchanged with the repository's hash-audit tooling.
-- Never stage everything with `git add .`; stage only the files changed for
-  this task and keep generated artifacts out of commits.
+- For changes to import, analysis, or export pipelines, run the repository
+  `scripts/hash-audit.py` check, which covers only `fixtures/audio/`. For
+  external audio used in pipeline tests, record and compare its hash before
+  and after.
+- Never stage everything with `git add .`; stage only task-related files and
+  preserve unrelated work. Include tracked skill-inventory outputs regenerated
+  by a policy change, but exclude machine-local inventory files and build
+  artifacts.
 - Don't commit generated artifacts (`target/`, `dist/`, model binaries) or the
   local database.
 

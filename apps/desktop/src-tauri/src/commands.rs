@@ -1419,23 +1419,19 @@ mod tests {
 
     #[test]
     fn cue_rows_are_ordered_and_conversion_errors_propagate() {
-        let conn = rusqlite::Connection::open_in_memory().unwrap();
-        conn.execute_batch(
-            "CREATE TABLE cue_points (
-                id TEXT NOT NULL,
-                track_id TEXT NOT NULL,
-                slot INTEGER,
-                position_ms INTEGER NOT NULL,
-                label TEXT NOT NULL,
-                cue_type TEXT NOT NULL,
-                color_hex TEXT,
-                source TEXT NOT NULL,
-                created_at TEXT NOT NULL
-            )",
+        let database = crate::db::Database::new_in_memory().unwrap();
+        let conn = database.conn();
+        conn.execute(
+            "INSERT INTO tracks (
+                id, workspace_id, file_path, file_hash, file_size, title, artist
+            ) VALUES (?1, 'default', ?2, ?3, 0, 'Title', 'Artist')",
+            rusqlite::params!["track", "track.mp3", "hash"],
         )
         .unwrap();
         conn.execute(
-            "INSERT INTO cue_points VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)",
+            "INSERT INTO cue_points (
+                id, track_id, slot, position_ms, label, cue_type, color_hex, source, created_at
+            ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)",
             rusqlite::params![
                 "later",
                 "track",
@@ -1450,7 +1446,9 @@ mod tests {
         )
         .unwrap();
         conn.execute(
-            "INSERT INTO cue_points VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)",
+            "INSERT INTO cue_points (
+                id, track_id, slot, position_ms, label, cue_type, color_hex, source, created_at
+            ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)",
             rusqlite::params![
                 "earlier",
                 "track",
@@ -1465,14 +1463,16 @@ mod tests {
         )
         .unwrap();
 
-        let cues = load_cues(&conn, "track").unwrap();
+        let cues = load_cues(conn, "track").unwrap();
         assert_eq!(
             cues.iter().map(|cue| cue.position_ms).collect::<Vec<_>>(),
             vec![1000, 2000]
         );
 
         conn.execute(
-            "INSERT INTO cue_points VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)",
+            "INSERT INTO cue_points (
+                id, track_id, slot, position_ms, label, cue_type, color_hex, source, created_at
+            ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)",
             rusqlite::params![
                 "invalid",
                 "track",
@@ -1486,7 +1486,7 @@ mod tests {
             ],
         )
         .unwrap();
-        assert!(load_cues(&conn, "track").is_err());
+        assert!(load_cues(conn, "track").is_err());
     }
 
     #[test]

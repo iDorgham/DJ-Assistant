@@ -24,7 +24,7 @@ fact, it belongs in [`facts.md`](./facts.md). Delete anything stale.
   `cargo clippy -p dj-assistant-desktop --all-targets -- -D warnings`,
   `pnpm agent:doctor` (0 hard problems) all pass. `check_schema.py` compiles
   and the reset SQL was exercised against an in-memory table: 0 non-null
-  ratings/energy afterwards, all 3 rows kept.
+  ratings/energy afterwards, all rows kept.
 - **New finding, left for the human:** `apps/desktop/src/components/RowContextMenu.test.tsx`
   is seven `assert.equal(true, true)` placeholders, and the desktop test script
   globs `src/**/*.test.ts`, so the file never runs. It is false confidence, not
