@@ -4,6 +4,21 @@ Ephemeral. Newest first. **Rotate aggressively** — if a line would still be tr
 in two weeks, it belongs in [`decisions.md`](./decisions.md); if it is just a
 fact, it belongs in [`facts.md`](./facts.md). Delete anything stale.
 
+## 2026-11-09 · PR #72 DeepSource round closed (T2.1.4 keyboard ownership)
+
+- The run reported 15 findings, all from the two adjudicated checkers
+  (`js/wrapper/iife` on ES-module exports; complexity "medium" at 6). Only
+  3 threads were still open; `ba8c3a9b` closed them — the activation-key
+  guard and the undo-status pluralization are shared helpers now, behavior
+  unchanged (241 desktop tests, typecheck, lint pass). Threads answered with
+  the SHA and resolved.
+- PR #72 carries the JavaScript FAILURE until the two checkers are Ignored
+  in the DeepSource dashboard (the human's action, agreed 2026-11-08); the
+  other 12 findings' threads were already resolved. Nothing is branch-protected.
+- The tree still holds the QA session's uncommitted work: the RowContextMenu
+  placeholder-test replacement (real tests in `library-menu.test.ts`) and
+  `docs/evidence/2026-11-09-RUNNING-WINDOW-QA.md` (Stage 1 Pass 1 PASS).
+
 ## 2026-11-08 · Docs-honesty sweep finished — PR #71
 
 - **Skill-name hardening:** `scripts/skills/sync.mjs` uses the shared
