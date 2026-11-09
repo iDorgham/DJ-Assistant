@@ -42,14 +42,14 @@ test("ratingKeyAction maps digits to the rating the widget commits", () => {
   assert.equal(ratingKeyAction("1"), 1);
   assert.equal(ratingKeyAction("5"), 5);
   assert.equal(ratingKeyAction("0"), null, "0 clears the rating");
-  assert.equal(ratingKeyAction("6"), undefined, "6 belongs to the player");
-  assert.equal(ratingKeyAction("Enter"), undefined);
+  assert.ok(ratingKeyAction("6") === undefined, "6 belongs to the player");
+  assert.ok(ratingKeyAction("Enter") === undefined, "Enter is not a rating key");
 });
 
 test("ratingKeyAction leaves modified digits to the app view shortcuts", () => {
   for (const modifiers of [{ ctrlKey: true }, { metaKey: true }, { altKey: true }]) {
-    assert.equal(ratingKeyAction("1", modifiers), undefined);
-    assert.equal(ratingKeyAction("0", modifiers), undefined);
+    assert.ok(ratingKeyAction("1", modifiers) === undefined, "modified 1 is not a rating key");
+    assert.ok(ratingKeyAction("0", modifiers) === undefined, "modified 0 is not a rating key");
   }
 });
 
@@ -143,7 +143,7 @@ test("a simulated player listener stays quiet for the focused rating cell", () =
   ) => {
     const triggered: number[] = [];
     const slot = playerHotCueSlot(key, {
-      insideRatingWidget: !!target?.closest(`[${RATING_WIDGET_ATTRIBUTE}]`),
+      insideRatingWidget: Boolean(target?.closest(`[${RATING_WIDGET_ATTRIBUTE}]`)),
     });
     if (slot !== null) triggered.push(slot);
     return triggered;

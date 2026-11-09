@@ -40,9 +40,8 @@ export function ratingKeyAction(
   modifiers: KeyModifiers = {}
 ): number | null | undefined {
   if (modifiers.ctrlKey || modifiers.metaKey || modifiers.altKey) return undefined;
-  if (key === "0") return null;
-  if (key.length === 1 && key >= "1" && key <= "5") return Number(key);
-  return undefined;
+  if (!isRatingKey(key)) return undefined;
+  return key === "0" ? null : Number(key);
 }
 
 /**

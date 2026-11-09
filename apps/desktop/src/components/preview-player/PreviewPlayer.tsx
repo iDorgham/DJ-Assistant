@@ -242,7 +242,7 @@ export function PreviewPlayer({
       // `window` (the widget also stops propagation).
       const slot = playerHotCueSlot(e.key, {
         modified: e.ctrlKey || e.metaKey || e.altKey,
-        insideRatingWidget: !!target?.closest(`[${RATING_WIDGET_ATTRIBUTE}]`),
+        insideRatingWidget: Boolean(target?.closest(`[${RATING_WIDGET_ATTRIBUTE}]`)),
       });
       if (slot !== null) {
         e.preventDefault();
