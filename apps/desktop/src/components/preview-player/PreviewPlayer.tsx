@@ -21,6 +21,7 @@ import {
   type HotCueData,
 } from "../../lib/waveform-generator";
 import { previewEngine, type PlaybackState } from "../../lib/audio-engine";
+import { RATING_WIDGET_ATTRIBUTE, playerHotCueSlot } from "../../lib/rating-keys";
 import { DetailedWaveform } from "./DetailedWaveform";
 import { OverviewMap } from "./OverviewMap";
 import { CompactWaveform } from "./CompactWaveform";
@@ -235,11 +236,17 @@ export function PreviewPlayer({
         return;
       }
 
-      // Hot cues 1 through 8
-      const digit = parseInt(e.key, 10);
-      if (digit >= 1 && digit <= 8 && !e.ctrlKey && !e.metaKey && !e.altKey) {
+      // Hot cues 1 through 8. The rating cell owns 1–5 and 0 while it has
+      // focus, so the player refuses those digits when the event came from
+      // inside it — even if a listener ordering ever lets the event reach
+      // `window` (the widget also stops propagation).
+      const slot = playerHotCueSlot(e.key, {
+        modified: e.ctrlKey || e.metaKey || e.altKey,
+        insideRatingWidget: Boolean(target?.closest(`[${RATING_WIDGET_ATTRIBUTE}]`)),
+      });
+      if (slot !== null) {
         e.preventDefault();
-        handleTriggerHotCue(digit);
+        handleTriggerHotCue(slot);
       }
     };
 

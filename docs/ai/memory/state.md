@@ -4,6 +4,24 @@ Ephemeral. Newest first. **Rotate aggressively** — if a line would still be tr
 in two weeks, it belongs in [`decisions.md`](./decisions.md); if it is just a
 fact, it belongs in [`facts.md`](./facts.md). Delete anything stale.
 
+## 2026-11-09 · PR #72 review rounds closed (T2.1.4 keyboard ownership)
+
+- Both bot rounds (DeepSource, CodeRabbit) are answered and their threads
+  resolved on the PR head. The DeepSource findings all came from the two
+  checkers already adjudicated — js/wrapper/iife firing on ES-module exports,
+  and the complexity ceiling accepted for small shared guards — so PR #72 keeps
+  the JavaScript FAILURE until both are marked Ignored in the DeepSource
+  dashboard (the human’s action, agreed 2026-11-08). Nothing is
+  branch-protected.
+- What was real was fixed, not argued: the activation-key guard and the
+  undo-status pluralization became shared helpers, the library loader now
+  tracks why a reload ran (a write’s own status, including a partial-undo
+  warning, survives it; a manual refresh still reports success), and the
+  rating cell’s key claims and roving tab stop are pure helpers in
+  rating-keys.ts, proven by node --test — the clear preview and the
+  description strings live in StarRating.tsx, which has no component
+  test harness here.
+
 ## 2026-11-08 · Docs-honesty sweep finished — PR #71
 
 - **Skill-name hardening:** `scripts/skills/sync.mjs` uses the shared

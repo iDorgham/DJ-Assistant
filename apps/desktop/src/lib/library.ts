@@ -496,3 +496,26 @@ export function describeMetadataUndo(
   if (kind === "energy") return `Set energy on ${count}`;
   return `Edited ${count}`;
 }
+
+/**
+ * Status line after undoing a rating/energy/metadata write.
+ *
+ * A track is skipped when it changed again after the write being undone, so
+ * the message has to report both halves instead of claiming a clean restore.
+ * When every track was skipped nothing was undone, and saying “Undone” would
+ * be a lie.
+ */
+const trackCountLabel = (count: number) => `${count} track${count === 1 ? "" : "s"}`;
+
+export const describeMetadataUndoResult = (restored: number, skipped: number): string => {
+  if (restored <= 0) {
+    if (skipped > 0) {
+      return `Nothing undone — ${trackCountLabel(skipped)} changed since`;
+    }
+    return `Undone — ${trackCountLabel(restored)} restored`;
+  }
+  const restoredLabel = `${trackCountLabel(restored)} restored`;
+  return skipped > 0
+    ? `Undone — ${restoredLabel}, ${skipped} skipped (changed since)`
+    : `Undone — ${restoredLabel}`;
+};
