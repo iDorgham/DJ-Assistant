@@ -15,9 +15,6 @@ fact, it belongs in [`facts.md`](./facts.md). Delete anything stale.
 - PR #72 carries the JavaScript FAILURE until the two checkers are Ignored
   in the DeepSource dashboard (the human's action, agreed 2026-11-08); the
   other 12 findings' threads were already resolved. Nothing is branch-protected.
-- The tree still holds the QA session's uncommitted work: the RowContextMenu
-  placeholder-test replacement (real tests in `library-menu.test.ts`) and
-  `docs/evidence/2026-11-09-RUNNING-WINDOW-QA.md` (Stage 1 Pass 1 PASS).
 
 ## 2026-11-08 · Docs-honesty sweep finished — PR #71
 
