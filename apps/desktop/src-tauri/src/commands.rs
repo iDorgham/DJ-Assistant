@@ -145,6 +145,33 @@ pub async fn list_tracks(
     })
 }
 
+/// Loads the cue points for a single track, ordered by position.
+fn load_cues(conn: &rusqlite::Connection, track_id: &str) -> Result<Vec<CuePoint>, String> {
+    let mut stmt = conn
+        .prepare(
+            "SELECT id, track_id, slot, position_ms, label, cue_type, color_hex, source, created_at
+         FROM cue_points WHERE track_id = ? ORDER BY position_ms ASC",
+        )
+        .map_err(|e| e.to_string())?;
+    let iter = stmt
+        .query_map([track_id], |row| {
+            Ok(CuePoint {
+                id: row.get(0)?,
+                track_id: row.get(1)?,
+                slot: row.get(2)?,
+                position_ms: row.get(3)?,
+                label: row.get(4)?,
+                cue_type: row.get(5)?,
+                color_hex: row.get(6)?,
+                source: row.get(7)?,
+                created_at: row.get(8)?,
+            })
+        })
+        .map_err(|e| e.to_string())?;
+    iter.collect::<rusqlite::Result<Vec<_>>>()
+        .map_err(|error| error.to_string())
+}
+
 /// The custom tags of the given tracks, grouped by track id (T2.1.7).
 ///
 /// Tags come back sorted, so a track's tag list has one stable order
@@ -289,33 +316,7 @@ pub async fn get_track(
         .map_err(|e| format!("Track not found: {}", e))?;
 
     // Load cues
-    let mut cue_stmt = conn
-        .prepare(
-            "SELECT id, track_id, slot, position_ms, label, cue_type, color_hex, source, created_at
-         FROM cue_points WHERE track_id = ? ORDER BY position_ms ASC",
-        )
-        .map_err(|e| e.to_string())?;
-
-    let cue_iter = cue_stmt
-        .query_map([&request.track_id], |row| {
-            Ok(CuePoint {
-                id: row.get(0)?,
-                track_id: row.get(1)?,
-                slot: row.get(2)?,
-                position_ms: row.get(3)?,
-                label: row.get(4)?,
-                cue_type: row.get(5)?,
-                color_hex: row.get(6)?,
-                source: row.get(7)?,
-                created_at: row.get(8)?,
-            })
-        })
-        .map_err(|e| e.to_string())?;
-
-    let mut cues = Vec::new();
-    for cue in cue_iter.flatten() {
-        cues.push(cue);
-    }
+    let cues = load_cues(conn, &request.track_id)?;
 
     let mut detailed = track;
     detailed.cues = cues;
@@ -543,7 +544,7 @@ pub async fn track_tag_health(
     let read = tag_health_rows(request.track_ids.as_deref()).map_err(|e| e.to_string())?;
 
     fn blank(value: &Option<String>) -> bool {
-        value.as_deref().map(str::trim).unwrap_or("").is_empty()
+        value.as_deref().map_or("", str::trim).is_empty()
     }
 
     struct TagHealthRow {
@@ -1414,7 +1415,79 @@ fn apply_metadata_patch(
 
 #[cfg(test)]
 mod tests {
-    use super::{bind_value, read_value, WriteValue};
+    use super::{bind_value, load_cues, read_value, WriteValue};
+
+    #[test]
+    fn cue_rows_are_ordered_and_conversion_errors_propagate() {
+        let database = crate::db::Database::new_in_memory().unwrap();
+        let conn = database.conn();
+        conn.execute(
+            "INSERT INTO tracks (
+                id, workspace_id, file_path, file_hash, file_size, title, artist
+            ) VALUES (?1, 'default', ?2, ?3, 0, 'Title', 'Artist')",
+            rusqlite::params!["track", "track.mp3", "hash"],
+        )
+        .unwrap();
+        conn.execute(
+            "INSERT INTO cue_points (
+                id, track_id, slot, position_ms, label, cue_type, color_hex, source, created_at
+            ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)",
+            rusqlite::params![
+                "later",
+                "track",
+                2,
+                2000,
+                "Later",
+                "hot",
+                None::<String>,
+                "user",
+                "now"
+            ],
+        )
+        .unwrap();
+        conn.execute(
+            "INSERT INTO cue_points (
+                id, track_id, slot, position_ms, label, cue_type, color_hex, source, created_at
+            ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)",
+            rusqlite::params![
+                "earlier",
+                "track",
+                1,
+                1000,
+                "Earlier",
+                "hot",
+                None::<String>,
+                "user",
+                "now"
+            ],
+        )
+        .unwrap();
+
+        let cues = load_cues(conn, "track").unwrap();
+        assert_eq!(
+            cues.iter().map(|cue| cue.position_ms).collect::<Vec<_>>(),
+            vec![1000, 2000]
+        );
+
+        conn.execute(
+            "INSERT INTO cue_points (
+                id, track_id, slot, position_ms, label, cue_type, color_hex, source, created_at
+            ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)",
+            rusqlite::params![
+                "invalid",
+                "track",
+                "not-a-number",
+                3000,
+                "Invalid",
+                "hot",
+                None::<String>,
+                "user",
+                "now"
+            ],
+        )
+        .unwrap();
+        assert!(load_cues(conn, "track").is_err());
+    }
 
     #[test]
     fn a_planned_value_binds_as_the_type_it_describes() {

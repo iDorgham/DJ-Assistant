@@ -4,6 +4,33 @@ Ephemeral. Newest first. **Rotate aggressively** — if a line would still be tr
 in two weeks, it belongs in [`decisions.md`](./decisions.md); if it is just a
 fact, it belongs in [`facts.md`](./facts.md). Delete anything stale.
 
+## 2026-11-08 · Docs-honesty sweep finished — PR #71
+
+- **Skill-name hardening:** `scripts/skills/sync.mjs` uses the shared
+  `assertSkillName` helper to reject empty, non-string, absolute, and traversal
+  names; tests verify a traversal name cannot create the mirror.
+- **Audit references:** the `TrackSummary` mapping is documented in the
+  [professional system audit](../../audit/PROFESSIONAL_DJ_SYSTEM_AUDIT.md), and
+  the reversible-write undo guard in the
+  [strategic report assessment](../../audit/06-strategic-report-assessment.md).
+- **QA-helper corrections:** `reset_qa_baseline.sql` now instructs users to
+  target an explicit database copy instead of claiming a nonexistent
+  `QA_COPY_PATH` guard; `check_schema.py` no longer claims it cannot open the
+  production database.
+- **Other verified docs fixes:** corrected the PlayerDock/full-window Player
+  checklist status and reconciled the Tag Surgeon status with audit C-5.
+- **Checks:** `pnpm lint` (0 errors, the 2 pre-existing Player `exhaustive-deps`
+  warnings), `pnpm typecheck`, `cargo fmt --all --check`,
+  `cargo clippy -p dj-assistant-desktop --all-targets -- -D warnings`,
+  `pnpm agent:doctor` (0 hard problems) all pass. `check_schema.py` compiles
+  and the reset SQL was exercised against an in-memory table: 0 non-null
+  ratings/energy afterwards, all rows kept.
+- **New finding, left for the human:** `apps/desktop/src/components/RowContextMenu.test.tsx`
+  is seven `assert.equal(true, true)` placeholders, and the desktop test script
+  globs `src/**/*.test.ts`, so the file never runs. It is false confidence, not
+  coverage; deleting or implementing it is a decision for the human.
+- **Still open:** native running-window QA gates below remain unticked.
+
 ## 2026-11-08 · PR #70 review round closed (T2.1.8 key pills)
 
 - **48 review threads on PR #70, all answered and resolved**; the branch head is
@@ -18,8 +45,8 @@ fact, it belongs in [`facts.md`](./facts.md). Delete anything stale.
   reopened checked *and* disabled once the reference was lost, and with no
   derived keys there was no chip to clear either, so Reset was the only escape;
   the box now stays enabled and removable whenever the intent is on, and
-  unchecking it without a reference leaves manual key picks alone (`d76573a5`,
-  desktop `node --test` 217 → 219). Two `js/wrapper/iife` threads then landed on
+  unchecking it without a reference leaves manual key picks alone (`d76573a5`).
+  Two `js/wrapper/iife` threads then landed on
   `export function`s that fix added — the documented false positive, answered
   with no code change.
 - **What the round changed:** `797e1823` turned Compatible-only into a committed
@@ -38,20 +65,12 @@ fact, it belongs in [`facts.md`](./facts.md). Delete anything stale.
   on 2026-11-08: mark those checkers Ignored in the DeepSource dashboard instead
   of reshaping code to satisfy them. Nothing is branch-protected, so the check
   blocks nothing.
-- **cubic's three memory P2s:** the `feedback.md` one is fixed. The `facts.md`
-  DeepSource entry keeps only the durable dashboard fact — the PR evidence and
-  the dated agreement moved here — and, after cubic's follow-up P2 on the same
-  file, it names the two false-positive checkers instead of implying every
-  DeepSource finding is a dashboard setting. `facts.md`'s `D-015` citation still
-  points at a decision that exists only in an **uncommitted** `decisions.md` in
-  this working tree; it becomes valid when that edit lands.
 - **Docs and context sweep complete (2026-11-08):** `docs/context/PROJECT_CONTEXT.md`
   brought up to date with PR #60 (context menu + soft remove migration 008), PR #65
   (bulk metadata edit + BulkActionBar), PR #70 (key pills + harmonic relations),
   migrations 006–008, new IPC commands, and audit report assessment;
   `PHASE2_LIBRARY_PLAYER_IMPLEMENTATION_PLAN.md` and `docs/ui/11-IMPLEMENTATION-CHECKLIST.md`
-  reconciled. Full automated test suite passes at **295 tests** (219 desktop,
-  64 agent [+1 skipped], 10 tooling, 2 API).
+  reconciled. The full automated test suite passed.
 - **Next development targets in Phase 2:**
   1. **Slice 4 — Artwork column (T2.1.9):** cached thumbnail with missing-art
      placeholder, hover-play overlay that loads track, default off, no cross-track
@@ -79,7 +98,7 @@ fact, it belongs in [`facts.md`](./facts.md). Delete anything stale.
   `aria-disabled` with reasons derived from `library-menu.ts`. It shows at
   `count >= 2`, not `> 0`, because a plain row click always leaves one row
   selected and a permanent bar hurts density (documented in `bulk-actions.ts`).
-  Desktop `node --test` is now **196 tests**; typecheck, ESLint and Prettier pass.
+  Desktop `node --test`, typecheck, ESLint and Prettier pass.
 - **Docs reconciled:** `docs/sdd/04-TASKS.md` (T2.1.3 annotation),
   `PHASE2_LIBRARY_PLAYER_IMPLEMENTATION_PLAN.md` (Slice 2 known gap + Slice 9
   row) and `docs/ui/11-IMPLEMENTATION-CHECKLIST.md` (BulkActionBar, editor,
@@ -88,7 +107,7 @@ fact, it belongs in [`facts.md`](./facts.md). Delete anything stale.
   `key-format.ts` modules with tests, the relation-tinted `KeyPill`, Settings →
   Key display (Camelot / 1m1d / both, Strict/Wide) persisted in `UiState`, and a
   Compatible-only filter that reuses `keyCamelot` (no Rust/SQL change). Desktop
-  `node --test` is now **217 tests**; typecheck, build, ESLint and Prettier pass.
+  `node --test`, typecheck, build, ESLint and Prettier pass.
 - **Still open:** select-all and keyboard scope (`Ctrl/Cmd+A`), the blocked
   shared bulk actions, the native multi-select QA pass, and the T2.1.8
   running-window QA (5A colours, live preference switch, compatible filter
@@ -144,7 +163,6 @@ fact, it belongs in [`facts.md`](./facts.md). Delete anything stale.
 - **New pure helpers are tested:** `resolvePlayerHeight` (`lib/ui-state.ts`),
   `clampZoomLevel` / `getFollowViewOffset` / `snapToGrid`
   (`lib/waveform-generator.ts`) and the Camelot palette (`lib/camelot.ts`).
-  Desktop `node --test` is now **126 tests**.
 - **Docs reconciled to three presentations:** `docs/ui/06A` v1.4, `06-PLAYER`
   v1.5, the plan docs, component tables and wireframes. The decision and its
   rejected alternatives are recorded in
@@ -158,7 +176,7 @@ fact, it belongs in [`facts.md`](./facts.md). Delete anything stale.
   `feat/t2.1.2-library-multi-filter` (unique commits, awaiting review), plus
   `fix/analysis-decode-truncation` and `fix/rustfmt-ci` — their PRs were
   **closed, not merged**, and they still carry unique commits.
-- **Checks:** desktop typecheck, Prettier and 126 tests pass; `pnpm lint:eslint`
+- **Checks:** desktop typecheck, Prettier and desktop tests pass; `pnpm lint:eslint`
   is 0 errors / 2 pre-existing Player `exhaustive-deps` warnings;
   `pnpm lint:root` passes.
 - **Open:** native running-window QA for Stage 1, Slice 3A and the new player
@@ -184,7 +202,7 @@ fact, it belongs in [`facts.md`](./facts.md). Delete anything stale.
   library; playlist/tag-wide global search and virtualization belong to Stage 2,
   not this shell.
 - **Checks:** `pnpm typecheck`, `pnpm build:desktop`, desktop Prettier, the
-  desktop `node --test` suite (**114 tests**) and `pnpm lint:root` pass.
+  desktop `node --test` suite and `pnpm lint:root` pass.
   `pnpm lint:eslint` has 0 errors and 3 pre-existing Player
   `exhaustive-deps` warnings.
 - **Not acceptance-complete yet.** Native Tauri running-window QA is pending:
@@ -210,7 +228,7 @@ fact, it belongs in [`facts.md`](./facts.md). Delete anything stale.
   manual running-window QA is still **not executed**, so T2.1.7 and T2.1.13
   remain unticked.
 - **Checks run before the baseline commit:** `pnpm lint`, `pnpm typecheck`,
-  the desktop `node --test` suite (109 tests), `pnpm rust:fmt`,
+  the desktop `node --test` suite, `pnpm rust:fmt`,
   `pnpm rust:clippy`, and
   `cargo test -p dj-assistant-core -p dj-assistant-schema-tests` (all passed).
 - **The plan's hierarchy is explicit:** `docs/product` and `docs/ui/` remain

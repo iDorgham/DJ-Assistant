@@ -3,8 +3,12 @@
 
 **Date:** November 2026  
 **Audience:** Lead Architect, Product Owner, Core Engineering, Professional DJ End-Users  
-**Status:** Canonical Audit & Technical Specification  
-**Location:** `docs/audits/` (mirrored in `factory` and `DJ Assistant`)
+**Status:** External input — unverified against this repository's code  
+**Location:** `docs/audit/` (repository-local copy; the original lives under `D:\Work\AI\Projects\factory`)
+
+---
+
+> **External input.** This document was supplied from outside this repository and has **not** been verified against the shipped code. The audit index (`docs/audit/README.md`) does not index it, and `06` §6, item 5 records it as open to error. Its action-plan references point at repository-local files in this directory, not at a `docs/audits/` path. The one checked exception is §3.3 item 6: the compilation-breakage claim was verified against the code on 2026-11-08 and is marked **Resolved** there.
 
 ---
 
@@ -77,8 +81,7 @@ To evaluate whether a tool meets professional DJ standards, we must measure agai
    - The analysis engine assumes a single, fixed BPM across the entire file. It lacks elastic/warp markers for tracks with live instrumentation or drifting tempos.
 5. **No Split-Cue / Multi-Channel Audio Routing**:
    - Web Audio output is hardcoded to the system default stereo output. Professional DJs require multi-channel interface selection (Channel 1/2 for Master, Channel 3/4 for Headphones).
-6. **Compilation Breakages**:
-   - Current Rust desktop code has compilation errors in `commands.rs` and `scanner.rs` due to missing `label`, `tags`, and `year` fields in `TrackSummary`.
+6. ~~**Compilation Breakages**~~ — **Resolved.** The migration 001/007 `label`, `tags`, and `year` fields are present at every `TrackSummary` construction site: `map_track_summary_at` (`commands.rs:244-271`) reads `label` / `year` (`row.get(base + 7)` / `row.get(base + 8)` at `253-254`), with custom tags loaded by the grouped query in `load_tags` (`commands.rs:191`); `scanner.rs:147-175` populates them (`label: None`, `year: meta.year.map(...)`, `tags: Vec::new()`). This item was carried over from an earlier state of the external input and is retained here only so the audit does not ask engineers to fix code that is already present.
 
 ---
 
@@ -184,14 +187,14 @@ flowchart TD
 
 To elevate this ecosystem to professional DJ readiness, development must proceed across two synchronized tracks:
 
-1. **Track A: DJ Assistant Production Hardening** (Detailed in [DJ_ASSISTANT_PRO_REQUIREMENTS.md](file:///D:/Work/AI/Projects/factory/docs/audits/DJ_ASSISTANT_PRO_REQUIREMENTS.md))
+1. **Track A: DJ Assistant Production Hardening** (Detailed in [DJ_ASSISTANT_PRO_REQUIREMENTS.md](./DJ_ASSISTANT_PRO_REQUIREMENTS.md))
    - Fix Rust compile blockers in `commands.rs`.
    - Implement true audio decoding and streaming playback using Symphonia and Tauri asset streaming.
    - Build 3-band spectral peak extraction in Rust and feed it directly into the canvas waveform renderer.
    - Implement the complete Phase 3 export engine (Rekordbox XML and Serato Crate).
    - Build the Harmonic Journey set planning algorithm.
 
-2. **Track B: Factory AI Engine Audio Specialization** (Detailed in [FACTORY_AI_FOR_DJ_ECOSYSTEM.md](file:///D:/Work/AI/Projects/factory/docs/audits/FACTORY_AI_FOR_DJ_ECOSYSTEM.md))
+2. **Track B: Factory AI Engine Audio Specialization** (Detailed in [FACTORY_AI_FOR_DJ_ECOSYSTEM.md](./FACTORY_AI_FOR_DJ_ECOSYSTEM.md))
    - Create specialized audio test check runners (EBU R128 LUFS verification, spectral consistency checks).
    - Add XML DTD validation checks for Rekordbox and schema tests for Serato crates.
    - Introduce DJ domain skills, system prompts, and memory ledgers into Factory's adapter context.

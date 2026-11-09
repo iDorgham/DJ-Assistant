@@ -44,6 +44,25 @@ optional.
 - Keep UI tokens and components aligned with `docs/ui/` — never invent a second
   palette or spacing scale.
 - Rust: prefer the workspace crates; `clippy -D warnings` is enforced.
+- Never modify source audio files, including when tagging writable music files;
+  metadata edits belong in the app's database or supported sidecars.
+- Keep SQLite changes in migrations and use the app's WAL/foreign-key setup.
+  Tauri commands should use the existing `Result<T, String>` boundary and
+  propagate errors instead of hiding them behind success-shaped results.
+- Do not add or move primary navigation tabs. Set Score belongs inside a
+  playlist under Playlists; follow the locked hierarchy in
+  `docs/plan/01-product/information-architecture.md`.
+- For changes to import, analysis, or export pipelines, run the repository
+  `scripts/hash-audit.py` check, which covers only `fixtures/audio/`. For
+  external audio used in pipeline tests, record and compare its hash before
+  and after.
+- Never stage everything with `git add .`; stage only task-related files and
+  preserve unrelated work. For a `skills.policy.json` change, include
+  `docs/ai/SKILL_ROUTING.md` when regenerated. Include
+  `.opencode/skill-manifest.json` only when generated without the ignored
+  `.opencode/skills/` mirror (the global-source version); with that local
+  mirror present, the manifest is machine-local and must remain unstaged.
+  Exclude the ignored mirror and build artifacts.
 - Don't commit generated artifacts (`target/`, `dist/`, model binaries) or the
   local database.
 

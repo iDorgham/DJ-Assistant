@@ -12,7 +12,7 @@ import os from "node:os";
 import path from "node:path";
 import { after, describe, it } from "node:test";
 
-import { apply, plan } from "./sync.mjs";
+import { apply, assertSkillName, plan } from "./sync.mjs";
 
 const scratch = path.join(os.tmpdir(), `dj-assistant-skills-sync-test-${process.pid}`);
 const source = path.join(scratch, "source");
@@ -99,5 +99,60 @@ describe("skills:sync plan", () => {
       { name: "epsilon", action: "unchanged" },
       { name: "ghost", action: "missing" },
     ]);
+  });
+});
+
+describe("skills:sync name validation", () => {
+  it("accepts an ordinary directory name", () => {
+    assert.equal(assertSkillName("alpha"), "alpha");
+  });
+
+  it("rejects `.` and `..`", () => {
+    for (const bad of [".", ".."]) {
+      assert.throws(() => assertSkillName(bad), /invalid skill name/);
+    }
+  });
+
+  it("rejects path separators and absolute paths", () => {
+    for (const bad of ["../escape", "a/b", "a\\b", "/abs", "C:\\abs"]) {
+      assert.throws(() => assertSkillName(bad), /invalid skill name/);
+    }
+  });
+
+  it("rejects empty and non-string names", () => {
+    assert.throws(() => assertSkillName(""), /invalid skill name/);
+    assert.throws(() => assertSkillName(undefined), /invalid skill name/);
+  });
+
+  it("refuses a traversal name before touching the mirror", () => {
+    // The mirror must stay empty: a malformed name must never create or delete
+    // anything under it. Use a fresh target so earlier tests' directories
+    // cannot mask a failure. Both entry points are covered — `apply` is the
+    // `--write` path that actually calls `fs.rmSync`.
+    const freshTarget = path.join(scratch, "fresh-target");
+    assert.throws(() => plan(["../escape"], source, freshTarget), /invalid skill name/);
+    assert.equal(fs.existsSync(freshTarget), false);
+    assert.throws(() => apply(["../escape"], source, freshTarget), /invalid skill name/);
+    assert.equal(fs.existsSync(freshTarget), false);
+  });
+
+  it("aborts the whole write when a later name is malformed", () => {
+    // A valid name first: validation must reject the batch before any copy or
+    // delete runs, not part-way through it.
+    const guardedTarget = path.join(scratch, "guarded-target");
+    makeSkill(source, "zeta", { "SKILL.md": "zeta\n" });
+    makeSkill(guardedTarget, "bystander", { "SKILL.md": "must survive\n" });
+    const before = listing(guardedTarget);
+
+    assert.throws(
+      () => apply(["zeta", "../escape"], source, guardedTarget),
+      /invalid skill name/
+    );
+    assert.deepEqual(listing(guardedTarget), before);
+    assert.equal(fs.existsSync(path.join(guardedTarget, "zeta")), false);
+    assert.equal(
+      fs.readFileSync(path.join(guardedTarget, "bystander", "SKILL.md"), "utf8"),
+      "must survive\n"
+    );
   });
 });

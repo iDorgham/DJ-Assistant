@@ -2,12 +2,29 @@
 -- This script is intended ONLY for copies of the live DB used during QA testing.
 -- Running this on %APPDATA%\com.djassistant.desktop\dj_assistant.db will permanently
 -- reset user ratings and energy values.
+--
+-- The reset is a single UPDATE: SQLite executes the whole statement atomically,
+-- so either both columns reset or neither does. If the statement fails mid-way,
+-- SQLite rolls back the rows it already changed, leaving neither field
+-- half-reset. Splitting it into two statements would leave that decision to
+-- the caller — a CLI that reports the second error and still reaches COMMIT
+-- would persist a misleading partial baseline.
+--
+-- There is no path guard in this file: plain SQL cannot inspect the name of the
+-- database it is run against, so the only thing standing between this script and
+-- the live library is the operator pointing the CLI at a copy. Be explicit:
+--   sqlite3 "path/to/dj_assistant_qa_copy.db" < scripts/reset_qa_baseline.sql
+-- Never run it with no argument, and never against %APPDATA%.
 
 BEGIN TRANSACTION;
 
--- Reset user-assigned ratings and energy to pristine state (0 rated, 0 energy)
-UPDATE tracks SET user_rating = NULL WHERE user_rating IS NOT NULL;
-UPDATE tracks SET energy = NULL WHERE energy IS NOT NULL;
+-- Reset user-assigned ratings and energy to pristine state (0 rated, 0 energy).
+-- Both columns clear in one statement, so either both reset or neither does.
+UPDATE tracks
+   SET user_rating = NULL,
+       energy = NULL
+ WHERE user_rating IS NOT NULL
+    OR energy IS NOT NULL;
 
 COMMIT;
 
