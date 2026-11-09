@@ -77,7 +77,7 @@ export function StarRating({
   // The digits are the cell’s contract, not each star’s own shortcut: `5` on
   // star 2 sets rating 5. So they are described once for the group instead of
   // advertised on every button.
-  const describesRatingKeys = !readOnly && !!onChange;
+  const describesRatingKeys = !readOnly && Boolean(onChange);
 
   const onKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
     if (readOnly || !onChange) return;
