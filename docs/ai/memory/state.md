@@ -4,6 +4,26 @@ Ephemeral. Newest first. **Rotate aggressively** — if a line would still be tr
 in two weeks, it belongs in [`decisions.md`](./decisions.md); if it is just a
 fact, it belongs in [`facts.md`](./facts.md). Delete anything stale.
 
+## 2026-11-09 · PR #72 merged; ledger, context and plan reconciled on `main`
+
+- **`main` is at `307a13fb`** (PR #72, the T2.1.4 rating-cell keyboard ownership fix)
+  after PR #71 (`b8acce5a`, docs-honesty sweep). **PR #70’s squash `682084ff` is not an
+  ancestor of `main`** — it merged into `feature/bulk-metadata-edit`, and its code arrived
+  inside PR #65’s squash `9551aa41`. `04-TASKS.md` had been calling #65 and #70 “open in
+  review, not merged”; that claim, its mirror in `PROJECT_CONTEXT.md`, the slice list and
+  the Phase 2 Slice 2 status are now corrected.
+- **Nothing was ticked.** The 2026-11-09 running-window record shows **Pass 1 (Stage 1
+  shell) PASS** (A1–A12, B1–B5, C1–C3) and **Passes 2–5 NOT RUN**, so T2.1.0 (§D still
+  unrun), T2.1.2, T2.1.3, T2.1.4, T2.1.6, T2.1.7, T2.1.8 and T2.1.13 all stay open (F-012).
+- **The QA session’s own work is still uncommitted and is not mine to commit:**
+  `docs/evidence/2026-11-09-RUNNING-WINDOW-QA.md`, the `RowContextMenu.test.tsx` deletion
+  and the `library-menu.ts` / `.test.ts` helper extraction. Those 6 tests are why this tree
+  measures **242** desktop tests while merged `main` measures **236** — keep them out of
+  docs commits (F-010).
+- **Checks on `main` 2026-11-09:** `pnpm lint` (0 errors, the 2 known Player
+  `exhaustive-deps` warnings), `pnpm typecheck`, 236 desktop / 70 pass + 1 skipped agent /
+  10 tooling / 2 API tests, `pnpm lint:root` — all pass.
+
 ## 2026-11-09 · PR #72 review rounds closed (T2.1.4 keyboard ownership)
 
 - Both bot rounds (DeepSource, CodeRabbit) are answered and their threads

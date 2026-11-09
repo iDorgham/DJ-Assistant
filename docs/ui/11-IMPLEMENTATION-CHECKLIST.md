@@ -1,6 +1,6 @@
 # 11 — Implementation Checklist
 
-**Version:** 1.3 · **Date:** 2026-11-08
+**Version:** 1.4 · **Date:** 2026-11-09
 
 Use this as the UI build order and acceptance gate.
 
@@ -36,7 +36,7 @@ Use this as the UI build order and acceptance gate.
 - [x] KeyPill - Camelot 1A-12B + classical 1m/1d (preference) - relation-tinted pill, text on the theme primary token so every relation clears 4.5:1; notation persisted in Settings (T2.1.8; running-window QA pending)  
 - [x] **EnergyBars** (1–10 charging-bar meter) — click a segment to set, click it again to clear (T2.1.6)  
 - [x] **TagChips** (compact chips + overflow) — click a chip to filter (T2.1.7; running-window QA pending)  
-- [x] **StarRating** — editable 5 stars — click to set, click the same star again to clear, keys `1`–`5` / `0` (T2.1.4)  
+- [x] **StarRating** — editable 5 stars — click to set, click the same star again to clear, keys `1`–`5` / `0` (T2.1.4). PR #72 (`307a13fb`, 2026-11-09) made the cell one roving tab stop that claims its digits (`lib/rating-keys.ts`, `data-rating-widget`) so the preview player no longer reads them as hot cues; the running-window pass for it is still unrun  
 - [ ] **ArtworkThumb** — hover play overlay; real embedded art per track  
 - [x] Label + Year columns — present in `library-columns.ts`, default Off (T2.1.7)  
 - [ ] **MixSuggestionsPanel** (right dock) + Options bar button  

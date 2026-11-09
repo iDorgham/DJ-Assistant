@@ -1,6 +1,6 @@
 # Implementation Slices
 
-Last updated: 2026-10-24  
+Last updated: 2026-11-09  
 Status: Active — Stage 1 shipped, Stage 2 in progress; native acceptance QA pending.
 
 ## 1. Current state
@@ -9,6 +9,10 @@ Status: Active — Stage 1 shipped, Stage 2 in progress; native acceptance QA pe
 - **PR #54 merged 2026-10-23** (squash `5e7334eb`): the player dock now uses the three-presentation model (Mini / Full / Player view); Extended is retired; BPM fine-tune drives the grid, bar counter and beat jump.
 - **PR #55 merged 2026-10-24** (squash `83831774`): the shared Track inspect panel with player entry points.
 - **PR #56 merged 2026-10-24** (squash `ed8d1046`): the 30,000-track virtualized Library table and the `DJ_ASSISTANT_DB_PATH` override.
+- **PR #65 merged 2026-11-08** (squash `9551aa41`): T2.1.3 bulk metadata edit with preview and undo — and, stacked inside that branch, **PR #70** (own merge `682084ff` on `feature/bulk-metadata-edit`), the T2.1.8 key pills and harmonic compatibility.
+- **PR #71 merged 2026-11-09** (squash `b8acce5a`): the docs-honesty sweep — stale claims reconciled with the shipped code, plus the skill-mirror name hardening.
+- **PR #72 merged 2026-11-09** (squash `307a13fb`): the T2.1.4 rating cell now owns its digits and is a keyboard tab stop.
+- **Running-window QA 2026-11-09**: Pass 1 (Stage 1 shell) recorded **PASS**; Passes 2–5 (Slice 2, Slice 3A, key pills, 30k fixture) **not run**, so no slice below moves to accepted.
 - Slice 3A manual running-window QA is still pending; T2.1.7 and T2.1.13 stay unticked.
 - The approved plan is mirrored at `docs/plan/`; the discussion log is `docs/plan/06-delivery/discussions.md`.
 - The factory repository is a separate workstream and must not be mixed into DJ Assistant delivery.

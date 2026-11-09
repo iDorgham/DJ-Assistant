@@ -1,7 +1,7 @@
 # DJ Assistant — Project Context
 
 **Document type:** Consolidated application, plan, and progress reference
-**Status:** Living — snapshot as of 2026-11-08 (approved v1 plan mirrored; Stage 1 shell + Slice 3A merged via PR #53; player presentations merged via PR #54; shared Track panel merged via PR #55; 30,000-track virtualized library merged via PR #56; track context menu + soft remove shipped via PR #60; bulk metadata edit code-complete via PR #65; key pills + harmonic relations review round closed via PR #70; audit TA.1–TA.14 integrated; T2.1.2 filters reflected)
+**Status:** Living — snapshot as of 2026-11-09 (approved v1 plan mirrored; Stage 1 shell + Slice 3A merged via PR #53; player presentations merged via PR #54; shared Track panel merged via PR #55; 30,000-track virtualized library merged via PR #56; track context menu + soft remove shipped via PR #60; bulk metadata edit code-complete via PR #65; key pills + harmonic relations merged via PR #70, which reached `main` inside PR #65's squash `9551aa41`; the rating-cell keyboard-ownership fix merged via PR #72 (`307a13fb`) and the docs-honesty sweep via PR #71 (`b8acce5a`), both 2026-11-09; audit TA.1–TA.14 integrated; T2.1.2 filters reflected)
 **Audience:** Engineers, product, AI agents, and anyone who needs the full picture in one place
 **Source of truth:** [`docs/product/CANONICAL_DOCUMENTATION.md`](../product/CANONICAL_DOCUMENTATION.md) (product + technical) and [`docs/sdd/`](../sdd/README.md) (plan, tasks, acceptance). Audit findings live in [`docs/audit/`](../audit/README.md) and are tracked as `TA.x` tasks in [`docs/sdd/04-TASKS.md`](../sdd/04-TASKS.md).
 
@@ -585,7 +585,8 @@ approved v1 plan: set building lives in Playlists → Set Score.
 | Track detail / inspector (tags vs analysis, provenance) | 2 | ✅ Shipped PR #55 — shared panel, seven tabs, keyboard model; cues read-only |
 | Track context menu (Play, Edit tags, Rate, column toggles, Reveal, Copy path, Remove) | 2 | ✅ Shipped PR #60 — soft delete migration 008, disabled stubs (T2.1.10) |
 | Bulk select & BulkActionBar (count >= 2, live edit/rate/clear, diff preview) | 2 | 🟡 Code-complete PR #65 — multi-select, diff preview, disabled stubs (T2.1.3) |
-| Key pills & harmonic relations (Camelot wheel tints, Strict/Wide, Compatible-only intent) | 2 | 🟡 Implemented PR #70 — 4.5:1 contrast, re-derivation, stranded intent fix (T2.1.8) |
+| Key pills & harmonic relations (Camelot wheel tints, Strict/Wide, Compatible-only intent) | 2 | ✅ Merged PR #70 (`9551aa41`) — 4.5:1 contrast, re-derivation, stranded intent fix (T2.1.8) |
+| Rating cell owns its digits + single tab stop (`rating-keys.ts`, `data-rating-widget`) | 2 | ✅ Merged PR #72 (`307a13fb`) — keyboard fix shipped, running-window QA pending (T2.1.4) |
 | Cue / waveform editor (markers, phrase bands, cue list) | 2–3 | 📋 Planned |
 | Tag cleanup (preview → apply → undo) | 2 | 📋 Planned |
 | Preparation view (set builder, energy curve, transitions, alternatives) | 3 | 📋 Superseded — Playlists → Set Score (Stage 5) |
@@ -921,15 +922,26 @@ planned. The first Phase 2 slices landed on top of the Phase 0/1 foundations:
   Copy path, and Remove from library with undo. Soft delete via migration 008
   `tracks.removed_at` stamped in the same transaction as its `skill_runs` snapshot.
   Analyze, playlist/set, mix suggestions, and online search stay disabled stubs.
-- 🟡 **T2.1.3 Bulk select + bulk metadata edit (PR #65)** — code-complete 2026-10-29
+- ✅ **T2.1.3 Bulk select + bulk metadata edit (PR #65)** — merged to `main` 2026-11-08 (`9551aa41`); code-complete 2026-10-29
   on `feature/bulk-metadata-edit`: table multi-select (Ctrl/Cmd-click, Shift-click),
   `MetadataEditor` dirty-fields-only write with diff preview and undo, and
   `BulkActionBar` (count >= 2 with scope, live edit/rate/clear, disabled stubs with reasons).
-- 🟡 **T2.1.8 Key pills + harmonic relations (PR #70)** — implemented 2026-10-29; review
+- ✅ **T2.1.8 Key pills + harmonic relations (PR #70)** — merged to `main` 2026-11-08 inside `9551aa41`; implemented 2026-10-29; review
   round closed 2026-11-08 (head `144292e0` on `feat/T2.1.8-key-pills`): pure `harmonic.ts`
   and `key-format.ts`, Camelot/1m1d/both, Strict/Wide preferences persisted in `UiState`,
   relation-tinted `KeyPill` meeting WCAG 4.5:1 text contrast, persistent Compatible-only
   intent re-derivation, drops-with-chip regression fix, and stranded intent enabled and removable.
+- ✅ **T2.1.4 Rating cell keyboard ownership (PR #72)** — merged 2026-11-09 (squash `307a13fb`): the rating group was
+  never focusable, so `Tab` landed on the row and the preview player's `window` listener turned
+  `1`–`8` into hot-cue jumps. The cell is one roving tab stop declaring `aria-keyshortcuts`,
+  claims `1`–`5` / `0` through the pure `lib/rating-keys.ts` helpers with `preventDefault` +
+  `stopPropagation`, and carries `data-rating-widget` so the player refuses those digits as a
+  second guard; modified digits stay with the `Ctrl/Cmd+1`–`6` view shortcuts and hot cues
+  `6`–`8` stay live inside the cell. The metadata-undo status line moved into
+  `describeMetadataUndoResult` (changed-since skip and nothing-restored now tested), the library
+  loader records why a reload runs so a write's own status survives it, and the header Refresh
+  reports its result. Running-window Pass 2 (rating/energy) has not been run, so T2.1.4 stays
+  unticked.
 
 Live today inside the library screen (non-gating, post-MVP scope): local
 similar-track scoring + inspector (TF.1/TF.4), Tag Health modal (TF.4/TE.3–TE.4),
@@ -938,7 +950,7 @@ provider status + store links (TF.2/TF.4), opt-in enrichment preview → apply �
 
 ### 17.4 Test and quality status
 
-- Current automated suite records **295 total tests passing**: 219 desktop tests (`node --test`), 64 agent tests (+1 skipped), 10 tooling tests, and 2 API integration tests,
+- Current automated suite records **318 total tests passing**: 236 desktop tests (`node --test`), 70 agent tests (+1 skipped), 10 tooling tests, and 2 API integration tests,
   with `cargo clippy -D warnings`, `cargo fmt --check`, and `eslint .` clean.
 - Phase 1 added full per-analyzer Rust suites (BPM, key, phrase, vocal, loudness,
   version, registry, pipeline). The portable Rust suite is the gate that runs on
@@ -1167,10 +1179,10 @@ items on 4–6 week cycles.
 - Update it when the **phase status**, **implemented interfaces**, **data model**,
   or **CI posture** changes materially — those are the sections most likely to
   drift.
-- Current status snapshot: **Phase 0 complete** (P0.1–P0.8 pass); **Phase 1 in progress** (analysis engine tasks T1.1.1–T1.1.8 and T1.2.1–T1.2.6 shipped; P1.x exit criteria under verification); **Phase 2 in progress** — Stage 1 shell, T2.1.2 multi-filter/sorting, Slice 3A tags/comments merged in PR #53, player presentations in PR #54, shared Track panel in PR #55, 30k-track virtualized library in PR #56, track context menu in PR #60 (2026-10-27), bulk metadata edit code-complete in PR #65 (2026-10-29), and key pills + harmonic relations review round closed in PR #70 (2026-11-08, head `144292e0`). Manual running-window QA is still pending for Stage 1, Slice 2, Slice 3A, T2.1.3 and T2.1.8; next implementation slices are Slice 4 Artwork (T2.1.9), Slice 5 Left-Nav Sources (T2.1.12), Slice 6 Mix Suggestions dock (T2.1.11), and Slices 7–8 real audio/peaks; **Phases 3–4 not started**. Live post-MVP foundations: TF.1–TF.6, TD.3,
+- Current status snapshot: **Phase 0 complete** (P0.1–P0.8 pass); **Phase 1 in progress** (analysis engine tasks T1.1.1–T1.1.8 and T1.2.1–T1.2.6 shipped; P1.x exit criteria under verification); **Phase 2 in progress** — Stage 1 shell, T2.1.2 multi-filter/sorting, Slice 3A tags/comments merged in PR #53, player presentations in PR #54, shared Track panel in PR #55, 30k-track virtualized library in PR #56, track context menu in PR #60 (2026-10-27), bulk metadata edit code-complete in PR #65 (2026-10-29), key pills + harmonic relations merged in PR #70 (2026-11-08, head `144292e0`, on `main` via `9551aa41`), the docs-honesty sweep in PR #71 and the rating-cell keyboard-ownership fix in PR #72 (both 2026-11-09). Manual running-window QA is still pending for Slice 2, Slice 3A, T2.1.3, T2.1.8 and Stage 1 section D; next implementation slices are Slice 4 Artwork (T2.1.9), Slice 5 Left-Nav Sources (T2.1.12), Slice 6 Mix Suggestions dock (T2.1.11), and Slices 7–8 real audio/peaks; **Phases 3–4 not started**. Live post-MVP foundations: TF.1–TF.6, TD.3,
   TE.1–TE.4, TM.1/TM.2a.
 - Prefer editing the canonical document first, then reflecting the change here.
 
 ---
 
-*Maintained under `docs/context/`. Last synthesized 2026-11-08.*
+*Maintained under `docs/context/`. Last synthesized 2026-11-09.*
