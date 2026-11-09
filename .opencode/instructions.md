@@ -6,10 +6,10 @@
 >
 > If you are reading this because you are an AI agent working in this repository,
 > **read [`../AGENTS.md`](../AGENTS.md)** — it is the single source of truth for
-> project conventions, the SDD loop, technical guardrails, the test commands, and
-> repo hygiene. This file exists only so OpenCode finds instructions here; every
-> substantive rule lives in `AGENTS.md`, and any drift between the two is a bug
-> in the adapter, not a second opinion.
+> project conventions, commands, memory architecture, agent routing, and repo
+> hygiene. This file exists only so OpenCode finds the shared guidance here;
+> keep project rules in `AGENTS.md` or its linked canonical docs rather than
+> duplicating them in this adapter.
 
 ## Canonical sources
 

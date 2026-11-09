@@ -3,10 +3,12 @@
 -- Running this on %APPDATA%\com.djassistant.desktop\dj_assistant.db will permanently
 -- reset user ratings and energy values.
 --
--- The reset is a single UPDATE so SQLite prepares the whole statement before
--- changing either field: a two-statement script where the energy UPDATE fails
--- would still leave the rating UPDATE committed under the outer transaction,
--- producing a misleading partial baseline. One statement is atomic here.
+-- The reset is a single UPDATE: SQLite executes the whole statement atomically,
+-- so either both columns reset or neither does. If the statement fails mid-way,
+-- SQLite rolls back the rows it already changed, leaving neither field
+-- half-reset. Splitting it into two statements would leave that decision to
+-- the caller — a CLI that reports the second error and still reaches COMMIT
+-- would persist a misleading partial baseline.
 --
 -- There is no path guard in this file: plain SQL cannot inspect the name of the
 -- database it is run against, so the only thing standing between this script and

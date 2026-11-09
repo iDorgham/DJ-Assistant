@@ -168,7 +168,8 @@ fn load_cues(conn: &rusqlite::Connection, track_id: &str) -> Result<Vec<CuePoint
             })
         })
         .map_err(|e| e.to_string())?;
-    Ok(iter.flatten().collect())
+    iter.collect::<rusqlite::Result<Vec<_>>>()
+        .map_err(|error| error.to_string())
 }
 
 /// The custom tags of the given tracks, grouped by track id (T2.1.7).
@@ -1414,7 +1415,79 @@ fn apply_metadata_patch(
 
 #[cfg(test)]
 mod tests {
-    use super::{bind_value, read_value, WriteValue};
+    use super::{bind_value, load_cues, read_value, WriteValue};
+
+    #[test]
+    fn cue_rows_are_ordered_and_conversion_errors_propagate() {
+        let conn = rusqlite::Connection::open_in_memory().unwrap();
+        conn.execute_batch(
+            "CREATE TABLE cue_points (
+                id TEXT NOT NULL,
+                track_id TEXT NOT NULL,
+                slot INTEGER,
+                position_ms INTEGER NOT NULL,
+                label TEXT NOT NULL,
+                cue_type TEXT NOT NULL,
+                color_hex TEXT,
+                source TEXT NOT NULL,
+                created_at TEXT NOT NULL
+            )",
+        )
+        .unwrap();
+        conn.execute(
+            "INSERT INTO cue_points VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)",
+            rusqlite::params![
+                "later",
+                "track",
+                2,
+                2000,
+                "Later",
+                "hot",
+                None::<String>,
+                "user",
+                "now"
+            ],
+        )
+        .unwrap();
+        conn.execute(
+            "INSERT INTO cue_points VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)",
+            rusqlite::params![
+                "earlier",
+                "track",
+                1,
+                1000,
+                "Earlier",
+                "hot",
+                None::<String>,
+                "user",
+                "now"
+            ],
+        )
+        .unwrap();
+
+        let cues = load_cues(&conn, "track").unwrap();
+        assert_eq!(
+            cues.iter().map(|cue| cue.position_ms).collect::<Vec<_>>(),
+            vec![1000, 2000]
+        );
+
+        conn.execute(
+            "INSERT INTO cue_points VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)",
+            rusqlite::params![
+                "invalid",
+                "track",
+                "not-a-number",
+                3000,
+                "Invalid",
+                "hot",
+                None::<String>,
+                "user",
+                "now"
+            ],
+        )
+        .unwrap();
+        assert!(load_cues(&conn, "track").is_err());
+    }
 
     #[test]
     fn a_planned_value_binds_as_the_type_it_describes() {

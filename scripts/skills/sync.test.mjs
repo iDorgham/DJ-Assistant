@@ -127,9 +127,32 @@ describe("skills:sync name validation", () => {
   it("refuses a traversal name before touching the mirror", () => {
     // The mirror must stay empty: a malformed name must never create or delete
     // anything under it. Use a fresh target so earlier tests' directories
-    // cannot mask a failure.
+    // cannot mask a failure. Both entry points are covered — `apply` is the
+    // `--write` path that actually calls `fs.rmSync`.
     const freshTarget = path.join(scratch, "fresh-target");
     assert.throws(() => plan(["../escape"], source, freshTarget), /invalid skill name/);
     assert.equal(fs.existsSync(freshTarget), false);
+    assert.throws(() => apply(["../escape"], source, freshTarget), /invalid skill name/);
+    assert.equal(fs.existsSync(freshTarget), false);
+  });
+
+  it("aborts the whole write when a later name is malformed", () => {
+    // A valid name first: validation must reject the batch before any copy or
+    // delete runs, not part-way through it.
+    const guardedTarget = path.join(scratch, "guarded-target");
+    makeSkill(source, "zeta", { "SKILL.md": "zeta\n" });
+    makeSkill(guardedTarget, "bystander", { "SKILL.md": "must survive\n" });
+    const before = listing(guardedTarget);
+
+    assert.throws(
+      () => apply(["zeta", "../escape"], source, guardedTarget),
+      /invalid skill name/
+    );
+    assert.deepEqual(listing(guardedTarget), before);
+    assert.equal(fs.existsSync(path.join(guardedTarget, "zeta")), false);
+    assert.equal(
+      fs.readFileSync(path.join(guardedTarget, "bystander", "SKILL.md"), "utf8"),
+      "must survive\n"
+    );
   });
 });

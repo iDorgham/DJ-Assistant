@@ -40,7 +40,7 @@ Use this as the UI build order and acceptance gate.
 - [ ] **ArtworkThumb** — hover play overlay; real embedded art per track  
 - [x] Label + Year columns — present in `library-columns.ts`, default Off (T2.1.7)  
 - [ ] **MixSuggestionsPanel** (right dock) + Options bar button  
-- [ ] **TrackContextMenu** per view — the Library `RowContextMenu` ships (PR #60), but the Preparation and Auto views do not exist in the desktop app yet, so there is nothing for their distinct menus to attach to. Stays unchecked until those views and their menus ship.
+- [ ] **TrackContextMenu** per view — the Library `RowContextMenu` ships (PR #60). The Playlists → Set Score menu still needs the applicable track actions from the approved flow (move, replace, add/remove, reorder, cue, analyze, relink, and sync); keep this gate tied to that view and menu, not the superseded Preparation or Auto views.
 - [x] Library menu: Play, Analyze, Edit tags, Fix tags, Add to playlist, Find in playlists, Mix suggestions, Find smaller/similar online, Find new tracks online, Remove from library — Play, Edit tags, Rate, column toggles, Reveal, Copy path, Remove live with soft delete; other items disabled stubs (PR #60)
 - [x] **Edit tags…** editor — title / artist / album / genre / label / year / tags / **comment** — `MetadataEditor`, single-row and bulk, dirty-field diff (T2.1.7/T2.1.13/T2.1.3)  
 - [x] Column toggles (Energy, Tags, Rating, Label, Year, Artwork) persist  

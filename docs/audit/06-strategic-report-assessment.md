@@ -16,7 +16,7 @@ The report's **direction is right**: prep speed and DJ trust before AI-theatre. 
 | Enhancement #1 — the DJ waits with "nothing to work on" | Results already stream per track; the UI throws them away until the queue drains. Frontend bug, not a missing queue. |
 | Enhancement #1 — priority ordering buys time-to-first-result | The queue is one sequential thread. Concurrency is the 4–8× lever; ordering is second-order. |
 | Enhancement #2 — Wizard: Import → … → Export | Export does not exist. Publish is a placeholder naming Stage 9 and Stage 11. |
-| Enhancement #3 — Tag Surgeon v2 needs preview + snapshot + undo | Preview, snapshot, undo are shipped and transactional. Only clustering is missing. Cheaper than priced. |
+| Enhancement #3 — Tag Surgeon v2 needs preview + snapshot + undo | Preview, snapshot, undo are shipped and transactional (T2.1.x). The Tag Surgeon's six T2.2 capabilities are all open — clustering, canonical-name suggestion, preview diff UI, bulk apply with confirmation, alias table + auto-map, undo/history for bulk tag operations. The 60% figure is reusable infrastructure, not the Surgeon. |
 | Enhancement #5 — "we have similarity scoring ready" | True for **pairs** only. No set exists to score transitions across — Beam Search is docs-only. |
 | Part 7 — "median Import → USB/Export ready ≤ 12 min" | Unmeasurable today; the last mile is the farthest thing in the repo. |
 | Part 5 — "300k tracks will kill the in-memory queue" | This library is 94 tracks, 24 analysed (`state.md`). Speculative at three orders of magnitude. |
@@ -116,7 +116,7 @@ Every Month-1 item in the report adds unaccepted surface to a pile that currentl
 | 4 | Rekordbox XML export, pulled forward from Stage 9/11 | Report #2's missing last mile | Without it the 15-minute promise cannot be measured or felt. Needs the DJ's `rekordbox.xml`. |
 | 5 | `needs_review` triage flow — a queue of the tracks the pipeline already flagged, with the confidence shown honestly | Report #5's stated goal, without the AI layer | 68/94 tracks are already waiting. Highest daily-use value per hour in the app. |
 | 6 | Priority in `analysis_candidates` (rating DESC, then active-playlist/"Tonight" tag, then unanalysed) | Report #1 | Only after 1–2, and only once throughput is fixed. Keep a stable id tiebreak. |
-| 7 | Tag Surgeon clustering (Levenshtein + phonetic) onto the existing preview → apply → undo path | Report #3 | Mostly new algorithm, almost no new plumbing. Stage 6. |
+| 7 | Tag Surgeon: all six T2.2 capabilities (fuzzy clustering, canonical-name suggestion, preview diff UI, bulk apply with confirmation, alias table + auto-map, undo/history for bulk tag ops) — the reusable preview→apply→undo plumbing from T2.1.x is the base, not the feature | Report #3 | Entirely new algorithm and UI work on shared infrastructure. Stage 6. |
 | 8 | Beam Search sequencer → then per-transition confidence on `ScoredTrack.reasons` → then Gig-Type presets | Reports #5 and #4 | Stage 5. Presets last: nothing consumes them before the builder exists. |
 | 9 | Gig Ready Wizard | Report #2 | An orchestration layer earns its keep once the stages it orchestrates work end-to-end. |
 | 10 | Transition Heatmap, embeddings, B2B, marketplace | Report Part 4 | Unanimous with the report's own kill list. |

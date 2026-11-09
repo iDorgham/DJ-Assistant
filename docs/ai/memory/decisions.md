@@ -230,3 +230,14 @@ single-source-plus-mirrors rule the agent layer already follows was cheaper than
 duplicating curation per tool.
 **Reverses if:** Qoder learns to read `.opencode/skills` directly, or the
 advertise cost per skill stops being the dominant spend.
+
+## D-016 · Qoder hot-set mirror; machine-local counts excluded (2026-11-09)
+
+`pnpm skills:sync --write` copies the `hot` list from `skills.policy.json` into
+`.qoder/skills`; the durable choice is to mirror that set, not the full source
+library. Installed-skill and hot-set counts are machine-local or transient and
+do not belong in shared memory.
+**Supersedes:** D-015's installed-library wording; retain the hot-set mirror
+decision without recording an inventory count.
+**Reverses if:** Qoder learns to read `.opencode/skills` directly, or the
+advertise cost per skill stops being the dominant spend.

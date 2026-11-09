@@ -46,11 +46,12 @@
 - **The Stage 1 shell is shipped** on `main` via PR #53: six primary tabs,
   typed view registry, top-bar library search/Import Center/Inbox/backup status,
   persistent player dock, Settings skeleton, error boundary and redacted
-  renderer logging. PR #54 (squash `5e7334eb`) rebuilt the dock to the
-  three-presentation model (Mini / Full / Player view; Extended retired), with
-  BPM fine-tune and the dock-height snap. Native acceptance QA is pending,
+  renderer logging. PR #54 (squash `5e7334eb`) shipped the Mini and Full dock
+  presentations (with Hidden as a visibility state; Extended retired), with
+  BPM fine-tune and the dock-height snap. The separate full-window Player view
+  is not implemented yet. Native acceptance QA is pending,
   including the 30,000-track fixture check. The top-bar search is labeled
-  “Search library” until Stage 2 adds playlist/tag-wide global search. See
+  "Search library" until Stage 2 adds playlist/tag-wide global search. See
   [`docs/plan/06-delivery/implementation-slices.md`](../plan/06-delivery/implementation-slices.md).
 - **The shared Track panel is merged** on `main` via PR #55 (squash
   `83831774`, 2026-10-24). One panel serves the library and every later entry
@@ -512,7 +513,7 @@ Wired in `apps/desktop/src-tauri/src/lib.rs`:
 | `remove_tracks` | Soft delete tracks by stamping `removed_at` in a transaction with undo snapshot |
 | `restore_tracks` | Restore soft-deleted tracks from the Removed view; a write of its own that snapshots the before-state, so Undo of the restore puts the *original* stamp back instead of inventing a new removal time |
 | `undo_remove_tracks` | The undo endpoint for `remove_tracks` (and for `restore_tracks`, since the snapshot records which direction it was written in) |
-| `list_removed_tracks` | The only read in the app that asks for the rows every other library read filters out; its length is the toolbar count |
+| `list_removed_tracks` | The read used to list removed tracks in the Removed view; `list_tracks` filters removed rows, while `get_track` can still return a soft-deleted track by ID. Its length is the toolbar count |
 | `provider_match_set` / `provider_export_playlist` | Generic multi-provider match/export contract (TM.1; Spotify re-implementation waits on TP) |
 | `chart_import_snapshot` / `chart_list` | Versioned chart ingest (idempotent) + taste-filtered listing (TD.3, migration 005) |
 
@@ -564,9 +565,10 @@ the earlier UI/UX set, kept for history and superseded where it conflicts.
 The T2.1.0 shell implements the six primary tabs (Library / Playlists / Discover
 / Statistics / Publish / Settings), a collapsible 220/48px left nav, the top bar
 (search, Import Center, Inbox, backup status), dark/light/system theming with
-persisted UI state, and the player dock. The player has three presentations —
-Mini, Full and Player view — with Hidden as a visibility state; the dock is
-layout-only until T2.4. The old three-view shell (header view switcher,
+persisted UI state, and the player dock. The spec defines Mini, Full and
+full-window Player view, with Hidden as a visibility state; PR #54 shipped the
+Mini and Full dock presentations, while the separate Player view is not
+implemented. Real track audio is also pending T2.4. The old three-view shell (header view switcher,
 Preparation / Auto Performance tabs, per-view options bar) is superseded by the
 approved v1 plan: set building lives in Playlists → Set Score.
 
@@ -574,7 +576,7 @@ approved v1 plan: set building lives in Playlists → Set Score.
 |---------|-------|--------|
 | App shell (six tabs, collapsible 220/48px nav, top bar, typed view router) | 2 | ✅ Shipped PR #53 — native acceptance QA pending (T2.1.0) |
 | Theme system (dark/light/system, semantic tokens, persisted preference) | 2 | ✅ Shipped (T2.1.0) |
-| Player dock (Mini / Full / Player view, artwork, metadata, transport) | 2 | 🟡 Shell + presentations shipped PR #54; real audio T2.4 |
+| Player dock (Mini / Full; Hidden visibility state) | 2 | 🟡 Mini and Full dock shipped PR #54; full-window Player view is not implemented; real audio T2.4 |
 | Library (scan, live progress, dense track table, empty/error states) | 0 | ✅ Implemented, relocated into the shell |
 | Track inspector drawer (similar tracks, gap chips, buy-links) | 0 | ✅ Implemented — relocated into the shared Track panel PR #55 |
 | Tag Health modal (per-field bars + gap list; online lookup shown as planned) | 0 | ✅ Implemented |

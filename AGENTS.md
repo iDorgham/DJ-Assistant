@@ -44,6 +44,18 @@ optional.
 - Keep UI tokens and components aligned with `docs/ui/` — never invent a second
   palette or spacing scale.
 - Rust: prefer the workspace crates; `clippy -D warnings` is enforced.
+- Never modify source audio files, including when tagging writable music files;
+  metadata edits belong in the app's database or supported sidecars.
+- Keep SQLite changes in migrations and use the app's WAL/foreign-key setup.
+  Tauri commands should use the existing `Result<T, String>` boundary and
+  propagate errors instead of hiding them behind success-shaped results.
+- Do not add or move primary navigation tabs. Set Score belongs inside a
+  playlist under Playlists; follow the locked hierarchy in
+  `docs/plan/01-product/information-architecture.md`.
+- For changes to import, analysis, or export pipelines, verify source audio
+  hashes remain unchanged with the repository's hash-audit tooling.
+- Never stage everything with `git add .`; stage only the files changed for
+  this task and keep generated artifacts out of commits.
 - Don't commit generated artifacts (`target/`, `dist/`, model binaries) or the
   local database.
 
