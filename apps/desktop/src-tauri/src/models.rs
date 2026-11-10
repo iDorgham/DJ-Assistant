@@ -600,7 +600,7 @@ pub struct UpdateTrackMetadataRequest {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct UpdateTrackMetadataResponse {
-    /// Id of the `skill_runs` row holding the undo snapshot.
+    /// Id of the `skill_runs` row holding the undo snapshot, or empty if no tracks changed.
     pub undo_id: String,
     /// Number of tracks actually changed.
     pub updated: usize,

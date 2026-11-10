@@ -370,11 +370,13 @@ test("describeMetadataWrite reports the changed tracks, not the selection", () =
     "a write that changed nothing is not announced as a save"
   );
   assert.equal(describeMetadataWrite("energy", 0), "Energy unchanged — nothing to save");
+  assert.equal(describeMetadataWrite("metadata", 0), "Metadata unchanged — nothing to save");
 });
 
 test("describeMetadataUndo offers no undo when nothing changed", () => {
   assert.equal(describeMetadataUndo("rating", 0, 1, "Title"), null);
   assert.equal(describeMetadataUndo("energy", 0, 3, "Title"), null);
+  assert.equal(describeMetadataUndo("metadata", 0, 1, "Title"), null);
 });
 
 test("describeMetadataUndoResult reports restored and changed-since tracks", () => {

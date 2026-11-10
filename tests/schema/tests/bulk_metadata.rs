@@ -178,10 +178,15 @@ fn apply_patch(conn: &Connection, ids: &[String], patch: &MetadataPatch) -> (Str
         );
     }
 
-    let undo_id = format!("undo-{:04}", planned.len());
-    let run = write_skill_run(&undo_id, METADATA_SKILL_NAME, ids, patch, before, after);
-    conn.execute(&run.sql, rusqlite::params_from_iter(run.params.iter()))
-        .expect("the snapshot insert must run");
+    let undo_id = if planned.is_empty() {
+        String::new()
+    } else {
+        let undo_id = format!("undo-{:04}", planned.len());
+        let run = write_skill_run(&undo_id, METADATA_SKILL_NAME, ids, patch, before, after);
+        conn.execute(&run.sql, rusqlite::params_from_iter(run.params.iter()))
+            .expect("the snapshot insert must run");
+        undo_id
+    };
 
     (undo_id, planned.len())
 }
@@ -383,6 +388,58 @@ fn a_track_that_already_matches_is_not_written() {
         updated, 0,
         "nothing changed, so nothing is counted or snapshotted"
     );
+}
+
+#[test]
+fn an_empty_patch_is_a_success_shaped_no_op() {
+    // B4: the metadata editor sends a patch with every field absent when the
+    // user saves an unchanged form. The write path has to run to the end and
+    // report zero changed tracks — an error there is what kept the renderer's
+    // "Metadata unchanged — nothing to save" branch unreachable.
+    fn state(conn: &Connection) -> Vec<(String, Vec<String>)> {
+        ["t1", "t2", "t3"]
+            .iter()
+            .copied()
+            .map(|id| {
+                (
+                    id.to_string(),
+                    ["title", "genre", "year", "user_rating", "comments"]
+                        .iter()
+                        .copied()
+                        .map(|name| column(conn, id, name))
+                        .collect(),
+                )
+            })
+            .collect()
+    }
+
+    let conn = three_tracks();
+    let before = state(&conn);
+    let undo_count_before: i64 = conn
+        .query_row("SELECT COUNT(*) FROM skill_runs", [], |row| row.get(0))
+        .expect("the undo history must be readable");
+
+    let p = patch();
+    p.validate()
+        .expect("an unchanged patch is a no-op, not a rejected write");
+    let (undo_id, updated) = apply_patch(&conn, &three_ids(), &p);
+
+    assert_eq!(updated, 0, "an empty patch writes no track");
+    assert!(undo_id.is_empty(), "a no-op has no undo id");
+    assert_eq!(
+        state(&conn),
+        before,
+        "an unchanged save leaves the library exactly as it was"
+    );
+    let undo_count_after: i64 = conn
+        .query_row("SELECT COUNT(*) FROM skill_runs", [], |row| row.get(0))
+        .expect("the undo history must be readable");
+    assert_eq!(
+        undo_count_after, undo_count_before,
+        "an unchanged save creates no undo history"
+    );
+    assert_eq!(tags(&conn, "t1"), vec!["peak".to_string()]);
+    assert_eq!(tags(&conn, "t2"), vec!["warmup".to_string()]);
 }
 
 #[test]
