@@ -15,6 +15,9 @@ import { ROOT, tokenize } from "../skills/lib.mjs";
 export const MEMORY_DIR = path.join(ROOT, "docs", "ai", "memory");
 export const LAYERS = ["facts", "conventions", "decisions", "feedback", "state"];
 
+/** Layers whose `## ` headings are ledger entries, not bullet-list groups. */
+export const LEDGER_LAYERS = new Set(["decisions", "feedback"]);
+
 /**
  * Generic verbs that match everything ("add a line…", "add a file…") and carry
  * no signal in a memory lookup. The skill matcher has its own, larger
@@ -33,9 +36,10 @@ const QUERY_STOPWORDS = new Set(
  * Read one memory file into `{ layer, section, text }` entries.
  *
  * The store has two shapes: `facts`/`conventions`/`state` are bullet lists,
- * while `decisions`/`feedback` are `## <id> · <title>` ledgers with a prose
- * body. Bullets become one entry each; a prose block becomes one entry carrying
- * its section heading, so searching a decision ID still hits.
+ * while `decisions`/`feedback` are `## <id> · <title>` ledgers. A bullet list
+ * yields one entry per bullet; a ledger yields one entry per heading, its whole
+ * body — prose and bullets alike — carried by that entry, so a lesson is handed
+ * to a brief once and searching any part of it still finds the lesson.
  *
  * The file's opening paragraph is a description of the file itself ("Permanent,
  * verifiable facts…", "Append-only, newest last…"). It matches nearly every
@@ -44,6 +48,7 @@ const QUERY_STOPWORDS = new Set(
 export function readLayer(layer) {
   const file = path.join(MEMORY_DIR, `${layer}.md`);
   if (!fs.existsSync(file)) return [];
+  const ledger = LEDGER_LAYERS.has(layer);
   const entries = [];
   let section = null;
   let bullet = null;
@@ -85,6 +90,10 @@ export function readLayer(layer) {
       continue;
     }
     if (/^[-*] /.test(line)) {
+      if (ledger) {
+        if (section !== null) block.push(line.slice(2));
+        continue;
+      }
       addBlock();
       addBullet();
       introDone = true;
@@ -92,6 +101,11 @@ export function readLayer(layer) {
       continue;
     }
     if (line.startsWith("# ")) continue;
+    if (ledger) {
+      if (section !== null) block.push(line);
+      continue;
+    }
+
     // Indented continuation of a wrapped bullet belongs to that same fact.
     if (bullet !== null && /^\s/.test(raw)) bullet += ` ${line}`;
     else if (bullet !== null) {

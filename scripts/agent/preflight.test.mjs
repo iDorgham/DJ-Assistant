@@ -238,6 +238,22 @@ describe("memory reader", () => {
     }
   });
 
+  it("keeps a bullet-bodied ledger entry whole", () => {
+    const entries = readLayer("feedback").filter((entry) => entry.section.startsWith("F-014"));
+    assert.equal(entries.length, 1, `F-014 came back as ${entries.length} entries`);
+    assert.match(entries[0].text, /elementFromPoint/, "a bullet body was dropped");
+    assert.match(entries[0].text, /blocked only after both paths/, "the rule was dropped");
+  });
+
+  it("keeps one result per bullet in a bullet-list layer", () => {
+    const entries = readLayer("state");
+    const sections = new Set(entries.map((entry) => entry.section));
+    assert.ok(
+      entries.length > sections.size,
+      "state has to stay one entry per bullet, not one per heading"
+    );
+  });
+
   it("matches a ledger ID without crossing the layer", () => {
     const results = searchMemory("F-001", 5);
     assert.ok(results.length, "the ID query returned nothing");
