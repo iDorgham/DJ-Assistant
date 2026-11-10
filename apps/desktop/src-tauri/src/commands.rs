@@ -1383,6 +1383,10 @@ fn apply_metadata_patch(
     };
 
     let planned = plan_metadata_write(&rows, &tag_sets, &columns, patch);
+    if planned.is_empty() {
+        tx.commit().map_err(|e| e.to_string())?;
+        return Ok((String::new(), 0));
+    }
 
     let mut before = serde_json::Map::new();
     let mut after = serde_json::Map::new();
