@@ -4,15 +4,21 @@ Ephemeral. Newest first. **Rotate aggressively** — if a line would still be tr
 in two weeks, it belongs in [`decisions.md`](./decisions.md); if it is just a
 fact, it belongs in [`facts.md`](./facts.md). Delete anything stale.
 
-## 2026-11-10 · Running-window Passes 4–5 executed — K10 contrast FAIL open
+## 2026-11-10 · Running-window Passes 4–5 executed — K10 fixed, K9 wording open
 
 - Pass 4 (T2.1.8 key pills, live 94-track library, 7B reference): **K1–K8 and K11 PASS, K9
   DEVIATION, K10 FAIL**. Pass 5 (Stage 1 §D, 30,000-track fixture behind `DJ_ASSISTANT_DB_PATH`):
   **D1–D4 PASS**.
-- **K10 is the defect.** The shipped claim that every relation tint clears WCAG 4.5:1 is false
-  for the *muted* text token over a tinted row: 2.94 light / 2.59 dark on a selected row, 4.10 /
-  3.70 on a hovered one (fixture), plus same-key on a selected dark row at 4.46. The misses are
-  hue-independent, so the fix is the muted token (or scoping the claim), not the tint alphas.
+- **K10 was the defect and is fixed (2026-11-10, uncommitted as this rotates).** The tint was
+  translucent over the row, so the row state moved the ground under a fixed ink token (2.94 / 2.59
+  selected, 4.10 / 3.70 hovered, same-key 4.46 selected dark). `lib/key-pill-surface.ts` now gives
+  a tinted pill its own opaque `bg.base` ground with the tint layered above, and the unfilled
+  treatment uses `text.secondary`; `lib/key-pill-contrast.test.ts` gates every theme × relation ×
+  code. Re-run in the app: 9.56 / 8.08 identical across normal, hovered and selected; quiet 7.10 /
+  10.59 normal and 6.38 / 7.18 hovered. See D-017 — the ground must not go back to translucent.
+- **Open follow-up, deliberately not fixed here:** `text-dj-text-muted` still misses 4.5:1 on
+  hovered and selected rows *outside* the key pill. The pill was the measured defect; a global
+  muted-ink audit is its own task.
 - **K9 is a stale expectation.** With no reference the Compatible-only box is deliberately
   disabled with help text (`canToggleCompatibleOnly`, tested at
   `apps/desktop/src/lib/library.test.ts:427`), not "stays enabled"; the lost-reference case does stay
@@ -25,7 +31,7 @@ fact, it belongs in [`facts.md`](./facts.md). Delete anything stale.
   whole fixture session, `skill_runs` still 99, `track_tags` 0, localStorage restored byte-identical,
   0 of 94 mp3s touched, no `Runtime.exceptionThrown`.
 - **Nothing ticked.** §D is now recorded PASS but the evidence file is still uncommitted, and
-  T2.1.8 stays open on K10; the human ticks on `main` post-merge.
+  T2.1.8 stays open on K9's stale expectation; the human ticks on `main` post-merge.
 
 ## 2026-11-10 · Running-window Pass 3 executed (Slice 3A tags/editor/menu) — B4 open
 

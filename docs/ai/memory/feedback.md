@@ -258,6 +258,15 @@ Proven while executing Passes 4–5 of
   1280×800, and the same overlay plus the dock hid the Settings notation rows. Close or scroll,
   re-test, and only then record a row as broken.
 
+- **Hold the relation constant to compare row states.** Selecting a row makes it the key
+  reference, so its own pill always renders `Same key` and the state under test also changes the
+  tint. Selecting a row whose key a second mounted row shares makes both render the same tint with
+  only one of them selected — the row state becomes the only variable, and a tinted pill measured
+  identically in normal, hovered and selected proves it owns its ground.
+- **A computed `backgroundImage` is invisible to a `backgroundColor`-only composite.** Once the
+  fix painted the tint as a gradient layer, the Pass-4 measurement script had to walk the layer
+  list (paren-aware split, outermost → innermost) or it silently dropped the tint.
+
 **Rule:** for any visual threshold claim (contrast, target size, legibility), record the numeric
 measurement together with the exact row/panel state it was taken in. A PASS with no number is a
 guess.

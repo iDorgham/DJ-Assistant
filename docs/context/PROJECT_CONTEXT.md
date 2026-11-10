@@ -592,7 +592,7 @@ approved v1 plan: set building lives in Playlists → Set Score.
 | Track detail / inspector (tags vs analysis, provenance) | 2 | ✅ Shipped PR #55 — shared panel, seven tabs, keyboard model; cues read-only |
 | Track context menu (Play, Edit tags, Rate, column toggles, Reveal, Copy path, Remove) | 2 | ✅ Shipped PR #60 — soft delete migration 008, disabled stubs (T2.1.10) |
 | Bulk select & BulkActionBar (count >= 2, live edit/rate/clear, diff preview) | 2 | 🟡 Code-complete PR #65 — multi-select, diff preview, disabled stubs (T2.1.3) |
-| Key pills & harmonic relations (Camelot wheel tints, Strict/Wide, Compatible-only intent) | 2 | ✅ Merged PR #70 (`9551aa41`) — 4.5:1 contrast, re-derivation, stranded intent fix (T2.1.8) |
+| Key pills & harmonic relations (Camelot wheel tints, Strict/Wide, Compatible-only intent) | 2 | ✅ Merged PR #70 (`9551aa41`) — re-derivation, stranded intent fix, and the K10 contrast fix (2026-11-10: the pill owns its ground) (T2.1.8) |
 | Rating cell owns its digits + single tab stop (`rating-keys.ts`, `data-rating-widget`) | 2 | ✅ Merged PR #72 (`307a13fb`) — keyboard fix shipped, running-window QA pending (T2.1.4) |
 | Cue / waveform editor (markers, phrase bands, cue list) | 2–3 | 📋 Planned |
 | Tag cleanup (preview → apply → undo) | 2 | 📋 Planned |
@@ -938,8 +938,10 @@ planned. The first Phase 2 slices landed on top of the Phase 0/1 foundations:
   and `key-format.ts`, Camelot/1m1d/both, Strict/Wide preferences persisted in `UiState`,
   relation-tinted `KeyPill`, persistent Compatible-only intent re-derivation,
   drops-with-chip regression fix, and stranded intent enabled and removable. The review
-  round wrote that the pill text clears WCAG 4.5:1; that holds for the tinted relations
-  on a normal row, **not** for every combination — see Pass 4.
+  round wrote that the pill text clears WCAG 4.5:1; Pass 4 found the exception (**K10**) and
+  it is fixed 2026-11-10: `lib/key-pill-surface.ts` gives a tinted pill its own opaque ground
+  with the tint layered above, and moves the unfilled treatment to `text.secondary`, gated by
+  `lib/key-pill-contrast.test.ts` and re-measured in the running window (D-017).
 - ✅ **T2.1.4 Rating cell keyboard ownership (PR #72)** — merged 2026-11-09 (squash `307a13fb`): the rating group was
   never focusable, so `Tab` landed on the row and the preview player's `window` listener turned
   `1`–`8` into hot-cue jumps. The cell is one roving tab stop declaring `aria-keyshortcuts`,
@@ -994,7 +996,10 @@ planned. The first Phase 2 slices landed on top of the Phase 0/1 foundations:
   inspector aside overlays the Key column and the lower Settings rows, so those controls
   are unreachable until the panel is closed and the row scrolled into view; and filters do
   not survive a reload. No library write was issued and `localStorage` came back
-  byte-identical. Record: `docs/evidence/2026-11-09-RUNNING-WINDOW-QA.md`, Pass 4.
+  byte-identical. **K10 was fixed and re-run the next day** (2026-11-10): the same-key tint
+  now measures 9.56 light / 8.08 dark identically on normal, hovered and selected rows, and the
+  incompatible treatment 7.10 / 10.59 normal and 6.38 / 7.18 hovered, both themes. Record:
+  `docs/evidence/2026-11-09-RUNNING-WINDOW-QA.md`, Pass 4.
 - ✅ **Running-window Pass 5 — Stage 1 §D on the 30,000-track fixture** — executed
   2026-11-09 23:31 → 2026-11-10 00:30 UTC through `DJ_ASSISTANT_DB_PATH`, so the live
   library was never opened (its `.db`/`.wal` sizes and mtimes match the pre-run copy
@@ -1249,7 +1254,7 @@ items on 4–6 week cycles.
 - Update it when the **phase status**, **implemented interfaces**, **data model**,
   or **CI posture** changes materially — those are the sections most likely to
   drift.
-- Current status snapshot: **Phase 0 complete** (P0.1–P0.8 pass); **Phase 1 in progress** (analysis engine tasks T1.1.1–T1.1.8 and T1.2.1–T1.2.6 shipped; P1.x exit criteria under verification); **Phase 2 in progress** — Stage 1 shell, T2.1.2 multi-filter/sorting, Slice 3A tags/comments merged in PR #53, player presentations in PR #54, shared Track panel in PR #55, 30k-track virtualized library in PR #56, track context menu in PR #60 (2026-10-27), bulk metadata edit code-complete in PR #65 (2026-10-29), key pills + harmonic relations merged in PR #70 (2026-11-08, head `144292e0`, on `main` via `9551aa41`), the docs-honesty sweep in PR #71 and the rating-cell keyboard-ownership fix in PR #72 (both 2026-11-09). Manual running-window QA is still pending for Slice 2, Slice 3A, T2.1.3, T2.1.8 and Stage 1 section D; next implementation slices are Slice 4 Artwork (T2.1.9), Slice 5 Left-Nav Sources (T2.1.12), Slice 6 Mix Suggestions dock (T2.1.11), and Slices 7–8 real audio/peaks; **Phases 3–4 not started**. Live post-MVP foundations: TF.1–TF.6, TD.3,
+- Current status snapshot: **Phase 0 complete** (P0.1–P0.8 pass); **Phase 1 in progress** (analysis engine tasks T1.1.1–T1.1.8 and T1.2.1–T1.2.6 shipped; P1.x exit criteria under verification); **Phase 2 in progress** — Stage 1 shell, T2.1.2 multi-filter/sorting, Slice 3A tags/comments merged in PR #53, player presentations in PR #54, shared Track panel in PR #55, 30k-track virtualized library in PR #56, track context menu in PR #60 (2026-10-27), bulk metadata edit code-complete in PR #65 (2026-10-29), key pills + harmonic relations merged in PR #70 (2026-11-08, head `144292e0`, on `main` via `9551aa41`), the docs-honesty sweep in PR #71 and the rating-cell keyboard-ownership fix in PR #72 (both 2026-11-09). Running-window Passes 1–5 are recorded (Stage 1 shell, Slice 2, Slice 3A, T2.1.8 key pills, Stage 1 §D) with **B4** and the stale expectations (A7/F6/K9) open, T2.1.8's **K10** contrast defect fixed and re-run 2026-11-10, and T2.1.3's multi-select still not automatable here; next implementation slices are Slice 4 Artwork (T2.1.9), Slice 5 Left-Nav Sources (T2.1.12), Slice 6 Mix Suggestions dock (T2.1.11), and Slices 7–8 real audio/peaks; **Phases 3–4 not started**. Live post-MVP foundations: TF.1–TF.6, TD.3,
   TE.1–TE.4, TM.1/TM.2a.
 - Prefer editing the canonical document first, then reflecting the change here.
 

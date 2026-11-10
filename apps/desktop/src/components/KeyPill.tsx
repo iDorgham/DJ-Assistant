@@ -1,4 +1,5 @@
-import { camelotColor, type CamelotColor } from "../lib/camelot";
+import { camelotColor } from "../lib/camelot";
+import { EMPTY_KEY_PAINT, pillPaint, RELATION_TONE, type PillInk } from "../lib/key-pill-surface";
 import { RELATION_LABELS, type HarmonicMatch } from "../lib/harmonic";
 import { formatKeyForNotation, type KeyNotation } from "../lib/key-format";
 
@@ -10,6 +11,10 @@ import { formatKeyForNotation, type KeyNotation } from "../lib/key-format";
  * relative major/minor, then the optional ±2 wide tint. Incompatible keys keep
  * the hue out of the fill and mute the text. With no reference (nothing
  * playing and nothing selected) the pill falls back to its plain wheel colour.
+ *
+ * The paint rule itself — ground, hue layer, border and ink token — lives in
+ * `lib/key-pill-surface.ts`, where `key-pill-contrast.test.ts` can hold it to
+ * WCAG AA without a browser.
  *
  * Key pills use the Carbon component radius (`radius.md` = 0), not the chip
  * radius, and a fixed min-width so a column of keys does not jitter.
@@ -23,46 +28,14 @@ export interface KeyPillProps {
   theme?: "dark" | "light";
 }
 
-interface RelationTone {
-  /** Alpha suffix appended to the Camelot hex for the fill. */
-  background: string;
-  /** Alpha suffix for the border. */
-  border: string;
-  muted: boolean;
-}
-
-const RELATION_TONE: Record<HarmonicMatch, RelationTone> = {
-  same: { background: "47", border: "E6", muted: false },
-  adjacent: { background: "33", border: "B3", muted: false },
-  relative: { background: "29", border: "80", muted: false },
-  wide: { background: "1A", border: "66", muted: false },
-  incompatible: { background: "00", border: "00", muted: true },
-  unknown: { background: "00", border: "00", muted: true },
-};
-
 const PILL_BASE =
   "inline-flex min-w-[2.75rem] max-w-full items-center justify-center overflow-hidden text-ellipsis whitespace-nowrap rounded-none border px-1.5 py-0.5 font-mono text-[11px]";
 
-interface PillStyle {
-  backgroundColor: string;
-  borderColor: string;
-}
-
-/**
- * The hue stays in the fill and border, while the text uses the theme's
- * primary text token. That keeps every relation readable at 4.5:1 or better in
- * both themes; tinting the text with the same pastel hue does not.
- */
-function pillStyle(palette: CamelotColor | null, tone: RelationTone | null): PillStyle | undefined {
-  if (!palette || tone?.muted) return undefined;
-  if (!tone) {
-    return { backgroundColor: palette.background, borderColor: palette.border };
-  }
-  return {
-    backgroundColor: `${palette.hex}${tone.background}`,
-    borderColor: `${palette.hex}${tone.border}`,
-  };
-}
+const INK_CLASS: Record<PillInk, string> = {
+  primary: "text-dj-text",
+  secondary: "text-dj-text-secondary",
+  muted: "text-dj-text-muted",
+};
 
 export function KeyPill({
   keyCamelot,
@@ -73,23 +46,24 @@ export function KeyPill({
 }: KeyPillProps) {
   const text = formatKeyForNotation(keyCamelot, keyClassical, notation);
   if (text === "—") {
-    return <span className="text-dj-text-muted">—</span>;
+    return <span className={INK_CLASS[EMPTY_KEY_PAINT.ink]}>—</span>;
   }
 
-  const palette = camelotColor(keyCamelot, theme);
   const tone = relation ? RELATION_TONE[relation] : null;
-  const neutral = !palette || (tone?.muted ?? false);
+  const paint = pillPaint(camelotColor(keyCamelot, theme), tone);
   const fullText = formatKeyForNotation(keyCamelot, keyClassical, "both");
   const title = relation ? `${fullText} — ${RELATION_LABELS[relation]}` : fullText;
 
   return (
     <span
-      className={`${PILL_BASE} ${
-        neutral
-          ? "border-dj-border bg-transparent text-dj-text-muted"
-          : "border-transparent text-dj-text"
-      }`}
-      style={pillStyle(palette, tone)}
+      className={`${PILL_BASE} ${paint.borderColor ? "border-transparent" : "border-dj-border"} ${
+        paint.groundToken ? "" : "bg-transparent"
+      } ${INK_CLASS[paint.ink]}`}
+      style={{
+        backgroundColor: paint.groundToken,
+        backgroundImage: paint.hueLayer,
+        borderColor: paint.borderColor,
+      }}
       title={title}
     >
       {text}
