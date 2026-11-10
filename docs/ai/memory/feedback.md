@@ -216,3 +216,48 @@ Pass 2 of [`../../evidence/2026-11-09-RUNNING-WINDOW-QA.md`](../../evidence/2026
 
 **Rule:** a Pass row is blocked only after both paths have been tried; "UIA has no element
 index" is no longer evidence that a row needs a human.
+
+## F-015 · Four counting and transport traps in CDP-driven QA (2026-11-10)
+
+Proven while executing Pass 3 of [`../../evidence/2026-11-09-RUNNING-WINDOW-QA.md`](../../evidence/2026-11-09-RUNNING-WINDOW-QA.md).
+
+- **Never read a filtered count from `tbody tr`.** The library table is virtualised: ~25 rows
+  mount whatever the filter, and `aria-rowcount` is always full-count + 1. The status-bar label
+  is the only truth — `N tracks`, or `N of 94 tracks` while `#library-search` is active — and
+  every count has to be cross-checked with `dj-query` / SQL.
+- **A filter-panel click plus "Apply filters" in the same CDP tick applies the stale draft**
+  (React batches the two events). It looks like the filter silently did not apply. Separated,
+  the toolbar `Filters (n)` chip then agrees with SQL.
+- **After the app process restarts, the old CDP transport is dead** — and a node_repl `const` /
+  `ws` binding compiled into script scope shadows the `globalThis` copy, so a "reuse" helper
+  keeps writing into the closed socket and every call is a timeout. Build a freshly named
+  transport instead.
+- **`LIKE` escapes bite**: with `ESCAPE '!'`, `%!_%` is one literal underscore, so `%!_*%` also
+  demands a literal asterisk. A "UI says 2, SQL says 0" gap was my SQL, not a defect.
+
+**Rule:** before recording a count as a FAIL, prove it twice — once from the UI label, once
+from the DB. A single-source number is not evidence.
+
+## F-016 · Contrast is computed by compositing, and per row state (2026-11-10)
+
+Proven while executing Passes 4–5 of
+[../../evidence/2026-11-09-RUNNING-WINDOW-QA.md](../../evidence/2026-11-09-RUNNING-WINDOW-QA.md).
+
+- **A tint claim needs alpha math, not a screenshot.** `getComputedStyle` gives the pill’s
+  `rgba` fill and text colour; composite the fill over the row background, up to the opaque page
+  background, then apply the WCAG ratio. One in-page evaluation returned the whole K10 matrix in
+  both themes — no image, no eyeballing, and every number is re-checkable.
+- **Measure every row state.** The same tint passes on a normal row and fails on a selected or
+  hovered one, because the row’s own background change stacks *under* the pill. A contrast note
+  sampled only on default rows does not verify the component.
+- **Do not inherit a review-round claim as a PASS.** T2.1.8 merged with "every relation tint
+  clears 4.5:1" written during the review round; the QA row exists to test that sentence and it
+  failed (2.94 / 2.59). A quoted assertion is a hypothesis until re-measured.
+- **A click that lands on the wrong thing is usually occlusion.** `document.elementFromPoint(x, y)`
+  proved the open inspector aside (x∈[860, 1280]) covers the Key column (x∈[845, 1005]) at
+  1280×800, and the same overlay plus the dock hid the Settings notation rows. Close or scroll,
+  re-test, and only then record a row as broken.
+
+**Rule:** for any visual threshold claim (contrast, target size, legibility), record the numeric
+measurement together with the exact row/panel state it was taken in. A PASS with no number is a
+guess.

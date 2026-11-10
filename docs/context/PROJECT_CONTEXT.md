@@ -38,11 +38,18 @@
 - **The v1 non-goals** include Lexicon compatibility, synthetic audio, multiple
   libraries, a dashboard, playlist-scoped statistics, WMA/DRM audio, full USB
   library export, and scraping music catalogs.
-- **Slice 3A is merged.** Tags and comment editing landed in PR #53 (squash
+- **Slice 3A is merged, QA-open.** Tags and comment editing landed in PR #53 (squash
   `03991d3c`, 2026-10-23); the annotated tag `slice-3a-code-complete` still
   peels to `ec2b191f`. The tag set is snapshotted transactionally; undo skips a
-  track changed since the snapshot. Automated checks pass; manual
-  running-window QA is still pending, so T2.1.7 and T2.1.13 remain unticked.
+  track changed since the snapshot. Automated checks pass. Running-window
+  Pass 3 (menu, editor, tags column, filters, undo) ran on the live 94-track library
+  2026-11-09 into 2026-11-10: 44 of 48 rows pass, B4 fails — an unchanged Save is
+  reported as a backend error and closes the dialog instead of reading
+  `Metadata unchanged — nothing to save` — while A7 and F6 turn out to be stale
+  checklist expectations that contradict shipped code, and E3 is unreachable on the
+  single undo token. Every write was reverted to the pre-run baseline, so T2.1.7 and
+  T2.1.13 remain unticked (record:
+  [`docs/evidence/2026-11-09-RUNNING-WINDOW-QA.md`](../evidence/2026-11-09-RUNNING-WINDOW-QA.md)).
 - **The Stage 1 shell is shipped** on `main` via PR #53: six primary tabs,
   typed view registry, top-bar library search/Import Center/Inbox/backup status,
   persistent player dock, Settings skeleton, error boundary and redacted
@@ -926,11 +933,13 @@ planned. The first Phase 2 slices landed on top of the Phase 0/1 foundations:
   on `feature/bulk-metadata-edit`: table multi-select (Ctrl/Cmd-click, Shift-click),
   `MetadataEditor` dirty-fields-only write with diff preview and undo, and
   `BulkActionBar` (count >= 2 with scope, live edit/rate/clear, disabled stubs with reasons).
-- ✅ **T2.1.8 Key pills + harmonic relations (PR #70)** — merged to `main` 2026-11-08 inside `9551aa41`; implemented 2026-10-29; review
+- 🧪 **T2.1.8 Key pills + harmonic relations (PR #70)** — merged to `main` 2026-11-08 inside `9551aa41`; implemented 2026-10-29; review
   round closed 2026-11-08 (head `144292e0` on `feat/T2.1.8-key-pills`): pure `harmonic.ts`
   and `key-format.ts`, Camelot/1m1d/both, Strict/Wide preferences persisted in `UiState`,
-  relation-tinted `KeyPill` meeting WCAG 4.5:1 text contrast, persistent Compatible-only
-  intent re-derivation, drops-with-chip regression fix, and stranded intent enabled and removable.
+  relation-tinted `KeyPill`, persistent Compatible-only intent re-derivation,
+  drops-with-chip regression fix, and stranded intent enabled and removable. The review
+  round wrote that the pill text clears WCAG 4.5:1; that holds for the tinted relations
+  on a normal row, **not** for every combination — see Pass 4.
 - ✅ **T2.1.4 Rating cell keyboard ownership (PR #72)** — merged 2026-11-09 (squash `307a13fb`): the rating group was
   never focusable, so `Tab` landed on the row and the preview player's `window` listener turned
   `1`–`8` into hot-cue jumps. The cell is one roving tab stop declaring `aria-keyshortcuts`,
@@ -944,6 +953,65 @@ planned. The first Phase 2 slices landed on top of the Phase 0/1 foundations:
   UIA and then by hand: 24 rows pass, B1 is a wording gap (`No energy set` is the read-only
   meter's label, not the library cell's) and A7 is unreachable because the toast keeps a single
   undo token, so T2.1.4 stays unticked.
+- ✅🧪 **Running-window Pass 3 — Slice 3A (tags, editor, row menu)** — executed
+  2026-11-09 23:05 UTC into 2026-11-10 against the live 94-track library, all 48 rows
+  run over Chrome DevTools Protocol on the WebView2 debug port (the only route here that
+  carries a right-click, and the source of the console reader). 44 pass; **B4 is a real
+  FAIL** — a Save with nothing changed reaches `library_writes.rs`'s `nothing to update`
+  error, so the UI shows its “Couldn't save…” path, closes the dialog and logs to the
+  console instead of the designed `Metadata unchanged — nothing to save`;
+  `describeMetadataWrite`'s `updated <= 0` branch is unreachable from the editor.
+  **A7** (right-click an unselected row) and **F6** (the second Escape) turned out to be
+  stale checklist wording — `handleRowContextMenu` deliberately takes the selection and
+  the window-level Escape handler deliberately closes the track panel — and **E3** is
+  unreachable for the same reason Pass 2 A7 was: one undo token. Two findings for the
+  record: the library table is virtualized, so filtered counts must come from the
+  status-bar `N tracks` label and never from `tbody tr`; and the pass reverted every
+  write — 0 diffs over all 94 `tracks` rows and `track_tags` back to 0 rows, with only
+  the app's own `skill_runs` undo ledger grown. F1 was a real process restart.
+  Record: `docs/evidence/2026-11-09-RUNNING-WINDOW-QA.md`, Pass 3.
+- 🧪 **Running-window Pass 4 — T2.1.8 key pills** — executed 2026-11-09 22:55 → 23:27 UTC
+  on the live 94-track library over the same CDP channel. K1–K8 pass: with no reference
+  the pills render the saved notation with no relation tint; a 7B selection gives the
+  same-key fill at alpha 0.28, adjacent 0.20 and incompatible transparent + muted, exactly
+  `RELATION_TONE`; the **playing** track keeps the reference over the selection even after
+  the deck is paused (K3); the notation switch is live with no reload and the classical
+  rendering matches `((n+4)%12)+1` (K4); Wide adds the ±2 tint to 9B and Strict removes it
+  again (K5 — this library has no 5B row, so only one code proves it); the tooltip carries
+  both notations plus the relation (K6); Compatible-only derives 57 tracks = SQL 57 with
+  the chip `Key 6B, 7A, 7B, 8B` (K7) and the chip’s × drops the intent cleanly (K8).
+  **K9 is a deviation**: with no reference the box is *disabled* and dimmed under the help
+  line `Play or select a track with a key to use this filter`, not “stays enabled” as the
+  checklist says — deliberate (`canToggleCompatibleOnly`, unit-tested) — while the “stays
+  enabled and removable” case, reached by applying the intent and then losing the
+  reference, behaves exactly as written (Apply writes nothing). **K10 FAILS**: composited
+  contrast against a 7B reference puts muted incompatible text on a *selected* row at
+  2.94 light / 2.59 dark, and same-key text on a selected row at 4.46 dark, under the
+  4.5:1 target — plus muted-on-hovered 4.10 / 3.70 measured later on the fixture. The
+  culprit is `text-dj-text-muted` over `bg-dj-active`, which the 2026-11-08 change (pill
+  text onto the primary token) never covered, because the incompatible fill is transparent
+  and the muted token is deliberately kept. Two environment findings: at 1280×800 the open
+  inspector aside overlays the Key column and the lower Settings rows, so those controls
+  are unreachable until the panel is closed and the row scrolled into view; and filters do
+  not survive a reload. No library write was issued and `localStorage` came back
+  byte-identical. Record: `docs/evidence/2026-11-09-RUNNING-WINDOW-QA.md`, Pass 4.
+- ✅ **Running-window Pass 5 — Stage 1 §D on the 30,000-track fixture** — executed
+  2026-11-09 23:31 → 2026-11-10 00:30 UTC through `DJ_ASSISTANT_DB_PATH`, so the live
+  library was never opened (its `.db`/`.wal` sizes and mtimes match the pre-run copy
+  exactly). D1–D4 all pass: the cold load reaches `200 of 30000 tracks` at 833 ms with
+  boot long tasks 62/99/87 ms; the five primary tab switches cost 0–1 ms with zero long
+  tasks — honest qualifier: four of them are planned-view stubs, so that half proves the
+  shell is free, not that unbuilt views are fast; the Library remount is one 196–197 ms
+  long task with a 200 ms frame gap; and 12 wheel steps track `scrollTop` exactly at
+  132–149 ms round trips, crossing the page boundary 200 → 700 rows while only 23–25
+  rows mount. **K11 passes**: a selected 5A row mounts all five relations at once — same,
+  4A/6A adjacent, 5B relative (the first time that tint has ever mounted) and the rest
+  muted — which also filled the two K10 gaps (relative 12.59 light / 11.13 dark, hover)
+  and reproduced muted-on-selected at 2.94 / 2.59. The fixture had to be re-keyed to cycle
+  all 24 Camelot codes, because the shipped generator emits one letter per number
+  (`make-library-fixture.mjs:205`); that patch touched the throwaway fixture DB only.
+  Stage 1 section D is therefore closed **on the fixture**, not on the live library.
+  Record: `docs/evidence/2026-11-09-RUNNING-WINDOW-QA.md`, Pass 5.
 
 Live today inside the library screen (non-gating, post-MVP scope): local
 similar-track scoring + inspector (TF.1/TF.4), Tag Health modal (TF.4/TE.3–TE.4),

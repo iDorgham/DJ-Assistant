@@ -4,6 +4,47 @@ Ephemeral. Newest first. **Rotate aggressively** — if a line would still be tr
 in two weeks, it belongs in [`decisions.md`](./decisions.md); if it is just a
 fact, it belongs in [`facts.md`](./facts.md). Delete anything stale.
 
+## 2026-11-10 · Running-window Passes 4–5 executed — K10 contrast FAIL open
+
+- Pass 4 (T2.1.8 key pills, live 94-track library, 7B reference): **K1–K8 and K11 PASS, K9
+  DEVIATION, K10 FAIL**. Pass 5 (Stage 1 §D, 30,000-track fixture behind `DJ_ASSISTANT_DB_PATH`):
+  **D1–D4 PASS**.
+- **K10 is the defect.** The shipped claim that every relation tint clears WCAG 4.5:1 is false
+  for the *muted* text token over a tinted row: 2.94 light / 2.59 dark on a selected row, 4.10 /
+  3.70 on a hovered one (fixture), plus same-key on a selected dark row at 4.46. The misses are
+  hue-independent, so the fix is the muted token (or scoping the claim), not the tint alphas.
+- **K9 is a stale expectation.** With no reference the Compatible-only box is deliberately
+  disabled with help text (`canToggleCompatibleOnly`, tested at
+  `apps/desktop/src/lib/library.test.ts:427`), not "stays enabled"; the lost-reference case does stay
+  checked, enabled and removable, exactly as `d76573a5` decided.
+- The live library holds no 7A and no 5B row, so the relative tint and half the ±2 tints can
+  only mount on the fixture — and the generator emits one letter per number
+  (`scripts/make-library-fixture.mjs:205`), which is why Pass 5 needed a fixture-only re-key.
+  That is fixture tooling, not app behaviour.
+- Both passes net-zero: the live `.db`/`.wal` kept their exact sizes and mtimes through the
+  whole fixture session, `skill_runs` still 99, `track_tags` 0, localStorage restored byte-identical,
+  0 of 94 mp3s touched, no `Runtime.exceptionThrown`.
+- **Nothing ticked.** §D is now recorded PASS but the evidence file is still uncommitted, and
+  T2.1.8 stays open on K10; the human ticks on `main` post-merge.
+
+## 2026-11-10 · Running-window Pass 3 executed (Slice 3A tags/editor/menu) — B4 open
+
+- Pass 3 of [`../../evidence/2026-11-09-RUNNING-WINDOW-QA.md`](../../evidence/2026-11-09-RUNNING-WINDOW-QA.md)
+  ran over CDP on the live 94-track library: **44 PASS, 1 FAIL, 2 DEVIATION, 1 BLOCKED**.
+- **B4 is the one real defect**: an unchanged Save takes the backend `nothing to update` error
+  path (`crates/core/src/library_writes.rs:189-191`), so the renderer's "Metadata unchanged —
+  nothing to save" branch never fires, the dialog closes and the console errors. Fix belongs in
+  the write path, not the dialog.
+- **A7 and F6 are stale checklist expectations**, not defects: the row menu deliberately replaces
+  the selection (`App.tsx:2101-2109`) and window-level Escape deliberately closes the track panel
+  (`App.tsx:1878-1896`). Slice 3A's checklist text needs the correction. **E3 is blocked** by the
+  single-slot undo token — no UI path undoes the first of two writes.
+- **Net-zero proven** against the pre-run copy: 0 diffs over all 94 `tracks` rows, 0 `track_tags`
+  both sides, every other table count identical, 0 of 94 mp3s touched, column layout restored and
+  identical after the F1 restart. Only `skill_runs` grew — the pass's own undo snapshots, left alone.
+- **Passes 4–5 have since run** — see the entry above: §D closed PASS and K10 is the open FAIL.
+  T2.1.7 and T2.1.13 stay unticked; the human ticks on `main` post-merge.
+
 ## 2026-11-09 · PR #72 merged; ledger, context and plan reconciled on `main`
 
 - **`main` is at `307a13fb`** (PR #72, the T2.1.4 rating-cell keyboard ownership fix)
@@ -13,7 +54,8 @@ fact, it belongs in [`facts.md`](./facts.md). Delete anything stale.
   review, not merged”; that claim, its mirror in `PROJECT_CONTEXT.md`, the slice list and
   the Phase 2 Slice 2 status are now corrected.
 - **Nothing was ticked.** The 2026-11-09 running-window record shows **Pass 1 (Stage 1
-  shell) PASS** (A1–A12, B1–B5, C1–C3) and **Passes 2–5 NOT RUN**, so T2.1.0 (§D still
+  shell) PASS** (A1–A12, B1–B5, C1–C3) and **Passes 2–5 NOT RUN** at that point (Passes 2–3 have since run — see the
+  2026-11-10 entry, which also notes B4 as the one open FAIL), so T2.1.0 (§D still
   unrun), T2.1.2, T2.1.3, T2.1.4, T2.1.6, T2.1.7, T2.1.8 and T2.1.13 all stay open (F-012).
 - **The QA session’s own work is still uncommitted and is not mine to commit:**
   `docs/evidence/2026-11-09-RUNNING-WINDOW-QA.md`, the `RowContextMenu.test.tsx` deletion
