@@ -127,6 +127,7 @@ export function PreviewPlayer({
       return;
     }
 
+    let active = true;
     const duration = trackDurationMs || 240000;
     const baseBpm = trackBpm || 124;
     // Pass trackId so the native audio engine (T2.4) can decode and play the
@@ -140,7 +141,7 @@ export function PreviewPlayer({
     // Upgrade to real peaks when the backend can decode the file (T2.4.1).
     getWaveformPeaks({ trackId })
       .then((res) => {
-        if (res.isReal && res.peaks.length > 0) {
+        if (active && res.isReal && res.peaks.length > 0) {
           setWaveform((current) =>
             current
               ? { ...current, peaks: new Float32Array(res.peaks), isEstimated: false }
@@ -170,6 +171,9 @@ export function PreviewPlayer({
     } catch {
       setHotCues(createDefaultHotCues(duration, baseBpm));
     }
+    return () => {
+      active = false;
+    };
   }, [trackId, trackDurationMs, trackBpm, trackFileHash]);
 
   // Keep the engine tempo in step with the grid calibration: beat jump and the

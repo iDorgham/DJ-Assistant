@@ -469,7 +469,9 @@ export async function audioPause(): Promise<void> {
 export async function audioSeek(ms: number): Promise<void> {
   if (!isTauri) return;
   const { invoke } = await import("@tauri-apps/api/core");
-  await invoke<void>("audio_seek", { ms });
+  await invoke<void>("audio_seek", {
+    ms: Number.isNaN(ms) ? 0 : Math.round(Math.max(0, Math.min(ms, Number.MAX_SAFE_INTEGER))),
+  });
 }
 
 export async function audioSetVolume(volume: number): Promise<void> {

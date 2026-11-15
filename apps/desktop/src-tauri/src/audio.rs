@@ -29,6 +29,7 @@ struct Inner {
     volume: f32,
     // Output stream (kept alive).
     stream: Option<cpal::Stream>,
+    stream_invalid: bool,
     out_rate: u32,
     out_channels: usize,
 }
@@ -49,6 +50,7 @@ impl AudioEngine {
                 playing: false,
                 volume: 0.8,
                 stream: None,
+                stream_invalid: false,
                 out_rate: 44100,
                 out_channels: 2,
             })),
@@ -80,6 +82,14 @@ impl AudioEngine {
         if inner.src.is_empty() {
             return Ok(());
         }
+        if inner.stream_invalid {
+            let stale_stream = inner.stream.take();
+            drop(inner);
+            // Never tear down a stream in its callback or while holding its mutex.
+            drop(stale_stream);
+            inner = self.inner.lock().map_err(|e| e.to_string())?;
+            inner.stream_invalid = false;
+        }
         // Already have a stream: just resume.
         if inner.stream.is_some() {
             inner.playing = true;
@@ -93,19 +103,52 @@ impl AudioEngine {
         inner.out_channels = out_channels;
         inner.out_rate = out_rate;
 
+        let config = supported.config();
+        let stream = match supported.sample_format() {
+            cpal::SampleFormat::I8 => self.build_stream::<i8>(&device, config),
+            cpal::SampleFormat::I16 => self.build_stream::<i16>(&device, config),
+            cpal::SampleFormat::I24 => self.build_stream::<cpal::I24>(&device, config),
+            cpal::SampleFormat::I32 => self.build_stream::<i32>(&device, config),
+            cpal::SampleFormat::I64 => self.build_stream::<i64>(&device, config),
+            cpal::SampleFormat::U8 => self.build_stream::<u8>(&device, config),
+            cpal::SampleFormat::U16 => self.build_stream::<u16>(&device, config),
+            cpal::SampleFormat::U24 => self.build_stream::<cpal::U24>(&device, config),
+            cpal::SampleFormat::U32 => self.build_stream::<u32>(&device, config),
+            cpal::SampleFormat::U64 => self.build_stream::<u64>(&device, config),
+            cpal::SampleFormat::F32 => self.build_stream::<f32>(&device, config),
+            cpal::SampleFormat::F64 => self.build_stream::<f64>(&device, config),
+            format => return Err(format!("unsupported output sample format: {format}")),
+        }?;
+        if let Err(error) = stream.play() {
+            drop(inner);
+            drop(stream);
+            return Err(error.to_string());
+        }
+        inner.stream = Some(stream);
+        inner.playing = true;
+        Ok(())
+    }
+
+    fn build_stream<T>(
+        &self,
+        device: &cpal::Device,
+        config: cpal::StreamConfig,
+    ) -> Result<cpal::Stream, String>
+    where
+        T: cpal::SizedSample + cpal::FromSample<f32>,
+    {
+        let error_inner = Arc::clone(&self.inner);
         let inner_clone = Arc::clone(&self.inner);
-        let stream = device
+        device
             .build_output_stream(
-                supported.config(),
-                move |data: &mut [f32], _| {
+                config,
+                move |data: &mut [T], _| {
+                    data.fill(T::EQUILIBRIUM);
                     let mut inner = match inner_clone.lock() {
                         Ok(g) => g,
                         Err(_) => return,
                     };
                     if !inner.playing {
-                        for s in data.iter_mut() {
-                            *s = 0.0;
-                        }
                         return;
                     }
                     let src_ch = inner.src_channels;
@@ -122,9 +165,6 @@ impl AudioEngine {
                     for frame in data.chunks_mut(out_ch) {
                         if pos >= total_src_frames_f {
                             inner.playing = false;
-                            for s in frame.iter_mut() {
-                                *s = 0.0;
-                            }
                             pos = total_src_frames_f;
                             break;
                         }
@@ -138,22 +178,22 @@ impl AudioEngine {
                             } else {
                                 0.0
                             };
-                            *sample = val * inner.volume;
+                            *sample = T::from_sample(val * inner.volume);
                         }
                         pos += ratio;
                     }
                     inner.cursor = pos.min(total_src_frames_f);
                 },
-                |err| {
+                move |err| {
                     log::error!("audio stream error: {}", err);
+                    if let Ok(mut inner) = error_inner.lock() {
+                        inner.playing = false;
+                        inner.stream_invalid = true;
+                    }
                 },
                 None,
             )
-            .map_err(|e| e.to_string())?;
-        stream.play().map_err(|e| e.to_string())?;
-        inner.stream = Some(stream);
-        inner.playing = true;
-        Ok(())
+            .map_err(|e| e.to_string())
     }
 
     pub fn pause(&self) -> Result<(), String> {

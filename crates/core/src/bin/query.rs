@@ -695,6 +695,7 @@ fn run_list(
         filters: args.filters.clone(),
         sort_by: args.sort_by.clone(),
         sort_dir: args.sort_dir.clone(),
+        ..TrackQuery::default()
     };
 
     let built = query

@@ -51,6 +51,12 @@ class PreviewAudioEngine {
   /** The trackId currently loaded into the native engine, if any. */
   private loadedTrackId: string | null = null;
 
+  private loadQueue: Promise<void> = Promise.resolve();
+  private pendingLoad: Promise<void> | null = null;
+  // Identifies the selected request, including repeated selections of one track.
+  private loadGeneration = 0;
+  private playbackGeneration = 0;
+
   constructor() {
     // AudioContext will be initialized on first user interaction (web path).
   }
@@ -134,29 +140,62 @@ class PreviewAudioEngine {
     this.positionMs = 0;
     this.currentBeatIndex = 0;
 
+    const generation = ++this.loadGeneration;
+    this.loadedTrackId = null;
     if (isTauri && trackId) {
-      this.loadedTrackId = trackId;
-      try {
-        const nativeDuration = await audioLoad(trackId);
-        if (nativeDuration > 0) {
-          this.durationMs = nativeDuration;
+      const load = this.loadQueue.then(async () => {
+        if (generation !== this.loadGeneration) return;
+        try {
+          const nativeDuration = await audioLoad(trackId);
+          if (generation !== this.loadGeneration) return;
+          let effectiveVolume: number;
+          do {
+            effectiveVolume = this.isMuted ? 0 : this.volume;
+            await audioSetVolume(effectiveVolume);
+            if (generation !== this.loadGeneration) return;
+          } while (effectiveVolume !== (this.isMuted ? 0 : this.volume));
+          this.loadedTrackId = trackId;
+          if (nativeDuration > 0) {
+            this.durationMs = nativeDuration;
+          }
+        } catch (e) {
+          if (generation !== this.loadGeneration) return;
+          console.warn("Native audio_load failed, falling back to synthetic:", e);
+          this.loadedTrackId = null;
         }
-      } catch (e) {
-        console.warn("Native audio_load failed, falling back to synthetic:", e);
-        this.loadedTrackId = null;
-      }
+      });
+      this.loadQueue = load;
+      this.pendingLoad = load;
+      await load;
+      if (generation !== this.loadGeneration) return;
+      this.pendingLoad = null;
     } else {
-      this.loadedTrackId = null;
+      // Drain any native load already in flight before permitting playback.
+      const load = this.loadQueue;
+      this.pendingLoad = load;
+      await load;
+      if (generation !== this.loadGeneration) return;
+      this.pendingLoad = null;
     }
 
     this.notify();
   }
 
   public play() {
+    if (this.pendingLoad) {
+      const pending = this.pendingLoad;
+      const generation = this.playbackGeneration;
+      void pending.then(() => {
+        if (generation === this.playbackGeneration && !this.pendingLoad) this.play();
+      });
+      return;
+    }
     if (isTauri && this.loadedTrackId) {
       this.isPlaying = true;
       this.startNativePoll();
+      const generation = this.playbackGeneration;
       audioPlay().catch((e) => {
+        if (generation !== this.playbackGeneration) return;
         console.warn("Native audio_play failed:", e);
         this.isPlaying = false;
         this.stopNativePoll();
@@ -188,9 +227,9 @@ class PreviewAudioEngine {
   }
 
   public pause() {
+    this.stopNativePoll();
     if (isTauri && this.loadedTrackId) {
       this.isPlaying = false;
-      this.stopNativePoll();
       audioPause().catch((e) => console.warn("Native audio_pause failed:", e));
       this.notify();
       return;
@@ -279,10 +318,12 @@ class PreviewAudioEngine {
 
   private startNativePoll() {
     this.stopNativePoll();
+    const generation = this.playbackGeneration;
     const poll = async () => {
       if (!this.isPlaying) return;
       try {
         const s = await audioState();
+        if (generation !== this.playbackGeneration) return;
         this.positionMs = Math.min(s.positionMs, this.durationMs);
         if (!s.playing && s.positionMs >= this.durationMs) {
           this.isPlaying = false;
@@ -296,7 +337,7 @@ class PreviewAudioEngine {
       } catch (e) {
         console.warn("Native audio_state poll failed:", e);
       }
-      if (this.isPlaying) {
+      if (generation === this.playbackGeneration && this.isPlaying) {
         this.nativePollId = requestAnimationFrame(poll);
       }
     };
@@ -304,6 +345,7 @@ class PreviewAudioEngine {
   }
 
   private stopNativePoll() {
+    this.playbackGeneration++;
     if (this.nativePollId !== null) {
       cancelAnimationFrame(this.nativePollId);
       this.nativePollId = null;

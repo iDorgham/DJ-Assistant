@@ -294,9 +294,12 @@ impl TrackQuery {
                             .replace("\\", "\\\\")
                             .replace("%", "\\%")
                             .replace("_", "\\_");
-                        params.push(QueryParam::Text(format!("{}%", escaped)));
+                        params.push(QueryParam::Text(format!(
+                            "{}%",
+                            escaped.to_ascii_lowercase()
+                        )));
                         conditions.push(format!(
-                            "LOWER(file_path) LIKE ?{} ESCAPE '\\'",
+                            "LOWER(REPLACE(file_path, CHAR(92), '/')) LIKE ?{} ESCAPE '\\'",
                             params.len()
                         ));
                     }
@@ -569,6 +572,22 @@ mod tests {
             built.select_sql,
             "SELECT id, title FROM tracks WHERE 1 = 1 ORDER BY created_at DESC, id ASC \
              LIMIT ?1 OFFSET ?2"
+        );
+    }
+
+    #[test]
+    fn folder_paths_normalize_separators_and_escape_like() {
+        let built = build(TrackQuery {
+            source: Some("folder".into()),
+            source_id: Some("C:/Music/100%_Mix".into()),
+            ..Default::default()
+        });
+        assert!(built
+            .count_sql
+            .contains("LOWER(REPLACE(file_path, CHAR(92), '/')) LIKE"));
+        assert_eq!(
+            built.params[0],
+            QueryParam::Text("c:/music/100\\%\\_mix%".into())
         );
     }
 
