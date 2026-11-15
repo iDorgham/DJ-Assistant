@@ -126,6 +126,47 @@ export async function getWaveformPeaks(
   return invoke<GetWaveformPeaksResponse>("get_waveform_peaks", { request: req });
 }
 
+/** Peak layers of a decoded `get_waveform_peaks` response, shaped for `WaveformData`. */
+export interface DecodedPeakLayers {
+  peaks: Float32Array;
+  lowPeaks: Float32Array;
+  midPeaks: Float32Array;
+  highPeaks: Float32Array;
+  isEstimated: false;
+}
+
+/**
+ * Turns a decoded peak list into the peak layers the waveform renderers read.
+ *
+ * The response carries ~4000 points while the synthesized waveform carries
+ * 16000 in `peaks` *and* in every band, and `DetailedWaveform` indexes the
+ * bands with `peaks.length`. Copying the response straight into `peaks` leaves
+ * the bands four times too long: the render loop reads the first quarter of the
+ * synthetic bands and stretches it over the whole canvas — fabricated energy
+ * wherever the decoded peaks are silent.
+ *
+ * Upsampling the decoded peaks to 16000 would fix the indexing but keep those
+ * synthetic bands, and this patch clears `isEstimated`, which tells the UI the
+ * waveform was decoded (docs/ui/06 forbids passing invented analysis off as
+ * decoded). The bands are dropped instead: zero-filled at the decoded length.
+ * The waveform still renders — `DetailedWaveform` always draws the body layer
+ * and simply has no mid/low height left to draw.
+ */
+export function decodedPeakLayers(peaks: number[]): DecodedPeakLayers {
+  const body = new Float32Array(peaks.length);
+  for (let i = 0; i < peaks.length; i++) {
+    const value = peaks[i]!;
+    body[i] = Number.isFinite(value) ? Math.min(Math.max(value, 0), 1) : 0;
+  }
+  return {
+    peaks: body,
+    lowPeaks: new Float32Array(body.length),
+    midPeaks: new Float32Array(body.length),
+    highPeaks: new Float32Array(body.length),
+    isEstimated: false,
+  };
+}
+
 /**
  * Patches user-assigned metadata (rating, energy) on one or more tracks.
  *
@@ -466,12 +507,28 @@ export async function audioPause(): Promise<void> {
   await invoke<void>("audio_pause");
 }
 
+/**
+ * Rounds and clamps a seek target to the `ms: u64` the Rust command declares.
+ *
+ * serde rejects a fractional number for a u64 parameter, and NaN / Infinity do
+ * not serialize at all, so a target that survives the UI's own double clamp
+ * would fail the call instead of seeking. `null` means the value cannot be
+ * represented: the caller drops the seek rather than silently jumping to 0.
+ */
+export function normalizeSeekMs(ms: number): number | null {
+  if (!Number.isFinite(ms)) return null;
+  return Math.round(Math.min(Math.max(ms, 0), Number.MAX_SAFE_INTEGER));
+}
+
 export async function audioSeek(ms: number): Promise<void> {
   if (!isTauri) return;
+  const target = normalizeSeekMs(ms);
+  if (target === null) {
+    console.warn("Native audio_seek ignored a non-finite position:", ms);
+    return;
+  }
   const { invoke } = await import("@tauri-apps/api/core");
-  await invoke<void>("audio_seek", {
-    ms: Number.isNaN(ms) ? 0 : Math.round(Math.max(0, Math.min(ms, Number.MAX_SAFE_INTEGER))),
-  });
+  await invoke<void>("audio_seek", { ms: target });
 }
 
 export async function audioSetVolume(volume: number): Promise<void> {

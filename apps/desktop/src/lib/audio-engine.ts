@@ -32,6 +32,17 @@ export interface PlaybackState {
 
 export type PlaybackListener = (state: PlaybackState) => void;
 
+/**
+ * True when a finished transport has to rewind before it can play again.
+ *
+ * Both backends leave the position on the last frame when a track ends, so
+ * play() would otherwise restart from silence. A zero duration means nothing
+ * usable is loaded and there is nothing to rewind to.
+ */
+export function shouldRewindToStart(positionMs: number, durationMs: number): boolean {
+  return durationMs > 0 && positionMs >= durationMs;
+}
+
 const isTauri = typeof window !== "undefined" && "__TAURI_INTERNALS__" in window;
 
 class PreviewAudioEngine {
@@ -50,12 +61,21 @@ class PreviewAudioEngine {
   private currentBeatIndex = 0;
   /** The trackId currently loaded into the native engine, if any. */
   private loadedTrackId: string | null = null;
-
-  private loadQueue: Promise<void> = Promise.resolve();
-  private pendingLoad: Promise<void> | null = null;
-  // Identifies the selected request, including repeated selections of one track.
+  /**
+   * Bumped by every `loadTrack` and `stop`. `audioLoad` is asynchronous: without
+   * this, a load that resolves late would install its trackId and duration over
+   * the track the user picked afterwards, and a late failure would clear a newer
+   * load's trackId. `loadedTrackId` is also set only after a successful load, so
+   * Play cannot resume the previous track while the next one is decoding.
+   */
   private loadGeneration = 0;
-  private playbackGeneration = 0;
+  /**
+   * Bumped by every transport change (play / pause / stop — `loadTrack` goes
+   * through `stop`). A native `audio_state` reply that arrives afterwards
+   * belongs to the previous session: applying it would repaint an old position
+   * or revive the poll loop for a transport the user already stopped.
+   */
+  private pollGeneration = 0;
 
   constructor() {
     // AudioContext will be initialized on first user interaction (web path).
@@ -135,67 +155,58 @@ class PreviewAudioEngine {
     }
 
     this.stop();
+    // Captured after stop(): anything in flight from before this call — a
+    // decode, a failed decode, a poll reply — is stale from here on.
+    this.loadGeneration += 1;
+    const generation = this.loadGeneration;
+
     this.bpm = bpmVal;
     this.durationMs = duration;
     this.positionMs = 0;
     this.currentBeatIndex = 0;
 
-    const generation = ++this.loadGeneration;
-    this.loadedTrackId = null;
     if (isTauri && trackId) {
-      const load = this.loadQueue.then(async () => {
+      try {
+        const nativeDuration = await audioLoad(trackId);
+        // A newer load or a stop owns the engine by now: keep its state.
         if (generation !== this.loadGeneration) return;
-        try {
-          const nativeDuration = await audioLoad(trackId);
-          if (generation !== this.loadGeneration) return;
-          let effectiveVolume: number;
-          do {
-            effectiveVolume = this.isMuted ? 0 : this.volume;
-            await audioSetVolume(effectiveVolume);
-            if (generation !== this.loadGeneration) return;
-          } while (effectiveVolume !== (this.isMuted ? 0 : this.volume));
-          this.loadedTrackId = trackId;
-          if (nativeDuration > 0) {
-            this.durationMs = nativeDuration;
-          }
-        } catch (e) {
-          if (generation !== this.loadGeneration) return;
-          console.warn("Native audio_load failed, falling back to synthetic:", e);
-          this.loadedTrackId = null;
+        this.loadedTrackId = trackId;
+        if (nativeDuration > 0) {
+          this.durationMs = nativeDuration;
         }
-      });
-      this.loadQueue = load;
-      this.pendingLoad = load;
-      await load;
-      if (generation !== this.loadGeneration) return;
-      this.pendingLoad = null;
+        // Volume and mute set before this load skipped IPC because nothing was
+        // loaded, so Rust still holds its own 0.8 default. Push the retained
+        // value now that a track is there.
+        audioSetVolume(this.isMuted ? 0 : this.volume).catch((e) =>
+          console.warn("Native audio_set_volume failed:", e)
+        );
+      } catch (e) {
+        // The same staleness rule for a failure: it must not clear a newer track.
+        if (generation !== this.loadGeneration) return;
+        console.warn("Native audio_load failed, falling back to synthetic:", e);
+        this.loadedTrackId = null;
+      }
     } else {
-      // Drain any native load already in flight before permitting playback.
-      const load = this.loadQueue;
-      this.pendingLoad = load;
-      await load;
-      if (generation !== this.loadGeneration) return;
-      this.pendingLoad = null;
+      this.loadedTrackId = null;
     }
 
     this.notify();
   }
 
   public play() {
-    if (this.pendingLoad) {
-      const pending = this.pendingLoad;
-      const generation = this.playbackGeneration;
-      void pending.then(() => {
-        if (generation === this.playbackGeneration && !this.pendingLoad) this.play();
-      });
-      return;
-    }
+    this.pollGeneration += 1;
+
     if (isTauri && this.loadedTrackId) {
       this.isPlaying = true;
+      // A finished track keeps its last position in the native engine, so a
+      // replay has to rewind first — the synthetic path below does the same.
+      if (shouldRewindToStart(this.positionMs, this.durationMs)) {
+        this.positionMs = 0;
+        this.currentBeatIndex = 0;
+        audioSeek(0).catch((e) => console.warn("Native audio_seek failed:", e));
+      }
       this.startNativePoll();
-      const generation = this.playbackGeneration;
       audioPlay().catch((e) => {
-        if (generation !== this.playbackGeneration) return;
         console.warn("Native audio_play failed:", e);
         this.isPlaying = false;
         this.stopNativePoll();
@@ -211,7 +222,7 @@ class PreviewAudioEngine {
       this.ctx.resume().catch(() => {});
     }
 
-    if (this.positionMs >= this.durationMs) {
+    if (shouldRewindToStart(this.positionMs, this.durationMs)) {
       this.positionMs = 0;
       this.currentBeatIndex = 0;
     }
@@ -227,9 +238,11 @@ class PreviewAudioEngine {
   }
 
   public pause() {
-    this.stopNativePoll();
+    this.pollGeneration += 1;
+
     if (isTauri && this.loadedTrackId) {
       this.isPlaying = false;
+      this.stopNativePoll();
       audioPause().catch((e) => console.warn("Native audio_pause failed:", e));
       this.notify();
       return;
@@ -252,10 +265,19 @@ class PreviewAudioEngine {
     this.isPlaying = false;
     this.stopSyntheticLoop();
     this.stopNativePoll();
+    // Neither a load still decoding nor a poll reply may revive what the caller
+    // has just stopped.
+    this.loadGeneration += 1;
+    this.pollGeneration += 1;
     this.positionMs = 0;
     this.currentBeatIndex = 0;
     if (isTauri && this.loadedTrackId) {
-      audioPause().catch(() => {});
+      // Pause first, then rewind: a stopped transport must not keep playing from
+      // the top, and so the next Play starts at the beginning.
+      audioPause()
+        .catch((e) => console.warn("Native audio_pause failed:", e))
+        .then(() => audioSeek(0))
+        .catch((e) => console.warn("Native audio_seek failed:", e));
     }
     this.notify();
   }
@@ -318,17 +340,16 @@ class PreviewAudioEngine {
 
   private startNativePoll() {
     this.stopNativePoll();
-    const generation = this.playbackGeneration;
+    const generation = this.pollGeneration;
     const poll = async () => {
       if (!this.isPlaying) return;
       try {
         const s = await audioState();
-        if (generation !== this.playbackGeneration) return;
+        // The reply may outlive a pause, a stop or a load: drop it instead of
+        // repainting a position that belongs to the previous session.
+        if (generation !== this.pollGeneration) return;
         this.positionMs = Math.min(s.positionMs, this.durationMs);
-        if (!s.playing && s.positionMs >= this.durationMs) {
-          this.isPlaying = false;
-          this.stopNativePoll();
-        } else if (!s.playing) {
+        if (!s.playing) {
           // Engine paused underneath us (e.g. track ended). Reflect it.
           this.isPlaying = false;
           this.stopNativePoll();
@@ -337,7 +358,8 @@ class PreviewAudioEngine {
       } catch (e) {
         console.warn("Native audio_state poll failed:", e);
       }
-      if (generation === this.playbackGeneration && this.isPlaying) {
+      // Do not schedule the next frame for a stale session either.
+      if (this.isPlaying && generation === this.pollGeneration) {
         this.nativePollId = requestAnimationFrame(poll);
       }
     };
@@ -345,7 +367,6 @@ class PreviewAudioEngine {
   }
 
   private stopNativePoll() {
-    this.playbackGeneration++;
     if (this.nativePollId !== null) {
       cancelAnimationFrame(this.nativePollId);
       this.nativePollId = null;

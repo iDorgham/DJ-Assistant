@@ -20,7 +20,7 @@ import {
   type WaveformData,
   type HotCueData,
 } from "../../lib/waveform-generator";
-import { getWaveformPeaks } from "../../services/api";
+import { decodedPeakLayers, getWaveformPeaks } from "../../services/api";
 import { previewEngine, type PlaybackState } from "../../lib/audio-engine";
 import { RATING_WIDGET_ATTRIBUTE, playerHotCueSlot } from "../../lib/rating-keys";
 import { DetailedWaveform } from "./DetailedWaveform";
@@ -127,7 +127,6 @@ export function PreviewPlayer({
       return;
     }
 
-    let active = true;
     const duration = trackDurationMs || 240000;
     const baseBpm = trackBpm || 124;
     // Pass trackId so the native audio engine (T2.4) can decode and play the
@@ -139,15 +138,18 @@ export function PreviewPlayer({
     const generated = getOrGenerateWaveform(trackId, duration, baseBpm, trackFileHash || trackId);
     setWaveform(generated);
     // Upgrade to real peaks when the backend can decode the file (T2.4.1).
+    // Decoding can outlive the selection, so the cleanup flag covers the next
+    // track (and unmount) and the patch re-checks the waveform it replaces;
+    // `decodedPeakLayers` explains why the synthetic bands are dropped.
+    let cancelled = false;
     getWaveformPeaks({ trackId })
       .then((res) => {
-        if (active && res.isReal && res.peaks.length > 0) {
-          setWaveform((current) =>
-            current
-              ? { ...current, peaks: new Float32Array(res.peaks), isEstimated: false }
-              : current
-          );
-        }
+        if (cancelled || !res.isReal || res.peaks.length === 0) return;
+        setWaveform((current) =>
+          current && current.trackId === trackId
+            ? { ...current, ...decodedPeakLayers(res.peaks) }
+            : current
+        );
       })
       .catch(() => {
         // Keep the synthesized waveform on failure.
@@ -171,8 +173,9 @@ export function PreviewPlayer({
     } catch {
       setHotCues(createDefaultHotCues(duration, baseBpm));
     }
+
     return () => {
-      active = false;
+      cancelled = true;
     };
   }, [trackId, trackDurationMs, trackBpm, trackFileHash]);
 
