@@ -448,6 +448,7 @@ function TrackCell({
   keyReference,
   compatibilityMode,
   theme,
+  onPlay,
 }: {
   id: ColumnId;
   track: TrackSummary;
@@ -464,6 +465,8 @@ function TrackCell({
   keyReference?: string | null;
   compatibilityMode?: CompatibilityMode;
   theme?: "dark" | "light";
+  /** Loads the track into the preview player (T2.1.9 hover-play). */
+  onPlay?: (track: TrackSummary) => void;
 }) {
   const definition = columnDefinition(id);
   const base = `py-2.5 px-4 overflow-hidden whitespace-nowrap text-ellipsis ${
@@ -474,8 +477,22 @@ function TrackCell({
   if (id === "artwork") {
     return (
       <td className="py-1.5 px-2 text-center">
-        <div className="mx-auto w-fit">
+        <div className="group relative mx-auto w-fit">
           <ArtworkThumb trackId={track.id} hasArtwork={Boolean(track.artworkHash)} />
+          {onPlay && (
+            <button
+              type="button"
+              onClick={(event) => {
+                event.stopPropagation();
+                onPlay(track);
+              }}
+              aria-label={`Play ${track.title || "Untitled"}`}
+              title={`Play ${track.title || "Untitled"}`}
+              className="absolute inset-0 flex items-center justify-center rounded-sm bg-black/40 opacity-0 transition group-hover:opacity-100 focus-visible:opacity-100"
+            >
+              <Play className="h-4 w-4 text-white drop-shadow" />
+            </button>
+          )}
         </div>
       </td>
     );
@@ -3077,6 +3094,7 @@ export default function App() {
                                   keyReference={keyReference}
                                   compatibilityMode={ui.compatibilityMode}
                                   theme={resolveTheme(ui.theme, systemPrefersDark)}
+                                  onPlay={handlePlayTrack}
                                 />
                               ))}
                             </tr>
