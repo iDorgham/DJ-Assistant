@@ -169,6 +169,12 @@ pub struct TrackQuery {
     /// Free-text search across title, artist, album and file path.
     pub query: Option<String>,
     pub filters: TrackFilters,
+    /// Library source selector (T2.1.12): `all` (default, no narrowing),
+    /// `category` (genre = source_id), `folder` (file_path under source_id),
+    /// `playlist` / `storage` (reserved; no rows until those models exist).
+    pub source: Option<String>,
+    /// Identifier for the selected source (a genre name or a folder path).
+    pub source_id: Option<String>,
     /// One of [`SORT_KEYS`]; unknown values fall back to the default ordering.
     pub sort_by: Option<String>,
     /// `asc` | `desc`; ignored when unrecognised.
@@ -265,6 +271,42 @@ impl TrackQuery {
         // optional filters below, so no caller can forget to apply it.
         let mut conditions: Vec<String> = vec![schema.rows_condition().to_string()];
         let mut params: Vec<QueryParam> = Vec::new();
+
+        // Library source (T2.1.12): All Library is the default (no narrowing);
+        // a category narrows to one genre, a folder to files under that path.
+        // Playlist / storage sources have no backing model yet, so they yield
+        // no rows rather than silently returning the whole library.
+        match self.source.as_deref() {
+            Some("category") => {
+                if let Some(id) = &self.source_id {
+                    let trimmed = id.trim();
+                    if !trimmed.is_empty() {
+                        params.push(QueryParam::Text(trimmed.to_ascii_lowercase()));
+                        conditions.push(format!("LOWER(TRIM(genre)) = ?{}", params.len()));
+                    }
+                }
+            }
+            Some("folder") => {
+                if let Some(id) = &self.source_id {
+                    let trimmed = id.trim();
+                    if !trimmed.is_empty() {
+                        let escaped = trimmed
+                            .replace("\\", "\\\\")
+                            .replace("%", "\\%")
+                            .replace("_", "\\_");
+                        params.push(QueryParam::Text(format!("{}%", escaped)));
+                        conditions.push(format!(
+                            "LOWER(file_path) LIKE ?{} ESCAPE '\\'",
+                            params.len()
+                        ));
+                    }
+                }
+            }
+            Some("playlist") | Some("storage") => {
+                conditions.push("1 = 0".to_string());
+            }
+            _ => {}
+        }
 
         if let Some(search) = self.search_pattern() {
             // One placeholder reused by every searched column keeps the
@@ -572,6 +614,10 @@ mod tests {
                 energy_max: Some(8),
             },
             sort_by: Some("rating".into()),
+            source: None,
+
+            source_id: None,
+
             sort_dir: Some("asc".into()),
         };
         let current = query.build(COLUMNS, 20, 40).expect("query must build");
@@ -871,6 +917,10 @@ mod tests {
     fn sort_direction_is_explicit_and_nulls_stay_last() {
         let ascending = build(TrackQuery {
             sort_by: Some("bpm".into()),
+            source: None,
+
+            source_id: None,
+
             sort_dir: Some("asc".into()),
             ..Default::default()
         });
@@ -880,6 +930,10 @@ mod tests {
 
         let descending = build(TrackQuery {
             sort_by: Some("bpm".into()),
+            source: None,
+
+            source_id: None,
+
             sort_dir: Some("desc".into()),
             ..Default::default()
         });
@@ -889,6 +943,10 @@ mod tests {
 
         let imported_ascending = build(TrackQuery {
             sort_by: Some("imported_at".into()),
+            source: None,
+
+            source_id: None,
+
             sort_dir: Some("asc".into()),
             ..Default::default()
         });
@@ -901,6 +959,10 @@ mod tests {
     fn unknown_sort_values_fall_back_instead_of_reaching_sql() {
         let built = build(TrackQuery {
             sort_by: Some("file_path; DROP TABLE tracks".into()),
+            source: None,
+
+            source_id: None,
+
             sort_dir: Some("sideways".into()),
             ..Default::default()
         });
@@ -1231,6 +1293,10 @@ mod tests {
     fn rating_and_energy_sort_direction_can_be_overridden() {
         let rating_ascending = build(TrackQuery {
             sort_by: Some("rating".into()),
+            source: None,
+
+            source_id: None,
+
             sort_dir: Some("asc".into()),
             ..Default::default()
         });
@@ -1240,6 +1306,10 @@ mod tests {
 
         let energy_ascending = build(TrackQuery {
             sort_by: Some("energy".into()),
+            source: None,
+
+            source_id: None,
+
             sort_dir: Some("asc".into()),
             ..Default::default()
         });

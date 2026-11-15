@@ -112,6 +112,11 @@ pub struct ListTracksRequest {
     /// narrowing).
     #[serde(default)]
     pub filters: Option<TrackFilters>,
+    /// Library source selector (T2.1.12): `all`, `category`, `folder`,
+    /// `playlist`, `storage`. `None` is `all`.
+    pub source: Option<String>,
+    /// Identifier for the selected source (genre name or folder path).
+    pub source_id: Option<String>,
     pub limit: Option<i64>,
     pub offset: Option<i64>,
     pub sort_by: Option<String>,
@@ -125,6 +130,8 @@ impl ListTracksRequest {
         dj_assistant_core::library_query::TrackQuery {
             query: self.query,
             filters: self.filters.unwrap_or_default(),
+            source: self.source,
+            source_id: self.source_id,
             sort_by: self.sort_by,
             sort_dir: self.sort_dir,
         }

@@ -122,6 +122,10 @@ export interface ListTracksRequest {
   workspaceId?: string;
   query?: string;
   filters?: ListTracksFilters;
+  /** Library source selector (T2.1.12): `all`, `category`, `folder`, `playlist`, `storage`. */
+  source?: "all" | "category" | "folder" | "playlist" | "storage";
+  /** Identifier for the selected source (a genre name or a folder path). */
+  sourceId?: string;
   limit?: number;
   offset?: number;
   sortBy?: ListTracksSortBy;

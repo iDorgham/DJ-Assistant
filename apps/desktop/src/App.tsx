@@ -1139,6 +1139,11 @@ export default function App() {
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [filterError, setFilterError] = useState<string | null>(null);
   const [genres, setGenres] = useState<GenreCount[]>([]);
+  // Library source selector (T2.1.12): All Library / Categories / Browser / Playlists / Flash/Storage.
+  const [librarySource, setLibrarySource] = useState<
+    "all" | "category" | "folder" | "playlist" | "storage"
+  >("all");
+  const [sourceId, setSourceId] = useState<string | null>(null);
   const [sortBy, setSortBy] = useState<ListTracksSortBy | undefined>(undefined);
   const [sortDir, setSortDir] = useState<SortDirection>("asc");
   // Column arrangement (T2.1.5) is a UI preference, not app state: it is read
@@ -1313,8 +1318,9 @@ export default function App() {
   }, [filters, compatibleOnly, compatibleKeys]);
   const normalizedFilters = useMemo(() => normalizeFilters(effectiveFilters), [effectiveFilters]);
   const queryKey = useMemo(
-    () => `${JSON.stringify(normalizedFilters ?? {})}|${sortBy ?? ""}|${sortBy ? sortDir : ""}`,
-    [normalizedFilters, sortBy, sortDir]
+    () =>
+      `${JSON.stringify(normalizedFilters ?? {})}|${sortBy ?? ""}|${sortBy ? sortDir : ""}|${librarySource}|${sourceId ?? ""}`,
+    [normalizedFilters, sortBy, sortDir, librarySource, sourceId]
   );
 
   // Load tracks — a new query resets to the first page; a reload re-fetches as
@@ -1359,6 +1365,8 @@ export default function App() {
         const limit = Math.min(MAX_LIBRARY_PAGE, target - collected.length);
         const res = await listTracks({
           filters: normalizedFilters,
+          source: librarySource === "all" ? undefined : librarySource,
+          sourceId: sourceId ?? undefined,
           sortBy,
           sortDir: sortBy ? sortDir : undefined,
           limit,
@@ -1395,7 +1403,7 @@ export default function App() {
         setLoading(false);
       });
     // Only the applied query and reloads drive the fetch; loader helpers are pure.
-  }, [queryKey, normalizedFilters, sortBy, sortDir, reloadToken]);
+  }, [queryKey, normalizedFilters, sortBy, sortDir, reloadToken, librarySource, sourceId]);
 
   /**
    * Starts the next 500-row page unless a load is active or all rows are loaded.
@@ -1412,6 +1420,8 @@ export default function App() {
     setLoadingMore(true);
     listTracks({
       filters: normalizedFilters,
+      source: librarySource === "all" ? undefined : librarySource,
+      sourceId: sourceId ?? undefined,
       sortBy,
       sortDir: sortBy ? sortDir : undefined,
       limit: NEXT_LIBRARY_PAGE,
@@ -1435,7 +1445,7 @@ export default function App() {
         appendInFlightRef.current = false;
         setLoadingMore(false);
       });
-  }, [normalizedFilters, sortBy, sortDir, libraryTotal]);
+  }, [normalizedFilters, sortBy, sortDir, libraryTotal, librarySource, sourceId]);
 
   // Measure the scroll viewport; a window resize or a dock/player layout change
   // changes how many rows are visible, never the row height.
@@ -2674,6 +2684,61 @@ export default function App() {
             <>
               {/* Main Content Area */}
               <div className="relative flex min-h-0 flex-1 flex-col overflow-hidden">
+                {/* Library source tabs (T2.1.12) */}
+                <div className="flex shrink-0 items-center gap-1 border-b border-dj-border bg-dj-panel px-3 py-1">
+                  {(["all", "category", "folder", "playlist", "storage"] as const).map((tab) => (
+                    <button
+                      key={tab}
+                      type="button"
+                      onClick={() => {
+                        setLibrarySource(tab);
+                        setSourceId(null);
+                      }}
+                      className={`rounded-sm px-2 py-0.5 text-[11px] transition ${librarySource === tab ? "bg-dj-accent/15 text-dj-accent" : "text-dj-text-secondary hover:bg-dj-hover hover:text-dj-text"}`}
+                    >
+                      {tab === "all"
+                        ? "All Library"
+                        : tab === "category"
+                          ? "Categories"
+                          : tab === "folder"
+                            ? "Browser"
+                            : tab === "playlist"
+                              ? "Playlists"
+                              : "Flash/Storage"}
+                    </button>
+                  ))}
+                </div>
+                {librarySource === "category" && genres.length > 0 && (
+                  <div className="flex shrink-0 flex-wrap items-center gap-1 border-b border-dj-border bg-dj-panel px-3 py-1">
+                    {genres.map((g) => (
+                      <button
+                        key={g.genre}
+                        type="button"
+                        onClick={() => setSourceId(g.genre)}
+                        className={`rounded-sm px-2 py-0.5 text-[11px] transition ${sourceId === g.genre ? "bg-dj-accent/15 text-dj-accent" : "text-dj-text-secondary hover:bg-dj-hover hover:text-dj-text"}`}
+                      >
+                        {g.genre} ({g.count})
+                      </button>
+                    ))}
+                  </div>
+                )}
+                {librarySource === "folder" && (
+                  <div className="flex shrink-0 flex-wrap items-center gap-1 border-b border-dj-border bg-dj-panel px-3 py-1">
+                    {Array.from(
+                      new Set(tracks.map((t) => t.filePath.split(/[\\/]/).slice(0, -1).join("/")))
+                    ).map((folder) => (
+                      <button
+                        key={folder}
+                        type="button"
+                        onClick={() => setSourceId(folder)}
+                        className={`max-w-[240px] truncate rounded-sm px-2 py-0.5 text-[11px] transition ${sourceId === folder ? "bg-dj-accent/15 text-dj-accent" : "text-dj-text-secondary hover:bg-dj-hover hover:text-dj-text"}`}
+                        title={folder}
+                      >
+                        {folder.split("/").pop() || folder}
+                      </button>
+                    ))}
+                  </div>
+                )}
                 {/* Options bar — view-context actions (docs/ui/02) */}
                 <div className="flex h-8 shrink-0 items-center gap-1.5 border-b border-dj-border bg-dj-panel px-3">
                   <div className="relative w-64">
