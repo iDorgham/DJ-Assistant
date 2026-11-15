@@ -22,6 +22,7 @@ use dj_assistant_core::patch::{
 };
 use dj_assistant_core::reveal::reveal_command;
 
+use crate::audio;
 use crate::db::Database;
 use crate::models::{
     AnalyzeLibraryRequest, AnalyzeLibraryResponse, CuePoint, FindSimilarTracksRequest,
@@ -462,6 +463,63 @@ pub async fn get_waveform_peaks(
     }
 
     Ok(response)
+}
+
+#[tauri::command]
+pub async fn audio_load(
+    db: State<'_, Arc<Mutex<Database>>>,
+    engine: State<'_, Arc<Mutex<audio::AudioEngine>>>,
+    track_id: String,
+) -> Result<u64, String> {
+    let file_path = {
+        let db_guard = db.lock().map_err(|e| e.to_string())?;
+        let conn = db_guard.conn();
+        let mut stmt = conn
+            .prepare("SELECT file_path FROM tracks WHERE id = ?1")
+            .map_err(|e| e.to_string())?;
+        stmt.query_row([&track_id], |row| row.get::<_, String>(0))
+            .map_err(|e| format!("Track not found: {}", e))?
+    };
+    let eng = engine.lock().map_err(|e| e.to_string())?;
+    eng.load(&file_path)
+}
+
+#[tauri::command]
+pub async fn audio_play(engine: State<'_, Arc<Mutex<audio::AudioEngine>>>) -> Result<(), String> {
+    let eng = engine.lock().map_err(|e| e.to_string())?;
+    eng.play()
+}
+
+#[tauri::command]
+pub async fn audio_pause(engine: State<'_, Arc<Mutex<audio::AudioEngine>>>) -> Result<(), String> {
+    let eng = engine.lock().map_err(|e| e.to_string())?;
+    eng.pause()
+}
+
+#[tauri::command]
+pub async fn audio_seek(
+    engine: State<'_, Arc<Mutex<audio::AudioEngine>>>,
+    ms: u64,
+) -> Result<(), String> {
+    let eng = engine.lock().map_err(|e| e.to_string())?;
+    eng.seek(ms)
+}
+
+#[tauri::command]
+pub async fn audio_set_volume(
+    engine: State<'_, Arc<Mutex<audio::AudioEngine>>>,
+    volume: f32,
+) -> Result<(), String> {
+    let eng = engine.lock().map_err(|e| e.to_string())?;
+    eng.set_volume(volume)
+}
+
+#[tauri::command]
+pub async fn audio_state(
+    engine: State<'_, Arc<Mutex<audio::AudioEngine>>>,
+) -> Result<audio::AudioState, String> {
+    let eng = engine.lock().map_err(|e| e.to_string())?;
+    Ok(eng.state())
 }
 
 #[tauri::command]

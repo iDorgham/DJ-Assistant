@@ -10,16 +10,16 @@ test("previewEngine initializes in paused state", () => {
   assert.ok(state.volume > 0);
 });
 
-test("previewEngine loadTrack sets duration and resets position", () => {
-  previewEngine.loadTrack(300000, 128);
+test("previewEngine loadTrack sets duration and resets position", async () => {
+  await previewEngine.loadTrack(300000, 128);
   const state = previewEngine.getState();
   assert.equal(state.durationMs, 300000);
   assert.equal(state.positionMs, 0);
   assert.equal(state.isPlaying, false);
 });
 
-test("previewEngine seek updates position within bounds", () => {
-  previewEngine.loadTrack(200000, 120);
+test("previewEngine seek updates position within bounds", async () => {
+  await previewEngine.loadTrack(200000, 120);
   previewEngine.seek(50000);
   assert.equal(previewEngine.getState().positionMs, 50000);
 
@@ -31,8 +31,8 @@ test("previewEngine seek updates position within bounds", () => {
   assert.equal(previewEngine.getState().positionMs, 0);
 });
 
-test("previewEngine jumpBeats advances position based on BPM", () => {
-  previewEngine.loadTrack(200000, 120); // 120 bpm = 500ms per beat
+test("previewEngine jumpBeats advances position based on BPM", async () => {
+  await previewEngine.loadTrack(200000, 120); // 120 bpm = 500ms per beat
   previewEngine.seek(10000);
   previewEngine.jumpBeats(4); // +2000ms
   assert.equal(previewEngine.getState().positionMs, 12000);

@@ -434,6 +434,58 @@ export async function chartList(req: ChartListRequest = {}): Promise<ChartListRe
   return invoke<ChartListResponse>("chart_list", { request: req });
 }
 
+// --- Native audio engine (T2.4) ---
+// The Rust AudioEngine decodes the track file via Symphonia and plays it back
+// through cpal. These wrappers are the only IPC surface the frontend audio
+// engine needs; position polling goes through `audioState`.
+
+export interface NativeAudioState {
+  playing: boolean;
+  positionMs: number;
+  durationMs: number;
+  volume: number;
+}
+
+export async function audioLoad(trackId: string): Promise<number> {
+  if (!isTauri) {
+    return 0;
+  }
+  const { invoke } = await import("@tauri-apps/api/core");
+  return invoke<number>("audio_load", { trackId });
+}
+
+export async function audioPlay(): Promise<void> {
+  if (!isTauri) return;
+  const { invoke } = await import("@tauri-apps/api/core");
+  await invoke<void>("audio_play");
+}
+
+export async function audioPause(): Promise<void> {
+  if (!isTauri) return;
+  const { invoke } = await import("@tauri-apps/api/core");
+  await invoke<void>("audio_pause");
+}
+
+export async function audioSeek(ms: number): Promise<void> {
+  if (!isTauri) return;
+  const { invoke } = await import("@tauri-apps/api/core");
+  await invoke<void>("audio_seek", { ms });
+}
+
+export async function audioSetVolume(volume: number): Promise<void> {
+  if (!isTauri) return;
+  const { invoke } = await import("@tauri-apps/api/core");
+  await invoke<void>("audio_set_volume", { volume });
+}
+
+export async function audioState(): Promise<NativeAudioState> {
+  if (!isTauri) {
+    return { playing: false, positionMs: 0, durationMs: 0, volume: 0.8 };
+  }
+  const { invoke } = await import("@tauri-apps/api/core");
+  return invoke<NativeAudioState>("audio_state");
+}
+
 export async function openFolderDialog(): Promise<string | null> {
   if (!isTauri) {
     const mockPath = window.prompt("Enter folder path for mock scan:", "D:/Music/TestSet");

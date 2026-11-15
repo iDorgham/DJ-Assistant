@@ -129,7 +129,11 @@ export function PreviewPlayer({
 
     const duration = trackDurationMs || 240000;
     const baseBpm = trackBpm || 124;
-    previewEngine.loadTrack(duration, baseBpm);
+    // Pass trackId so the native audio engine (T2.4) can decode and play the
+    // real file; the engine falls back to the synthetic path outside Tauri.
+    previewEngine.loadTrack(trackId, duration, baseBpm).catch(() => {
+      // Native load failed — the engine already falls back to synthetic.
+    });
 
     const generated = getOrGenerateWaveform(trackId, duration, baseBpm, trackFileHash || trackId);
     setWaveform(generated);

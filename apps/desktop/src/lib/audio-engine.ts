@@ -1,7 +1,26 @@
 /**
- * DJ Assistant Web Audio Preview Engine
- * Provides precise playback timing, beat synthesis for preview, and cue auditioning.
+ * DJ Assistant Preview Audio Engine.
+ *
+ * Two backends share one public surface:
+ * - **Tauri (native):** delegates load/play/pause/seek/volume to the Rust
+ *   `AudioEngine` (Symphonia decode + cpal output) via the `audio_*` IPC
+ *   wrappers in `services/api`. Position is polled from the native engine.
+ * - **Web / tests:** a synthetic Web Audio beat generator stands in so the UI
+ *   is usable outside the desktop shell and the unit tests stay deterministic.
+ *
+ * The beat grid, BPM calibration, and beat-jump are UI-only concerns in both
+ * paths — the native engine plays the real file and reports position; the beat
+ * counter is derived locally from BPM.
  */
+
+import {
+  audioLoad,
+  audioPause,
+  audioPlay,
+  audioSeek,
+  audioSetVolume,
+  audioState,
+} from "../services/api.ts";
 
 export interface PlaybackState {
   isPlaying: boolean;
@@ -12,6 +31,8 @@ export interface PlaybackState {
 }
 
 export type PlaybackListener = (state: PlaybackState) => void;
+
+const isTauri = typeof window !== "undefined" && "__TAURI_INTERNALS__" in window;
 
 class PreviewAudioEngine {
   private ctx: AudioContext | null = null;
@@ -27,9 +48,11 @@ class PreviewAudioEngine {
   private lastRafTime = 0;
   private nextBeatTime = 0;
   private currentBeatIndex = 0;
+  /** The trackId currently loaded into the native engine, if any. */
+  private loadedTrackId: string | null = null;
 
   constructor() {
-    // AudioContext will be initialized on first user interaction
+    // AudioContext will be initialized on first user interaction (web path).
   }
 
   private initContext() {
@@ -72,16 +95,78 @@ class PreviewAudioEngine {
     };
   }
 
-  public loadTrack(durationMs: number, bpm?: number | null) {
+  /**
+   * Load a track into the engine.
+   *
+   * `trackId` is optional for backwards compatibility with the synthetic path
+   * and the unit tests. In Tauri, passing a `trackId` delegates to the native
+   * `audio_load` command (real decode + playback); the returned duration is
+   * authoritative. Without a `trackId` in Tauri, or outside Tauri, the
+   * synthetic path uses `durationMs` as given.
+   */
+  public async loadTrack(durationMs: number, bpm?: number | null): Promise<void>;
+  public async loadTrack(
+    trackId: string | null,
+    durationMs: number,
+    bpm?: number | null
+  ): Promise<void>;
+  public async loadTrack(
+    first: string | number | null,
+    second?: number | null,
+    bpm?: number | null
+  ): Promise<void> {
+    let trackId: string | null;
+    let duration: number;
+    let bpmVal: number;
+    if (typeof first === "string" || first === null) {
+      trackId = first;
+      duration = Math.max(second || 180000, 10000);
+      bpmVal = bpm && bpm > 40 && bpm < 240 ? bpm : 124;
+    } else {
+      trackId = null;
+      duration = Math.max(first || 180000, 10000);
+      bpmVal = second && second > 40 && second < 240 ? second : 124;
+    }
+
     this.stop();
-    this.durationMs = Math.max(durationMs || 180000, 10000);
-    this.bpm = bpm && bpm > 40 && bpm < 240 ? bpm : 124;
+    this.bpm = bpmVal;
+    this.durationMs = duration;
     this.positionMs = 0;
     this.currentBeatIndex = 0;
+
+    if (isTauri && trackId) {
+      this.loadedTrackId = trackId;
+      try {
+        const nativeDuration = await audioLoad(trackId);
+        if (nativeDuration > 0) {
+          this.durationMs = nativeDuration;
+        }
+      } catch (e) {
+        console.warn("Native audio_load failed, falling back to synthetic:", e);
+        this.loadedTrackId = null;
+      }
+    } else {
+      this.loadedTrackId = null;
+    }
+
     this.notify();
   }
 
   public play() {
+    if (isTauri && this.loadedTrackId) {
+      this.isPlaying = true;
+      this.startNativePoll();
+      audioPlay().catch((e) => {
+        console.warn("Native audio_play failed:", e);
+        this.isPlaying = false;
+        this.stopNativePoll();
+        this.notify();
+      });
+      this.notify();
+      return;
+    }
+
+    // Synthetic path
     this.initContext();
     if (this.ctx && this.ctx.state === "suspended") {
       this.ctx.resume().catch(() => {});
@@ -98,13 +183,21 @@ class PreviewAudioEngine {
     this.nextBeatTime = this.ctx ? this.ctx.currentTime : 0;
     this.currentBeatIndex = Math.floor(this.positionMs / 1000 / beatSec);
 
-    this.startLoop();
+    this.startSyntheticLoop();
     this.notify();
   }
 
   public pause() {
+    if (isTauri && this.loadedTrackId) {
+      this.isPlaying = false;
+      this.stopNativePoll();
+      audioPause().catch((e) => console.warn("Native audio_pause failed:", e));
+      this.notify();
+      return;
+    }
+
     this.isPlaying = false;
-    this.stopLoop();
+    this.stopSyntheticLoop();
     this.notify();
   }
 
@@ -118,17 +211,27 @@ class PreviewAudioEngine {
 
   public stop() {
     this.isPlaying = false;
-    this.stopLoop();
+    this.stopSyntheticLoop();
+    this.stopNativePoll();
     this.positionMs = 0;
     this.currentBeatIndex = 0;
+    if (isTauri && this.loadedTrackId) {
+      audioPause().catch(() => {});
+    }
     this.notify();
   }
 
   public seek(targetMs: number) {
-    this.positionMs = Math.max(0, Math.min(targetMs, this.durationMs));
+    const clamped = Math.max(0, Math.min(targetMs, this.durationMs));
+    this.positionMs = clamped;
     const beatSec = 60 / this.bpm;
     this.currentBeatIndex = Math.floor(this.positionMs / 1000 / beatSec);
-    this.playScrubTick();
+
+    if (isTauri && this.loadedTrackId) {
+      audioSeek(clamped).catch((e) => console.warn("Native audio_seek failed:", e));
+    } else {
+      this.playScrubTick();
+    }
     this.notify();
   }
 
@@ -149,6 +252,11 @@ class PreviewAudioEngine {
     if (this.masterGain && !this.isMuted) {
       this.masterGain.gain.setValueAtTime(this.volume, this.ctx?.currentTime ?? 0);
     }
+    if (isTauri && this.loadedTrackId) {
+      audioSetVolume(this.isMuted ? 0 : this.volume).catch((e) =>
+        console.warn("Native audio_set_volume failed:", e)
+      );
+    }
     this.notify();
   }
 
@@ -157,11 +265,55 @@ class PreviewAudioEngine {
     if (this.masterGain) {
       this.masterGain.gain.setValueAtTime(muted ? 0 : this.volume, this.ctx?.currentTime ?? 0);
     }
+    if (isTauri && this.loadedTrackId) {
+      audioSetVolume(muted ? 0 : this.volume).catch((e) =>
+        console.warn("Native audio_set_volume failed:", e)
+      );
+    }
     this.notify();
   }
 
-  private startLoop() {
-    this.stopLoop();
+  // --- Native polling loop ----------------------------------------------
+
+  private nativePollId: number | null = null;
+
+  private startNativePoll() {
+    this.stopNativePoll();
+    const poll = async () => {
+      if (!this.isPlaying) return;
+      try {
+        const s = await audioState();
+        this.positionMs = Math.min(s.positionMs, this.durationMs);
+        if (!s.playing && s.positionMs >= this.durationMs) {
+          this.isPlaying = false;
+          this.stopNativePoll();
+        } else if (!s.playing) {
+          // Engine paused underneath us (e.g. track ended). Reflect it.
+          this.isPlaying = false;
+          this.stopNativePoll();
+        }
+        this.notify();
+      } catch (e) {
+        console.warn("Native audio_state poll failed:", e);
+      }
+      if (this.isPlaying) {
+        this.nativePollId = requestAnimationFrame(poll);
+      }
+    };
+    this.nativePollId = requestAnimationFrame(poll);
+  }
+
+  private stopNativePoll() {
+    if (this.nativePollId !== null) {
+      cancelAnimationFrame(this.nativePollId);
+      this.nativePollId = null;
+    }
+  }
+
+  // --- Synthetic Web Audio loop (non-Tauri) -----------------------------
+
+  private startSyntheticLoop() {
+    this.stopSyntheticLoop();
     const tick = () => {
       if (!this.isPlaying) return;
 
@@ -187,7 +339,7 @@ class PreviewAudioEngine {
     this.timerId = requestAnimationFrame(tick);
   }
 
-  private stopLoop() {
+  private stopSyntheticLoop() {
     if (this.timerId !== null) {
       cancelAnimationFrame(this.timerId);
       this.timerId = null;
