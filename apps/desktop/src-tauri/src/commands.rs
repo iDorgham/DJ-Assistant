@@ -402,10 +402,23 @@ pub async fn get_waveform_peaks(
         .unwrap_or_else(|_| std::path::PathBuf::from("peaks"));
     let _ = std::fs::create_dir_all(&cache_dir);
 
-    let cache_key = file_hash
-        .clone()
-        .unwrap_or_else(|| request.track_id.clone());
-    let cache_file = cache_dir.join(format!("{}.json", cache_key));
+    // The stored fingerprint covers length + the first 1 MiB only
+    // (`crates/core/src/fingerprint.rs`), which is deliberately not an
+    // integrity check: a same-size in-place edit after that window keeps the
+    // old hash and would keep serving the old waveform from disk. Peaks are
+    // derived data, so the key is re-fingerprinted from the file on disk —
+    // one MiB read against a full decode, and a changed file gets a new key
+    // by construction. An unreadable file falls back to the previous key.
+    let cache_key = dj_assistant_core::compute_file_fingerprint(&file_path).unwrap_or_else(|_| {
+        file_hash
+            .clone()
+            .unwrap_or_else(|| request.track_id.clone())
+    });
+    // Peaks are derived data, so anything written by an older generator must not be served
+    // after the binning changes. Versioning the filename makes stale entries unreachable
+    // while leaving the user's existing cache files on disk untouched.
+    const PEAKS_CACHE_VERSION: &str = "v2";
+    let cache_file = cache_dir.join(format!("{}-{}.json", PEAKS_CACHE_VERSION, cache_key));
 
     if let Ok(raw) = std::fs::read_to_string(&cache_file) {
         if let Ok(cached) = serde_json::from_str::<GetWaveformPeaksResponse>(&raw) {
@@ -432,23 +445,22 @@ pub async fn get_waveform_peaks(
     const BINS: usize = 4000;
     let mut peaks = vec![0.0f32; BINS];
     let frames = mono.len();
-    if frames > 0 {
-        let bin_size = frames.div_ceil(BINS);
-        for (i, peak) in peaks.iter_mut().enumerate() {
-            let start = i * bin_size;
-            if start >= frames {
-                break;
+    for (i, peak) in peaks.iter_mut().enumerate() {
+        // Bin `i` owns [i * frames / BINS, (i + 1) * frames / BINS). A fixed
+        // `frames.div_ceil(BINS)` stride stops short of `frames` when the stride does not
+        // divide it evenly, which left the tail bins at zero and cut the waveform before the
+        // real duration. Proportional edges cover every frame and keep every bin non-empty
+        // while `frames >= BINS`; below that the empty bins are legitimately zero.
+        let start = (i as u128 * frames as u128 / BINS as u128) as usize;
+        let end = ((i as u128 + 1) * frames as u128 / BINS as u128) as usize;
+        let mut max_abs: f32 = 0.0;
+        for sample in &mono[start..end] {
+            let a = sample.abs();
+            if a > max_abs {
+                max_abs = a;
             }
-            let end = (start + bin_size).min(frames);
-            let mut max_abs: f32 = 0.0;
-            for sample in &mono[start..end] {
-                let a = sample.abs();
-                if a > max_abs {
-                    max_abs = a;
-                }
-            }
-            *peak = max_abs;
         }
+        *peak = max_abs;
     }
 
     let response = GetWaveformPeaksResponse {
