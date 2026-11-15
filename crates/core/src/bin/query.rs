@@ -690,12 +690,14 @@ fn run_list(
 ) -> Result<(), String> {
     check_schema(conn, args, available)?;
 
+    // The CLI has no source flag yet, so the query keeps the default (All
+    // Library) source instead of narrowing to a category or folder.
     let query = TrackQuery {
         query: args.query.clone(),
         filters: args.filters.clone(),
         sort_by: args.sort_by.clone(),
         sort_dir: args.sort_dir.clone(),
-        ..TrackQuery::default()
+        ..Default::default()
     };
 
     let built = query
