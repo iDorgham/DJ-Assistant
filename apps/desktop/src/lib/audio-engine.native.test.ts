@@ -153,7 +153,7 @@ test("native loading discards stale continuations, gates play, restores volume",
 test("native stop rewinds, and a newer seek discards the deferred rewind", async () => {
   Object.assign(globalThis, { window: { __TAURI_INTERNALS__: {} } });
   const calls: { command: string; args: Record<string, unknown> }[] = [];
-  const pauses: ReturnType<typeof deferred<void>>[] = [];
+  const pauses: ReturnType<typeof deferred<null>>[] = [];
   mockIPC((command, args) => {
     const payload = args as Record<string, unknown>;
     calls.push({ command, args: payload });
@@ -167,16 +167,16 @@ test("native stop rewinds, and a newer seek discards the deferred rewind", async
   calls.length = 0;
   const seeks = () => calls.filter((c) => c.command === "audio_seek").map((c) => c.args.ms);
 
-  pauses.push(deferred<void>());
+  pauses.push(deferred<null>());
   engine.stop();
   engine.seek(12000); // newer transport command, issued while the pause is in flight
-  pauses[0].resolve();
+  pauses[0].resolve(null);
   await flush();
   assert.deepEqual(seeks(), [12000], "the deferred rewind must not overwrite the newer seek");
 
-  pauses.push(deferred<void>());
+  pauses.push(deferred<null>());
   engine.stop();
-  pauses[0].resolve();
+  pauses[0].resolve(null);
   await flush();
   assert.deepEqual(seeks(), [12000, 0], "an undisrupted stop still rewinds");
 });

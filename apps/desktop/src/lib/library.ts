@@ -450,12 +450,6 @@ export function truncateComment(comment: string | null | undefined, maxLength = 
 
 /** Percentage 0-100 for the scan progress bar; 25 while the total is unknown. */
 /**
- * Whether a freshly scanned track belongs to the source currently selected in
- * the Browser sidebar. Mirrors the SQL predicates in library_query.rs: a
- * category is a folded genre equality, a folder is a slash-normalised, folded
- * prefix, and playlist/storage have no backing model yet.
- */
-/**
  * Case-fold the way SQLite's LOWER() does: ASCII only, so a folder chip
  * and the SQL folder predicate never disagree on non-ASCII text.
  */
@@ -463,6 +457,12 @@ function asciiFold(value: string): string {
   return value.replace(/[A-Z]/g, (c) => c.toLowerCase());
 }
 
+/**
+ * Whether a freshly scanned track belongs to the source currently selected in
+ * the Browser sidebar. Mirrors the SQL predicates in library_query.rs: a
+ * category is a folded genre equality, a folder is a slash-normalised, folded
+ * prefix, and playlist/storage have no backing model yet.
+ */
 export function trackMatchesSource(
   track: Pick<TrackSummary, "filePath" | "genre">,
   source: string | null | undefined,
