@@ -167,6 +167,7 @@ import { nextTheme, resolveTheme, THEME_LABELS } from "./lib/theme";
 import { PreviewPlayer } from "./components/preview-player";
 import { ModalShell } from "./components/ModalShell";
 import { ArtworkThumb } from "./components/ArtworkThumb";
+import { MixSuggestionsDock } from "./components/MixSuggestionsDock";
 import { TrackPanel } from "./components/track-panel/TrackPanel";
 import { BulkActionBar } from "./components/BulkActionBar";
 import { ColumnPicker } from "./components/ColumnPicker";
@@ -1298,6 +1299,7 @@ export default function App() {
 
   // Chart snapshots Tier 1 (TD.3): versioned data with local taste filtering.
   const [chartsOpen, setChartsOpen] = useState(false);
+  const [mixSuggestionsOpen, setMixSuggestionsOpen] = useState(false);
   dialogsOpenRef.current =
     healthOpen || chartsOpen || removedOpen || editorTrack !== null || removeConfirm !== null;
   const [chartGenre, setChartGenre] = useState("techno");
@@ -2684,6 +2686,16 @@ export default function App() {
             <>
               {/* Main Content Area */}
               <div className="relative flex min-h-0 flex-1 flex-col overflow-hidden">
+                {mixSuggestionsOpen && (
+                  <MixSuggestionsDock
+                    seedTrack={visibleSelectedTrack ?? inspectedTrack ?? playingTrack}
+                    onPlay={handlePlayTrack}
+                    onAdd={(track) =>
+                      setSelection((prev) => (prev.includes(track.id) ? prev : [...prev, track.id]))
+                    }
+                    onClose={() => setMixSuggestionsOpen(false)}
+                  />
+                )}
                 {/* Library source tabs (T2.1.12) */}
                 <div className="flex shrink-0 items-center gap-1 border-b border-dj-border bg-dj-panel px-3 py-1">
                   {(["all", "category", "folder", "playlist", "storage"] as const).map((tab) => (
@@ -2801,6 +2813,19 @@ export default function App() {
                   >
                     <Sparkles className={`h-3.5 w-3.5 ${analyzing ? "animate-pulse" : ""}`} />
                     <span>{analyzing ? "Analyzing…" : "Analyze"}</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setMixSuggestionsOpen((open) => !open)}
+                    className={`flex h-6 items-center gap-1 rounded-sm border px-2 text-[11px] transition ${
+                      mixSuggestionsOpen
+                        ? "border-dj-accent/40 bg-dj-accent/10 text-dj-accent"
+                        : "border-dj-border bg-dj-elevated text-dj-text-secondary hover:bg-dj-hover"
+                    }`}
+                    title="Mix suggestions for the selected track"
+                  >
+                    <Sparkles className="h-3.5 w-3.5" />
+                    <span className="hidden sm:inline">Mix</span>
                   </button>
                   <button
                     type="button"
