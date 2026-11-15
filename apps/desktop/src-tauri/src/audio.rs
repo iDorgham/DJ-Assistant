@@ -267,9 +267,9 @@ fn fill_output(data: &mut [f32], inner_arc: &Arc<Mutex<Inner>>) {
     let volume = inner.volume;
     let mut pos = inner.cursor;
 
+    let mut frames_written = 0usize;
     for frame in data.chunks_mut(out_ch) {
         if pos >= total {
-            frame.fill(0.0);
             inner.playing = false;
             pos = total;
             break;
@@ -290,6 +290,10 @@ fn fill_output(data: &mut [f32], inner_arc: &Arc<Mutex<Inner>>) {
             }
         }
         pos += ratio;
+        frames_written += 1;
     }
+    // cpal does not guarantee a zeroed buffer: clear every frame the source ran
+    // out of, or the tail replays samples from the previous callback.
+    data[frames_written * out_ch..].fill(0.0);
     inner.cursor = pos.min(total);
 }

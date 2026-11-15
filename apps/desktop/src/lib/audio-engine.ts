@@ -290,16 +290,23 @@ class PreviewAudioEngine {
     this.currentBeatIndex = 0;
     if (isTauri && this.loadedTrackId) {
       // Pause first, then rewind: a stopped transport must not keep playing from
-      // the top, and so the next Play starts at the beginning.
+      // the top, and so the next Play starts at the beginning. The generation
+      // check discards this rewind when a newer transport command (seek, play)
+      // has been dispatched while the pause was still in flight.
+      const generation = this.pollGeneration;
       audioPause()
         .catch((e) => console.warn("Native audio_pause failed:", e))
-        .then(() => audioSeek(0))
-        .catch((e) => console.warn("Native audio_seek failed:", e));
+        .then(() => {
+          if (generation !== this.pollGeneration) return undefined;
+          return audioSeek(0).catch((e) => console.warn("Native audio_seek failed:", e));
+        });
     }
     this.notify();
   }
 
   public seek(targetMs: number) {
+    // A seek is newer than any in-flight stop: it invalidates the deferred rewind.
+    this.pollGeneration += 1;
     const clamped = Math.max(0, Math.min(targetMs, this.durationMs));
     this.positionMs = clamped;
     const beatSec = 60 / this.bpm;
