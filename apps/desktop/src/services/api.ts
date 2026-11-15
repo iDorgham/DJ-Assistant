@@ -105,6 +105,27 @@ export async function getArtwork(req: GetArtworkRequest): Promise<GetArtworkResp
   return invoke<GetArtworkResponse>("get_artwork", { request: req });
 }
 
+export interface GetWaveformPeaksRequest {
+  trackId: string;
+}
+
+export interface GetWaveformPeaksResponse {
+  peaks: number[];
+  durationMs: number;
+  sampleRate: number;
+  isReal: boolean;
+}
+
+export async function getWaveformPeaks(
+  req: GetWaveformPeaksRequest
+): Promise<GetWaveformPeaksResponse> {
+  if (!isTauri) {
+    return { peaks: [], durationMs: 0, sampleRate: 0, isReal: false };
+  }
+  const { invoke } = await import("@tauri-apps/api/core");
+  return invoke<GetWaveformPeaksResponse>("get_waveform_peaks", { request: req });
+}
+
 /**
  * Patches user-assigned metadata (rating, energy) on one or more tracks.
  *

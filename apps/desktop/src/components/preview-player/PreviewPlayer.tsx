@@ -20,6 +20,7 @@ import {
   type WaveformData,
   type HotCueData,
 } from "../../lib/waveform-generator";
+import { getWaveformPeaks } from "../../services/api";
 import { previewEngine, type PlaybackState } from "../../lib/audio-engine";
 import { RATING_WIDGET_ATTRIBUTE, playerHotCueSlot } from "../../lib/rating-keys";
 import { DetailedWaveform } from "./DetailedWaveform";
@@ -132,6 +133,20 @@ export function PreviewPlayer({
 
     const generated = getOrGenerateWaveform(trackId, duration, baseBpm, trackFileHash || trackId);
     setWaveform(generated);
+    // Upgrade to real peaks when the backend can decode the file (T2.4.1).
+    getWaveformPeaks({ trackId })
+      .then((res) => {
+        if (res.isReal && res.peaks.length > 0) {
+          setWaveform((current) =>
+            current
+              ? { ...current, peaks: new Float32Array(res.peaks), isEstimated: false }
+              : current
+          );
+        }
+      })
+      .catch(() => {
+        // Keep the synthesized waveform on failure.
+      });
     setZoomLevel(DEFAULT_ZOOM_LEVEL);
     setFollowPlayhead(true);
     setTempCueMs(0);

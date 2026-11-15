@@ -154,6 +154,21 @@ pub struct ListGenresResponse {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
+pub struct GetWaveformPeaksRequest {
+    pub track_id: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct GetWaveformPeaksResponse {
+    pub peaks: Vec<f32>,
+    pub duration_ms: u64,
+    pub sample_rate: u32,
+    pub is_real: bool,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct ListTracksResponse {
     pub tracks: Vec<TrackSummary>,
     pub total: usize,

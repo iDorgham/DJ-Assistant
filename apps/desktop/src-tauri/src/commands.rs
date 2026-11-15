@@ -26,12 +26,13 @@ use crate::db::Database;
 use crate::models::{
     AnalyzeLibraryRequest, AnalyzeLibraryResponse, CuePoint, FindSimilarTracksRequest,
     FindSimilarTracksResponse, GenreCount, GetArtworkRequest, GetTrackRequest, GetTrackResponse,
-    ListGenresResponse, ListRemovedTracksResponse, ListTracksRequest, ListTracksResponse,
-    ProviderAccount, ProviderCapability, ProviderStatusResponse, RemoveTracksRequest,
-    RemoveTracksResponse, RemovedTrack, RestoreTracksRequest, RestoreTracksResponse,
-    RevealInFileManagerRequest, ScanFolderRequest, ScanFolderResponse, SetTrackRatingRequest,
-    SetTrackRatingResponse, SimilarTrackResult, StoreLink, StoreLinksRequest, StoreLinksResponse,
-    TagHealthRequest, TagHealthResponse, TagHealthTotals, TrackDetail, TrackGaps, TrackSummary,
+    GetWaveformPeaksRequest, GetWaveformPeaksResponse, ListGenresResponse,
+    ListRemovedTracksResponse, ListTracksRequest, ListTracksResponse, ProviderAccount,
+    ProviderCapability, ProviderStatusResponse, RemoveTracksRequest, RemoveTracksResponse,
+    RemovedTrack, RestoreTracksRequest, RestoreTracksResponse, RevealInFileManagerRequest,
+    ScanFolderRequest, ScanFolderResponse, SetTrackRatingRequest, SetTrackRatingResponse,
+    SimilarTrackResult, StoreLink, StoreLinksRequest, StoreLinksResponse, TagHealthRequest,
+    TagHealthResponse, TagHealthTotals, TrackDetail, TrackGaps, TrackSummary,
     UndoRemoveTracksRequest, UndoRemoveTracksResponse, UndoTrackMetadataRequest,
     UndoTrackMetadataResponse, UpdateTrackMetadataRequest, UpdateTrackMetadataResponse,
 };
@@ -371,6 +372,96 @@ pub async fn get_artwork(
     let mime = mime.unwrap_or_else(|| "image/jpeg".to_string());
     let encoded = base64::engine::general_purpose::STANDARD.encode(bytes);
     Ok(Some(format!("data:{mime};base64,{encoded}")))
+}
+
+/// Decodes an audio file and returns normalized amplitude peaks, cached on
+/// disk by the track's content hash so a track is only decoded once.
+#[tauri::command]
+pub async fn get_waveform_peaks(
+    app: AppHandle,
+    db: State<'_, Arc<Mutex<Database>>>,
+    request: GetWaveformPeaksRequest,
+) -> Result<GetWaveformPeaksResponse, String> {
+    let (file_path, file_hash) = {
+        let db_guard = db.lock().map_err(|e| e.to_string())?;
+        let conn = db_guard.conn();
+        let mut stmt = conn
+            .prepare("SELECT file_path, file_hash FROM tracks WHERE id = ?1")
+            .map_err(|e| e.to_string())?;
+        stmt.query_row([&request.track_id], |row| {
+            Ok((row.get::<_, String>(0)?, row.get::<_, Option<String>>(1)?))
+        })
+        .map_err(|e| format!("Track not found: {}", e))?
+    };
+
+    let cache_dir = app
+        .path()
+        .app_data_dir()
+        .map(|dir| dir.join("peaks"))
+        .unwrap_or_else(|_| std::path::PathBuf::from("peaks"));
+    let _ = std::fs::create_dir_all(&cache_dir);
+
+    let cache_key = file_hash
+        .clone()
+        .unwrap_or_else(|| request.track_id.clone());
+    let cache_file = cache_dir.join(format!("{}.json", cache_key));
+
+    if let Ok(raw) = std::fs::read_to_string(&cache_file) {
+        if let Ok(cached) = serde_json::from_str::<GetWaveformPeaksResponse>(&raw) {
+            return Ok(cached);
+        }
+    }
+
+    let decoded = match dj_assistant_analysis::decode_audio_file(&file_path) {
+        Ok(d) => d,
+        Err(_) => {
+            return Ok(GetWaveformPeaksResponse {
+                peaks: Vec::new(),
+                duration_ms: 0,
+                sample_rate: 0,
+                is_real: false,
+            });
+        }
+    };
+
+    let sample_rate = decoded.sample_rate;
+    let duration_ms = (decoded.duration_seconds * 1000.0).round() as u64;
+    let mono = decoded.to_mono();
+
+    const BINS: usize = 4000;
+    let mut peaks = vec![0.0f32; BINS];
+    let frames = mono.len();
+    if frames > 0 {
+        let bin_size = frames.div_ceil(BINS);
+        for (i, peak) in peaks.iter_mut().enumerate() {
+            let start = i * bin_size;
+            if start >= frames {
+                break;
+            }
+            let end = (start + bin_size).min(frames);
+            let mut max_abs: f32 = 0.0;
+            for sample in &mono[start..end] {
+                let a = sample.abs();
+                if a > max_abs {
+                    max_abs = a;
+                }
+            }
+            *peak = max_abs;
+        }
+    }
+
+    let response = GetWaveformPeaksResponse {
+        peaks,
+        duration_ms,
+        sample_rate,
+        is_real: true,
+    };
+
+    if let Ok(serialized) = serde_json::to_string(&response) {
+        let _ = std::fs::write(&cache_file, serialized);
+    }
+
+    Ok(response)
 }
 
 #[tauri::command]

@@ -67,6 +67,7 @@ pub fn run() {
             commands::list_genres,
             commands::get_track,
             commands::get_artwork,
+            commands::get_waveform_peaks,
             commands::analyze_library,
             commands::find_similar_tracks,
             commands::track_tag_health,
