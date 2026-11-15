@@ -455,6 +455,14 @@ export function truncateComment(comment: string | null | undefined, maxLength = 
  * category is a folded genre equality, a folder is a slash-normalised, folded
  * prefix, and playlist/storage have no backing model yet.
  */
+/**
+ * Case-fold the way SQLite's LOWER() does: ASCII only, so a folder chip
+ * and the SQL folder predicate never disagree on non-ASCII text.
+ */
+function asciiFold(value: string): string {
+  return value.replace(/[A-Z]/g, (c) => c.toLowerCase());
+}
+
 export function trackMatchesSource(
   track: Pick<TrackSummary, "filePath" | "genre">,
   source: string | null | undefined,
@@ -462,21 +470,25 @@ export function trackMatchesSource(
 ): boolean {
   if (!source || source === "all") return true;
   const id = sourceId?.trim();
-  if (!id) return true;
   switch (source) {
     case "category": {
-      const genre = (track.genre ?? "").trim().toLowerCase();
-      return genre !== "" && genre === id.toLowerCase();
+      // An unset id means "the whole category source", like the SQL branch.
+      if (!id) return true;
+      const genre = asciiFold((track.genre ?? "").trim());
+      return genre !== "" && genre === asciiFold(id);
     }
     case "folder": {
-      const normalized = track.filePath.replace(/\\/g, "/").toLowerCase();
-      let folder = id.replace(/\\/g, "/").toLowerCase();
+      if (!id) return true;
+      const normalized = asciiFold(track.filePath.replace(/\\/g, "/"));
+      let folder = asciiFold(id.replace(/\\/g, "/"));
       while (folder.length > 1 && folder.endsWith("/")) folder = folder.slice(0, -1);
       // Root keeps its single slash, exactly like the SQL pattern (/%).
       if (folder === "/") return normalized.startsWith("/");
       return normalized.startsWith(`${folder}/`);
     }
     default:
+      // playlist/storage have no model yet: they match nothing, with or
+      // without an id, exactly like the backend's 1 = 0 branch.
       return false;
   }
 }

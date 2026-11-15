@@ -103,7 +103,7 @@ jobs:
         run: |
           cargo fmt --all --check
           cargo clippy --all-targets -- -D warnings
-          cargo test
+          cargo test --features dj-assistant-core/cli
 
   desktop-build:
     name: Desktop Build (macOS + Windows)

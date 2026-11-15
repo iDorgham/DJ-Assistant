@@ -260,8 +260,8 @@ pub async fn list_folders(
     let paths: Vec<String> = stmt
         .query_map([], |row| row.get::<_, String>(0))
         .map_err(|e| e.to_string())?
-        .flatten()
-        .collect();
+        .collect::<Result<Vec<String>, _>>()
+        .map_err(|e| e.to_string())?;
 
     let folders = folder_counts_from_paths(paths)
         .into_iter()

@@ -512,5 +512,7 @@ test("trackMatchesSource: folder normalises separators, case, and trailing slash
 test("trackMatchesSource: playlist and storage match nothing until they have a model", () => {
   for (const source of ["playlist", "storage"]) {
     assert.equal(trackMatchesSource(track(), source, "anything"), false);
+    assert.equal(trackMatchesSource(track(), source, null), false);
+    assert.equal(trackMatchesSource(track(), source, undefined), false);
   }
 });

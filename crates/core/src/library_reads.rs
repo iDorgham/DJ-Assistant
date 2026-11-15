@@ -100,7 +100,9 @@ pub fn folder_counts_from_paths(paths: impl IntoIterator<Item = String>) -> Vec<
         let Some(folder) = folder_of_path(&path) else {
             continue;
         };
-        let entry = folded.entry(folder.to_lowercase());
+        // ASCII-only fold to mirror the SQL selector's LOWER(): SQLite does
+        // not case-fold non-ASCII, so the chip list and the query must agree.
+        let entry = folded.entry(folder.to_ascii_lowercase());
         match entry {
             std::collections::btree_map::Entry::Occupied(mut occupied) => {
                 let (representative, count) = occupied.get_mut();

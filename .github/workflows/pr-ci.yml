@@ -117,7 +117,7 @@ jobs:
       - name: test
         # Portable subset: skips desktop integration tests that require
         # a full Tauri/WebKit stack. Keeps CI fast on ubuntu-latest.
-        run: cargo test -p dj-assistant-core -p dj-assistant-analysis -p dj-assistant-schema-tests
+        run: cargo test -p dj-assistant-core -p dj-assistant-analysis -p dj-assistant-schema-tests --features dj-assistant-core/cli
 
   desktop-build:
     name: Desktop Build (macOS + Windows)
