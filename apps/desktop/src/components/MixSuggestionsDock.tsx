@@ -9,6 +9,13 @@ const STORAGE_KEY = "dj-assistant.mix-suggestions.width.v1";
 const DEFAULT_WIDTH = 320;
 const MIN_WIDTH = 240;
 const MAX_WIDTH = 520;
+/** Arrow-key step, the same one the player's height splitter uses. */
+const KEYBOARD_STEP = 16;
+
+/** Every width the dock accepts — dragged, keyed, or loaded from storage. */
+function clampWidth(width: number): number {
+  return Math.min(MAX_WIDTH, Math.max(MIN_WIDTH, Math.round(width)));
+}
 
 function loadWidth(): number {
   try {
@@ -16,7 +23,7 @@ function loadWidth(): number {
     if (!raw) return DEFAULT_WIDTH;
     const n = Number(raw);
     if (!Number.isFinite(n)) return DEFAULT_WIDTH;
-    return Math.min(MAX_WIDTH, Math.max(MIN_WIDTH, Math.round(n)));
+    return clampWidth(n);
   } catch {
     return DEFAULT_WIDTH;
   }
@@ -96,6 +103,27 @@ export function MixSuggestionsDock({
     draggingRef.current = false;
   };
 
+  const resetWidth = () => setWidth(DEFAULT_WIDTH);
+
+  // The dock is anchored to the right edge, so growing it moves the handle
+  // left: ArrowLeft widens, exactly what dragging left does. That is the
+  // WAI-ARIA window-splitter model — the splitter follows the arrow, not the
+  // value — so the keys stay consistent with the pointer.
+  const onSplitterKeyDown = (event: React.KeyboardEvent<HTMLDivElement>) => {
+    if (event.key === "ArrowLeft" || event.key === "ArrowRight") {
+      event.preventDefault();
+      const delta = event.key === "ArrowLeft" ? KEYBOARD_STEP : -KEYBOARD_STEP;
+      setWidth((current) => clampWidth(current + delta));
+      return;
+    }
+    // Enter and Space repeat the double-click reset, so the whole splitter
+    // contract is reachable without a pointer.
+    if (event.key === "Enter" || event.key === " ") {
+      event.preventDefault();
+      resetWidth();
+    }
+  };
+
   return (
     <aside
       className="absolute right-0 top-0 z-20 flex h-full shrink-0 flex-col border-l border-dj-border bg-dj-panel shadow-2xl"
@@ -103,14 +131,24 @@ export function MixSuggestionsDock({
       aria-label="Mix suggestions"
     >
       <div
-        className="absolute left-0 top-0 h-full w-1 cursor-col-resize hover:bg-dj-accent/40"
+        className="absolute left-0 top-0 h-full w-1 cursor-col-resize hover:bg-dj-accent/40 focus-visible:bg-dj-accent/40 focus-visible:ring-1 focus-visible:ring-dj-accent focus-visible:outline-hidden"
         onPointerDown={startDrag}
         onPointerMove={onPointerMove}
         onPointerUp={endDrag}
         onPointerCancel={endDrag}
+        onKeyDown={onSplitterKeyDown}
+        onDoubleClick={resetWidth}
         role="separator"
         aria-orientation="vertical"
         aria-label="Resize mix suggestions dock"
+        // A focusable separator carries the slider value attributes, so the
+        // current width is announced instead of the handle being a mystery.
+        aria-valuenow={width}
+        aria-valuemin={MIN_WIDTH}
+        aria-valuemax={MAX_WIDTH}
+        aria-valuetext={`${width} pixels`}
+        tabIndex={0}
+        title="Drag or use ←/→ to resize · Double-click or Enter to reset"
       >
         <GripVertical className="sr-only" />
       </div>

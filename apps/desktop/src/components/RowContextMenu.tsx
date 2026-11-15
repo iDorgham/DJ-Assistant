@@ -19,10 +19,10 @@ import {
   Waves,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
+import { columnDefinition } from "../lib/library-columns";
 import type { ColumnId, ColumnState } from "../lib/library-columns";
 import {
   clampMenuPosition,
-  columnMenuLabel,
   isDisabled,
   itemTooltip,
   MENU_LAYOUT,
@@ -323,7 +323,7 @@ export function RowContextMenu({
           {columnList.map((col) => {
             const canHide = canHideColumnFn ? canHideColumnFn(columnList, col.id) : true;
             const colDisabled = col.visible && !canHide;
-            const colLabel = columnMenuLabel(col.id);
+            const colLabel = columnDefinition(col.id).label;
             return (
               <button
                 key={col.id}

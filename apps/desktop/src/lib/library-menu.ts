@@ -10,8 +10,27 @@
  * selection rather than the row under the pointer.
  */
 
-/** Gap the menu keeps from the viewport edge when it flips away from the cursor. */
+/** Smallest gap the menu keeps from a viewport edge once it has flipped. */
 export const MENU_VIEWPORT_MARGIN = 8;
+
+/**
+ * One axis of `clampMenuPosition`.
+ *
+ * A menu that fits where the cursor is stays there. One that would run off the
+ * edge opens *towards* the cursor instead — and that flipped position is bounded
+ * too: flipping alone can still leave the panel flush against the far edge
+ * (`x - width` with the cursor near the start) or, with the cursor on the edge
+ * itself, hanging a full margin past the viewport.
+ *
+ * When the panel is larger than the viewport the upper bound falls below the
+ * margin; the margin then wins, so the panel starts at the edge with its
+ * breathing room intact rather than at zero.
+ */
+function clampAxis(position: number, size: number, viewport: number, margin: number): number {
+  if (position + size + margin <= viewport) return position;
+  const limit = Math.max(margin, viewport - size - margin);
+  return Math.min(Math.max(position - size, margin), limit);
+}
 
 /**
  * Where the menu's top-left corner lands.
@@ -30,15 +49,10 @@ export function clampMenuPosition(
   viewportHeight: number,
   margin = MENU_VIEWPORT_MARGIN
 ): { left: number; top: number } {
-  let left = x;
-  let top = y;
-  if (left + width + margin > viewportWidth) {
-    left = Math.max(margin, x - width);
-  }
-  if (top + height + margin > viewportHeight) {
-    top = Math.max(margin, y - height);
-  }
-  return { left, top };
+  return {
+    left: clampAxis(x, width, viewportWidth, margin),
+    top: clampAxis(y, height, viewportHeight, margin),
+  };
 }
 
 /** The 0–5 rating the menu renders: `null` reads as unrated, and out-of-range values clamp. */
@@ -59,13 +73,6 @@ export function starClickRating(
   star: 1 | 2 | 3 | 4 | 5
 ): 0 | 1 | 2 | 3 | 4 | 5 {
   return menuRating(current) === star ? 0 : star;
-}
-
-/** The label a column toggle shows. `index` and `artwork` are the two ids whose names differ. */
-export function columnMenuLabel(id: string): string {
-  if (id === "index") return "#";
-  if (id === "artwork") return "Art";
-  return id.charAt(0).toUpperCase() + id.slice(1);
 }
 
 export interface BlockedAction {
