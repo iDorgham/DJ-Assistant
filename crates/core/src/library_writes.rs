@@ -161,6 +161,10 @@ impl MetadataPatch {
     }
 
     /// Rejects values the columns cannot hold, before anything is written.
+    ///
+    /// An empty patch is **not** one of them: an unchanged save is a no-op the
+    /// write path reports with zero changed tracks, not an error. The renderer
+    /// turns that zero into `Metadata unchanged — nothing to save`.
     pub fn validate(&self) -> Result<(), String> {
         if let Some(rating) = self.rating {
             if !(0..=MAX_TRACK_RATING).contains(&rating) {
@@ -186,13 +190,13 @@ impl MetadataPatch {
                 }
             }
         }
-        if self.is_empty() {
-            return Err("nothing to update".to_string());
-        }
         Ok(())
     }
 
     /// True when the patch would not touch a single column or tag.
+    ///
+    /// A patch that reports empty still validates — the caller writes nothing
+    /// and counts nothing, which is the no-op the editor reports.
     pub fn is_empty(&self) -> bool {
         PATCH_COLUMNS
             .iter()
@@ -735,7 +739,15 @@ mod tests {
         }
         .validate()
         .is_err());
-        assert!(MetadataPatch::default().validate().is_err());
+    }
+
+    #[test]
+    fn an_empty_patch_validates_as_a_no_op() {
+        // B4: the editor sends an all-absent patch when the user saves without
+        // changing anything. Rejecting it made the write path report a failure,
+        // so the renderer's "nothing to save" line was unreachable. It is a
+        // no-op instead: the executor writes zero tracks.
+        assert!(MetadataPatch::default().validate().is_ok());
     }
 
     #[test]
