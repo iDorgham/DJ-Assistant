@@ -74,6 +74,8 @@ test("native loading discards stale continuations, gates play, restores volume",
     false
   );
   engine.play();
+  await flush();
+  assert.equal(calls.filter((c) => c.command === "audio_play").length, 1);
   const poll = frames.values().next().value!;
   frames.clear();
   poll(0);

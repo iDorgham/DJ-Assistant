@@ -1,3 +1,4 @@
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex};
 
 use cpal::traits::{DeviceTrait, HostTrait, StreamTrait};
@@ -31,13 +32,16 @@ struct Inner {
     stream: Option<cpal::Stream>,
     out_rate: u32,
     out_channels: usize,
-    /// Set by the stream's error callback when the device fails or is
-    /// unplugged: the retained stream is dead and must be rebuilt, not resumed.
-    stream_failed: bool,
 }
 
 pub struct AudioEngine {
     inner: Arc<Mutex<Inner>>,
+    /// Set by the stream's error callback when the device fails or is
+    /// unplugged: the retained stream is dead and must be rebuilt, not
+    /// resumed. Lock-free because the callback can fire while `play` holds
+    /// the engine mutex across `stream.play` — a try_lock there would drop
+    /// the only failure signal.
+    stream_failed: Arc<AtomicBool>,
 }
 
 impl AudioEngine {
@@ -54,8 +58,8 @@ impl AudioEngine {
                 stream: None,
                 out_rate: 44100,
                 out_channels: 2,
-                stream_failed: false,
             })),
+            stream_failed: Arc::new(AtomicBool::new(false)),
         }
     }
 
@@ -68,7 +72,7 @@ impl AudioEngine {
         let stale_stream = {
             let mut inner = self.inner.lock().map_err(|e| e.to_string())?;
             inner.playing = false;
-            inner.stream_failed = false;
+            self.stream_failed.store(false, Ordering::Relaxed);
             inner.src = decoded.samples;
             inner.src_channels = decoded.channels.max(1);
             inner.src_rate = decoded.sample_rate;
@@ -93,13 +97,13 @@ impl AudioEngine {
             if inner.cursor >= total_frames(&inner) {
                 inner.cursor = 0.0;
             }
-            if inner.stream.is_some() && !inner.stream_failed {
+            if inner.stream.is_some() && !self.stream_failed.load(Ordering::Relaxed) {
                 inner.playing = true;
                 return Ok(());
             }
-            inner.stream_failed = false;
             inner.stream.take()
         };
+        self.stream_failed.store(false, Ordering::Relaxed);
         drop(failed_stream);
 
         let mut inner = self.inner.lock().map_err(|e| e.to_string())?;
@@ -122,19 +126,34 @@ impl AudioEngine {
         // stream creation fail on devices whose default output is I16/U16.
         let config = supported.config();
         let stream = match supported.sample_format() {
-            cpal::SampleFormat::F32 => {
-                build_stream::<f32>(&device, config, Arc::clone(&self.inner))
-            }
-            cpal::SampleFormat::I16 => {
-                build_stream::<i16>(&device, config, Arc::clone(&self.inner))
-            }
-            cpal::SampleFormat::U16 => {
-                build_stream::<u16>(&device, config, Arc::clone(&self.inner))
-            }
+            cpal::SampleFormat::F32 => build_stream::<f32>(
+                &device,
+                config,
+                Arc::clone(&self.inner),
+                Arc::clone(&self.stream_failed),
+            ),
+            cpal::SampleFormat::I16 => build_stream::<i16>(
+                &device,
+                config,
+                Arc::clone(&self.inner),
+                Arc::clone(&self.stream_failed),
+            ),
+            cpal::SampleFormat::U16 => build_stream::<u16>(
+                &device,
+                config,
+                Arc::clone(&self.inner),
+                Arc::clone(&self.stream_failed),
+            ),
             other => return Err(format!("unsupported output sample format: {other:?}")),
         }
         .map_err(|e| e.to_string())?;
-        stream.play().map_err(|e| e.to_string())?;
+        if let Err(error) = stream.play() {
+            // Release the lock before dropping the stream: teardown joins the
+            // audio thread, whose callbacks wait on this same mutex.
+            drop(inner);
+            drop(stream);
+            return Err(error.to_string());
+        }
         inner.stream = Some(stream);
         inner.playing = true;
         Ok(())
@@ -193,12 +212,14 @@ fn build_stream<T>(
     device: &cpal::Device,
     config: cpal::StreamConfig,
     inner: Arc<Mutex<Inner>>,
+    stream_failed: Arc<AtomicBool>,
 ) -> Result<cpal::Stream, cpal::Error>
 where
     T: cpal::SizedSample + cpal::FromSample<f32>,
 {
     let data_inner = Arc::clone(&inner);
     let error_inner = Arc::clone(&inner);
+    let error_failed = Arc::clone(&stream_failed);
     let mut scratch: Vec<f32> = Vec::new();
     device.build_output_stream(
         config,
@@ -211,12 +232,13 @@ where
         },
         move |err| {
             log::error!("audio stream error: {}", err);
-            // Never block the audio/error thread on the engine mutex: if the
-            // lock is held, the data callback notices the dead stream itself
-            // and `play` rebuilds it on the next request.
+            // Lock-free flag first: it must survive the engine mutex being
+            // held (play() holds it across stream.play, exactly when a
+            // backend reports its first error here). The transport reset is
+            // best-effort; the flag alone already forces a rebuild.
+            error_failed.store(true, Ordering::Relaxed);
             if let Ok(mut state) = error_inner.try_lock() {
                 state.playing = false;
-                state.stream_failed = true;
             }
         },
         None,

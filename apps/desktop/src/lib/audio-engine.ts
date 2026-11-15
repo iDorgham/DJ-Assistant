@@ -172,6 +172,9 @@ class PreviewAudioEngine {
     this.currentBeatIndex = 0;
 
     if (isTauri && trackId) {
+      // The previous native track stops being resumable the moment a new
+      // load starts: play() must not resume it while the replacement decodes.
+      this.loadedTrackId = null;
       this.pendingNativeLoad = true;
       try {
         const nativeDuration = await audioLoad(trackId);
