@@ -3,6 +3,7 @@ import type {
   ScanFolderResponse,
   ListTracksRequest,
   ListTracksResponse,
+  ListFoldersResponse,
   ListGenresResponse,
   GetTrackRequest,
   GetTrackResponse,
@@ -83,6 +84,18 @@ export async function listGenres(): Promise<ListGenresResponse> {
   }
   const { invoke } = await import("@tauri-apps/api/core");
   return invoke<ListGenresResponse>("list_genres");
+}
+
+/**
+ * Distinct parent folders of the present tracks with counts, for the Browser
+ * source's folder options. Read library-wide, not from the loaded page.
+ */
+export async function listFolders(): Promise<ListFoldersResponse> {
+  if (!isTauri) {
+    return { folders: [] };
+  }
+  const { invoke } = await import("@tauri-apps/api/core");
+  return invoke<ListFoldersResponse>("list_folders");
 }
 
 export async function getTrack(req: GetTrackRequest): Promise<GetTrackResponse> {

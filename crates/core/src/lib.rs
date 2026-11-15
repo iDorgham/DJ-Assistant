@@ -43,8 +43,9 @@ pub use library_query::{
     sort_column, BuiltQuery, QueryError, QueryParam, TrackFilters, TrackQuery, SORT_KEYS,
 };
 pub use library_reads::{
-    analysis_candidates, enrichment_targets, missing_file_paths_sql, present_rows, tag_health_rows,
-    ReadError, ENRICHMENT_TARGET_COLUMNS, GENRE_COUNTS_SQL, OWNED_ISRC_SQL, REMOVED_TRACKS_SQL,
+    analysis_candidates, enrichment_targets, folder_counts_from_paths, folder_of_path,
+    missing_file_paths_sql, present_rows, tag_health_rows, ReadError, ENRICHMENT_TARGET_COLUMNS,
+    GENRE_COUNTS_SQL, OWNED_ISRC_SQL, PRESENT_FILE_PATHS_SQL, REMOVED_TRACKS_SQL,
     SIMILAR_CANDIDATES_SQL, TAG_HEALTH_COLUMNS,
 };
 pub use library_remove::{

@@ -17,6 +17,7 @@ import type {
   EnrichmentProgressEvent,
   EnrichmentProviderKind,
   ChartListResponse,
+  FolderCount,
   GenreCount,
   ListTracksFilters,
   ListTracksSortBy,
@@ -30,6 +31,7 @@ import {
   listTracks,
   getTrack,
   listGenres,
+  listFolders,
   analyzeLibrary,
   listenToAnalysisProgress,
   listenToAnalysisCompleted,
@@ -117,6 +119,7 @@ import {
   projectCompatibleDraftKeys,
   scanPercent,
   toggleFilterValue,
+  trackMatchesSource,
   truncateComment,
 } from "./lib/library";
 import {
@@ -1140,11 +1143,20 @@ export default function App() {
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [filterError, setFilterError] = useState<string | null>(null);
   const [genres, setGenres] = useState<GenreCount[]>([]);
+  const [folders, setFolders] = useState<FolderCount[]>([]);
   // Library source selector (T2.1.12): All Library / Categories / Browser / Playlists / Flash/Storage.
   const [librarySource, setLibrarySource] = useState<
     "all" | "category" | "folder" | "playlist" | "storage"
   >("all");
   const [sourceId, setSourceId] = useState<string | null>(null);
+  // The scan listener is registered once and lives across source changes; it
+  // reads the current selection through this ref so an imported track is
+  // inserted only when it actually belongs to the view the user is looking at.
+  const sourceFilterRef = useRef<{ source: string | null; id: string | null }>({
+    source: "all",
+    id: null,
+  });
+  sourceFilterRef.current = { source: librarySource, id: sourceId };
   const [sortBy, setSortBy] = useState<ListTracksSortBy | undefined>(undefined);
   const [sortDir, setSortDir] = useState<SortDirection>("asc");
   // Column arrangement (T2.1.5) is a UI preference, not app state: it is read
@@ -1500,6 +1512,21 @@ export default function App() {
     };
   }, [reloadToken]);
 
+  // Folder options for the Browser source, reloaded with the library. Read
+  // from the whole library, not the loaded page: a folder that only appears
+  // past the first page must still be selectable.
+  useEffect(() => {
+    let cancelled = false;
+    listFolders()
+      .then((res) => {
+        if (!cancelled) setFolders(res.folders);
+      })
+      .catch((err) => console.error("Failed to load folders:", err));
+    return () => {
+      cancelled = true;
+    };
+  }, [reloadToken]);
+
   const refreshLibrary = (cause: "manual" | "write" = "write") => {
     reloadCauseRef.current = cause;
     setReloadToken((token) => token + 1);
@@ -1847,6 +1874,8 @@ export default function App() {
       setProgress(payload);
       const importedTrack = payload.importedTrack;
       if (importedTrack) {
+        const { source, id } = sourceFilterRef.current;
+        if (!trackMatchesSource(importedTrack, source, id)) return;
         setTracks((prev) => {
           if (prev.some((t) => t.id === importedTrack.id)) return prev;
           return [importedTrack, ...prev];
@@ -2734,19 +2763,17 @@ export default function App() {
                     ))}
                   </div>
                 )}
-                {librarySource === "folder" && (
+                {librarySource === "folder" && folders.length > 0 && (
                   <div className="flex shrink-0 flex-wrap items-center gap-1 border-b border-dj-border bg-dj-panel px-3 py-1">
-                    {Array.from(
-                      new Set(tracks.map((t) => t.filePath.split(/[\\/]/).slice(0, -1).join("/")))
-                    ).map((folder) => (
+                    {folders.map((f) => (
                       <button
-                        key={folder}
+                        key={f.path}
                         type="button"
-                        onClick={() => setSourceId(folder)}
-                        className={`max-w-[240px] truncate rounded-sm px-2 py-0.5 text-[11px] transition ${sourceId === folder ? "bg-dj-accent/15 text-dj-accent" : "text-dj-text-secondary hover:bg-dj-hover hover:text-dj-text"}`}
-                        title={folder}
+                        onClick={() => setSourceId(f.path)}
+                        className={`max-w-[240px] truncate rounded-sm px-2 py-0.5 text-[11px] transition ${sourceId === f.path ? "bg-dj-accent/15 text-dj-accent" : "text-dj-text-secondary hover:bg-dj-hover hover:text-dj-text"}`}
+                        title={f.path}
                       >
-                        {folder.split("/").pop() || folder}
+                        {f.path.split("/").pop() || f.path} ({f.count})
                       </button>
                     ))}
                   </div>

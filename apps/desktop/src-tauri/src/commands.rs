@@ -4,8 +4,8 @@ use uuid::Uuid;
 
 use dj_assistant_core::library_query::QueryParam;
 use dj_assistant_core::library_reads::{
-    analysis_candidates, tag_health_rows, GENRE_COUNTS_SQL, REMOVED_TRACKS_SQL,
-    SIMILAR_CANDIDATES_SQL,
+    analysis_candidates, folder_counts_from_paths, tag_health_rows, GENRE_COUNTS_SQL,
+    PRESENT_FILE_PATHS_SQL, REMOVED_TRACKS_SQL, SIMILAR_CANDIDATES_SQL,
 };
 use dj_assistant_core::library_remove::{
     after_doc, before_doc, check_undoable, input_doc, parse_states, present_states, read_statement,
@@ -26,14 +26,14 @@ use crate::audio;
 use crate::db::Database;
 use crate::models::{
     AnalyzeLibraryRequest, AnalyzeLibraryResponse, CuePoint, FindSimilarTracksRequest,
-    FindSimilarTracksResponse, GenreCount, GetArtworkRequest, GetTrackRequest, GetTrackResponse,
-    GetWaveformPeaksRequest, GetWaveformPeaksResponse, ListGenresResponse,
-    ListRemovedTracksResponse, ListTracksRequest, ListTracksResponse, ProviderAccount,
-    ProviderCapability, ProviderStatusResponse, RemoveTracksRequest, RemoveTracksResponse,
-    RemovedTrack, RestoreTracksRequest, RestoreTracksResponse, RevealInFileManagerRequest,
-    ScanFolderRequest, ScanFolderResponse, SetTrackRatingRequest, SetTrackRatingResponse,
-    SimilarTrackResult, StoreLink, StoreLinksRequest, StoreLinksResponse, TagHealthRequest,
-    TagHealthResponse, TagHealthTotals, TrackDetail, TrackGaps, TrackSummary,
+    FindSimilarTracksResponse, FolderCount, GenreCount, GetArtworkRequest, GetTrackRequest,
+    GetTrackResponse, GetWaveformPeaksRequest, GetWaveformPeaksResponse, ListFoldersResponse,
+    ListGenresResponse, ListRemovedTracksResponse, ListTracksRequest, ListTracksResponse,
+    ProviderAccount, ProviderCapability, ProviderStatusResponse, RemoveTracksRequest,
+    RemoveTracksResponse, RemovedTrack, RestoreTracksRequest, RestoreTracksResponse,
+    RevealInFileManagerRequest, ScanFolderRequest, ScanFolderResponse, SetTrackRatingRequest,
+    SetTrackRatingResponse, SimilarTrackResult, StoreLink, StoreLinksRequest, StoreLinksResponse,
+    TagHealthRequest, TagHealthResponse, TagHealthTotals, TrackDetail, TrackGaps, TrackSummary,
     UndoRemoveTracksRequest, UndoRemoveTracksResponse, UndoTrackMetadataRequest,
     UndoTrackMetadataResponse, UpdateTrackMetadataRequest, UpdateTrackMetadataResponse,
 };
@@ -241,6 +241,33 @@ pub async fn list_genres(
     }
 
     Ok(ListGenresResponse { genres })
+}
+
+/// The distinct parent folders of the present tracks with their counts — the
+/// Browser source's navigation options. Derived from the whole library, never
+/// from the loaded page: a folder whose tracks sit past the first pages must
+/// stay selectable.
+#[tauri::command]
+pub async fn list_folders(
+    db: State<'_, Arc<Mutex<Database>>>,
+) -> Result<ListFoldersResponse, String> {
+    let db_guard = db.lock().map_err(|e| e.to_string())?;
+    let conn = db_guard.conn();
+
+    let mut stmt = conn
+        .prepare(PRESENT_FILE_PATHS_SQL)
+        .map_err(|e| e.to_string())?;
+    let paths: Vec<String> = stmt
+        .query_map([], |row| row.get::<_, String>(0))
+        .map_err(|e| e.to_string())?
+        .flatten()
+        .collect();
+
+    let folders = folder_counts_from_paths(paths)
+        .into_iter()
+        .map(|(path, count)| FolderCount { path, count })
+        .collect();
+    Ok(ListFoldersResponse { folders })
 }
 
 fn map_track_summary_at(row: &rusqlite::Row, base: usize) -> rusqlite::Result<TrackSummary> {

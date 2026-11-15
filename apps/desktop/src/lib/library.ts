@@ -449,6 +449,38 @@ export function truncateComment(comment: string | null | undefined, maxLength = 
 }
 
 /** Percentage 0-100 for the scan progress bar; 25 while the total is unknown. */
+/**
+ * Whether a freshly scanned track belongs to the source currently selected in
+ * the Browser sidebar. Mirrors the SQL predicates in library_query.rs: a
+ * category is a folded genre equality, a folder is a slash-normalised, folded
+ * prefix, and playlist/storage have no backing model yet.
+ */
+export function trackMatchesSource(
+  track: Pick<TrackSummary, "filePath" | "genre">,
+  source: string | null | undefined,
+  sourceId: string | null | undefined
+): boolean {
+  if (!source || source === "all") return true;
+  const id = sourceId?.trim();
+  if (!id) return true;
+  switch (source) {
+    case "category": {
+      const genre = (track.genre ?? "").trim().toLowerCase();
+      return genre !== "" && genre === id.toLowerCase();
+    }
+    case "folder": {
+      const normalized = track.filePath.replace(/\\/g, "/").toLowerCase();
+      let folder = id.replace(/\\/g, "/").toLowerCase();
+      while (folder.length > 1 && folder.endsWith("/")) folder = folder.slice(0, -1);
+      // Root keeps its single slash, exactly like the SQL pattern (/%).
+      if (folder === "/") return normalized.startsWith("/");
+      return normalized.startsWith(`${folder}/`);
+    }
+    default:
+      return false;
+  }
+}
+
 export function scanPercent(scannedFiles: number, totalFiles: number): number {
   if (!totalFiles || totalFiles <= 0) return 25;
   return Math.min(100, Math.round((scannedFiles / totalFiles) * 100));

@@ -147,6 +147,16 @@ export interface ListGenresResponse {
   genres: GenreCount[];
 }
 
+/** One distinct parent folder of the library's files plus its track count. */
+export interface FolderCount {
+  path: string;
+  count: number;
+}
+
+export interface ListFoldersResponse {
+  folders: FolderCount[];
+}
+
 export interface GetTrackRequest {
   trackId: string;
 }

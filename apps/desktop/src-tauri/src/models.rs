@@ -152,6 +152,21 @@ pub struct ListGenresResponse {
     pub genres: Vec<GenreCount>,
 }
 
+/// One distinct parent folder of the library's files plus how many present
+/// tracks live under it — the Browser source's options, read library-wide.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct FolderCount {
+    pub path: String,
+    pub count: usize,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ListFoldersResponse {
+    pub folders: Vec<FolderCount>,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct GetWaveformPeaksRequest {
