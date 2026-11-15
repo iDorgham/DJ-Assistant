@@ -305,8 +305,13 @@ class PreviewAudioEngine {
   }
 
   public seek(targetMs: number) {
-    // A seek is newer than any in-flight stop: it invalidates the deferred rewind.
+    // A seek is newer than any in-flight stop: it invalidates the deferred
+    // rewind. It invalidates the in-flight state reply too, so restart the
+    // poll or position updates would stop flowing during playback.
     this.pollGeneration += 1;
+    if (isTauri && this.loadedTrackId && this.isPlaying) {
+      this.startNativePoll();
+    }
     const clamped = Math.max(0, Math.min(targetMs, this.durationMs));
     this.positionMs = clamped;
     const beatSec = 60 / this.bpm;
