@@ -2764,7 +2764,7 @@ export default function App() {
                   </div>
                 )}
                 {librarySource === "folder" && folders.length > 0 && (
-                  <div className="flex shrink-0 flex-wrap items-center gap-1 border-b border-dj-border bg-dj-panel px-3 py-1">
+                  <div className="flex max-h-24 shrink-0 flex-wrap items-center gap-1 overflow-y-auto border-b border-dj-border bg-dj-panel px-3 py-1">
                     {folders.map((f) => (
                       <button
                         key={f.path}
