@@ -29,9 +29,11 @@ struct Inner {
     volume: f32,
     // Output stream (kept alive).
     stream: Option<cpal::Stream>,
-    stream_invalid: bool,
     out_rate: u32,
     out_channels: usize,
+    /// Set by the stream's error callback when the device fails or is
+    /// unplugged: the retained stream is dead and must be rebuilt, not resumed.
+    stream_failed: bool,
 }
 
 pub struct AudioEngine {
@@ -50,9 +52,9 @@ impl AudioEngine {
                 playing: false,
                 volume: 0.8,
                 stream: None,
-                stream_invalid: false,
                 out_rate: 44100,
                 out_channels: 2,
+                stream_failed: false,
             })),
         }
     }
@@ -66,6 +68,7 @@ impl AudioEngine {
         let stale_stream = {
             let mut inner = self.inner.lock().map_err(|e| e.to_string())?;
             inner.playing = false;
+            inner.stream_failed = false;
             inner.src = decoded.samples;
             inner.src_channels = decoded.channels.max(1);
             inner.src_rate = decoded.sample_rate;
@@ -78,122 +81,63 @@ impl AudioEngine {
     }
 
     pub fn play(&self) -> Result<(), String> {
+        // A failed stream is dropped outside the lock for the same reason as in
+        // `load`: teardown can block until the audio callback drains.
+        let failed_stream = {
+            let mut inner = self.inner.lock().map_err(|e| e.to_string())?;
+            if inner.src.is_empty() {
+                return Ok(());
+            }
+            // An exhausted cursor (the track reached its end) rewinds, so Play
+            // starts the track again instead of stopping on the first frame.
+            if inner.cursor >= total_frames(&inner) {
+                inner.cursor = 0.0;
+            }
+            if inner.stream.is_some() && !inner.stream_failed {
+                inner.playing = true;
+                return Ok(());
+            }
+            inner.stream_failed = false;
+            inner.stream.take()
+        };
+        drop(failed_stream);
+
         let mut inner = self.inner.lock().map_err(|e| e.to_string())?;
         if inner.src.is_empty() {
             return Ok(());
         }
-        if inner.stream_invalid {
-            let stale_stream = inner.stream.take();
-            drop(inner);
-            // Never tear down a stream in its callback or while holding its mutex.
-            drop(stale_stream);
-            inner = self.inner.lock().map_err(|e| e.to_string())?;
-            inner.stream_invalid = false;
-        }
-        // Already have a stream: just resume.
+        // Another caller may have rebuilt the stream while the lock was open.
         if inner.stream.is_some() {
             inner.playing = true;
             return Ok(());
         }
+
         let host = cpal::default_host();
         let device = host.default_output_device().ok_or("no output device")?;
         let supported = device.default_output_config().map_err(|e| e.to_string())?;
-        let out_channels = supported.channels() as usize;
-        let out_rate = supported.sample_rate();
-        inner.out_channels = out_channels;
-        inner.out_rate = out_rate;
+        inner.out_channels = supported.channels() as usize;
+        inner.out_rate = supported.sample_rate();
 
+        // Build in the device's own sample format. Forcing an f32 callback makes
+        // stream creation fail on devices whose default output is I16/U16.
         let config = supported.config();
         let stream = match supported.sample_format() {
-            cpal::SampleFormat::I8 => self.build_stream::<i8>(&device, config),
-            cpal::SampleFormat::I16 => self.build_stream::<i16>(&device, config),
-            cpal::SampleFormat::I24 => self.build_stream::<cpal::I24>(&device, config),
-            cpal::SampleFormat::I32 => self.build_stream::<i32>(&device, config),
-            cpal::SampleFormat::I64 => self.build_stream::<i64>(&device, config),
-            cpal::SampleFormat::U8 => self.build_stream::<u8>(&device, config),
-            cpal::SampleFormat::U16 => self.build_stream::<u16>(&device, config),
-            cpal::SampleFormat::U24 => self.build_stream::<cpal::U24>(&device, config),
-            cpal::SampleFormat::U32 => self.build_stream::<u32>(&device, config),
-            cpal::SampleFormat::U64 => self.build_stream::<u64>(&device, config),
-            cpal::SampleFormat::F32 => self.build_stream::<f32>(&device, config),
-            cpal::SampleFormat::F64 => self.build_stream::<f64>(&device, config),
-            format => return Err(format!("unsupported output sample format: {format}")),
-        }?;
-        if let Err(error) = stream.play() {
-            drop(inner);
-            drop(stream);
-            return Err(error.to_string());
+            cpal::SampleFormat::F32 => {
+                build_stream::<f32>(&device, config, Arc::clone(&self.inner))
+            }
+            cpal::SampleFormat::I16 => {
+                build_stream::<i16>(&device, config, Arc::clone(&self.inner))
+            }
+            cpal::SampleFormat::U16 => {
+                build_stream::<u16>(&device, config, Arc::clone(&self.inner))
+            }
+            other => return Err(format!("unsupported output sample format: {other:?}")),
         }
+        .map_err(|e| e.to_string())?;
+        stream.play().map_err(|e| e.to_string())?;
         inner.stream = Some(stream);
         inner.playing = true;
         Ok(())
-    }
-
-    fn build_stream<T>(
-        &self,
-        device: &cpal::Device,
-        config: cpal::StreamConfig,
-    ) -> Result<cpal::Stream, String>
-    where
-        T: cpal::SizedSample + cpal::FromSample<f32>,
-    {
-        let error_inner = Arc::clone(&self.inner);
-        let inner_clone = Arc::clone(&self.inner);
-        device
-            .build_output_stream(
-                config,
-                move |data: &mut [T], _| {
-                    data.fill(T::EQUILIBRIUM);
-                    let mut inner = match inner_clone.lock() {
-                        Ok(g) => g,
-                        Err(_) => return,
-                    };
-                    if !inner.playing {
-                        return;
-                    }
-                    let src_ch = inner.src_channels;
-                    let src_rate = inner.src_rate as f64;
-                    let out_rate = inner.out_rate as f64;
-                    let ratio = src_rate / out_rate;
-                    let total_src_frames = inner.src.len() / src_ch;
-                    let total_src_frames_f = total_src_frames as f64;
-                    // Cursor is a fractional source-frame position. Each output
-                    // frame consumes `ratio` source frames; we index into the
-                    // source with the truncated integer position.
-                    let mut pos = inner.cursor;
-                    let out_ch = inner.out_channels;
-                    for frame in data.chunks_mut(out_ch) {
-                        if pos >= total_src_frames_f {
-                            inner.playing = false;
-                            pos = total_src_frames_f;
-                            break;
-                        }
-                        let src_frame = pos as usize;
-                        // Downmix/upmix source frame to output channels.
-                        for (ci, sample) in frame.iter_mut().enumerate() {
-                            let src_ci = if src_ch == 1 { 0 } else { ci % src_ch };
-                            let idx = src_frame * src_ch + src_ci;
-                            let val = if idx < inner.src.len() {
-                                inner.src[idx]
-                            } else {
-                                0.0
-                            };
-                            *sample = T::from_sample(val * inner.volume);
-                        }
-                        pos += ratio;
-                    }
-                    inner.cursor = pos.min(total_src_frames_f);
-                },
-                move |err| {
-                    log::error!("audio stream error: {}", err);
-                    if let Ok(mut inner) = error_inner.lock() {
-                        inner.playing = false;
-                        inner.stream_invalid = true;
-                    }
-                },
-                None,
-            )
-            .map_err(|e| e.to_string())
     }
 
     pub fn pause(&self) -> Result<(), String> {
@@ -206,7 +150,7 @@ impl AudioEngine {
         let mut inner = self.inner.lock().map_err(|e| e.to_string())?;
         let frames_per_ms = inner.src_rate as f64 / 1000.0;
         let target = ms as f64 * frames_per_ms;
-        let total = (inner.src.len() / inner.src_channels.max(1)) as f64;
+        let total = total_frames(&inner);
         inner.cursor = target.min(total);
         Ok(())
     }
@@ -237,4 +181,93 @@ impl Default for AudioEngine {
     fn default() -> Self {
         Self::new()
     }
+}
+
+fn total_frames(inner: &Inner) -> f64 {
+    (inner.src.len() / inner.src_channels.max(1)) as f64
+}
+
+/// Builds an output stream in the device's sample format, converting the mixed
+/// f32 frames into that format on the way out.
+fn build_stream<T>(
+    device: &cpal::Device,
+    config: cpal::StreamConfig,
+    inner: Arc<Mutex<Inner>>,
+) -> Result<cpal::Stream, cpal::Error>
+where
+    T: cpal::SizedSample + cpal::FromSample<f32>,
+{
+    let data_inner = Arc::clone(&inner);
+    let error_inner = Arc::clone(&inner);
+    let mut scratch: Vec<f32> = Vec::new();
+    device.build_output_stream(
+        config,
+        move |data: &mut [T], _| {
+            scratch.resize(data.len(), 0.0);
+            fill_output(&mut scratch, &data_inner);
+            for (out, sample) in data.iter_mut().zip(scratch.iter()) {
+                *out = <T as cpal::FromSample<f32>>::from_sample_(*sample);
+            }
+        },
+        move |err| {
+            log::error!("audio stream error: {}", err);
+            // Never block the audio/error thread on the engine mutex: if the
+            // lock is held, the data callback notices the dead stream itself
+            // and `play` rebuilds it on the next request.
+            if let Ok(mut state) = error_inner.try_lock() {
+                state.playing = false;
+                state.stream_failed = true;
+            }
+        },
+        None,
+    )
+}
+
+/// Mixes the source into interleaved f32 output frames at the device's channel
+/// count, resampling with a fractional source-frame cursor.
+fn fill_output(data: &mut [f32], inner_arc: &Arc<Mutex<Inner>>) {
+    let mut inner = match inner_arc.lock() {
+        Ok(guard) => guard,
+        Err(_) => {
+            data.fill(0.0);
+            return;
+        }
+    };
+    if !inner.playing {
+        data.fill(0.0);
+        return;
+    }
+
+    let out_ch = inner.out_channels.max(1);
+    let src_ch = inner.src_channels.max(1);
+    let ratio = inner.src_rate as f64 / inner.out_rate.max(1) as f64;
+    let total = total_frames(&inner);
+    let volume = inner.volume;
+    let mut pos = inner.cursor;
+
+    for frame in data.chunks_mut(out_ch) {
+        if pos >= total {
+            frame.fill(0.0);
+            inner.playing = false;
+            pos = total;
+            break;
+        }
+        let base = pos as usize * src_ch;
+        if out_ch == 1 && src_ch > 1 {
+            // A mono device gets the average of the source channels; taking
+            // channel zero would drop the right channel entirely.
+            let mut sum = 0.0f32;
+            for channel in 0..src_ch {
+                sum += inner.src.get(base + channel).copied().unwrap_or(0.0);
+            }
+            frame[0] = (sum / src_ch as f32) * volume;
+        } else {
+            for (index, sample) in frame.iter_mut().enumerate() {
+                let src_index = if src_ch == 1 { 0 } else { index % src_ch };
+                *sample = inner.src.get(base + src_index).copied().unwrap_or(0.0) * volume;
+            }
+        }
+        pos += ratio;
+    }
+    inner.cursor = pos.min(total);
 }
