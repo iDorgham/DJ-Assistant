@@ -4,6 +4,8 @@ import { test } from "node:test";
 import {
   appliesToWholeSelection,
   BLOCKED_ACTIONS,
+  clampMenuPosition,
+  columnMenuLabel,
   describeRemove,
   describeRemovedCount,
   describeRestore,
@@ -13,6 +15,9 @@ import {
   isDisabled,
   itemTooltip,
   MENU_LAYOUT,
+  MENU_VIEWPORT_MARGIN,
+  menuRating,
+  starClickRating,
   type MenuEntry,
 } from "./library-menu.ts";
 
@@ -255,4 +260,55 @@ test("undoing a restore removes again, and says so", () => {
 test("the removed button counts what is hidden", () => {
   assert.equal(describeRemovedCount(0), "Removed");
   assert.equal(describeRemovedCount(4), "Removed (4)");
+});
+
+// The menu is `.tsx`, and the desktop runner collects `.test.ts` only — so the
+// decisions the component makes live here, where they actually run. These four
+// replace the seven `assert.equal(true, true)` placeholders that shipped in
+// `RowContextMenu.test.tsx` and were never collected.
+
+test("the menu opens at the cursor when it fits", () => {
+  assert.deepEqual(clampMenuPosition(100, 200, 180, 320, 1200, 800), { left: 100, top: 200 });
+});
+
+test("the menu flips towards the cursor at the right and bottom edges", () => {
+  // 1160 + 180 + 8 > 1200, so it opens to the left of the cursor.
+  assert.deepEqual(clampMenuPosition(1160, 200, 180, 320, 1200, 800), {
+    left: 1160 - 180,
+    top: 200,
+  });
+  assert.deepEqual(clampMenuPosition(100, 760, 180, 320, 1200, 800), {
+    left: 100,
+    top: 760 - 320,
+  });
+});
+
+test("a menu larger than the viewport still keeps its margin", () => {
+  const { left, top } = clampMenuPosition(50, 50, 4000, 4000, 1200, 800);
+  assert.equal(left, MENU_VIEWPORT_MARGIN);
+  assert.equal(top, MENU_VIEWPORT_MARGIN);
+});
+
+test("an unrated track shows no lit stars, and out-of-range ratings clamp", () => {
+  assert.equal(menuRating(null), 0);
+  assert.equal(menuRating(undefined), 0);
+  assert.equal(menuRating(0), 0);
+  assert.equal(menuRating(3), 3);
+  assert.equal(menuRating(9), 5);
+  assert.equal(menuRating(-2), 0);
+  assert.equal(menuRating(2.6), 3);
+});
+
+test("clicking the lit star clears the rating; any other star sets it", () => {
+  assert.equal(starClickRating(3, 3), 0);
+  assert.equal(starClickRating(3, 5), 5);
+  assert.equal(starClickRating(null, 4), 4);
+  assert.equal(starClickRating(0, 1), 1);
+});
+
+test("column toggles name the two columns whose ids are not their labels", () => {
+  assert.equal(columnMenuLabel("index"), "#");
+  assert.equal(columnMenuLabel("artwork"), "Art");
+  assert.equal(columnMenuLabel("bpm"), "Bpm");
+  assert.equal(columnMenuLabel("key"), "Key");
 });

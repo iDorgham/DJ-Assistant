@@ -20,7 +20,15 @@ import {
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import type { ColumnId, ColumnState } from "../lib/library-columns";
-import { isDisabled, itemTooltip, MENU_LAYOUT } from "../lib/library-menu";
+import {
+  clampMenuPosition,
+  columnMenuLabel,
+  isDisabled,
+  itemTooltip,
+  MENU_LAYOUT,
+  menuRating,
+  starClickRating,
+} from "../lib/library-menu";
 import type { MenuEntry } from "../lib/library-menu";
 
 /**
@@ -85,8 +93,6 @@ interface RowContextMenuProps {
   /** Ask to remove the track(s) from the library — the caller confirms first. */
   onRemove?: () => void;
 }
-
-const MENU_MARGIN = 8;
 
 /** The row icon per menu id. Widgets (`rate`, `viewColumns`) draw their own. */
 const MENU_ICONS: Record<string, LucideIcon> = {
@@ -181,15 +187,9 @@ export function RowContextMenu({
     const panel = panelRef.current;
     if (!panel) return;
     const rect = panel.getBoundingClientRect();
-    let left = x;
-    let top = y;
-    if (left + rect.width + MENU_MARGIN > window.innerWidth) {
-      left = Math.max(MENU_MARGIN, x - rect.width);
-    }
-    if (top + rect.height + MENU_MARGIN > window.innerHeight) {
-      top = Math.max(MENU_MARGIN, y - rect.height);
-    }
-    setPosition({ left, top });
+    setPosition(
+      clampMenuPosition(x, y, rect.width, rect.height, window.innerWidth, window.innerHeight)
+    );
   }, [x, y]);
 
   // The focus goes to the first row on open, and back to the row it came from
@@ -239,7 +239,7 @@ export function RowContextMenu({
     }
   };
 
-  const rating = currentRating == null ? 0 : Math.min(5, Math.max(0, Math.round(currentRating)));
+  const rating = menuRating(currentRating);
   const columnList = columns ?? [];
 
   // An action closes the menu; the focus goes back to the row on unmount, and
@@ -282,7 +282,7 @@ export function RowContextMenu({
                 }
                 onClick={() => {
                   if (!onRate) return;
-                  onRate(rating === star ? 0 : (star as 0 | 1 | 2 | 3 | 4 | 5));
+                  onRate(starClickRating(currentRating, star as 1 | 2 | 3 | 4 | 5));
                   onClose();
                 }}
                 className={`rounded-sm p-0.5 transition focus:outline-hidden focus-visible:ring-1 focus-visible:ring-dj-accent ${
@@ -323,12 +323,7 @@ export function RowContextMenu({
           {columnList.map((col) => {
             const canHide = canHideColumnFn ? canHideColumnFn(columnList, col.id) : true;
             const colDisabled = col.visible && !canHide;
-            const colLabel =
-              col.id === "index"
-                ? "#"
-                : col.id === "artwork"
-                  ? "Art"
-                  : col.id.charAt(0).toUpperCase() + col.id.slice(1);
+            const colLabel = columnMenuLabel(col.id);
             return (
               <button
                 key={col.id}

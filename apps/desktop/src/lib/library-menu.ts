@@ -10,6 +10,64 @@
  * selection rather than the row under the pointer.
  */
 
+/** Gap the menu keeps from the viewport edge when it flips away from the cursor. */
+export const MENU_VIEWPORT_MARGIN = 8;
+
+/**
+ * Where the menu's top-left corner lands.
+ *
+ * The menu opens at the cursor; near the right or bottom edge it would run off
+ * the window, so it opens *towards* the cursor instead. The margin is kept even
+ * when the panel is larger than the viewport — clamping to zero would pin it to
+ * the edge with no breathing room.
+ */
+export function clampMenuPosition(
+  x: number,
+  y: number,
+  width: number,
+  height: number,
+  viewportWidth: number,
+  viewportHeight: number,
+  margin = MENU_VIEWPORT_MARGIN
+): { left: number; top: number } {
+  let left = x;
+  let top = y;
+  if (left + width + margin > viewportWidth) {
+    left = Math.max(margin, x - width);
+  }
+  if (top + height + margin > viewportHeight) {
+    top = Math.max(margin, y - height);
+  }
+  return { left, top };
+}
+
+/** The 0–5 rating the menu renders: `null` reads as unrated, and out-of-range values clamp. */
+export function menuRating(current: number | null | undefined): number {
+  if (current == null) return 0;
+  return Math.min(5, Math.max(0, Math.round(current)));
+}
+
+/**
+ * What clicking a star commits.
+ *
+ * Clicking the star that is already the rating clears it (0); any other star
+ * sets it. This is the same click-to-set / click-again-to-clear rule the
+ * `StarRating` cell follows, so the two surfaces cannot disagree.
+ */
+export function starClickRating(
+  current: number | null | undefined,
+  star: 1 | 2 | 3 | 4 | 5
+): 0 | 1 | 2 | 3 | 4 | 5 {
+  return menuRating(current) === star ? 0 : star;
+}
+
+/** The label a column toggle shows. `index` and `artwork` are the two ids whose names differ. */
+export function columnMenuLabel(id: string): string {
+  if (id === "index") return "#";
+  if (id === "artwork") return "Art";
+  return id.charAt(0).toUpperCase() + id.slice(1);
+}
+
 export interface BlockedAction {
   /** Stable id the menu component and `appliesToWholeSelection` both use. */
   id: string;
