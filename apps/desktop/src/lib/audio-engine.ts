@@ -76,6 +76,12 @@ class PreviewAudioEngine {
    * or revive the poll loop for a transport the user already stopped.
    */
   private pollGeneration = 0;
+  /**
+   * True while a native `audio_load` call is in flight. `play()` gates on it
+   * so a track that is still decoding does not fall back to the synthetic loop
+   * (which would double-start playback when the native load lands).
+   */
+  private pendingNativeLoad = false;
 
   constructor() {
     // AudioContext will be initialized on first user interaction (web path).
@@ -166,10 +172,12 @@ class PreviewAudioEngine {
     this.currentBeatIndex = 0;
 
     if (isTauri && trackId) {
+      this.pendingNativeLoad = true;
       try {
         const nativeDuration = await audioLoad(trackId);
         // A newer load or a stop owns the engine by now: keep its state.
         if (generation !== this.loadGeneration) return;
+        this.pendingNativeLoad = false;
         this.loadedTrackId = trackId;
         if (nativeDuration > 0) {
           this.durationMs = nativeDuration;
@@ -183,6 +191,7 @@ class PreviewAudioEngine {
       } catch (e) {
         // The same staleness rule for a failure: it must not clear a newer track.
         if (generation !== this.loadGeneration) return;
+        this.pendingNativeLoad = false;
         console.warn("Native audio_load failed, falling back to synthetic:", e);
         this.loadedTrackId = null;
       }
@@ -195,6 +204,10 @@ class PreviewAudioEngine {
 
   public play() {
     this.pollGeneration += 1;
+
+    // A track still decoding natively is not playable yet; the synthetic
+    // fallback is only for the web path and for loads that failed.
+    if (isTauri && !this.loadedTrackId && this.pendingNativeLoad) return;
 
     if (isTauri && this.loadedTrackId) {
       this.isPlaying = true;
@@ -269,6 +282,7 @@ class PreviewAudioEngine {
     // has just stopped.
     this.loadGeneration += 1;
     this.pollGeneration += 1;
+    this.pendingNativeLoad = false;
     this.positionMs = 0;
     this.currentBeatIndex = 0;
     if (isTauri && this.loadedTrackId) {
