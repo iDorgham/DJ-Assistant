@@ -45,6 +45,7 @@ pub struct AudioEngine {
 }
 
 impl AudioEngine {
+    #[allow(clippy::new_without_default)]
     pub fn new() -> Self {
         Self {
             inner: Arc::new(Mutex::new(Inner {
@@ -80,7 +81,7 @@ impl AudioEngine {
             inner.cursor = 0.0;
             inner.stream.take()
         };
-        drop(stale_stream);
+        let _ = stale_stream;
         Ok(self.state().duration_ms)
     }
 
@@ -104,7 +105,7 @@ impl AudioEngine {
             inner.stream.take()
         };
         self.stream_failed.store(false, Ordering::Relaxed);
-        drop(failed_stream);
+        let _ = failed_stream;
 
         let mut inner = self.inner.lock().map_err(|e| e.to_string())?;
         if inner.src.is_empty() {
@@ -193,12 +194,6 @@ impl AudioEngine {
             duration_ms: inner.duration_ms,
             volume: inner.volume,
         }
-    }
-}
-
-impl Default for AudioEngine {
-    fn default() -> Self {
-        Self::new()
     }
 }
 
