@@ -270,3 +270,17 @@ Proven while executing Passes 4–5 of
 **Rule:** for any visual threshold claim (contrast, target size, legibility), record the numeric
 measurement together with the exact row/panel state it was taken in. A PASS with no number is a
 guess.
+
+## F-017 · DeepSource: run pages truncate; skipcq is the per-occurrence lever (2026-11-16)
+
+**The run-page issue list is virtualized — scrapes see ~10-15 of N findings.**
+Reliable enumeration: the page's "Copy as Markdown" button plus
+`powershell Get-Clipboard -Raw` (in-page clipboard reads return stale text; PR
+inline comments cover only earlier runs).
+
+**`/* skipcq: <CHECKER-ID> */` on the occurrence line** is DeepSource's
+code-side ignore — the right lever for adjudicated-intentional findings
+(loud-crash `!` assertions, dev-only mock `window.prompt`) when dashboard
+approval does not cover disabling the checker. Prettier can wrap a long line
+and orphan the marker: keep the marked line under 100 columns or pin it with
+`// prettier-ignore`.
