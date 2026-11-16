@@ -175,7 +175,7 @@ export function MixSuggestionsDock({
           <p className="px-2 py-6 text-center text-[11px] text-dj-text-muted">Loading...</p>
         ) : error ? (
           <p className="px-2 py-6 text-center text-[11px] text-dj-text-muted">
-            Couldn't load suggestions.
+            Couldn&#39;t load suggestions.
           </p>
         ) : results.length === 0 ? (
           <p className="px-2 py-6 text-center text-[11px] text-dj-text-muted">
@@ -198,9 +198,9 @@ export function MixSuggestionsDock({
                     </p>
                     {result.reasons.length > 0 && (
                       <div className="mt-1 flex flex-wrap gap-1">
-                        {result.reasons.map((reason, index) => (
+                        {result.reasons.map((reason) => (
                           <span
-                            key={`${result.id}-${index}`}
+                            key={`${result.id}-${reason}`}
                             className="rounded-sm border border-dj-border bg-dj-panel px-1.5 py-0.5 text-[10px] text-dj-text-secondary"
                           >
                             {reason}
