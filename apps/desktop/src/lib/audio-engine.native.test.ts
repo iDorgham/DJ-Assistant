@@ -180,3 +180,44 @@ test("native stop rewinds, and a newer seek discards the deferred rewind", async
   await flush();
   assert.deepEqual(seeks(), [12000, 0], "an undisrupted stop still rewinds");
 });
+
+test("a late rejection from a superseded play() cannot stop the newer playback", async () => {
+  Object.assign(globalThis, { window: { __TAURI_INTERNALS__: {} } });
+  const plays: ReturnType<typeof deferred<null>>[] = [];
+  const frames = new Map<number, FrameRequestCallback>();
+  let frameId = 0;
+  Object.assign(globalThis, {
+    requestAnimationFrame: (cb: FrameRequestCallback) => {
+      frames.set(++frameId, cb);
+      return frameId;
+    },
+    cancelAnimationFrame: (id: number) => frames.delete(id),
+  });
+  mockIPC((command) => {
+    if (command === "audio_load") return Promise.resolve(20000);
+    if (command === "audio_play") {
+      const d = deferred<null>();
+      plays.push(d);
+      return d.promise;
+    }
+    return undefined;
+  });
+  const { previewEngine: engine } = await import("./audio-engine.ts");
+  await engine.loadTrack("playrace", 20000);
+  await flush();
+  engine.play(); // plays[0] in flight
+  await flush();
+  engine.pause();
+  engine.play(); // plays[1] supersedes it
+  await flush();
+  assert.equal(plays.length, 2);
+  assert.ok(frames.size > 0, "the newer play scheduled its poll");
+  const baselineFrames = frames.size;
+  plays[0].reject(new Error("device busy"));
+  await flush();
+  assert.equal(engine.getState().isPlaying, true, "superseded rejection must not stop playback");
+  assert.equal(frames.size, baselineFrames, "the newer poll must keep running");
+  plays[1].resolve(null);
+  engine.stop();
+  await flush();
+});

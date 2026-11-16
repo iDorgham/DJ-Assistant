@@ -222,8 +222,12 @@ class PreviewAudioEngine {
         audioSeek(0).catch((e) => console.warn("Native audio_seek failed:", e));
       }
       this.startNativePoll();
+      const generation = this.pollGeneration;
       audioPlay().catch((e) => {
         console.warn("Native audio_play failed:", e);
+        // A newer transport command owns the engine by now; its own
+        // audio_play reply governs the playing state.
+        if (generation !== this.pollGeneration) return;
         this.isPlaying = false;
         this.stopNativePoll();
         this.notify();
