@@ -62,6 +62,67 @@ pub const GENRE_COUNTS_SQL: &str = "SELECT MIN(TRIM(genre)), COUNT(*) FROM track
 pub const SIMILAR_CANDIDATES_SQL: &str = "SELECT id, bpm, key_camelot, genre, duration_ms \
      FROM tracks WHERE removed_at IS NULL AND id != ?1";
 
+/// The file paths of every present track, for the Browser source's folder list.
+///
+/// The folder derivation is not expressible as portable SQLite (no directory
+/// function), so the aggregation runs on these paths in Rust — see
+/// [folder_counts_from_paths].
+pub const PRESENT_FILE_PATHS_SQL: &str =
+    "SELECT file_path FROM tracks WHERE removed_at IS NULL AND file_path IS NOT NULL";
+
+/// The parent folder of a stored file path, normalised to `/` separators the
+/// way the folder source stores its ids. `None` for a bare filename; a file
+/// at a filesystem root keeps that root (`"/music.mp3"` → `"/"`).
+pub fn folder_of_path(path: &str) -> Option<String> {
+    let normalized = path.replace('\\', "/");
+    // The separator before the file name — or a trailing one, which still
+    // names this directory — splits the parent from the rest.
+    let (folder, _file) = normalized.rsplit_once('/')?;
+    Some(if folder.is_empty() {
+        "/".to_string()
+    } else {
+        folder.to_string()
+    })
+}
+
+/// Aggregates library file paths into `(`folder, track count`)` rows for the
+/// Browser source.
+///
+/// Deduplicated case- and separator-insensitively (`D:\Music` and `d:/music`
+/// are one folder — the query layer folds the same way), the spelling kept is
+/// the lexicographically smallest raw form so the same library always renders
+/// the same label. Ordered by popularity, then by folded path — the same rule
+/// as the genre options, so the most useful folders come first.
+pub fn folder_counts_from_paths(paths: impl IntoIterator<Item = String>) -> Vec<(String, usize)> {
+    let mut folded: std::collections::BTreeMap<String, (String, usize)> =
+        std::collections::BTreeMap::new();
+    for path in paths {
+        let Some(folder) = folder_of_path(&path) else {
+            continue;
+        };
+        // ASCII-only fold to mirror the SQL selector's LOWER(): SQLite does
+        // not case-fold non-ASCII, so the chip list and the query must agree.
+        let entry = folded.entry(folder.to_ascii_lowercase());
+        match entry {
+            std::collections::btree_map::Entry::Occupied(mut occupied) => {
+                let (representative, count) = occupied.get_mut();
+                if folder < *representative {
+                    *representative = folder;
+                }
+                *count += 1;
+            }
+            std::collections::btree_map::Entry::Vacant(vacant) => {
+                vacant.insert((folder, 1));
+            }
+        }
+    }
+    // BTreeMap yields folded-path order; the stable sort then re-orders by
+    // count with the folded order as the tiebreak.
+    let mut rows: Vec<(String, usize)> = folded.into_values().collect();
+    rows.sort_by_key(|row| std::cmp::Reverse(row.1));
+    rows
+}
+
 /// The ISRCs the library owns, for the taste score of a chart snapshot.
 pub const OWNED_ISRC_SQL: &str =
     "SELECT UPPER(isrc) FROM tracks WHERE removed_at IS NULL AND isrc IS NOT NULL";
@@ -160,8 +221,9 @@ pub fn analysis_candidates(
 #[cfg(test)]
 mod tests {
     use super::{
-        analysis_candidates, enrichment_targets, missing_file_paths_sql, present_rows,
-        tag_health_rows, ReadError, ENRICHMENT_TARGET_COLUMNS, GENRE_COUNTS_SQL, OWNED_ISRC_SQL,
+        analysis_candidates, enrichment_targets, folder_counts_from_paths, folder_of_path,
+        missing_file_paths_sql, present_rows, tag_health_rows, ReadError,
+        ENRICHMENT_TARGET_COLUMNS, GENRE_COUNTS_SQL, OWNED_ISRC_SQL, PRESENT_FILE_PATHS_SQL,
         REMOVED_TRACKS_COLUMNS, REMOVED_TRACKS_SQL, SIMILAR_CANDIDATES_SQL, TAG_HEALTH_COLUMNS,
     };
     use crate::library_remove::Statement;
@@ -388,5 +450,57 @@ mod tests {
             REMOVED_TRACKS_COLUMNS.contains("removed_at"),
             "the view has to show when a track left"
         );
+    }
+
+    #[test]
+    fn folder_of_path_normalizes_separators_and_keeps_roots() {
+        assert_eq!(
+            folder_of_path(r"D:\Music\House\track.mp3").as_deref(),
+            Some("D:/Music/House")
+        );
+        assert_eq!(
+            folder_of_path("/Music/House/track.mp3").as_deref(),
+            Some("/Music/House")
+        );
+        assert_eq!(folder_of_path("/track.mp3").as_deref(), Some("/"));
+        // A bare filename lives in no folder the Browser could navigate to.
+        assert_eq!(folder_of_path("track.mp3"), None);
+    }
+
+    #[test]
+    fn folder_counts_deduplicate_case_and_separator_spelling() {
+        // The query layer folds case and normalizes separators; the picker
+        // list must fold the same way or one folder shows up twice.
+        let rows = folder_counts_from_paths([
+            r"D:\Music\House\a.mp3".to_string(),
+            "d:/music/house/b.mp3".to_string(),
+            "D:/Music/House2/c.mp3".to_string(),
+        ]);
+        assert_eq!(rows.len(), 2);
+        // Two tracks, then one; the kept spelling is the smallest raw form.
+        assert_eq!(rows[0].1, 2);
+        assert_eq!(rows[0].0, "D:/Music/House");
+        assert_eq!(rows[1].0, "D:/Music/House2");
+        assert_eq!(rows[1].1, 1);
+    }
+
+    #[test]
+    fn folder_counts_order_by_popularity_then_path() {
+        let rows = folder_counts_from_paths([
+            "/Music/b/popular.mp3".to_string(),
+            "/Music/a/one.mp3".to_string(),
+            "/Music/b/two.mp3".to_string(),
+            "/music/a/x.mp3".to_string(),
+        ]);
+        assert_eq!(
+            rows,
+            vec![("/Music/a".to_string(), 2), ("/Music/b".to_string(), 2),],
+            "equal counts keep folded-path order"
+        );
+    }
+
+    #[test]
+    fn present_file_paths_sql_skips_removed_rows() {
+        assert!(PRESENT_FILE_PATHS_SQL.contains("removed_at IS NULL"));
     }
 }

@@ -143,8 +143,7 @@ interface UpdateTrackMetadataResponse {
 ```
 Validation: an empty `trackIds` is rejected (`no tracks selected`), a `rating` outside
 `0..=5` (`rating must be between 0 and 5`), an `energy` outside `0..=10`
-(`energy must be between 0 and 10`) and a request with neither field
-(`nothing to update`) are rejected with a descriptive error.
+(`energy must be between 0 and 10`). An all-absent patch (no field and no tags) is **not** an error: it is a no-op that writes nothing, creates no undo snapshot, and reports `updated: 0` **and an empty `undoId`** (`""`) so the editor can show `Metadata unchanged — nothing to save` (PR #78, 2026-11-15). The empty id is the sentinel for "nothing was written": the planner drops every unchanged track (`plan_metadata_write` in `crates/core/src/library_writes.rs`) and the command then returns `(String::default(), 0)` (`apply_metadata_patch` in `apps/desktop/src-tauri/src/commands.rs`) without writing a `skill_runs` row. Callers must **not** attempt an undo in that case — there is no snapshot to restore, and `undo_track_metadata` fails with `undo snapshot not found: `.
 
 #### `set_track_rating` (shipped — T2.1.4)
 Rating-only variant of `update_track_metadata`, used by the star widget. It shares the

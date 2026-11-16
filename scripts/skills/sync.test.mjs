@@ -144,10 +144,7 @@ describe("skills:sync name validation", () => {
     makeSkill(guardedTarget, "bystander", { "SKILL.md": "must survive\n" });
     const before = listing(guardedTarget);
 
-    assert.throws(
-      () => apply(["zeta", "../escape"], source, guardedTarget),
-      /invalid skill name/
-    );
+    assert.throws(() => apply(["zeta", "../escape"], source, guardedTarget), /invalid skill name/);
     assert.deepEqual(listing(guardedTarget), before);
     assert.equal(fs.existsSync(path.join(guardedTarget, "zeta")), false);
     assert.equal(

@@ -87,11 +87,12 @@ not inferable by reading the code.
 - **`DeepSource: JavaScript` is configured outside the repo**: there is no
   `.deepsource.toml`, so the JS checker set lives in the DeepSource dashboard and
   cannot be changed from here. That is not the same as the findings being wrong —
-  treat each one on its merits. The two that this project has documented as
-  false positives so far: `js/wrapper/iife` ("function declaration in the global
+  treat each one on its merits. Two documented false positives are now
+  **Ignored repo-wide in the dashboard** (2026-11-16): `js/wrapper/iife` ("function declaration in the global
   scope") fires on top-level function declarations in ES modules, exported ones
   included, since its text is ESLint's `no-implicit-globals` — which by design
   does not apply to ES modules. And
   `js/maintainability/cyclomatic-complexity` reports "medium" at a complexity of
-  6. No branch protection is set, so the check blocks nothing; which PRs
+  6. Per-occurrence ignores use inline `/* skipcq: <ID> */` comments on the
+  occurrence line — no dashboard change needed. No branch protection is set, so the check blocks nothing; which PRs
   currently carry the FAILURE is in [`state.md`](./state.md).

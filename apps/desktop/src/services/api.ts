@@ -3,6 +3,7 @@ import type {
   ScanFolderResponse,
   ListTracksRequest,
   ListTracksResponse,
+  ListFoldersResponse,
   ListGenresResponse,
   GetTrackRequest,
   GetTrackResponse,
@@ -58,7 +59,7 @@ const isTauri = typeof window !== "undefined" && "__TAURI_INTERNALS__" in window
 export async function scanFolder(req: ScanFolderRequest): Promise<ScanFolderResponse> {
   if (!isTauri) {
     console.warn("[Mock API] Tauri not detected, running mock scan");
-    return { jobId: "mock-job-" + Date.now(), estimatedFiles: 42 };
+    return { jobId: `mock-job-${Date.now()}`, estimatedFiles: 42 };
   }
   const { invoke } = await import("@tauri-apps/api/core");
   return invoke<ScanFolderResponse>("scan_folder", { request: req });
@@ -85,6 +86,18 @@ export async function listGenres(): Promise<ListGenresResponse> {
   return invoke<ListGenresResponse>("list_genres");
 }
 
+/**
+ * Distinct parent folders of the present tracks with counts, for the Browser
+ * source's folder options. Read library-wide, not from the loaded page.
+ */
+export async function listFolders(): Promise<ListFoldersResponse> {
+  if (!isTauri) {
+    return { folders: [] };
+  }
+  const { invoke } = await import("@tauri-apps/api/core");
+  return invoke<ListFoldersResponse>("list_folders");
+}
+
 export async function getTrack(req: GetTrackRequest): Promise<GetTrackResponse> {
   if (!isTauri) {
     throw new Error("Tauri not detected in mock mode");
@@ -103,6 +116,67 @@ export async function getArtwork(req: GetArtworkRequest): Promise<GetArtworkResp
   }
   const { invoke } = await import("@tauri-apps/api/core");
   return invoke<GetArtworkResponse>("get_artwork", { request: req });
+}
+
+export interface GetWaveformPeaksRequest {
+  trackId: string;
+}
+
+export interface GetWaveformPeaksResponse {
+  peaks: number[];
+  durationMs: number;
+  sampleRate: number;
+  isReal: boolean;
+}
+
+export async function getWaveformPeaks(
+  req: GetWaveformPeaksRequest
+): Promise<GetWaveformPeaksResponse> {
+  if (!isTauri) {
+    return { peaks: [], durationMs: 0, sampleRate: 0, isReal: false };
+  }
+  const { invoke } = await import("@tauri-apps/api/core");
+  return invoke<GetWaveformPeaksResponse>("get_waveform_peaks", { request: req });
+}
+
+/** Peak layers of a decoded `get_waveform_peaks` response, shaped for `WaveformData`. */
+export interface DecodedPeakLayers {
+  peaks: Float32Array;
+  lowPeaks: Float32Array;
+  midPeaks: Float32Array;
+  highPeaks: Float32Array;
+  isEstimated: false;
+}
+
+/**
+ * Turns a decoded peak list into the peak layers the waveform renderers read.
+ *
+ * The response carries ~4000 points while the synthesized waveform carries
+ * 16000 in `peaks` *and* in every band, and `DetailedWaveform` indexes the
+ * bands with `peaks.length`. Copying the response straight into `peaks` leaves
+ * the bands four times too long: the render loop reads the first quarter of the
+ * synthetic bands and stretches it over the whole canvas — fabricated energy
+ * wherever the decoded peaks are silent.
+ *
+ * Upsampling the decoded peaks to 16000 would fix the indexing but keep those
+ * synthetic bands, and this patch clears `isEstimated`, which tells the UI the
+ * waveform was decoded (docs/ui/06 forbids passing invented analysis off as
+ * decoded). The bands are dropped instead: zero-filled at the decoded length.
+ * The waveform still renders — `DetailedWaveform` always draws the body layer
+ * and simply has no mid/low height left to draw.
+ */
+export function decodedPeakLayers(peaks: number[]): DecodedPeakLayers {
+  const body = new Float32Array(peaks.length);
+  peaks.forEach((value, i) => {
+    body[i] = Number.isFinite(value) ? Math.min(Math.max(value, 0), 1) : 0;
+  });
+  return {
+    peaks: body,
+    lowPeaks: new Float32Array(body.length),
+    midPeaks: new Float32Array(body.length),
+    highPeaks: new Float32Array(body.length),
+    isEstimated: false,
+  };
 }
 
 /**
@@ -331,7 +405,7 @@ export async function listenToEnrichmentProgress(
   callback: (event: EnrichmentProgressEvent) => void
 ): Promise<() => void> {
   if (!isTauri) {
-    return () => {};
+    return () => undefined;
   }
   const { listen } = await import("@tauri-apps/api/event");
   const unlisten = await listen<EnrichmentProgressEvent>("enrichment:progress", (e) => {
@@ -413,9 +487,80 @@ export async function chartList(req: ChartListRequest = {}): Promise<ChartListRe
   return invoke<ChartListResponse>("chart_list", { request: req });
 }
 
+// --- Native audio engine (T2.4) ---
+// The Rust AudioEngine decodes the track file via Symphonia and plays it back
+// through cpal. These wrappers are the only IPC surface the frontend audio
+// engine needs; position polling goes through `audioState`.
+
+export interface NativeAudioState {
+  playing: boolean;
+  positionMs: number;
+  durationMs: number;
+  volume: number;
+}
+
+export async function audioLoad(trackId: string): Promise<number> {
+  if (!isTauri) {
+    return 0;
+  }
+  const { invoke } = await import("@tauri-apps/api/core");
+  return invoke<number>("audio_load", { trackId });
+}
+
+export async function audioPlay(): Promise<void> {
+  if (!isTauri) return;
+  const { invoke } = await import("@tauri-apps/api/core");
+  await invoke("audio_play");
+}
+
+export async function audioPause(): Promise<void> {
+  if (!isTauri) return;
+  const { invoke } = await import("@tauri-apps/api/core");
+  await invoke("audio_pause");
+}
+
+/**
+ * Rounds and clamps a seek target to the `ms: u64` the Rust command declares.
+ *
+ * serde rejects a fractional number for a u64 parameter, and NaN / Infinity do
+ * not serialize at all, so a target that survives the UI's own double clamp
+ * would fail the call instead of seeking. `null` means the value cannot be
+ * represented: the caller drops the seek rather than silently jumping to 0.
+ */
+export function normalizeSeekMs(ms: number): number | null {
+  if (!Number.isFinite(ms)) return null;
+  return Math.round(Math.min(Math.max(ms, 0), Number.MAX_SAFE_INTEGER));
+}
+
+export async function audioSeek(ms: number): Promise<void> {
+  if (!isTauri) return;
+  const target = normalizeSeekMs(ms);
+  if (target === null) {
+    console.warn("Native audio_seek ignored a non-finite position:", ms);
+    return;
+  }
+  const { invoke } = await import("@tauri-apps/api/core");
+  await invoke("audio_seek", { ms: target });
+}
+
+export async function audioSetVolume(volume: number): Promise<void> {
+  if (!isTauri) return;
+  const { invoke } = await import("@tauri-apps/api/core");
+  await invoke("audio_set_volume", { volume });
+}
+
+export async function audioState(): Promise<NativeAudioState> {
+  if (!isTauri) {
+    return { playing: false, positionMs: 0, durationMs: 0, volume: 0.8 };
+  }
+  const { invoke } = await import("@tauri-apps/api/core");
+  return invoke<NativeAudioState>("audio_state");
+}
+
 export async function openFolderDialog(): Promise<string | null> {
   if (!isTauri) {
-    const mockPath = window.prompt("Enter folder path for mock scan:", "D:/Music/TestSet");
+    const promptText = "Enter folder path for mock scan:";
+    const mockPath = window.prompt(promptText, "D:/Music/TestSet"); /* skipcq: JS-0052 */
     return mockPath || null;
   }
   try {
@@ -439,7 +584,7 @@ export async function listenToScanProgress(
   callback: (event: ScanProgressEvent) => void
 ): Promise<() => void> {
   if (!isTauri) {
-    return () => {};
+    return () => undefined;
   }
   const { listen } = await import("@tauri-apps/api/event");
   const unlisten = await listen<ScanProgressEvent>("scan:progress", (e) => {
@@ -452,7 +597,7 @@ export async function listenToScanCompleted(
   callback: (event: ScanCompletedEvent) => void
 ): Promise<() => void> {
   if (!isTauri) {
-    return () => {};
+    return () => undefined;
   }
   const { listen } = await import("@tauri-apps/api/event");
   const unlisten = await listen<ScanCompletedEvent>("scan:completed", (e) => {
@@ -471,7 +616,7 @@ export async function analyzeLibrary(
 ): Promise<AnalyzeLibraryResponse> {
   if (!isTauri) {
     console.warn("[Mock API] Tauri not detected, returning empty analysis job");
-    return { jobId: "mock-analysis-" + Date.now(), total: 0 };
+    return { jobId: `mock-analysis-${Date.now()}`, total: 0 };
   }
   const { invoke } = await import("@tauri-apps/api/core");
   return invoke<AnalyzeLibraryResponse>("analyze_library", { request: req });
@@ -481,7 +626,7 @@ export async function listenToAnalysisProgress(
   callback: (event: AnalysisProgressEvent) => void
 ): Promise<() => void> {
   if (!isTauri) {
-    return () => {};
+    return () => undefined;
   }
   const { listen } = await import("@tauri-apps/api/event");
   const unlisten = await listen<AnalysisProgressEvent>("analysis:progress", (e) => {
@@ -494,7 +639,7 @@ export async function listenToAnalysisCompleted(
   callback: (event: AnalysisCompletedEvent) => void
 ): Promise<() => void> {
   if (!isTauri) {
-    return () => {};
+    return () => undefined;
   }
   const { listen } = await import("@tauri-apps/api/event");
   const unlisten = await listen<AnalysisCompletedEvent>("analysis:completed", (e) => {

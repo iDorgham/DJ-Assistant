@@ -4,6 +4,16 @@ Ephemeral. Newest first. **Rotate aggressively** — if a line would still be tr
 in two weeks, it belongs in [`decisions.md`](./decisions.md); if it is just a
 fact, it belongs in [`facts.md`](./facts.md). Delete anything stale.
 
+## 2026-11-16 · PR #80 DeepSource JavaScript flipped green (head a9c829c2)
+
+- JS-0067 (iife) and JS-R1005 (complexity) are now Ignored in the dashboard,
+  as agreed 2026-11-08; the Documentation Coverage metric is unenforced
+  (threshold 0), so no gate action was needed.
+- The 26 findings introduced on the T2.4 files were fixed in code except the
+  adjudicated-intentional loud-crash `!` assertions and the dev-only mock
+  `window.prompt`, which keep `/* skipcq */` markers (F-017). JavaScript and
+  Secrets pass on this head; no review threads remain unresolved.
+
 ## 2026-11-10 · Running-window Passes 4–5 executed — K10 fixed, K9 wording open
 
 - Pass 4 (T2.1.8 key pills, live 94-track library, 7B reference): **K1–K8 and K11 PASS, K9

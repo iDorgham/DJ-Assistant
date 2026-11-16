@@ -30,6 +30,7 @@ import {
   shortHash,
   SORT_OPTIONS,
   toggleFilterValue,
+  trackMatchesSource,
   truncateComment,
 } from "./library.ts";
 
@@ -475,4 +476,44 @@ test("draft key provenance survives reference loss and preserves manual choices"
   assert.deepEqual(projectCompatibleDraftKeys(derived, [], false, true, ["5B"]).keyCamelot, ["5B"]);
   const manual = { keyCamelot: ["5B"] };
   assert.equal(projectCompatibleDraftKeys(manual, ["8A"], false), manual);
+});
+
+test("trackMatchesSource: all sources and an unset source id accept any track", () => {
+  const tr = track();
+  assert.equal(trackMatchesSource(tr, "all", null), true);
+  assert.equal(trackMatchesSource(tr, null, null), true);
+  assert.equal(trackMatchesSource(tr, "category", null), true);
+  assert.equal(trackMatchesSource(tr, "category", "  "), true);
+});
+
+test("trackMatchesSource: category is a folded, trimmed genre equality", () => {
+  const tr = track({ genre: "Deep House" });
+  assert.equal(trackMatchesSource(tr, "category", "deep house"), true);
+  assert.equal(trackMatchesSource(tr, "category", "Deep House "), true);
+  assert.equal(trackMatchesSource(tr, "category", "Tech House"), false);
+  assert.equal(trackMatchesSource(track({ genre: null }), "category", "Deep House"), false);
+  assert.equal(trackMatchesSource(track({ genre: "  " }), "category", "Deep House"), false);
+});
+
+test("trackMatchesSource: folder normalises separators, case, and trailing slash", () => {
+  const tr = track({ filePath: "D:\\Music\\House\\track.mp3" });
+  assert.equal(trackMatchesSource(tr, "folder", "D:/Music/House"), true);
+  assert.equal(trackMatchesSource(tr, "folder", "d:\\music\\house"), true);
+  assert.equal(trackMatchesSource(tr, "folder", "D:/Music/House/"), true);
+  // The boundary matters: House must not select House2.
+  assert.equal(trackMatchesSource(tr, "folder", "D:/Music/Hous"), false);
+  assert.equal(
+    trackMatchesSource(track({ filePath: "D:\\Music\\House2\\x.mp3" }), "folder", "D:/Music/House"),
+    false
+  );
+  assert.equal(trackMatchesSource(track({ filePath: "/data/root.mp3" }), "folder", "/"), true);
+});
+
+test("trackMatchesSource: playlist and storage match nothing until they have a model", () => {
+  for (const source of ["playlist", "storage"]) {
+    assert.equal(trackMatchesSource(track(), source, "anything"), false);
+    assert.equal(trackMatchesSource(track(), source, null), false);
+    const noModel: string | undefined = undefined;
+    assert.equal(trackMatchesSource(track(), source, noModel), false);
+  }
 });

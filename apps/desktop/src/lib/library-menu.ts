@@ -10,6 +10,71 @@
  * selection rather than the row under the pointer.
  */
 
+/** Smallest gap the menu keeps from a viewport edge once it has flipped. */
+export const MENU_VIEWPORT_MARGIN = 8;
+
+/**
+ * One axis of `clampMenuPosition`.
+ *
+ * A menu that fits where the cursor is stays there. One that would run off the
+ * edge opens *towards* the cursor instead — and that flipped position is bounded
+ * too: flipping alone can still leave the panel flush against the far edge
+ * (`x - width` with the cursor near the start) or, with the cursor on the edge
+ * itself, hanging a full margin past the viewport.
+ *
+ * When the panel is larger than the viewport the upper bound falls below the
+ * margin; the margin then wins, so the panel starts at the edge with its
+ * breathing room intact rather than at zero.
+ */
+function clampAxis(position: number, size: number, viewport: number, margin: number): number {
+  if (position + size + margin <= viewport) return position;
+  const limit = Math.max(margin, viewport - size - margin);
+  return Math.min(Math.max(position - size, margin), limit);
+}
+
+/**
+ * Where the menu's top-left corner lands.
+ *
+ * The menu opens at the cursor; near the right or bottom edge it would run off
+ * the window, so it opens *towards* the cursor instead. The margin is kept even
+ * when the panel is larger than the viewport — clamping to zero would pin it to
+ * the edge with no breathing room.
+ */
+export function clampMenuPosition(
+  x: number,
+  y: number,
+  width: number,
+  height: number,
+  viewportWidth: number,
+  viewportHeight: number,
+  margin = MENU_VIEWPORT_MARGIN
+): { left: number; top: number } {
+  return {
+    left: clampAxis(x, width, viewportWidth, margin),
+    top: clampAxis(y, height, viewportHeight, margin),
+  };
+}
+
+/** The 0–5 rating the menu renders: `null` reads as unrated, and out-of-range values clamp. */
+export function menuRating(current: number | null | undefined): number {
+  if (current == null) return 0;
+  return Math.min(5, Math.max(0, Math.round(current)));
+}
+
+/**
+ * What clicking a star commits.
+ *
+ * Clicking the star that is already the rating clears it (0); any other star
+ * sets it. This is the same click-to-set / click-again-to-clear rule the
+ * `StarRating` cell follows, so the two surfaces cannot disagree.
+ */
+export function starClickRating(
+  current: number | null | undefined,
+  star: 1 | 2 | 3 | 4 | 5
+): 0 | 1 | 2 | 3 | 4 | 5 {
+  return menuRating(current) === star ? 0 : star;
+}
+
 export interface BlockedAction {
   /** Stable id the menu component and `appliesToWholeSelection` both use. */
   id: string;

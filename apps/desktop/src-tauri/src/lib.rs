@@ -1,4 +1,5 @@
 pub mod analysis;
+pub mod audio;
 pub mod charts;
 pub mod commands;
 pub mod db;
@@ -58,15 +59,24 @@ pub fn run() {
                 db::Database::new(&db_path).expect("Failed to initialize SQLite database");
             app.manage(Arc::new(Mutex::new(database)));
             app.manage(enrichment::RateLimiter::default());
+            app.manage(Arc::new(Mutex::new(audio::AudioEngine::new())));
 
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
             commands::scan_folder,
             commands::list_tracks,
+            commands::list_folders,
             commands::list_genres,
             commands::get_track,
             commands::get_artwork,
+            commands::audio_load,
+            commands::audio_play,
+            commands::audio_pause,
+            commands::audio_seek,
+            commands::audio_set_volume,
+            commands::audio_state,
+            commands::get_waveform_peaks,
             commands::analyze_library,
             commands::find_similar_tracks,
             commands::track_tag_health,

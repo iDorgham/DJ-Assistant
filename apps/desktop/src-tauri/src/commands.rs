@@ -4,8 +4,8 @@ use uuid::Uuid;
 
 use dj_assistant_core::library_query::QueryParam;
 use dj_assistant_core::library_reads::{
-    analysis_candidates, tag_health_rows, GENRE_COUNTS_SQL, REMOVED_TRACKS_SQL,
-    SIMILAR_CANDIDATES_SQL,
+    analysis_candidates, folder_counts_from_paths, tag_health_rows, GENRE_COUNTS_SQL,
+    PRESENT_FILE_PATHS_SQL, REMOVED_TRACKS_SQL, SIMILAR_CANDIDATES_SQL,
 };
 use dj_assistant_core::library_remove::{
     after_doc, before_doc, check_undoable, input_doc, parse_states, present_states, read_statement,
@@ -22,10 +22,12 @@ use dj_assistant_core::patch::{
 };
 use dj_assistant_core::reveal::reveal_command;
 
+use crate::audio;
 use crate::db::Database;
 use crate::models::{
     AnalyzeLibraryRequest, AnalyzeLibraryResponse, CuePoint, FindSimilarTracksRequest,
-    FindSimilarTracksResponse, GenreCount, GetArtworkRequest, GetTrackRequest, GetTrackResponse,
+    FindSimilarTracksResponse, FolderCount, GenreCount, GetArtworkRequest, GetTrackRequest,
+    GetTrackResponse, GetWaveformPeaksRequest, GetWaveformPeaksResponse, ListFoldersResponse,
     ListGenresResponse, ListRemovedTracksResponse, ListTracksRequest, ListTracksResponse,
     ProviderAccount, ProviderCapability, ProviderStatusResponse, RemoveTracksRequest,
     RemoveTracksResponse, RemovedTrack, RestoreTracksRequest, RestoreTracksResponse,
@@ -241,6 +243,33 @@ pub async fn list_genres(
     Ok(ListGenresResponse { genres })
 }
 
+/// The distinct parent folders of the present tracks with their counts — the
+/// Browser source's navigation options. Derived from the whole library, never
+/// from the loaded page: a folder whose tracks sit past the first pages must
+/// stay selectable.
+#[tauri::command]
+pub async fn list_folders(
+    db: State<'_, Arc<Mutex<Database>>>,
+) -> Result<ListFoldersResponse, String> {
+    let db_guard = db.lock().map_err(|e| e.to_string())?;
+    let conn = db_guard.conn();
+
+    let mut stmt = conn
+        .prepare(PRESENT_FILE_PATHS_SQL)
+        .map_err(|e| e.to_string())?;
+    let paths: Vec<String> = stmt
+        .query_map([], |row| row.get::<_, String>(0))
+        .map_err(|e| e.to_string())?
+        .collect::<Result<Vec<String>, _>>()
+        .map_err(|e| e.to_string())?;
+
+    let folders = folder_counts_from_paths(paths)
+        .into_iter()
+        .map(|(path, count)| FolderCount { path, count })
+        .collect();
+    Ok(ListFoldersResponse { folders })
+}
+
 fn map_track_summary_at(row: &rusqlite::Row, base: usize) -> rusqlite::Result<TrackSummary> {
     Ok(TrackSummary {
         id: row.get(base)?,
@@ -371,6 +400,165 @@ pub async fn get_artwork(
     let mime = mime.unwrap_or_else(|| "image/jpeg".to_string());
     let encoded = base64::engine::general_purpose::STANDARD.encode(bytes);
     Ok(Some(format!("data:{mime};base64,{encoded}")))
+}
+
+/// Decodes an audio file and returns normalized amplitude peaks, cached on
+/// disk by the track's content hash so a track is only decoded once.
+#[tauri::command]
+pub async fn get_waveform_peaks(
+    app: AppHandle,
+    db: State<'_, Arc<Mutex<Database>>>,
+    request: GetWaveformPeaksRequest,
+) -> Result<GetWaveformPeaksResponse, String> {
+    let (file_path, file_hash) = {
+        let db_guard = db.lock().map_err(|e| e.to_string())?;
+        let conn = db_guard.conn();
+        let mut stmt = conn
+            .prepare("SELECT file_path, file_hash FROM tracks WHERE id = ?1")
+            .map_err(|e| e.to_string())?;
+        stmt.query_row([&request.track_id], |row| {
+            Ok((row.get::<_, String>(0)?, row.get::<_, Option<String>>(1)?))
+        })
+        .map_err(|e| format!("Track not found: {}", e))?
+    };
+
+    let cache_dir = app
+        .path()
+        .app_data_dir()
+        .map(|dir| dir.join("peaks"))
+        .unwrap_or_else(|_| std::path::PathBuf::from("peaks"));
+    let _ = std::fs::create_dir_all(&cache_dir);
+
+    // The stored fingerprint covers length + the first 1 MiB only
+    // (`crates/core/src/fingerprint.rs`), which is deliberately not an
+    // integrity check: a same-size in-place edit after that window keeps the
+    // old hash and would keep serving the old waveform from disk. Peaks are
+    // derived data, so the key is re-fingerprinted from the file on disk —
+    // one MiB read against a full decode, and a changed file gets a new key
+    // by construction. An unreadable file falls back to the previous key.
+    let cache_key = dj_assistant_core::compute_file_fingerprint(&file_path).unwrap_or_else(|_| {
+        file_hash
+            .clone()
+            .unwrap_or_else(|| request.track_id.clone())
+    });
+    // Peaks are derived data, so anything written by an older generator must not be served
+    // after the binning changes. Versioning the filename makes stale entries unreachable
+    // while leaving the user's existing cache files on disk untouched.
+    const PEAKS_CACHE_VERSION: &str = "v2";
+    let cache_file = cache_dir.join(format!("{}-{}.json", PEAKS_CACHE_VERSION, cache_key));
+
+    if let Ok(raw) = std::fs::read_to_string(&cache_file) {
+        if let Ok(cached) = serde_json::from_str::<GetWaveformPeaksResponse>(&raw) {
+            return Ok(cached);
+        }
+    }
+
+    let decoded = match dj_assistant_analysis::decode_audio_file(&file_path) {
+        Ok(d) => d,
+        Err(_) => {
+            return Ok(GetWaveformPeaksResponse {
+                peaks: Vec::new(),
+                duration_ms: 0,
+                sample_rate: 0,
+                is_real: false,
+            });
+        }
+    };
+
+    let sample_rate = decoded.sample_rate;
+    let duration_ms = (decoded.duration_seconds * 1000.0).round() as u64;
+    let mono = decoded.to_mono();
+
+    const BINS: usize = 4000;
+    let mut peaks = vec![0.0f32; BINS];
+    let frames = mono.len();
+    for (i, peak) in peaks.iter_mut().enumerate() {
+        // Bin `i` owns [i * frames / BINS, (i + 1) * frames / BINS). A fixed
+        // `frames.div_ceil(BINS)` stride stops short of `frames` when the stride does not
+        // divide it evenly, which left the tail bins at zero and cut the waveform before the
+        // real duration. Proportional edges cover every frame and keep every bin non-empty
+        // while `frames >= BINS`; below that the empty bins are legitimately zero.
+        let start = (i as u128 * frames as u128 / BINS as u128) as usize;
+        let end = ((i as u128 + 1) * frames as u128 / BINS as u128) as usize;
+        let mut max_abs: f32 = 0.0;
+        for sample in &mono[start..end] {
+            let a = sample.abs();
+            if a > max_abs {
+                max_abs = a;
+            }
+        }
+        *peak = max_abs;
+    }
+
+    let response = GetWaveformPeaksResponse {
+        peaks,
+        duration_ms,
+        sample_rate,
+        is_real: true,
+    };
+
+    if let Ok(serialized) = serde_json::to_string(&response) {
+        let _ = std::fs::write(&cache_file, serialized);
+    }
+
+    Ok(response)
+}
+
+#[tauri::command]
+pub async fn audio_load(
+    db: State<'_, Arc<Mutex<Database>>>,
+    engine: State<'_, Arc<Mutex<audio::AudioEngine>>>,
+    track_id: String,
+) -> Result<u64, String> {
+    let file_path = {
+        let db_guard = db.lock().map_err(|e| e.to_string())?;
+        let conn = db_guard.conn();
+        let mut stmt = conn
+            .prepare("SELECT file_path FROM tracks WHERE id = ?1")
+            .map_err(|e| e.to_string())?;
+        stmt.query_row([&track_id], |row| row.get::<_, String>(0))
+            .map_err(|e| format!("Track not found: {}", e))?
+    };
+    let eng = engine.lock().map_err(|e| e.to_string())?;
+    eng.load(&file_path)
+}
+
+#[tauri::command]
+pub async fn audio_play(engine: State<'_, Arc<Mutex<audio::AudioEngine>>>) -> Result<(), String> {
+    let eng = engine.lock().map_err(|e| e.to_string())?;
+    eng.play()
+}
+
+#[tauri::command]
+pub async fn audio_pause(engine: State<'_, Arc<Mutex<audio::AudioEngine>>>) -> Result<(), String> {
+    let eng = engine.lock().map_err(|e| e.to_string())?;
+    eng.pause()
+}
+
+#[tauri::command]
+pub async fn audio_seek(
+    engine: State<'_, Arc<Mutex<audio::AudioEngine>>>,
+    ms: u64,
+) -> Result<(), String> {
+    let eng = engine.lock().map_err(|e| e.to_string())?;
+    eng.seek(ms)
+}
+
+#[tauri::command]
+pub async fn audio_set_volume(
+    engine: State<'_, Arc<Mutex<audio::AudioEngine>>>,
+    volume: f32,
+) -> Result<(), String> {
+    let eng = engine.lock().map_err(|e| e.to_string())?;
+    eng.set_volume(volume)
+}
+
+#[tauri::command]
+pub async fn audio_state(
+    engine: State<'_, Arc<Mutex<audio::AudioEngine>>>,
+) -> Result<audio::AudioState, String> {
+    let eng = engine.lock().map_err(|e| e.to_string())?;
+    Ok(eng.state())
 }
 
 #[tauri::command]

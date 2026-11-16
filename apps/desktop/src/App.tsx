@@ -17,6 +17,7 @@ import type {
   EnrichmentProgressEvent,
   EnrichmentProviderKind,
   ChartListResponse,
+  FolderCount,
   GenreCount,
   ListTracksFilters,
   ListTracksSortBy,
@@ -30,6 +31,7 @@ import {
   listTracks,
   getTrack,
   listGenres,
+  listFolders,
   analyzeLibrary,
   listenToAnalysisProgress,
   listenToAnalysisCompleted,
@@ -117,6 +119,7 @@ import {
   projectCompatibleDraftKeys,
   scanPercent,
   toggleFilterValue,
+  trackMatchesSource,
   truncateComment,
 } from "./lib/library";
 import {
@@ -167,6 +170,7 @@ import { nextTheme, resolveTheme, THEME_LABELS } from "./lib/theme";
 import { PreviewPlayer } from "./components/preview-player";
 import { ModalShell } from "./components/ModalShell";
 import { ArtworkThumb } from "./components/ArtworkThumb";
+import { MixSuggestionsDock } from "./components/MixSuggestionsDock";
 import { TrackPanel } from "./components/track-panel/TrackPanel";
 import { BulkActionBar } from "./components/BulkActionBar";
 import { ColumnPicker } from "./components/ColumnPicker";
@@ -448,6 +452,7 @@ function TrackCell({
   keyReference,
   compatibilityMode,
   theme,
+  onPlay,
 }: {
   id: ColumnId;
   track: TrackSummary;
@@ -464,6 +469,8 @@ function TrackCell({
   keyReference?: string | null;
   compatibilityMode?: CompatibilityMode;
   theme?: "dark" | "light";
+  /** Loads the track into the preview player (T2.1.9 hover-play). */
+  onPlay?: (track: TrackSummary) => void;
 }) {
   const definition = columnDefinition(id);
   const base = `py-2.5 px-4 overflow-hidden whitespace-nowrap text-ellipsis ${
@@ -474,8 +481,22 @@ function TrackCell({
   if (id === "artwork") {
     return (
       <td className="py-1.5 px-2 text-center">
-        <div className="mx-auto w-fit">
+        <div className="group relative mx-auto w-fit">
           <ArtworkThumb trackId={track.id} hasArtwork={Boolean(track.artworkHash)} />
+          {onPlay && (
+            <button
+              type="button"
+              onClick={(event) => {
+                event.stopPropagation();
+                onPlay(track);
+              }}
+              aria-label={`Play ${track.title || "Untitled"}`}
+              title={`Play ${track.title || "Untitled"}`}
+              className="absolute inset-0 flex items-center justify-center rounded-sm bg-black/40 opacity-0 transition group-hover:opacity-100 focus-visible:opacity-100"
+            >
+              <Play className="h-4 w-4 text-white drop-shadow" />
+            </button>
+          )}
         </div>
       </td>
     );
@@ -1122,6 +1143,20 @@ export default function App() {
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [filterError, setFilterError] = useState<string | null>(null);
   const [genres, setGenres] = useState<GenreCount[]>([]);
+  const [folders, setFolders] = useState<FolderCount[]>([]);
+  // Library source selector (T2.1.12): All Library / Categories / Browser / Playlists / Flash/Storage.
+  const [librarySource, setLibrarySource] = useState<
+    "all" | "category" | "folder" | "playlist" | "storage"
+  >("all");
+  const [sourceId, setSourceId] = useState<string | null>(null);
+  // The scan listener is registered once and lives across source changes; it
+  // reads the current selection through this ref so an imported track is
+  // inserted only when it actually belongs to the view the user is looking at.
+  const sourceFilterRef = useRef<{ source: string | null; id: string | null }>({
+    source: "all",
+    id: null,
+  });
+  sourceFilterRef.current = { source: librarySource, id: sourceId };
   const [sortBy, setSortBy] = useState<ListTracksSortBy | undefined>(undefined);
   const [sortDir, setSortDir] = useState<SortDirection>("asc");
   // Column arrangement (T2.1.5) is a UI preference, not app state: it is read
@@ -1276,6 +1311,7 @@ export default function App() {
 
   // Chart snapshots Tier 1 (TD.3): versioned data with local taste filtering.
   const [chartsOpen, setChartsOpen] = useState(false);
+  const [mixSuggestionsOpen, setMixSuggestionsOpen] = useState(false);
   dialogsOpenRef.current =
     healthOpen || chartsOpen || removedOpen || editorTrack !== null || removeConfirm !== null;
   const [chartGenre, setChartGenre] = useState("techno");
@@ -1296,8 +1332,9 @@ export default function App() {
   }, [filters, compatibleOnly, compatibleKeys]);
   const normalizedFilters = useMemo(() => normalizeFilters(effectiveFilters), [effectiveFilters]);
   const queryKey = useMemo(
-    () => `${JSON.stringify(normalizedFilters ?? {})}|${sortBy ?? ""}|${sortBy ? sortDir : ""}`,
-    [normalizedFilters, sortBy, sortDir]
+    () =>
+      `${JSON.stringify(normalizedFilters ?? {})}|${sortBy ?? ""}|${sortBy ? sortDir : ""}|${librarySource}|${sourceId ?? ""}`,
+    [normalizedFilters, sortBy, sortDir, librarySource, sourceId]
   );
 
   // Load tracks — a new query resets to the first page; a reload re-fetches as
@@ -1342,6 +1379,8 @@ export default function App() {
         const limit = Math.min(MAX_LIBRARY_PAGE, target - collected.length);
         const res = await listTracks({
           filters: normalizedFilters,
+          source: librarySource === "all" ? undefined : librarySource,
+          sourceId: sourceId ?? undefined,
           sortBy,
           sortDir: sortBy ? sortDir : undefined,
           limit,
@@ -1378,7 +1417,7 @@ export default function App() {
         setLoading(false);
       });
     // Only the applied query and reloads drive the fetch; loader helpers are pure.
-  }, [queryKey, normalizedFilters, sortBy, sortDir, reloadToken]);
+  }, [queryKey, normalizedFilters, sortBy, sortDir, reloadToken, librarySource, sourceId]);
 
   /**
    * Starts the next 500-row page unless a load is active or all rows are loaded.
@@ -1395,6 +1434,8 @@ export default function App() {
     setLoadingMore(true);
     listTracks({
       filters: normalizedFilters,
+      source: librarySource === "all" ? undefined : librarySource,
+      sourceId: sourceId ?? undefined,
       sortBy,
       sortDir: sortBy ? sortDir : undefined,
       limit: NEXT_LIBRARY_PAGE,
@@ -1418,7 +1459,7 @@ export default function App() {
         appendInFlightRef.current = false;
         setLoadingMore(false);
       });
-  }, [normalizedFilters, sortBy, sortDir, libraryTotal]);
+  }, [normalizedFilters, sortBy, sortDir, libraryTotal, librarySource, sourceId]);
 
   // Measure the scroll viewport; a window resize or a dock/player layout change
   // changes how many rows are visible, never the row height.
@@ -1466,6 +1507,21 @@ export default function App() {
         if (!cancelled) setGenres(res.genres);
       })
       .catch((err) => console.error("Failed to load genres:", err));
+    return () => {
+      cancelled = true;
+    };
+  }, [reloadToken]);
+
+  // Folder options for the Browser source, reloaded with the library. Read
+  // from the whole library, not the loaded page: a folder that only appears
+  // past the first page must still be selectable.
+  useEffect(() => {
+    let cancelled = false;
+    listFolders()
+      .then((res) => {
+        if (!cancelled) setFolders(res.folders);
+      })
+      .catch((err) => console.error("Failed to load folders:", err));
     return () => {
       cancelled = true;
     };
@@ -1818,6 +1874,8 @@ export default function App() {
       setProgress(payload);
       const importedTrack = payload.importedTrack;
       if (importedTrack) {
+        const { source, id } = sourceFilterRef.current;
+        if (!trackMatchesSource(importedTrack, source, id)) return;
         setTracks((prev) => {
           if (prev.some((t) => t.id === importedTrack.id)) return prev;
           return [importedTrack, ...prev];
@@ -2657,6 +2715,69 @@ export default function App() {
             <>
               {/* Main Content Area */}
               <div className="relative flex min-h-0 flex-1 flex-col overflow-hidden">
+                {mixSuggestionsOpen && (
+                  <MixSuggestionsDock
+                    seedTrack={visibleSelectedTrack ?? inspectedTrack ?? playingTrack}
+                    onPlay={handlePlayTrack}
+                    onAdd={(track) =>
+                      setSelection((prev) => (prev.includes(track.id) ? prev : [...prev, track.id]))
+                    }
+                    onClose={() => setMixSuggestionsOpen(false)}
+                  />
+                )}
+                {/* Library source tabs (T2.1.12) */}
+                <div className="flex shrink-0 items-center gap-1 border-b border-dj-border bg-dj-panel px-3 py-1">
+                  {(["all", "category", "folder", "playlist", "storage"] as const).map((tab) => (
+                    <button
+                      key={tab}
+                      type="button"
+                      onClick={() => {
+                        setLibrarySource(tab);
+                        setSourceId(null);
+                      }}
+                      className={`rounded-sm px-2 py-0.5 text-[11px] transition ${librarySource === tab ? "bg-dj-accent/15 text-dj-accent" : "text-dj-text-secondary hover:bg-dj-hover hover:text-dj-text"}`}
+                    >
+                      {tab === "all"
+                        ? "All Library"
+                        : tab === "category"
+                          ? "Categories"
+                          : tab === "folder"
+                            ? "Browser"
+                            : tab === "playlist"
+                              ? "Playlists"
+                              : "Flash/Storage"}
+                    </button>
+                  ))}
+                </div>
+                {librarySource === "category" && genres.length > 0 && (
+                  <div className="flex shrink-0 flex-wrap items-center gap-1 border-b border-dj-border bg-dj-panel px-3 py-1">
+                    {genres.map((g) => (
+                      <button
+                        key={g.genre}
+                        type="button"
+                        onClick={() => setSourceId(g.genre)}
+                        className={`rounded-sm px-2 py-0.5 text-[11px] transition ${sourceId === g.genre ? "bg-dj-accent/15 text-dj-accent" : "text-dj-text-secondary hover:bg-dj-hover hover:text-dj-text"}`}
+                      >
+                        {g.genre} ({g.count})
+                      </button>
+                    ))}
+                  </div>
+                )}
+                {librarySource === "folder" && folders.length > 0 && (
+                  <div className="flex max-h-24 shrink-0 flex-wrap items-center gap-1 overflow-y-auto border-b border-dj-border bg-dj-panel px-3 py-1">
+                    {folders.map((f) => (
+                      <button
+                        key={f.path}
+                        type="button"
+                        onClick={() => setSourceId(f.path)}
+                        className={`max-w-[240px] truncate rounded-sm px-2 py-0.5 text-[11px] transition ${sourceId === f.path ? "bg-dj-accent/15 text-dj-accent" : "text-dj-text-secondary hover:bg-dj-hover hover:text-dj-text"}`}
+                        title={f.path}
+                      >
+                        {f.path.split("/").pop() || f.path} ({f.count})
+                      </button>
+                    ))}
+                  </div>
+                )}
                 {/* Options bar — view-context actions (docs/ui/02) */}
                 <div className="flex h-8 shrink-0 items-center gap-1.5 border-b border-dj-border bg-dj-panel px-3">
                   <div className="relative w-64">
@@ -2719,6 +2840,19 @@ export default function App() {
                   >
                     <Sparkles className={`h-3.5 w-3.5 ${analyzing ? "animate-pulse" : ""}`} />
                     <span>{analyzing ? "Analyzing…" : "Analyze"}</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setMixSuggestionsOpen((open) => !open)}
+                    className={`flex h-6 items-center gap-1 rounded-sm border px-2 text-[11px] transition ${
+                      mixSuggestionsOpen
+                        ? "border-dj-accent/40 bg-dj-accent/10 text-dj-accent"
+                        : "border-dj-border bg-dj-elevated text-dj-text-secondary hover:bg-dj-hover"
+                    }`}
+                    title="Mix suggestions for the selected track"
+                  >
+                    <Sparkles className="h-3.5 w-3.5" />
+                    <span className="hidden sm:inline">Mix</span>
                   </button>
                   <button
                     type="button"
@@ -3077,6 +3211,7 @@ export default function App() {
                                   keyReference={keyReference}
                                   compatibilityMode={ui.compatibilityMode}
                                   theme={resolveTheme(ui.theme, systemPrefersDark)}
+                                  onPlay={handlePlayTrack}
                                 />
                               ))}
                             </tr>
