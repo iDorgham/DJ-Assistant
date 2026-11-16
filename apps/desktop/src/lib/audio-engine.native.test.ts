@@ -196,9 +196,9 @@ test("a late rejection from a superseded play() cannot stop the newer playback",
   mockIPC((command) => {
     if (command === "audio_load") return Promise.resolve(20000);
     if (command === "audio_play") {
-      const d = deferred<null>();
-      plays.push(d);
-      return d.promise;
+      const pendingPlay = deferred<null>();
+      plays.push(pendingPlay);
+      return pendingPlay.promise;
     }
     return undefined;
   });
