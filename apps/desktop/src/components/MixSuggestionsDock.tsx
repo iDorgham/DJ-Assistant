@@ -53,7 +53,7 @@ export function MixSuggestionsDock({
       setResults([]);
       setLoading(false);
       setError(false);
-      return;
+      return undefined;
     }
     let cancelled = false;
     setLoading(true);

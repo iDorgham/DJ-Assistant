@@ -124,7 +124,7 @@ export function PreviewPlayer({
       setWaveform(null);
       setHotCues([]);
       setTempCueMs(null);
-      return;
+      return undefined;
     }
 
     const duration = trackDurationMs || 240000;
