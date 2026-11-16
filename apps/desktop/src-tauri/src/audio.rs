@@ -81,7 +81,9 @@ impl AudioEngine {
             inner.cursor = 0.0;
             inner.stream.take()
         };
-        let _ = stale_stream;
+        {
+            let _stale = stale_stream;
+        }
         Ok(self.state().duration_ms)
     }
 
@@ -105,7 +107,12 @@ impl AudioEngine {
             inner.stream.take()
         };
         self.stream_failed.store(false, Ordering::Relaxed);
-        let _ = failed_stream;
+        // End the failed stream's lifetime here, outside the lock and before the
+        // replacement is built: an exclusive device refuses a second open while
+        // the old stream is still alive.
+        {
+            let _stale = failed_stream;
+        }
 
         let mut inner = self.inner.lock().map_err(|e| e.to_string())?;
         if inner.src.is_empty() {
