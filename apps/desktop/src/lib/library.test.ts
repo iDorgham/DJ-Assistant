@@ -513,6 +513,7 @@ test("trackMatchesSource: playlist and storage match nothing until they have a m
   for (const source of ["playlist", "storage"]) {
     assert.equal(trackMatchesSource(track(), source, "anything"), false);
     assert.equal(trackMatchesSource(track(), source, null), false);
-    assert.equal(trackMatchesSource(track(), source, undefined), false);
+    const noModel: string | undefined = undefined;
+    assert.equal(trackMatchesSource(track(), source, noModel), false);
   }
 });

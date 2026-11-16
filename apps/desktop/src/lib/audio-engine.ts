@@ -377,12 +377,12 @@ class PreviewAudioEngine {
     const poll = async () => {
       if (!this.isPlaying) return;
       try {
-        const s = await audioState();
+        const state = await audioState();
         // The reply may outlive a pause, a stop or a load: drop it instead of
         // repainting a position that belongs to the previous session.
         if (generation !== this.pollGeneration) return;
-        this.positionMs = Math.min(s.positionMs, this.durationMs);
-        if (!s.playing) {
+        this.positionMs = Math.min(state.positionMs, this.durationMs);
+        if (!state.playing) {
           // Engine paused underneath us (e.g. track ended). Reflect it.
           this.isPlaying = false;
           this.stopNativePoll();

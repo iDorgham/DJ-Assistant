@@ -328,7 +328,8 @@ test("an axis that fits is not moved because the other one flipped", () => {
 
 test("an unrated track shows no lit stars, and out-of-range ratings clamp", () => {
   assert.equal(menuRating(null), 0);
-  assert.equal(menuRating(undefined), 0);
+  const unrated: number | undefined = undefined;
+  assert.equal(menuRating(unrated), 0);
   assert.equal(menuRating(0), 0);
   assert.equal(menuRating(3), 3);
   assert.equal(menuRating(9), 5);

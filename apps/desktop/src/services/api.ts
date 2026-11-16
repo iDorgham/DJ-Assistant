@@ -59,7 +59,7 @@ const isTauri = typeof window !== "undefined" && "__TAURI_INTERNALS__" in window
 export async function scanFolder(req: ScanFolderRequest): Promise<ScanFolderResponse> {
   if (!isTauri) {
     console.warn("[Mock API] Tauri not detected, running mock scan");
-    return { jobId: "mock-job-" + Date.now(), estimatedFiles: 42 };
+    return { jobId: `mock-job-${Date.now()}`, estimatedFiles: 42 };
   }
   const { invoke } = await import("@tauri-apps/api/core");
   return invoke<ScanFolderResponse>("scan_folder", { request: req });
@@ -167,10 +167,9 @@ export interface DecodedPeakLayers {
  */
 export function decodedPeakLayers(peaks: number[]): DecodedPeakLayers {
   const body = new Float32Array(peaks.length);
-  for (let i = 0; i < peaks.length; i++) {
-    const value = peaks[i]!;
+  peaks.forEach((value, i) => {
     body[i] = Number.isFinite(value) ? Math.min(Math.max(value, 0), 1) : 0;
-  }
+  });
   return {
     peaks: body,
     lowPeaks: new Float32Array(body.length),
@@ -406,7 +405,7 @@ export async function listenToEnrichmentProgress(
   callback: (event: EnrichmentProgressEvent) => void
 ): Promise<() => void> {
   if (!isTauri) {
-    return () => {};
+    return () => undefined;
   }
   const { listen } = await import("@tauri-apps/api/event");
   const unlisten = await listen<EnrichmentProgressEvent>("enrichment:progress", (e) => {
@@ -511,13 +510,13 @@ export async function audioLoad(trackId: string): Promise<number> {
 export async function audioPlay(): Promise<void> {
   if (!isTauri) return;
   const { invoke } = await import("@tauri-apps/api/core");
-  await invoke<void>("audio_play");
+  await invoke("audio_play");
 }
 
 export async function audioPause(): Promise<void> {
   if (!isTauri) return;
   const { invoke } = await import("@tauri-apps/api/core");
-  await invoke<void>("audio_pause");
+  await invoke("audio_pause");
 }
 
 /**
@@ -541,13 +540,13 @@ export async function audioSeek(ms: number): Promise<void> {
     return;
   }
   const { invoke } = await import("@tauri-apps/api/core");
-  await invoke<void>("audio_seek", { ms: target });
+  await invoke("audio_seek", { ms: target });
 }
 
 export async function audioSetVolume(volume: number): Promise<void> {
   if (!isTauri) return;
   const { invoke } = await import("@tauri-apps/api/core");
-  await invoke<void>("audio_set_volume", { volume });
+  await invoke("audio_set_volume", { volume });
 }
 
 export async function audioState(): Promise<NativeAudioState> {
@@ -560,7 +559,8 @@ export async function audioState(): Promise<NativeAudioState> {
 
 export async function openFolderDialog(): Promise<string | null> {
   if (!isTauri) {
-    const mockPath = window.prompt("Enter folder path for mock scan:", "D:/Music/TestSet");
+    const promptText = "Enter folder path for mock scan:";
+    const mockPath = window.prompt(promptText, "D:/Music/TestSet"); /* skipcq: JS-0052 */
     return mockPath || null;
   }
   try {
@@ -584,7 +584,7 @@ export async function listenToScanProgress(
   callback: (event: ScanProgressEvent) => void
 ): Promise<() => void> {
   if (!isTauri) {
-    return () => {};
+    return () => undefined;
   }
   const { listen } = await import("@tauri-apps/api/event");
   const unlisten = await listen<ScanProgressEvent>("scan:progress", (e) => {
@@ -597,7 +597,7 @@ export async function listenToScanCompleted(
   callback: (event: ScanCompletedEvent) => void
 ): Promise<() => void> {
   if (!isTauri) {
-    return () => {};
+    return () => undefined;
   }
   const { listen } = await import("@tauri-apps/api/event");
   const unlisten = await listen<ScanCompletedEvent>("scan:completed", (e) => {
@@ -616,7 +616,7 @@ export async function analyzeLibrary(
 ): Promise<AnalyzeLibraryResponse> {
   if (!isTauri) {
     console.warn("[Mock API] Tauri not detected, returning empty analysis job");
-    return { jobId: "mock-analysis-" + Date.now(), total: 0 };
+    return { jobId: `mock-analysis-${Date.now()}`, total: 0 };
   }
   const { invoke } = await import("@tauri-apps/api/core");
   return invoke<AnalyzeLibraryResponse>("analyze_library", { request: req });
@@ -626,7 +626,7 @@ export async function listenToAnalysisProgress(
   callback: (event: AnalysisProgressEvent) => void
 ): Promise<() => void> {
   if (!isTauri) {
-    return () => {};
+    return () => undefined;
   }
   const { listen } = await import("@tauri-apps/api/event");
   const unlisten = await listen<AnalysisProgressEvent>("analysis:progress", (e) => {
@@ -639,7 +639,7 @@ export async function listenToAnalysisCompleted(
   callback: (event: AnalysisCompletedEvent) => void
 ): Promise<() => void> {
   if (!isTauri) {
-    return () => {};
+    return () => undefined;
   }
   const { listen } = await import("@tauri-apps/api/event");
   const unlisten = await listen<AnalysisCompletedEvent>("analysis:completed", (e) => {

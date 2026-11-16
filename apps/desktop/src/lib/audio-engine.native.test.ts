@@ -30,8 +30,12 @@ test("native loading discards stale continuations, gates play, restores volume",
   mockIPC((command, args) => {
     const payload = args as Record<string, unknown>;
     calls.push({ command, args: payload });
-    if (command === "audio_load") return loads.get(payload.trackId as string)!.promise;
+    if (command === "audio_load") {
+      // A missing load deferred must crash the test, not resolve undefined.
+      return loads.get(payload.trackId as string)!.promise; /* skipcq: JS-0339 */
+    }
     if (command === "audio_state") return state.promise;
+    return undefined;
   });
   const { previewEngine: engine } = await import("./audio-engine.ts");
   const { audioSeek } = await import("../services/api.ts");
@@ -55,11 +59,11 @@ test("native loading discards stale continuations, gates play, restores volume",
     calls.some((c) => c.command === "audio_play"),
     false
   );
-  loads.get("a")!.resolve(99999);
+  loads.get("a")!.resolve(99999); /* skipcq: JS-0339 */
   await first;
   await flush();
   assert.equal(engine.getState().durationMs, 30000);
-  loads.get("b")!.resolve(45000);
+  loads.get("b")!.resolve(45000); /* skipcq: JS-0339 */
   await second;
   await flush();
   assert.equal(engine.getState().durationMs, 45000);
@@ -76,7 +80,7 @@ test("native loading discards stale continuations, gates play, restores volume",
   engine.play();
   await flush();
   assert.equal(calls.filter((c) => c.command === "audio_play").length, 1);
-  const poll = frames.values().next().value!;
+  const poll = frames.values().next().value!; /* skipcq: JS-0339 */
   frames.clear();
   poll(0);
   await flush();
@@ -94,18 +98,18 @@ test("native loading discards stale continuations, gates play, restores volume",
   const third = engine.loadTrack("c", 30000);
   engine.play();
   engine.pause();
-  loads.get("c")!.resolve(50000);
+  loads.get("c")!.resolve(50000); /* skipcq: JS-0339 */
   await third;
   await flush();
   assert.equal(engine.getState().isPlaying, false);
   engine.setMuted(false);
   loads.set("d", deferred<number>());
   const fourth = engine.loadTrack("d", 30000);
-  loads.get("d")!.resolve(60000);
+  loads.get("d")!.resolve(60000); /* skipcq: JS-0339 */
   await fourth;
-  assert.deepEqual(calls.filter((c) => c.command === "audio_set_volume").at(-1)!.args, {
-    volume: 0.35,
-  });
+  // prettier-ignore
+  const lastVolume = calls.filter((c) => c.command === "audio_set_volume").at(-1)!; /* skipcq: JS-0339 */
+  assert.deepEqual(lastVolume.args, { volume: 0.35 });
 
   // Re-selecting the same ID still creates a distinct load request.
   const oldSame = deferred<number>();
@@ -126,11 +130,11 @@ test("native loading discards stale continuations, gates play, restores volume",
   loads.set("broken", deferred<number>());
   const broken = engine.loadTrack("broken", 30000);
   await flush();
-  loads.get("broken")!.reject(new Error("test decode failure"));
+  loads.get("broken")!.reject(new Error("test decode failure")); /* skipcq: JS-0339 */
   await broken;
   loads.set("recovered", deferred<number>());
   const recovered = engine.loadTrack("recovered", 30000);
-  loads.get("recovered")!.resolve(80000);
+  loads.get("recovered")!.resolve(80000); /* skipcq: JS-0339 */
   await recovered;
   assert.equal(engine.getState().durationMs, 80000);
 
