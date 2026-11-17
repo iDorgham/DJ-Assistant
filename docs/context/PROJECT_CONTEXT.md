@@ -478,6 +478,12 @@ and tag editing.
 Migration `008_tracks_removed_at.sql` adds `tracks.removed_at DATETIME` for reversible
 soft delete, indexed, with library queries automatically skipping removed tracks.
 
+Migration `009_beatgrid_confidence.sql` adds `tracks.beatgrid_confidence REAL` — the
+beat-alignment ratio (0..=1) the BPM detector reports, written by the analysis
+persist path and cleared when analysis fails. It is NULL for rows analysed before the
+migration until they are re-analysed (force), and `get_track` exposes it as
+`TrackDetail.beatgridConfidence`; the library summary deliberately does not carry it.
+
 Database pragmas: foreign keys **on** (SQLite defaults to off), `journal_mode =
 WAL`, `synchronous = NORMAL`.
 
@@ -513,7 +519,7 @@ Wired in `apps/desktop/src-tauri/src/lib.rs`:
 | `scan_folder` | Canonicalize path, run recursive scan, cache artwork, emit progress events |
 | `list_tracks` | Server-side search + filters (BPM/key/status/genre/rating), sort and pagination; returns the matching `total` |
 | `list_genres` | Distinct non-empty genre tags with track counts (filter-panel options) |
-| `get_track` | Full track detail incl. cue points |
+| `get_track` | Full track detail incl. cue points and the analysis fields the summary omits — `beatgridConfidence` (migration 009), `phraseConfidence`, `loudnessLufs`, `vocalPresence` |
 | `get_artwork` | Serve cached cover art as a `data:` URL (or `null`) |
 | `analyze_library` | Queue local analysis for all/selected tracks (version-aware skip, `force` supported) |
 | `find_similar_tracks` | Rank library tracks by local mix-compatibility (BPM/key/genre/duration + reasons) |
@@ -593,7 +599,7 @@ persisted UI state, and the player dock. The spec defines Mini, Full and
 full-window Player view, with Hidden as a visibility state; PR #54 shipped the
 Mini and Full dock presentations, while the separate Player view is not
 implemented. Real track audio is **native since PR #80** (cpal + Symphonia
-`AudioEngine` behind the six `audio_*` commands, with the T2.4.1/T2.4.4 dual-resolution
+`AudioEngine` behind the six `audio_*` commands, with the T2.4.1/T2.4.2 dual-resolution
 peaks cache feeding the waveforms from PR #81); its running-window QA is still open.
 The old three-view shell (header view switcher,
 Preparation / Auto Performance tabs, per-view options bar) is superseded by the
@@ -1076,7 +1082,7 @@ provider status + store links (TF.2/TF.4), opt-in enrichment preview → apply �
 
 ### 17.4 Test and quality status
 
-- Current automated suite records **351 total tests passing** (verified 2026-11-17): 267 desktop tests (`node --test`), 72 agent tests (+1 skipped), 10 tooling tests, and 2 API integration tests,
+- Current automated suite records **357 tests, 356 passing + 1 skipped** (re-run 2026-11-17 on this branch): 272 desktop tests (`node --test`, 0 fail), 72 agent tests (+1 skipped), 10 tooling tests, and 2 API integration tests,
   with `cargo clippy -D warnings`, `cargo fmt --check`, and `eslint .` clean.
 - Phase 1 added full per-analyzer Rust suites (BPM, key, phrase, vocal, loudness,
   version, registry, pipeline). The portable Rust suite is the gate that runs on
