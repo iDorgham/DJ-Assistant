@@ -166,6 +166,7 @@ import {
   type CompatibilityMode,
 } from "./lib/harmonic";
 import { formatKeyForNotation, type KeyNotation } from "./lib/key-format";
+import { addSuggestionToSelection, replaceSeedInSelection } from "./lib/mix-dock-actions";
 import { rowHeightForColumns, shouldLoadMore, virtualWindow } from "./lib/virtual-window";
 import { nextTheme, resolveTheme, THEME_LABELS } from "./lib/theme";
 import { PreviewPlayer } from "./components/preview-player";
@@ -2732,11 +2733,18 @@ export default function App() {
               <div className="relative flex min-h-0 flex-1 flex-col overflow-hidden">
                 {mixSuggestionsOpen && (
                   <MixSuggestionsDock
-                    seedTrack={visibleSelectedTrack ?? inspectedTrack ?? playingTrack}
+                    seedTrack={selectedTrack ?? inspectedTrack ?? playingTrack}
                     onPlay={handlePlayTrack}
                     onAdd={(track) =>
-                      setSelection((prev) => (prev.includes(track.id) ? prev : [...prev, track.id]))
+                      setSelection((prev) => addSuggestionToSelection(prev, track.id))
                     }
+                    onReplace={(track) => {
+                      // The same reference the dock displays as the seed: the
+                      // fetched one, so paging the candidate out of view never
+                      // swaps a different track than the one shown.
+                      const seedId = (selectedTrack ?? inspectedTrack ?? playingTrack)?.id ?? null;
+                      setSelection((prev) => replaceSeedInSelection(prev, seedId, track.id));
+                    }}
                     onClose={() => setMixSuggestionsOpen(false)}
                   />
                 )}
