@@ -10,9 +10,11 @@ import {
 
 test("null and undefined confidence read as unknown", () => {
   assert.equal(gridConfidenceTier(null), "unknown");
-  assert.equal(gridConfidenceTier(undefined), "unknown");
+  // The parameter is required, so the undefined branch can only be exercised
+  // by passing it explicitly.
+  assert.equal(gridConfidenceTier(undefined), "unknown"); /* skipcq: JS-W1042 */
   assert.equal(formatGridConfidence(null), null);
-  assert.equal(formatGridConfidence(undefined), null);
+  assert.equal(formatGridConfidence(undefined), null); /* skipcq: JS-W1042 */
 });
 
 test("non-finite and out-of-range confidence read as unknown", () => {
