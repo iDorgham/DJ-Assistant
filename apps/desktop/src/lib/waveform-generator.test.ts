@@ -113,3 +113,20 @@ test("snapToGrid rounds seeks to the nearest beat or bar", () => {
   // Without a usable tempo the requested position is returned.
   assert.equal(snapToGrid(1234, 0, 0, "beat", 300000), 1234);
 });
+
+test("the synthesized waveform carries a separate overview buffer", () => {
+  // T2.4.1 contract: overview and detail keep their own peaks.
+  const waveform = getOrGenerateWaveform("dual-res", 240000, 124, "seed-dual");
+  assert.equal(waveform.overviewPeaks.length, 4000);
+  assert.notEqual(waveform.overviewPeaks, waveform.peaks);
+  // The overview is a max decimation of the same synthesized shape: each
+  // overview bin holds the highest detail value in its proportional span.
+  const bin = 2101;
+  const start = Math.floor((bin * waveform.peaks.length) / waveform.overviewPeaks.length);
+  const end = Math.floor(((bin + 1) * waveform.peaks.length) / waveform.overviewPeaks.length);
+  let max = 0;
+  for (let i = start; i < end; i++) {
+    max = Math.max(max, waveform.peaks[i]);
+  }
+  assert.equal(waveform.overviewPeaks[bin], max);
+});

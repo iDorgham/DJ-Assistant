@@ -79,8 +79,17 @@ test("normalizeSeekMs rounds and clamps the u64 seek payload", () => {
   assert.equal(normalizeSeekMs(Number.NEGATIVE_INFINITY), null);
 });
 
+test("decodedPeakLayers gives the overview rail its own buffer", () => {
+  // T2.4.1: the overview layer must never read the detail buffer — separate
+  // arrays, its own clamping, its own length.
+  const layers = decodedPeakLayers([0.5, 2, -1, Number.NaN, 0.25], [0.75, -1, Number.NaN]);
+  assert.deepEqual(Array.from(layers.overviewPeaks), [0.75, 0, 0]);
+  assert.equal(layers.overviewPeaks.length, 3);
+  assert.notEqual(layers.overviewPeaks, layers.peaks);
+});
+
 test("decodedPeakLayers keeps decoded peaks and drops the synthetic bands", () => {
-  const layers = decodedPeakLayers([0.5, 2, -1, Number.NaN, 0.25]);
+  const layers = decodedPeakLayers([0.5, 2, -1, Number.NaN, 0.25], []);
   assert.equal(layers.isEstimated, false);
   assert.equal(layers.peaks.length, 5);
   // Out-of-range and non-finite samples are clamped into 0..1.
