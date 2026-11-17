@@ -9,6 +9,49 @@ project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- **Slices 4–8: artwork hover-play, mix suggestions dock, library source tabs,
+  peaks cache and native audio (T2.1.9 / T2.1.11 / T2.1.12 / T2.4, PR #80)** — merged
+  2026-11-16 (`65ca59ad`): hover-play overlay on the artwork column; a resizable
+  MixSuggestionsDock with Preview + Add (Replace still open) and persisted width
+  (`dj-assistant.mix-suggestions.width.v1`); library source tabs driving
+  `list_tracks` `source`/`sourceId` plus the new `list_folders` command and folder
+  chips; a per-track content-addressed peaks cache; and a native cpal + Symphonia
+  `AudioEngine` behind six `audio_*` Tauri commands (load/play/pause/seek/set_volume/
+  state), hardened through a review round (generation guard, device sample format,
+  load gating, EOF tail, seek poll restart, stream lifetime, superseded-play).
+  CI gained `libasound2-dev` for the audio link. Running-window QA pending.
+- **Dual peak resolutions for the waveform layers (T2.4.1, PR #81)** — merged
+  2026-11-16 (`5a9fced7`, commit `888861de`): one decode now emits both resolutions —
+  detail 4000 for the zoomed waveform and overview 1000 for `OverviewMap` /
+  `CompactWaveform` — via the new `dj_assistant_analysis::peaks` module;
+  `get_waveform_peaks` returns `overviewPeaks` and the cache is v3, so each layer
+  owns peaks at its own resolution.
+- **Key pills + harmonic relations (T2.1.8, PR #70)** — code arrived 2026-11-08
+  inside the PR #65 squash (`9551aa41`): pure `harmonic.ts` / `key-format.ts`, the
+  relation-tinted `KeyPill`, Camelot / 1m1d / both notation and Strict/Wide
+  preferences persisted in `UiState`, and a Compatible-only filter kept as a
+  committed intent that re-derives and stays removable when the reference is lost.
+- **Bulk metadata edit (T2.1.3, PR #65)** — merged 2026-11-08 (`9551aa41`): table
+  multi-select (Ctrl/Cmd-click, Shift-click), `MetadataEditor` dirty-fields-only
+  write with diff preview and undo, and `BulkActionBar` at count ≥ 2 with live
+  edit/rate/clear and disabled stubs carrying reasons.
+- **Library track context menu + soft delete (T2.1.10, PR #60)** — merged 2026-10-27
+  (`495a0c21`): Play, Edit tags, Rate, column toggles, Reveal, Copy path and Remove
+  with undo; migration 008 stamps `tracks.removed_at` in the same transaction as its
+  `skill_runs` snapshot; the Removed view restores via `restore_tracks`.
+- **Virtualized library table + 30k fixture (T2.1.5, PR #56)** — merged 2026-10-24
+  (`ed8d1046`): only visible rows mount (19–23 `<tr>` for 30,000 tracks) with
+  per-column row pitch, 200 → +500 paging behind an epoch guard, the
+  `DJ_ASSISTANT_DB_PATH` override, and the deterministic 30,000-track QA fixture.
+- **Stage 1 shell and Slice 3A tags/comments (T2.1.0 / T2.1.7 / T2.1.13, PR #53)** —
+  merged 2026-10-23 (`03991d3c`): the six-tab shell (Library, Playlists, Discover,
+  Statistics, Publish, Settings) with a typed view registry, collapsible 220/48px
+  nav, top-bar search/Import/Inbox/backup, `Ctrl/Cmd+1`–`6` shortcuts and the player
+  dock; plus tags in migration 007 (`track_tags`), `TagChips`, the metadata editor
+  reached from the row menu, and the user comment overwriting `tracks.comments`.
+- **Player presentations (PR #54)** — merged 2026-10-23 (`5e7334eb`): Mini / Full
+  dock presentations (the separate full-window Player view is still unimplemented), hot-cue/grid segmented panel, BPM
+  fine-tune driving the grid, and persisted dock heights (Extended retired).
 - **Shared Track panel (Stage 2, PR #55)** — one inspectable panel used by the
   library and every later entry point: header with artwork/metadata and seven tabs
   (Overview, Tags, Cues, Analysis, Playlists, History, File). Overview absorbs the old
@@ -197,6 +240,15 @@ project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
+- **Dependabot merges through 2026-11-17 (#75, #82–#85)** — CI action updates
+  (`pnpm/action-setup` 6.1.1, `taiki-e/install-action` 2.90.3) and the grouped
+  version bumps: rust minor/patch including **rusqlite 0.41 → 0.42** (`07bccb5c`,
+  current `main` HEAD) and the js minor/patch batch.
+- **Docs-honesty sweep (PR #71)** — merged 2026-11-09 (`b8acce5a`): stale task,
+  plan and context claims reconciled against the shipped code (PR #65/#70 merge
+  state, player checklist, Tag Surgeon status, audit references, `reset_qa_baseline.sql`
+  and `check_schema.py` wording); the skill-mirror sync now rejects empty, non-string,
+  absolute and traversal names.
 - **TypeScript 6.0** — bumped `typescript` to `^6.0.3` across the workspace (supersedes Dependabot
   PR #13). TS 6 turns two previously-accepted `apps/desktop` patterns into errors: `TS2882`
   (side-effect `import './index.css'` now needs an ambient module declaration) and `TS2591`
@@ -290,6 +342,24 @@ project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- **Unchanged metadata save errored instead of no-op — B4 (PR #78)** — merged
+  2026-11-15 (`fad2d5eb`, fix `52ff7066`): an empty patch now succeeds as a no-op,
+  so the editor reports `Metadata unchanged — nothing to save` instead of the
+  “Couldn't save…” error path that also closed the dialog. The Pass-3 B4 re-run in
+  the running window is pending.
+- **Key pill contrast moved with row state — K10** — `c7b65bf6` (2026-11-10, landed
+  directly on `main`): the relation tint was translucent over the row, so
+  hovered/selected grounds pushed muted text under WCAG 4.5:1. A tinted pill now owns
+  an opaque ground with the tint layered above (`lib/key-pill-surface.ts`), the
+  unfilled treatment moves to `text.secondary`, and `key-pill-contrast.test.ts` gates
+  every theme × relation × code (D-017).
+- **Rating cell was not keyboard focusable — T2.1.4 (PR #72)** — merged 2026-11-09
+  (`307a13fb`): `Tab` landed on the row and the preview player turned `1`–`8` into
+  hot-cue jumps. The cell is one roving tab stop that claims `1`–`5` / `0` through
+  `lib/rating-keys.ts` and marks itself `data-rating-widget` so the player refuses
+  those digits.
+- **Agent memory read a ledger entry as multiple results (PR #79)** — `91f1f247`
+  (2026-11-15).
 - **`fixture_manifest` discovery test failed on `main`** — a merged commit added
   `fixtures/audio/analysis/` to the corpus, but that directory is a *separate corpus*
   generated by `scripts/make-analysis-fixtures.py` and described by

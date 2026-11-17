@@ -74,7 +74,10 @@ Scope split agreed up front: **Bucket 1** = fixes and alignment on existing surf
 
 ## 3. Remaining (Bucket 2 — feature work, not faked)
 
-- Real audio decode → replaces the synth-audio disclosure and, with it, `isEstimated` waveform pills (flip flag at the decode site).
+- Real audio decode → **shipped 2026-11-16 (PR #80 `cab6d8e5`, cpal + Symphonia
+  `AudioEngine`; per-track peaks via `get_waveform_peaks`, PR #80/#81)** — the
+  `isEstimated` PRNG path now only covers tracks without cached peaks, so the flag and
+  its disclosure stay; running-window QA of the native engine is still pending.
 - Analysis backend → status chips already render real `analysisStatus`; only data arrives.
 - Preparation / Auto Performance views behind their "Planned view" scaffolds; Settings window; command palette; visualizer.
 - Cue-pad roving tabindex within the toolbar (currently each pad + clear × is its own tab stop).

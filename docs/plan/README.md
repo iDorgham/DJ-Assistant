@@ -7,7 +7,7 @@ Status: **Approved and mirrored**. The plan is mirrored into the project at `doc
 D:\Work\AI\Projects\DJ Assistant\docs\plan\
 ```
 
-The plan's decision IDs (**D-001–D-052**) are scoped to this tree. They are separate from the repository's agent-memory decision ledger (`docs/ai/memory/decisions.md`, currently D-001–D-014).
+The plan's decision IDs (**D-001–D-052**) are scoped to this tree. They are separate from the repository's agent-memory decision ledger (`docs/ai/memory/decisions.md`, currently D-001–D-017).
 
 ---
 
