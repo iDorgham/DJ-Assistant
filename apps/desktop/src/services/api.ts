@@ -124,6 +124,8 @@ export interface GetWaveformPeaksRequest {
 
 export interface GetWaveformPeaksResponse {
   peaks: number[];
+  /** Overview-rail resolution, its own buffer (T2.4.1). */
+  overviewPeaks: number[];
   durationMs: number;
   sampleRate: number;
   isReal: boolean;
@@ -133,7 +135,7 @@ export async function getWaveformPeaks(
   req: GetWaveformPeaksRequest
 ): Promise<GetWaveformPeaksResponse> {
   if (!isTauri) {
-    return { peaks: [], durationMs: 0, sampleRate: 0, isReal: false };
+    return { peaks: [], overviewPeaks: [], durationMs: 0, sampleRate: 0, isReal: false };
   }
   const { invoke } = await import("@tauri-apps/api/core");
   return invoke<GetWaveformPeaksResponse>("get_waveform_peaks", { request: req });
@@ -142,6 +144,8 @@ export async function getWaveformPeaks(
 /** Peak layers of a decoded `get_waveform_peaks` response, shaped for `WaveformData`. */
 export interface DecodedPeakLayers {
   peaks: Float32Array;
+  /** The overview layer's own buffer — never the detail array (T2.4.1). */
+  overviewPeaks: Float32Array;
   lowPeaks: Float32Array;
   midPeaks: Float32Array;
   highPeaks: Float32Array;
@@ -164,14 +168,24 @@ export interface DecodedPeakLayers {
  * decoded). The bands are dropped instead: zero-filled at the decoded length.
  * The waveform still renders — `DetailedWaveform` always draws the body layer
  * and simply has no mid/low height left to draw.
+ *
+ * `overviewPeaks` is the backend's second peak layer (T2.4.1): the overview
+ * rail and Mini read it instead of the detail buffer, so the two layers never
+ * share one array.
  */
-export function decodedPeakLayers(peaks: number[]): DecodedPeakLayers {
-  const body = new Float32Array(peaks.length);
-  peaks.forEach((value, i) => {
-    body[i] = Number.isFinite(value) ? Math.min(Math.max(value, 0), 1) : 0;
+function clampPeaks(values: number[]): Float32Array {
+  const out = new Float32Array(values.length);
+  values.forEach((value, i) => {
+    out[i] = Number.isFinite(value) ? Math.min(Math.max(value, 0), 1) : 0;
   });
+  return out;
+}
+
+export function decodedPeakLayers(peaks: number[], overviewPeaks: number[]): DecodedPeakLayers {
+  const body = clampPeaks(peaks);
   return {
     peaks: body,
+    overviewPeaks: clampPeaks(overviewPeaks),
     lowPeaks: new Float32Array(body.length),
     midPeaks: new Float32Array(body.length),
     highPeaks: new Float32Array(body.length),

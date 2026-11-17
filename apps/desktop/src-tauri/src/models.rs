@@ -177,6 +177,9 @@ pub struct GetWaveformPeaksRequest {
 #[serde(rename_all = "camelCase")]
 pub struct GetWaveformPeaksResponse {
     pub peaks: Vec<f32>,
+    /// Overview-rail resolution, its own buffer (T2.4.1: never share one
+    /// peak array between the detail and overview layers).
+    pub overview_peaks: Vec<f32>,
     pub duration_ms: u64,
     pub sample_rate: u32,
     pub is_real: bool,
