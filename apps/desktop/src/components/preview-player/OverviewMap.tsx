@@ -71,7 +71,7 @@ export function OverviewMap({
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     ctx.clearRect(0, 0, width, height);
 
-    if (!waveform || waveform.peaks.length === 0) {
+    if (!waveform || waveform.overviewPeaks.length === 0) {
       // Carbon: gray-90 dark / gray-10 light
       ctx.fillStyle = isDarkTheme ? "#262626" : "#f4f4f4";
       ctx.fillRect(0, 0, width, height);
@@ -80,7 +80,7 @@ export function OverviewMap({
 
     const centerY = height * 0.5;
     const maxH = height * 0.42;
-    const totalPeaks = waveform.peaks.length;
+    const totalPeaks = waveform.overviewPeaks.length;
     const playedX = (positionMs / safeDuration) * width;
 
     // IBM Carbon: Cyan-40 played / Teal-70 muted (dark), Cyan-60 played / Cyan-30 muted (light)
@@ -92,7 +92,7 @@ export function OverviewMap({
     const step = 2;
     for (let x = 0; x < width; x += step) {
       const peakIdx = Math.min(totalPeaks - 1, Math.max(0, Math.floor((x / width) * totalPeaks)));
-      const amp = Math.max(waveform.peaks[peakIdx] || 0, 0.02);
+      const amp = Math.max(waveform.overviewPeaks[peakIdx] || 0, 0.02);
       const h = amp * maxH;
       const isPlayed = x <= playedX;
 
