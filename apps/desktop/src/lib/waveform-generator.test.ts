@@ -116,17 +116,17 @@ test("snapToGrid rounds seeks to the nearest beat or bar", () => {
 
 test("the synthesized waveform carries a separate overview buffer", () => {
   // T2.4.1 contract: overview and detail keep their own peaks.
-  const w = getOrGenerateWaveform("dual-res", 240000, 124, "seed-dual");
-  assert.equal(w.overviewPeaks.length, 4000);
-  assert.notEqual(w.overviewPeaks, w.peaks);
+  const waveform = getOrGenerateWaveform("dual-res", 240000, 124, "seed-dual");
+  assert.equal(waveform.overviewPeaks.length, 4000);
+  assert.notEqual(waveform.overviewPeaks, waveform.peaks);
   // The overview is a max decimation of the same synthesized shape: each
   // overview bin holds the highest detail value in its proportional span.
   const bin = 2101;
-  const start = Math.floor((bin * w.peaks.length) / w.overviewPeaks.length);
-  const end = Math.floor(((bin + 1) * w.peaks.length) / w.overviewPeaks.length);
+  const start = Math.floor((bin * waveform.peaks.length) / waveform.overviewPeaks.length);
+  const end = Math.floor(((bin + 1) * waveform.peaks.length) / waveform.overviewPeaks.length);
   let max = 0;
   for (let i = start; i < end; i++) {
-    max = Math.max(max, w.peaks[i]);
+    max = Math.max(max, waveform.peaks[i]);
   }
-  assert.equal(w.overviewPeaks[bin], max);
+  assert.equal(waveform.overviewPeaks[bin], max);
 });
