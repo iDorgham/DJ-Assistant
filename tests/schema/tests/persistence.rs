@@ -470,9 +470,15 @@ fn get_track_returns_a_detail_row_and_its_cues() {
         },
     );
 
-    // An energy level the detail row must carry through (T2.1.6).
+    // An energy level the detail row must carry through (T2.1.6), and a
+    // beat-grid confidence the detail row must carry through (T2.4.3).
     conn.execute("UPDATE tracks SET energy = 7 WHERE id = 't1'", [])
         .unwrap();
+    conn.execute(
+        "UPDATE tracks SET beatgrid_confidence = 0.87 WHERE id = 't1'",
+        [],
+    )
+    .unwrap();
 
     conn.execute(
         "INSERT INTO cue_points (id, track_id, position_ms, cue_type, slot, label, color_hex, source)
@@ -490,17 +496,23 @@ fn get_track_returns_a_detail_row_and_its_cues() {
          key_camelot, key_classical, duration_ms, format, analysis_status, \
          user_rating, energy, comments, artwork_hash, created_at, updated_at, \
          file_size, sample_rate, channels, bit_depth, loudness_lufs, \
-         vocal_presence, phrase_confidence, analysis_version, notes \
+         vocal_presence, phrase_confidence, analysis_version, notes, beatgrid_confidence \
          FROM tracks WHERE id = ?";
 
-    let (title, file_size, energy): (String, i64, Option<i64>) = conn
-        .query_row(detail_sql, params!["t1"], |r| {
-            Ok((r.get(3)?, r.get(21)?, r.get(16)?))
-        })
-        .expect("detail query must match the schema");
+    let (title, file_size, energy, beatgrid_confidence): (String, i64, Option<i64>, Option<f64>) =
+        conn
+            .query_row(detail_sql, params!["t1"], |r| {
+                Ok((r.get(3)?, r.get(21)?, r.get(16)?, r.get(30)?))
+            })
+            .expect("detail query must match the schema");
     assert_eq!(title, "Midnight Groove");
     assert_eq!(file_size, 1024);
     assert_eq!(energy, Some(7), "the detail row carries the energy level");
+    assert_eq!(
+        beatgrid_confidence,
+        Some(0.87),
+        "the detail row carries the beat-grid confidence (T2.4.3)"
+    );
 
     let cues: Vec<(i64, String, String)> = conn
         .prepare(
@@ -906,6 +918,44 @@ fn migrated_schema_has_an_energy_column() {
         )
         .expect("schema_migrations must be queryable");
     assert_eq!(versions, 1, "migration 006 must be recorded exactly once");
+
+    let _ = std::fs::remove_file(&db_path);
+}
+
+#[test]
+fn migrated_schema_has_a_beatgrid_confidence_column() {
+    // T2.4.3: migration 009 adds the persisted beat-grid confidence. The
+    // column must be a nullable REAL: never-analysed tracks store NULL and
+    // the player hides the chip instead of inventing a value.
+    let db_path = temp_db("beatgrid-confidence-column.db");
+    let conn = open_migrated_at(&db_path);
+
+    let mut stmt = conn
+        .prepare(
+            "SELECT type, \"notnull\" FROM pragma_table_info('tracks') \
+             WHERE name = 'beatgrid_confidence'",
+        )
+        .expect("pragma_table_info must be queryable");
+    let mut rows = stmt.query([]).expect("the tracks columns must be readable");
+    let column = rows
+        .next()
+        .expect("tracks.beatgrid_confidence must exist after migration 009")
+        .expect("the pragma row must be readable");
+    let column_type: String = column.get(0).expect("the column type must be readable");
+    let not_null: i64 = column.get(1).expect("the notnull flag must be readable");
+    assert_eq!(column_type, "REAL", "confidence is stored as a fraction");
+    assert_eq!(not_null, 0, "confidence must stay nullable for unanalysed tracks");
+    drop(rows);
+    drop(stmt);
+
+    let versions: i64 = conn
+        .query_row(
+            "SELECT COUNT(*) FROM schema_migrations WHERE version = 9",
+            [],
+            |r| r.get(0),
+        )
+        .expect("schema_migrations must be queryable");
+    assert_eq!(versions, 1, "migration 009 must be recorded exactly once");
 
     let _ = std::fs::remove_file(&db_path);
 }

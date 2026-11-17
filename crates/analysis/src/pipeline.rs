@@ -67,6 +67,10 @@ pub fn classify_analysis_status(results: &AnalysisResults) -> &'static str {
 pub struct AnalysisResults {
     /// `bpm` (from the beat grid). `None` when no tempo was established.
     pub bpm: Option<f32>,
+    /// `beatgrid_confidence` (beat alignment ratio, `0..=1`, from the same
+    /// [`BeatGrid`] as `bpm`). `None` when no tempo was established — a grid
+    /// without beats has nothing to be confident about (T2.4.3).
+    pub beatgrid_confidence: Option<f32>,
     /// `key_camelot` (e.g. `"8A"`). `None` when no confident tonal centre.
     pub key_camelot: Option<String>,
     /// `key_classical` (e.g. `"A minor"`). `None` when no confident tonal centre.
@@ -98,6 +102,7 @@ pub fn run_full_analysis<P: AsRef<Path>>(path: P) -> Result<AnalysisResults, Ana
 
     let mut results = AnalysisResults {
         bpm: None,
+        beatgrid_confidence: None,
         key_camelot: None,
         key_classical: None,
         loudness_lufs: None,
@@ -112,6 +117,7 @@ pub fn run_full_analysis<P: AsRef<Path>>(path: P) -> Result<AnalysisResults, Ana
         Ok(g) => {
             if g.bpm > 0.0 {
                 results.bpm = Some(g.bpm);
+                results.beatgrid_confidence = Some(g.confidence);
             } else {
                 results
                     .errors
@@ -203,18 +209,34 @@ mod tests {
             results.errors
         );
 
+        // The beat grid's own confidence rides along with the BPM (T2.4.3).
+        // The fixture is a steady 4/4 techno track, so alignment must read
+        // well above the floor the bpm module asserts for click tracks.
+        assert!(
+            results.beatgrid_confidence.is_some(),
+            "beatgrid_confidence must be populated when a tempo was established; errors: {:?}",
+            results.errors
+        );
+        if let Some(confidence) = results.beatgrid_confidence {
+            assert!(
+                confidence > 0.5,
+                "beatgrid_confidence on the steady 140 BPM fixture must exceed 0.5; got {confidence}"
+            );
+        }
+
         // BPM and key detection on real audio can degrade (tempo not established /
         // no tonal centre), which is recorded as a per-analyzer note, not a
         // pipeline failure. Print the full picture for anyone reading --nocapture.
         println!(
             "fixture analysis: bpm={:?} key_camelot={:?} key_classical={:?} \
-             loudness={:?} vocal={} phrase_confidence={:?} errors={:?}",
+             loudness={:?} vocal={} phrase_confidence={:?} beatgrid_confidence={:?} errors={:?}",
             results.bpm,
             results.key_camelot,
             results.key_classical,
             results.loudness_lufs,
             results.vocal_presence,
             results.phrase_confidence,
+            results.beatgrid_confidence,
             results.errors
         );
     }
