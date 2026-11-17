@@ -500,11 +500,10 @@ fn get_track_returns_a_detail_row_and_its_cues() {
          FROM tracks WHERE id = ?";
 
     let (title, file_size, energy, beatgrid_confidence): (String, i64, Option<i64>, Option<f64>) =
-        conn
-            .query_row(detail_sql, params!["t1"], |r| {
-                Ok((r.get(3)?, r.get(21)?, r.get(16)?, r.get(30)?))
-            })
-            .expect("detail query must match the schema");
+        conn.query_row(detail_sql, params!["t1"], |r| {
+            Ok((r.get(3)?, r.get(21)?, r.get(16)?, r.get(30)?))
+        })
+        .expect("detail query must match the schema");
     assert_eq!(title, "Midnight Groove");
     assert_eq!(file_size, 1024);
     assert_eq!(energy, Some(7), "the detail row carries the energy level");
@@ -944,7 +943,10 @@ fn migrated_schema_has_a_beatgrid_confidence_column() {
     let column_type: String = column.get(0).expect("the column type must be readable");
     let not_null: i64 = column.get(1).expect("the notnull flag must be readable");
     assert_eq!(column_type, "REAL", "confidence is stored as a fraction");
-    assert_eq!(not_null, 0, "confidence must stay nullable for unanalysed tracks");
+    assert_eq!(
+        not_null, 0,
+        "confidence must stay nullable for unanalysed tracks"
+    );
     drop(rows);
     drop(stmt);
 

@@ -20,7 +20,7 @@ import {
   type WaveformData,
   type HotCueData,
 } from "../../lib/waveform-generator";
-import { decodedPeakLayers, getWaveformPeaks } from "../../services/api";
+import { decodedPeakLayers, getTrack, getWaveformPeaks } from "../../services/api";
 import { previewEngine, type PlaybackState } from "../../lib/audio-engine";
 import { RATING_WIDGET_ATTRIBUTE, playerHotCueSlot } from "../../lib/rating-keys";
 import { DetailedWaveform } from "./DetailedWaveform";
@@ -71,6 +71,10 @@ export function PreviewPlayer({
   // Playback engine state
   const [playback, setPlayback] = useState<PlaybackState>(() => previewEngine.getState());
   const [waveform, setWaveform] = useState<WaveformData | null>(null);
+  // Beat-grid confidence (T2.4.3) travels with the loaded track. The library
+  // row is a summary, so the player fetches the analysis fields it displays
+  // from the detail command and re-checks the track on arrival.
+  const [beatgridConfidence, setBeatgridConfidence] = useState<number | null>(null);
 
   // Grid & navigation state
   const [gridOffsetMs, setGridOffsetMs] = useState(0);
@@ -124,6 +128,7 @@ export function PreviewPlayer({
       setWaveform(null);
       setHotCues([]);
       setTempCueMs(null);
+      setBeatgridConfidence(null);
       return undefined;
     }
 
@@ -153,6 +158,16 @@ export function PreviewPlayer({
       })
       .catch(() => {
         // Keep the synthesized waveform on failure.
+      });
+    // The beat-grid confidence (T2.4.3) lives on the detail row, not the
+    // library summary; clear first so the previous track's value cannot show.
+    setBeatgridConfidence(null);
+    getTrack({ trackId })
+      .then((res) => {
+        if (!cancelled) setBeatgridConfidence(res.track.beatgridConfidence ?? null);
+      })
+      .catch(() => {
+        // No confidence, no chip — the waveform and transport stay usable.
       });
     setZoomLevel(DEFAULT_ZOOM_LEVEL);
     setFollowPlayhead(true);
@@ -546,6 +561,7 @@ export function PreviewPlayer({
                 durationMs={playback.durationMs}
                 bpm={effectiveBpm}
                 gridOffsetMs={gridOffsetMs}
+                beatgridConfidence={beatgridConfidence}
                 isDarkTheme={isDarkTheme}
                 onInspect={
                   track && onInspectTrack ? (trigger) => onInspectTrack(track, trigger) : undefined
@@ -700,6 +716,7 @@ export function PreviewPlayer({
               positionMs={playback.positionMs}
               durationMs={playback.durationMs}
               bpm={effectiveBpm}
+              beatgridConfidence={beatgridConfidence}
               isDarkTheme={isDarkTheme}
               onInspect={
                 track && onInspectTrack ? (trigger) => onInspectTrack(track, trigger) : undefined
