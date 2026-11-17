@@ -110,10 +110,21 @@ Relative to the **currently playing track**. Support **Camelot 1A–12A / 1B–1
 | ±1 adjacent | Clear compatible fill |
 | Relative major/minor (xA ↔ xB) | Family shade |
 | Optional ±2 (Wide mode) | Soft tint |
-| Incompatible | Muted text, no fill |
-| Unknown | Dim “—” |
+| Incompatible | Secondary text, no fill |
+| Unknown | Dim “—” in secondary text |
 
 Pills use fixed min-width and stay legible in both themes. Optional left row border for “mixable with playing track”.
+
+**Legibility rule (K10, 2026-11-10)** — a tinted pill paints its own opaque `bg.base`
+ground and lays the relation tint over it, so its contrast cannot move with the row
+state. A translucent fill would not: the hovered (`layer.hover`) and selected
+(`layer.active`) grounds are far enough apart to push the same ink token under 4.5:1,
+which is how K10 failed. A pill with no fill (incompatible, unknown, and the key-less
+“—”) deliberately sits on the row ground, so its ink must clear 4.5:1 on all three —
+`text.secondary` does, `text.muted` does not. The rule lives in
+`apps/desktop/src/lib/key-pill-surface.ts` and is gated by
+`apps/desktop/src/lib/key-pill-contrast.test.ts`, which composites every theme ×
+relation × Camelot code from the tokens in `index.css`.
 
 ---
 

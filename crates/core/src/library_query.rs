@@ -169,6 +169,12 @@ pub struct TrackQuery {
     /// Free-text search across title, artist, album and file path.
     pub query: Option<String>,
     pub filters: TrackFilters,
+    /// Library source selector (T2.1.12): `all` (default, no narrowing),
+    /// `category` (genre = source_id), `folder` (file_path under source_id),
+    /// `playlist` / `storage` (reserved; no rows until those models exist).
+    pub source: Option<String>,
+    /// Identifier for the selected source (a genre name or a folder path).
+    pub source_id: Option<String>,
     /// One of [`SORT_KEYS`]; unknown values fall back to the default ordering.
     pub sort_by: Option<String>,
     /// `asc` | `desc`; ignored when unrecognised.
@@ -220,6 +226,13 @@ pub struct BuiltQuery {
     pub params: Vec<QueryParam>,
 }
 
+fn escape_like(value: &str) -> String {
+    value
+        .replace('\\', "\\\\")
+        .replace('%', "\\%")
+        .replace('_', "\\_")
+}
+
 impl TrackQuery {
     /// Renders the SQL and parameter list for a current-schema database.
     ///
@@ -265,6 +278,57 @@ impl TrackQuery {
         // optional filters below, so no caller can forget to apply it.
         let mut conditions: Vec<String> = vec![schema.rows_condition().to_string()];
         let mut params: Vec<QueryParam> = Vec::new();
+
+        // Library source (T2.1.12): All Library is the default (no narrowing);
+        // a category narrows to one genre, a folder to files under that path.
+        // Playlist / storage sources have no backing model yet, so they yield
+        // no rows rather than silently returning the whole library.
+        match self.source.as_deref() {
+            Some("category") => {
+                if let Some(id) = &self.source_id {
+                    let trimmed = id.trim();
+                    if !trimmed.is_empty() {
+                        params.push(QueryParam::Text(trimmed.to_ascii_lowercase()));
+                        conditions.push(format!("LOWER(TRIM(genre)) = ?{}", params.len()));
+                    }
+                }
+            }
+            Some("folder") => {
+                if let Some(id) = &self.source_id {
+                    let trimmed = id.trim();
+                    if !trimmed.is_empty() {
+                        // Folder ids arrive with `/` (the UI normalises them),
+                        // while scanned paths keep the platform separator, so
+                        // the comparison normalises the column instead.
+                        let mut folder = trimmed.replace('\\', "/");
+                        while folder.len() > 1 && folder.ends_with('/') {
+                            folder.pop();
+                        }
+                        // The column side is folded with `LOWER(...)`, and a
+                        // picker hands back on-disk case (`D:\Music\House` is
+                        // the normal spelling on Windows), so the bound prefix
+                        // is folded too or it can never match.
+                        let folder = folder.to_ascii_lowercase();
+                        // The trailing separator stops `/Music/House` from
+                        // matching `/Music/House2`; root keeps that one slash.
+                        let pattern = if folder == "/" {
+                            "/%".to_string()
+                        } else {
+                            format!("{}/%", escape_like(&folder))
+                        };
+                        params.push(QueryParam::Text(pattern));
+                        conditions.push(format!(
+                            "LOWER(REPLACE(file_path, '\\', '/')) LIKE ?{} ESCAPE '\\'",
+                            params.len()
+                        ));
+                    }
+                }
+            }
+            Some("playlist") | Some("storage") => {
+                conditions.push("1 = 0".to_string());
+            }
+            _ => {}
+        }
 
         if let Some(search) = self.search_pattern() {
             // One placeholder reused by every searched column keeps the
@@ -384,11 +448,7 @@ impl TrackQuery {
         if query.is_empty() {
             return None;
         }
-        let escaped = query
-            .replace('\\', "\\\\")
-            .replace('%', "\\%")
-            .replace('_', "\\_");
-        Some(format!("%{escaped}%"))
+        Some(format!("%{}%", escape_like(&query)))
     }
 
     /// ` ORDER BY ...` clause, always present so pagination is deterministic.
@@ -572,6 +632,10 @@ mod tests {
                 energy_max: Some(8),
             },
             sort_by: Some("rating".into()),
+            source: None,
+
+            source_id: None,
+
             sort_dir: Some("asc".into()),
         };
         let current = query.build(COLUMNS, 20, 40).expect("query must build");
@@ -871,6 +935,10 @@ mod tests {
     fn sort_direction_is_explicit_and_nulls_stay_last() {
         let ascending = build(TrackQuery {
             sort_by: Some("bpm".into()),
+            source: None,
+
+            source_id: None,
+
             sort_dir: Some("asc".into()),
             ..Default::default()
         });
@@ -880,6 +948,10 @@ mod tests {
 
         let descending = build(TrackQuery {
             sort_by: Some("bpm".into()),
+            source: None,
+
+            source_id: None,
+
             sort_dir: Some("desc".into()),
             ..Default::default()
         });
@@ -889,6 +961,10 @@ mod tests {
 
         let imported_ascending = build(TrackQuery {
             sort_by: Some("imported_at".into()),
+            source: None,
+
+            source_id: None,
+
             sort_dir: Some("asc".into()),
             ..Default::default()
         });
@@ -901,6 +977,10 @@ mod tests {
     fn unknown_sort_values_fall_back_instead_of_reaching_sql() {
         let built = build(TrackQuery {
             sort_by: Some("file_path; DROP TABLE tracks".into()),
+            source: None,
+
+            source_id: None,
+
             sort_dir: Some("sideways".into()),
             ..Default::default()
         });
@@ -1231,6 +1311,10 @@ mod tests {
     fn rating_and_energy_sort_direction_can_be_overridden() {
         let rating_ascending = build(TrackQuery {
             sort_by: Some("rating".into()),
+            source: None,
+
+            source_id: None,
+
             sort_dir: Some("asc".into()),
             ..Default::default()
         });
@@ -1240,6 +1324,10 @@ mod tests {
 
         let energy_ascending = build(TrackQuery {
             sort_by: Some("energy".into()),
+            source: None,
+
+            source_id: None,
+
             sort_dir: Some("asc".into()),
             ..Default::default()
         });
@@ -1257,5 +1345,86 @@ mod tests {
         assert_eq!(filters.active_count(), 1);
         filters.energy_max = Some(8);
         assert_eq!(filters.active_count(), 1, "both bounds are one group");
+    }
+
+    #[test]
+    fn category_source_binds_a_trimmed_lowercase_genre() {
+        // The column side is folded and trimmed in SQL, so the bound value has
+        // to be folded the same way — the sidebar sends the display name.
+        let built = build(TrackQuery {
+            source: Some("category".into()),
+            source_id: Some("  Deep House  ".into()),
+            ..Default::default()
+        });
+        assert_eq!(built.params[0], QueryParam::Text("deep house".into()));
+        assert!(
+            built.count_sql.contains("LOWER(TRIM(genre)) = ?1"),
+            "category must compare the folded genre: {}",
+            built.count_sql
+        );
+    }
+
+    #[test]
+    fn folder_source_folds_case_and_normalizes_separators() {
+        // A picker hands back `D:\Music\House` while the column side is
+        // lowercased and slash-normalised, so an unfolded prefix never matches.
+        let built = build(TrackQuery {
+            source: Some("folder".into()),
+            source_id: Some("D:\\Music\\House".into()),
+            ..Default::default()
+        });
+        assert_eq!(built.params[0], QueryParam::Text("d:/music/house/%".into()));
+        assert!(
+            built.count_sql.contains(r"REPLACE(file_path, '\', '/')"),
+            "the column side must use the separator of the bound value: {}",
+            built.count_sql
+        );
+        assert!(
+            built.count_sql.contains(r"ESCAPE '\'"),
+            "the LIKE wildcards keep their escape character: {}",
+            built.count_sql
+        );
+    }
+
+    #[test]
+    fn folder_source_strips_a_trailing_separator() {
+        // `D:\Music\House\` and `D:\Music\House` name the same folder, so both
+        // must leave exactly one separator before the wildcard.
+        let built = build(TrackQuery {
+            source: Some("folder".into()),
+            source_id: Some("D:\\Music\\House\\".into()),
+            ..Default::default()
+        });
+        assert_eq!(built.params[0], QueryParam::Text("d:/music/house/%".into()));
+    }
+
+    #[test]
+    fn playlist_and_storage_sources_match_no_rows() {
+        // Neither source has a backing model yet, so matching nothing is the
+        // honest answer; returning the whole library would mislabel it.
+        for source in ["playlist", "storage"] {
+            let built = build(TrackQuery {
+                source: Some(source.into()),
+                source_id: Some("anything".into()),
+                ..Default::default()
+            });
+            assert!(
+                built.count_sql.contains("1 = 0"),
+                "{source} must match no rows: {}",
+                built.count_sql
+            );
+        }
+    }
+
+    #[test]
+    fn root_folder_source_keeps_a_single_separator() {
+        // Stripping trailing separators must not empty root out: `/` stays one
+        // slash, so the pattern is `/%` and not a library-wide `%`.
+        let built = build(TrackQuery {
+            source: Some("folder".into()),
+            source_id: Some("/".into()),
+            ..Default::default()
+        });
+        assert_eq!(built.params[0], QueryParam::Text("/%".into()));
     }
 }

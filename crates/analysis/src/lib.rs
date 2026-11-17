@@ -13,6 +13,7 @@ pub mod key;
 pub mod loudness;
 pub mod normalizer;
 pub mod onnx;
+pub mod peaks;
 pub mod phrase;
 pub mod pipeline;
 pub mod registry;
@@ -33,6 +34,7 @@ pub use onnx::{
     find_onnxruntime_dylib, init_onnx_runtime, load_model_session, load_session_from_bytes,
     load_session_from_file, run_smoke_test,
 };
+pub use peaks::{peak_bins, peak_layers, PeakLayers, DETAIL_BINS, OVERVIEW_BINS};
 pub use phrase::{
     detect_phrases, Phrase, PhraseMap, PhraseMethod, PhraseOptions, SectionKind,
     PHRASE_PIPELINE_VERSION,

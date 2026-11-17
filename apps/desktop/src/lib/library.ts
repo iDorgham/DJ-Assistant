@@ -449,6 +449,50 @@ export function truncateComment(comment: string | null | undefined, maxLength = 
 }
 
 /** Percentage 0-100 for the scan progress bar; 25 while the total is unknown. */
+/**
+ * Case-fold the way SQLite's LOWER() does: ASCII only, so a folder chip
+ * and the SQL folder predicate never disagree on non-ASCII text.
+ */
+function asciiFold(value: string): string {
+  return value.replace(/[A-Z]/g, (c) => c.toLowerCase());
+}
+
+/**
+ * Whether a freshly scanned track belongs to the source currently selected in
+ * the Browser sidebar. Mirrors the SQL predicates in library_query.rs: a
+ * category is a folded genre equality, a folder is a slash-normalised, folded
+ * prefix, and playlist/storage have no backing model yet.
+ */
+export function trackMatchesSource(
+  track: Pick<TrackSummary, "filePath" | "genre">,
+  source: string | null | undefined,
+  sourceId: string | null | undefined
+): boolean {
+  if (!source || source === "all") return true;
+  const id = sourceId?.trim();
+  switch (source) {
+    case "category": {
+      // An unset id means "the whole category source", like the SQL branch.
+      if (!id) return true;
+      const genre = asciiFold((track.genre ?? "").trim());
+      return genre !== "" && genre === asciiFold(id);
+    }
+    case "folder": {
+      if (!id) return true;
+      const normalized = asciiFold(track.filePath.replace(/\\/g, "/"));
+      let folder = asciiFold(id.replace(/\\/g, "/"));
+      while (folder.length > 1 && folder.endsWith("/")) folder = folder.slice(0, -1);
+      // Root keeps its single slash, exactly like the SQL pattern (/%).
+      if (folder === "/") return normalized.startsWith("/");
+      return normalized.startsWith(`${folder}/`);
+    }
+    default:
+      // playlist/storage have no model yet: they match nothing, with or
+      // without an id, exactly like the backend's 1 = 0 branch.
+      return false;
+  }
+}
+
 export function scanPercent(scannedFiles: number, totalFiles: number): number {
   if (!totalFiles || totalFiles <= 0) return 25;
   return Math.min(100, Math.round((scannedFiles / totalFiles) * 100));

@@ -122,6 +122,17 @@ export interface ListTracksRequest {
   workspaceId?: string;
   query?: string;
   filters?: ListTracksFilters;
+  /**
+   * Library source selector (T2.1.12): `all`, `category`, `folder`, `playlist`, `storage`.
+   *
+   * `playlist` and `storage` are reserved selectors: the backend maps both to `1 = 0`
+   * (`crates/core/src/library_query.rs:322-323`), so they intentionally return an empty
+   * library until those models exist. They stay in the union because the source tabs are
+   * typed against it.
+   */
+  source?: "all" | "category" | "folder" | "playlist" | "storage";
+  /** Identifier for the selected source (a genre name or a folder path). */
+  sourceId?: string;
   limit?: number;
   offset?: number;
   sortBy?: ListTracksSortBy;
@@ -141,6 +152,16 @@ export interface GenreCount {
 
 export interface ListGenresResponse {
   genres: GenreCount[];
+}
+
+/** One distinct parent folder of the library's files plus its track count. */
+export interface FolderCount {
+  path: string;
+  count: number;
+}
+
+export interface ListFoldersResponse {
+  folders: FolderCount[];
 }
 
 export interface GetTrackRequest {

@@ -89,10 +89,13 @@ jobs:
           components: rustfmt, clippy
 
       - name: Install Linux system dependencies (Tauri)
+        # libasound2-dev is cpal's ALSA backend (the native audio engine in
+        # apps/desktop/src-tauri/src/audio.rs). The runner image ships no ALSA
+        # development headers, so alsa-sys fails its pkg-config probe without it.
         run: |
           sudo apt-get update
           sudo apt-get install -y libwebkit2gtk-4.1-dev libayatana-appindicator3-dev \
-            libxdo-dev libssl-dev librsvg2-dev patchelf
+            libxdo-dev libssl-dev librsvg2-dev libasound2-dev patchelf
 
       - name: Cache cargo
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
@@ -114,7 +117,7 @@ jobs:
       - name: test
         # Portable subset: skips desktop integration tests that require
         # a full Tauri/WebKit stack. Keeps CI fast on ubuntu-latest.
-        run: cargo test -p dj-assistant-core -p dj-assistant-analysis -p dj-assistant-schema-tests
+        run: cargo test -p dj-assistant-core -p dj-assistant-analysis -p dj-assistant-schema-tests --features dj-assistant-core/cli
 
   desktop-build:
     name: Desktop Build (macOS + Windows)

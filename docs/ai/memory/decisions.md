@@ -236,3 +236,20 @@ advertise cost per skill stops being the dominant spend.
 **Correction:** an installed-skill total in the prior draft was an ephemeral
 inventory figure and is omitted. See D-015 for the retained Qoder mirror
 decision and reversal conditions.
+
+## D-017 · The key pill paints its own ground (2026-11-10)
+
+`KeyPill` renders a tinted relation as an opaque `bg.base` ground with the Camelot hue
+laid over it as a background layer (`apps/desktop/src/lib/key-pill-surface.ts`), and the
+unfilled treatments (incompatible, unknown, the key-less “—”) use `text.secondary` rather
+than `text.muted`. `apps/desktop/src/lib/key-pill-contrast.test.ts` asserts the WCAG 4.5:1
+result for every theme × relation × Camelot code and refuses a tinted paint that does not own
+its ground.
+**Why:** K10 of the running-window Pass 4 — a translucent fill inherits the hovered
+(`layer.hover`) and selected (`layer.active`) row grounds, so the same ink token measured
+2.94 / 2.59 on a selected row and 4.10 / 3.70 on a hovered one. Lowering the tint alphas or
+re-tokenising the muted ink globally were the alternatives; both were rejected because the
+defect was the moving ground, not the hue.
+**Reverses if:** the library rows stop changing background by state, or a design-system-wide
+muted-ink audit lands (that audit is the recorded follow-up) and makes the row grounds close
+enough together that inheritance is safe.

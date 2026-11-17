@@ -84,10 +84,13 @@ jobs:
 
       - name: Install Linux system dependencies (Tauri)
         if: needs.changes.outputs.rust == 'true'
+        # libasound2-dev is cpal's ALSA backend (the native audio engine in
+        # apps/desktop/src-tauri/src/audio.rs). The runner image ships no ALSA
+        # development headers, so alsa-sys fails its pkg-config probe without it.
         run: |
           sudo apt-get update
           sudo apt-get install -y libwebkit2gtk-4.1-dev libayatana-appindicator3-dev \
-            libxdo-dev libssl-dev librsvg2-dev patchelf
+            libxdo-dev libssl-dev librsvg2-dev libasound2-dev patchelf
 
       - name: Lint / typecheck / test JS
         run: |
@@ -100,7 +103,7 @@ jobs:
         run: |
           cargo fmt --all --check
           cargo clippy --all-targets -- -D warnings
-          cargo test
+          cargo test --features dj-assistant-core/cli
 
   desktop-build:
     name: Desktop Build (macOS + Windows)
