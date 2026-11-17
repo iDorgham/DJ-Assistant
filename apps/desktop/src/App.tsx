@@ -7,6 +7,7 @@ import type {
 } from "react";
 import type {
   TrackSummary,
+  TrackDetail,
   ScanProgressEvent,
   ScanCompletedEvent,
   AnalysisProgressEvent,
@@ -1190,6 +1191,10 @@ export default function App() {
   // footer) loads the player.
   const [inspectedTrack, setInspectedTrack] = useState<TrackSummary | null>(null);
   const [playingTrack, setPlayingTrack] = useState<TrackSummary | null>(null);
+  // The detail row behind the playing track, keyed by id. The player shows
+  // analysis fields (`beatgridConfidence`) that the summary does not carry, so
+  // it reads them from here rather than issuing a second `get_track`.
+  const [playingDetail, setPlayingDetail] = useState<TrackDetail | null>(null);
   // The control that opened the panel, so closing it can hand the focus back.
   const panelTriggerRef = useRef<HTMLElement | null>(null);
   // Mirrors the open state for the stable close handler; a window-level Escape
@@ -1225,7 +1230,10 @@ export default function App() {
         .then(({ track }) => {
           if (cancelled) return;
           if (trackId === selectedId) setSelectedReference(track);
-          if (trackId === playingId) setPlayingTrack(track);
+          if (trackId === playingId) {
+            setPlayingTrack(track);
+            setPlayingDetail(track);
+          }
         })
         .catch(() => {
           // Retain the last known reference when a refresh is unavailable.
@@ -4000,6 +4008,9 @@ export default function App() {
           onHide={() => dispatch({ type: "setPlayerMode", mode: "hidden" })}
           onInspectTrack={openTrackPanel}
           activeView={ui.view}
+          beatgridConfidence={
+            playingDetail?.id === playingId ? (playingDetail.beatgridConfidence ?? null) : null
+          }
           isDarkTheme={resolveTheme(ui.theme, systemPrefersDark) === "dark"}
         />
       )}
