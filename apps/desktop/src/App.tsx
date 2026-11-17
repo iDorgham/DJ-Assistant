@@ -165,6 +165,7 @@ import {
   type CompatibilityMode,
 } from "./lib/harmonic";
 import { formatKeyForNotation, type KeyNotation } from "./lib/key-format";
+import { addSuggestionToSelection, replaceSeedInSelection } from "./lib/mix-dock-actions";
 import { rowHeightForColumns, shouldLoadMore, virtualWindow } from "./lib/virtual-window";
 import { nextTheme, resolveTheme, THEME_LABELS } from "./lib/theme";
 import { PreviewPlayer } from "./components/preview-player";
@@ -2720,8 +2721,13 @@ export default function App() {
                     seedTrack={visibleSelectedTrack ?? inspectedTrack ?? playingTrack}
                     onPlay={handlePlayTrack}
                     onAdd={(track) =>
-                      setSelection((prev) => (prev.includes(track.id) ? prev : [...prev, track.id]))
+                      setSelection((prev) => addSuggestionToSelection(prev, track.id))
                     }
+                    onReplace={(track) => {
+                      const seedId =
+                        (visibleSelectedTrack ?? inspectedTrack ?? playingTrack)?.id ?? null;
+                      setSelection((prev) => replaceSeedInSelection(prev, seedId, track.id));
+                    }}
                     onClose={() => setMixSuggestionsOpen(false)}
                   />
                 )}

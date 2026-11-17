@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Play, Plus, X, GripVertical } from "lucide-react";
+import { Play, Plus, X, GripVertical, ArrowLeftRight } from "lucide-react";
 
 import type { TrackSummary } from "@dj-assistant/shared";
 import { findSimilarTracks } from "../services/api";
@@ -33,11 +33,13 @@ export function MixSuggestionsDock({
   seedTrack,
   onPlay,
   onAdd,
+  onReplace,
   onClose,
 }: {
   seedTrack: TrackSummary | null;
   onPlay: (track: TrackSummary) => void;
   onAdd: (track: TrackSummary) => void;
+  onReplace: (track: TrackSummary) => void;
   onClose: () => void;
 }) {
   const [width, setWidth] = useState(loadWidth);
@@ -227,6 +229,15 @@ export function MixSuggestionsDock({
                       className="rounded-sm p-1 text-dj-text-secondary transition hover:bg-dj-hover hover:text-dj-accent"
                     >
                       <Plus className="h-3.5 w-3.5" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => onReplace(result)}
+                      aria-label={`Replace seed with ${result.title || "Untitled"}`}
+                      title="Replace the seed track with this one"
+                      className="rounded-sm p-1 text-dj-text-secondary transition hover:bg-dj-hover hover:text-dj-accent"
+                    >
+                      <ArrowLeftRight className="h-3.5 w-3.5" />
                     </button>
                   </div>
                 </div>
