@@ -2726,14 +2726,16 @@ export default function App() {
               <div className="relative flex min-h-0 flex-1 flex-col overflow-hidden">
                 {mixSuggestionsOpen && (
                   <MixSuggestionsDock
-                    seedTrack={visibleSelectedTrack ?? inspectedTrack ?? playingTrack}
+                    seedTrack={selectedTrack ?? inspectedTrack ?? playingTrack}
                     onPlay={handlePlayTrack}
                     onAdd={(track) =>
                       setSelection((prev) => addSuggestionToSelection(prev, track.id))
                     }
                     onReplace={(track) => {
-                      const seedId =
-                        (visibleSelectedTrack ?? inspectedTrack ?? playingTrack)?.id ?? null;
+                      // The same reference the dock displays as the seed: the
+                      // fetched one, so paging the candidate out of view never
+                      // swaps a different track than the one shown.
+                      const seedId = (selectedTrack ?? inspectedTrack ?? playingTrack)?.id ?? null;
                       setSelection((prev) => replaceSeedInSelection(prev, seedId, track.id));
                     }}
                     onClose={() => setMixSuggestionsOpen(false)}
