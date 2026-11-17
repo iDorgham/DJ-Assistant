@@ -43,5 +43,10 @@ Target track: "All This Love (Original Mix)" —
   switch — `App` keys the detail row it already fetches and passes
   `beatgridConfidence` to the player, so the stale-value behaviour in step 4 now
   comes from that id keying.
+- Post-review change (CodeRabbit): when that keyed detail refresh **fails**, the
+  confidence is dropped rather than retained (`App.tsx`, the `getTrack` catch),
+  so a cleared analysis cannot leave a stale `GRID nn%` on screen. Not exercised
+  in this pass — forcing a `get_track` failure mid-session needs the IPC channel
+  itself to break, which this window cannot do honestly.
 
 Verdict: the T2.4.3 confidence-display slice passes running-window QA.

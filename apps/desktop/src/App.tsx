@@ -1237,7 +1237,14 @@ export default function App() {
           }
         })
         .catch(() => {
-          // Retain the last known reference when a refresh is unavailable.
+          // A failed read keeps the reference, but the confidence chip must not
+          // assert a value this read could not confirm — a cleared analysis
+          // would otherwise keep showing the previous percentage.
+          if (trackId === playingId) {
+            setPlayingDetail((current) =>
+              current?.id === trackId ? { ...current, beatgridConfidence: null } : current
+            );
+          }
         });
     }
     return () => {
