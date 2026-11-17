@@ -444,7 +444,7 @@ pub async fn get_waveform_peaks(
     // Peaks are derived data, so anything written by an older generator must not be served
     // after the binning changes. Versioning the filename makes stale entries unreachable
     // while leaving the user's existing cache files on disk untouched.
-    const PEAKS_CACHE_VERSION: &str = "v2";
+    const PEAKS_CACHE_VERSION: &str = "v3";
     let cache_file = cache_dir.join(format!("{}-{}.json", PEAKS_CACHE_VERSION, cache_key));
 
     if let Ok(raw) = std::fs::read_to_string(&cache_file) {
@@ -458,6 +458,7 @@ pub async fn get_waveform_peaks(
         Err(_) => {
             return Ok(GetWaveformPeaksResponse {
                 peaks: Vec::new(),
+                overview_peaks: Vec::new(),
                 duration_ms: 0,
                 sample_rate: 0,
                 is_real: false,
@@ -469,29 +470,13 @@ pub async fn get_waveform_peaks(
     let duration_ms = (decoded.duration_seconds * 1000.0).round() as u64;
     let mono = decoded.to_mono();
 
-    const BINS: usize = 4000;
-    let mut peaks = vec![0.0f32; BINS];
-    let frames = mono.len();
-    for (i, peak) in peaks.iter_mut().enumerate() {
-        // Bin `i` owns [i * frames / BINS, (i + 1) * frames / BINS). A fixed
-        // `frames.div_ceil(BINS)` stride stops short of `frames` when the stride does not
-        // divide it evenly, which left the tail bins at zero and cut the waveform before the
-        // real duration. Proportional edges cover every frame and keep every bin non-empty
-        // while `frames >= BINS`; below that the empty bins are legitimately zero.
-        let start = (i as u128 * frames as u128 / BINS as u128) as usize;
-        let end = ((i as u128 + 1) * frames as u128 / BINS as u128) as usize;
-        let mut max_abs: f32 = 0.0;
-        for sample in &mono[start..end] {
-            let a = sample.abs();
-            if a > max_abs {
-                max_abs = a;
-            }
-        }
-        *peak = max_abs;
-    }
+    // T2.4.1: one decode, two cached resolutions — the zoomed detail view
+    // and the full-track overview rail each get their own peak buffer.
+    let layers = dj_assistant_analysis::peak_layers(&mono);
 
     let response = GetWaveformPeaksResponse {
-        peaks,
+        peaks: layers.detail,
+        overview_peaks: layers.overview,
         duration_ms,
         sample_rate,
         is_real: true,

@@ -147,7 +147,7 @@ export function PreviewPlayer({
         if (cancelled || !res.isReal || res.peaks.length === 0) return;
         setWaveform((current) =>
           current && current.trackId === trackId
-            ? { ...current, ...decodedPeakLayers(res.peaks) }
+            ? { ...current, ...decodedPeakLayers(res.peaks, res.overviewPeaks) }
             : current
         );
       })
