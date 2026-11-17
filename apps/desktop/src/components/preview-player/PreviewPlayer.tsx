@@ -42,6 +42,11 @@ export interface PreviewPlayerProps {
   onInspectTrack?: (track: TrackSummary, trigger?: HTMLElement | null) => void;
   activeView?: string;
   isDarkTheme?: boolean;
+  /**
+   * Beat-grid confidence (T2.4.3) for the loaded track, read off the detail
+   * row the caller already fetched. `null` (or omitted) hides the chip.
+   */
+  beatgridConfidence?: number | null;
 }
 
 const STORAGE_CUES_PREFIX = "dj-assistant.hot-cues.v1:";
@@ -59,6 +64,7 @@ export function PreviewPlayer({
   onInspectTrack,
   activeView = "library",
   isDarkTheme = true,
+  beatgridConfidence = null,
 }: PreviewPlayerProps) {
   // Height state: supports live dragging continuum
   const [height, setHeight] = useState<number>(() =>
@@ -546,6 +552,7 @@ export function PreviewPlayer({
                 durationMs={playback.durationMs}
                 bpm={effectiveBpm}
                 gridOffsetMs={gridOffsetMs}
+                beatgridConfidence={beatgridConfidence}
                 isDarkTheme={isDarkTheme}
                 onInspect={
                   track && onInspectTrack ? (trigger) => onInspectTrack(track, trigger) : undefined
@@ -700,6 +707,7 @@ export function PreviewPlayer({
               positionMs={playback.positionMs}
               durationMs={playback.durationMs}
               bpm={effectiveBpm}
+              beatgridConfidence={beatgridConfidence}
               isDarkTheme={isDarkTheme}
               onInspect={
                 track && onInspectTrack ? (trigger) => onInspectTrack(track, trigger) : undefined

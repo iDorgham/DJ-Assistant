@@ -54,6 +54,8 @@ export interface TrackDetail extends TrackSummary {
   loudnessLufs?: number | null;
   vocalPresence?: boolean | null;
   phraseConfidence?: number | null;
+  /** Beat-grid alignment confidence 0..=1 (migration 009); null until re-analysed. */
+  beatgridConfidence?: number | null;
   analysisVersion?: string | null;
   cues: CuePoint[];
   notes?: string | null;

@@ -63,6 +63,8 @@ pub struct TrackDetail {
     pub analysis_version: Option<String>,
     pub cues: Vec<CuePoint>,
     pub notes: Option<String>,
+    /// Beat-grid confidence (T2.4.3), `0..=1`; NULL until a (re-)analysis.
+    pub beatgrid_confidence: Option<f64>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

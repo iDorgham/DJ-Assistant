@@ -1,7 +1,7 @@
 # DJ Assistant — Project Context
 
 **Document type:** Consolidated application, plan, and progress reference
-**Status:** Living — snapshot as of 2026-11-09 (approved v1 plan mirrored; Stage 1 shell + Slice 3A merged via PR #53; player presentations merged via PR #54; shared Track panel merged via PR #55; 30,000-track virtualized library merged via PR #56; track context menu + soft remove shipped via PR #60; bulk metadata edit code-complete via PR #65; key pills + harmonic relations merged via PR #70, which reached `main` inside PR #65's squash `9551aa41`; the rating-cell keyboard-ownership fix merged via PR #72 (`307a13fb`) and the docs-honesty sweep via PR #71 (`b8acce5a`), both 2026-11-09; audit TA.1–TA.14 integrated; T2.1.2 filters reflected)
+**Status:** Living — snapshot as of 2026-11-17 (approved v1 plan mirrored; Stage 1 shell + Slice 3A merged via PR #53; player presentations via PR #54; shared Track panel via PR #55; 30,000-track virtualized library via PR #56; track context menu + soft remove via PR #60; bulk metadata edit via PR #65, which also carried the key pills of PR #70 (`9551aa41`); the docs-honesty sweep via PR #71 and the rating-cell keyboard-ownership fix via PR #72, both 2026-11-09; the B4 unchanged-metadata no-op fix via PR #78 (2026-11-15); Slices 4–8 via PR #80 (`65ca59ad`, 2026-11-16) — artwork hover-play, mix-suggestions dock, library source tabs, per-track peaks cache, native cpal audio engine; T2.4.1 dual peak resolutions via PR #81 (`5a9fced7`, 2026-11-16); Dependabot bumps #75/#82–#85 incl. rusqlite 0.42; Running-window Passes 1–5 recorded with B4 fixed-pending-rerun and K10 fixed; audit TA.1–TA.14 integrated; T2.1.2 filters reflected)
 **Audience:** Engineers, product, AI agents, and anyone who needs the full picture in one place
 **Source of truth:** [`docs/product/CANONICAL_DOCUMENTATION.md`](../product/CANONICAL_DOCUMENTATION.md) (product + technical) and [`docs/sdd/`](../sdd/README.md) (plan, tasks, acceptance). Audit findings live in [`docs/audit/`](../audit/README.md) and are tracked as `TA.x` tasks in [`docs/sdd/04-TASKS.md`](../sdd/04-TASKS.md).
 
@@ -11,12 +11,12 @@
 > first reading two dozen separate documents. Where a topic has a canonical home,
 > this file links to it rather than replacing it.
 
-## 0. Current planning baseline — 2026-11-08
+## 0. Current planning baseline — 2026-11-17
 
 - **The approved v1 plan is mirrored at [`docs/plan/`](../plan/README.md).** It
   contains 30 documents and 52 locked decisions (`D-001–D-052`). Those IDs are
   scoped to the plan tree; they are separate from the repository memory ledger
-  (`docs/ai/memory/decisions.md`, D-001–D-014).
+  (`docs/ai/memory/decisions.md`, D-001–D-017).
 - **Product shape is locked:** six tabs — Library, Playlists, Discover,
   Statistics, Publish, Settings. Maintain lives inside Library; Set Score lives
   inside Playlists; Import is a top-bar Import Center; Inbox combines Needs
@@ -43,13 +43,27 @@
   peels to `ec2b191f`. The tag set is snapshotted transactionally; undo skips a
   track changed since the snapshot. Automated checks pass. Running-window
   Pass 3 (menu, editor, tags column, filters, undo) ran on the live 94-track library
-  2026-11-09 into 2026-11-10: 44 of 48 rows pass, B4 fails — an unchanged Save is
-  reported as a backend error and closes the dialog instead of reading
-  `Metadata unchanged — nothing to save` — while A7 and F6 turn out to be stale
-  checklist expectations that contradict shipped code, and E3 is unreachable on the
-  single undo token. Every write was reverted to the pre-run baseline, so T2.1.7 and
-  T2.1.13 remain unticked (record:
-  [`docs/evidence/2026-11-09-RUNNING-WINDOW-QA.md`](../evidence/2026-11-09-RUNNING-WINDOW-QA.md)).
+  2026-11-09 into 2026-11-10: **43 of 48 rows pass** (1 partial, 1 fail, 2 stale
+  expectations, 1 blocked). B4 failed — an unchanged Save was reported as a backend
+  error and closed the dialog instead of reading `Metadata unchanged — nothing to
+  save` — and is **fixed by PR #78** (merged 2026-11-15), with the PASS re-run
+  pending; A7 and F6 are stale checklist expectations that contradict shipped code,
+  and E3 is unreachable on the single undo token. Every write was reverted to the
+  pre-run baseline, so T2.1.7 and T2.1.13 remain unticked (record:
+  [`docs/evidence/2026-11-09-RUNNING-WINDOW-QA.md`](../evidence/2026-11-09-RUNNING-WINDOW-QA.md),
+  committed by PR #80).
+- **Slices 4–8 are merged, QA-open.** PR #80 (`65ca59ad`, 2026-11-16) shipped the
+  artwork hover-play overlay (T2.1.9), the mix-suggestions dock (T2.1.11 — Replace
+  action still open), the library source tabs with `source`/`sourceId` query
+  filtering and the new `list_folders` command (T2.1.12 — the collapsed rail still
+  lacks source icons), the per-track content-addressed peaks cache (T2.4.1) and the
+  native cpal/Symphonia audio engine behind six `audio_*` commands (T2.4.2/T2.4.4),
+  hardened through a review round (generation guard, device-format streams, load
+  gating, EOF tail, seek poll restart, stream lifetime). PR #81 (`5a9fced7`,
+  2026-11-16) split the peak cache into dual resolutions (detail 4000 / overview
+  1000, cache v3) — each waveform layer now owns its peaks per the T2.4.2 contract.
+  Automated checks are green (267 desktop tests at merge); no running-window QA has
+  executed on these paths yet, so the boxes stay unticked.
 - **The Stage 1 shell is shipped** on `main` via PR #53: six primary tabs,
   typed view registry, top-bar library search/Import Center/Inbox/backup status,
   persistent player dock, Settings skeleton, error boundary and redacted
@@ -464,6 +478,12 @@ and tag editing.
 Migration `008_tracks_removed_at.sql` adds `tracks.removed_at DATETIME` for reversible
 soft delete, indexed, with library queries automatically skipping removed tracks.
 
+Migration `009_beatgrid_confidence.sql` adds `tracks.beatgrid_confidence REAL` — the
+beat-alignment ratio (0..=1) the BPM detector reports, written by the analysis
+persist path and cleared when analysis fails. It is NULL for rows analysed before the
+migration until they are re-analysed (force), and `get_track` exposes it as
+`TrackDetail.beatgridConfidence`; the library summary deliberately does not carry it.
+
 Database pragmas: foreign keys **on** (SQLite defaults to off), `journal_mode =
 WAL`, `synchronous = NORMAL`.
 
@@ -499,7 +519,7 @@ Wired in `apps/desktop/src-tauri/src/lib.rs`:
 | `scan_folder` | Canonicalize path, run recursive scan, cache artwork, emit progress events |
 | `list_tracks` | Server-side search + filters (BPM/key/status/genre/rating), sort and pagination; returns the matching `total` |
 | `list_genres` | Distinct non-empty genre tags with track counts (filter-panel options) |
-| `get_track` | Full track detail incl. cue points |
+| `get_track` | Full track detail incl. cue points and the analysis fields the summary omits — `beatgridConfidence` (migration 009), `phraseConfidence`, `loudnessLufs`, `vocalPresence` |
 | `get_artwork` | Serve cached cover art as a `data:` URL (or `null`) |
 | `analyze_library` | Queue local analysis for all/selected tracks (version-aware skip, `force` supported) |
 | `find_similar_tracks` | Rank library tracks by local mix-compatibility (BPM/key/genre/duration + reasons) |
@@ -523,6 +543,9 @@ Wired in `apps/desktop/src-tauri/src/lib.rs`:
 | `list_removed_tracks` | The read used to list removed tracks in the Removed view; `list_tracks` filters removed rows, while `get_track` can still return a soft-deleted track by ID. Its length is the toolbar count |
 | `provider_match_set` / `provider_export_playlist` | Generic multi-provider match/export contract (TM.1; Spotify re-implementation waits on TP) |
 | `chart_import_snapshot` / `chart_list` | Versioned chart ingest (idempotent) + taste-filtered listing (TD.3, migration 005) |
+| `list_folders` | Distinct parent folders of library tracks, for the source-tab folder chips (PR #80, T2.1.12) |
+| `get_waveform_peaks` | Content-addressed per-track peaks from the cache, dual resolutions — detail 4000 for the zoomed waveform, overview 1000 for OverviewMap/CompactWaveform (T2.4.1, cache v3 via PR #81) |
+| `audio_load` / `audio_play` / `audio_pause` / `audio_seek` / `audio_set_volume` / `audio_state` | Native cpal + Symphonia playback engine (T2.4.2/T2.4.4, PR #80): load decodes to f32 with a generation guard, play gates on a loaded stream, seek restarts the poll, device sample format honoured, superseded plays are ignored |
 
 ### 11.2 Tauri IPC — implemented events
 
@@ -575,7 +598,10 @@ The T2.1.0 shell implements the six primary tabs (Library / Playlists / Discover
 persisted UI state, and the player dock. The spec defines Mini, Full and
 full-window Player view, with Hidden as a visibility state; PR #54 shipped the
 Mini and Full dock presentations, while the separate Player view is not
-implemented. Real track audio is also pending T2.4. The old three-view shell (header view switcher,
+implemented. Real track audio is **native since PR #80** (cpal + Symphonia
+`AudioEngine` behind the six `audio_*` commands, with the T2.4.1/T2.4.2 dual-resolution
+peaks cache feeding the waveforms from PR #81); its running-window QA is still open.
+The old three-view shell (header view switcher,
 Preparation / Auto Performance tabs, per-view options bar) is superseded by the
 approved v1 plan: set building lives in Playlists → Set Score.
 
@@ -583,7 +609,7 @@ approved v1 plan: set building lives in Playlists → Set Score.
 |---------|-------|--------|
 | App shell (six tabs, collapsible 220/48px nav, top bar, typed view router) | 2 | ✅ Shipped PR #53 — native acceptance QA pending (T2.1.0) |
 | Theme system (dark/light/system, semantic tokens, persisted preference) | 2 | ✅ Shipped (T2.1.0) |
-| Player dock (Mini / Full; Hidden visibility state) | 2 | 🟡 Mini and Full dock shipped PR #54; full-window Player view is not implemented; real audio T2.4 |
+| Player dock (Mini / Full; Hidden visibility state) | 2 | 🟡 Mini and Full dock shipped PR #54; full-window Player view is not implemented; real audio native since PR #80 (running-window QA pending) |
 | Library (scan, live progress, dense track table, empty/error states) | 0 | ✅ Implemented, relocated into the shell |
 | Track inspector drawer (similar tracks, gap chips, buy-links) | 0 | ✅ Implemented — relocated into the shared Track panel PR #55 |
 | Tag Health modal (per-field bars + gap list; online lookup shown as planned) | 0 | ✅ Implemented |
@@ -592,8 +618,12 @@ approved v1 plan: set building lives in Playlists → Set Score.
 | Track detail / inspector (tags vs analysis, provenance) | 2 | ✅ Shipped PR #55 — shared panel, seven tabs, keyboard model; cues read-only |
 | Track context menu (Play, Edit tags, Rate, column toggles, Reveal, Copy path, Remove) | 2 | ✅ Shipped PR #60 — soft delete migration 008, disabled stubs (T2.1.10) |
 | Bulk select & BulkActionBar (count >= 2, live edit/rate/clear, diff preview) | 2 | 🟡 Code-complete PR #65 — multi-select, diff preview, disabled stubs (T2.1.3) |
-| Key pills & harmonic relations (Camelot wheel tints, Strict/Wide, Compatible-only intent) | 2 | ✅ Merged PR #70 (`9551aa41`) — re-derivation, stranded intent fix, and the K10 contrast fix (2026-11-10: the pill owns its ground) (T2.1.8) |
+| Key pills & harmonic relations (Camelot wheel tints, Strict/Wide, Compatible-only intent) | 2 | 🟡 Merged PR #70 (`9551aa41`) — re-derivation and stranded-intent fix; the K10 contrast fix landed separately on `main` (`c7b65bf6`, 2026-11-10 — the pill owns its ground, D-017); Pass-4 K9 stale wording still to reconcile (T2.1.8) |
 | Rating cell owns its digits + single tab stop (`rating-keys.ts`, `data-rating-widget`) | 2 | ✅ Merged PR #72 (`307a13fb`) — keyboard fix shipped, running-window QA pending (T2.1.4) |
+| Artwork hover-play overlay (thumbnail plays on hover) | 2 | 🟡 Merged PR #80 (`fb69db68`) — running-window QA pending (T2.1.9) |
+| Mix suggestions dock (Preview + Add; width persisted `dj-assistant.mix-suggestions.width.v1`, keyboard splitter) | 2 | 🟡 Merged PR #80 (`a2f9b231`) — Replace action still open (T2.1.11) |
+| Library source tabs (`source`/`sourceId` filtering, `list_folders`, folder chips bounded) | 2 | 🟡 Merged PR #80 (`3f98113c` + review fixes) — collapsed-rail source icons still open (T2.1.12) |
+| Native audio engine + dual-resolution waveform peaks (cpal/Symphonia, six `audio_*` commands, cache v3) | 2 | 🟡 Merged PR #80/#81 — review-hardened; running-window QA pending (T2.4.1/T2.4.2/T2.4.4) |
 | Cue / waveform editor (markers, phrase bands, cue list) | 2–3 | 📋 Planned |
 | Tag cleanup (preview → apply → undo) | 2 | 📋 Planned |
 | Preparation view (set builder, energy curve, transitions, alternatives) | 3 | 📋 Superseded — Playlists → Set Score (Stage 5) |
@@ -876,10 +906,12 @@ The full-pipeline entry point is
 per-analyzer graceful degradation (a single detector failure does not void the
 rest).
 
-### 17.3 Phase 2 — Library Intelligence — 🚧 STARTED (shell + shared Track panel + virtualized library)
+### 17.3 Phase 2 — Library Intelligence — 🚧 IN PROGRESS (shell + Track panel + virtualized library + Slices 4–8 merged)
 
-Tag cleanup, duplicates/versions, health score, cues and waveform work are still
-planned. The first Phase 2 slices landed on top of the Phase 0/1 foundations:
+Tag cleanup, duplicates/versions, health score and the cue editor are still
+planned; the native playback engine and the dual-resolution waveform peak cache
+shipped in PRs #80/#81 (running-window QA open). The Phase 2 slices landed on top
+of the Phase 0/1 foundations:
 
 - ✅ **T2.1.0 App shell** — the six-tab Stage 1 shell (Library, Playlists,
   Discover, Statistics, Publish, Settings) with a typed view registry, a
@@ -958,8 +990,8 @@ planned. The first Phase 2 slices landed on top of the Phase 0/1 foundations:
 - ✅🧪 **Running-window Pass 3 — Slice 3A (tags, editor, row menu)** — executed
   2026-11-09 23:05 UTC into 2026-11-10 against the live 94-track library, all 48 rows
   run over Chrome DevTools Protocol on the WebView2 debug port (the only route here that
-  carries a right-click, and the source of the console reader). 44 pass; **B4 is a real
-  FAIL** — a Save with nothing changed reaches `library_writes.rs`'s `nothing to update`
+  carries a right-click, and the source of the console reader). 43 pass, 1 partial
+  (F1); **B4 was a real FAIL** — a Save with nothing changed reaches `library_writes.rs`'s `nothing to update`
   error, so the UI shows its “Couldn't save…” path, closes the dialog and logs to the
   console instead of the designed `Metadata unchanged — nothing to save`;
   `describeMetadataWrite`'s `updated <= 0` branch is unreachable from the editor.
@@ -972,6 +1004,10 @@ planned. The first Phase 2 slices landed on top of the Phase 0/1 foundations:
   write — 0 diffs over all 94 `tracks` rows and `track_tags` back to 0 rows, with only
   the app's own `skill_runs` undo ledger grown. F1 was a real process restart.
   Record: `docs/evidence/2026-11-09-RUNNING-WINDOW-QA.md`, Pass 3.
+- ✅ **B4 fix (PR #78)** — merged 2026-11-15 (`fad2d5eb`): an empty metadata patch is
+  now a successful no-op, so the editor shows `Metadata unchanged — nothing to save`
+  instead of the “Couldn't save…” error path. The B4 PASS re-run in the running window
+  has not been executed yet; the QA record itself was committed to the repo by PR #80.
 - 🧪 **Running-window Pass 4 — T2.1.8 key pills** — executed 2026-11-09 22:55 → 23:27 UTC
   on the live 94-track library over the same CDP channel. K1–K8 pass: with no reference
   the pills render the saved notation with no relation tint; a 7B selection gives the
@@ -1017,6 +1053,27 @@ planned. The first Phase 2 slices landed on top of the Phase 0/1 foundations:
   (`make-library-fixture.mjs:205`); that patch touched the throwaway fixture DB only.
   Stage 1 section D is therefore closed **on the fixture**, not on the live library.
   Record: `docs/evidence/2026-11-09-RUNNING-WINDOW-QA.md`, Pass 5.
+- 🧪 **Slices 4–8 (PR #80)** — merged 2026-11-16 (`65ca59ad`): T2.1.9 artwork
+  hover-play overlay (`fb69db68`); T2.1.11 mix-suggestions dock with Preview + Add
+  and persisted width (`a2f9b231`, Replace action open); T2.1.12 library source tabs
+  with `source`/`sourceId` filtering and `list_folders` (`3f98113c`, collapsed-rail
+  icons open); T2.4.1 per-track content-addressed peaks cache (`0a9cd017`); and the
+  native cpal + Symphonia `AudioEngine` with six `audio_*` Tauri commands
+  (`cab6d8e5`). A review round hardened it: generation guard (`13a1fc45`), device
+  sample format (`7b6c1fe0`), play gating (`9081a0c1`), EOF tail (`971d59ce`), seek
+  poll restart (`2602ec2a`), stream lifetime (`6a5cf091`), superseded-play
+  (`143cecd7`), folder LIKE/wildcard fixes (`f0c7dde6`, `2694e18b`), bounded folder
+  chips (`f583a6b1`), keyboard dock splitter (`29982ed5`), CI `libasound2-dev`
+  (`140fbcca`). Automated suite green (desktop at merge); **no running-window QA has
+  touched these paths yet** — the boxes stay unticked.
+- 🧪 **T2.4.1 dual peak resolutions (PR #81)** — merged 2026-11-16 (`5a9fced7`,
+  commit `888861de`): one decode now emits both resolutions (detail 4000 for the
+  zoomed waveform, overview 1000 for OverviewMap/CompactWaveform) via the new
+  `dj_assistant_analysis::peaks` module; `get_waveform_peaks` returns
+  `overviewPeaks` and the cache is v3. This satisfies the T2.4.2 contract that each
+  waveform layer owns peaks at its own resolution. Running-window QA pending.
+- 🔧 **Dependabot merges (#75, #82–#85)** — CI actions updates and the 2026-11-17
+  group bumps, including rusqlite 0.41 → 0.42 (`07bccb5c`, current `main` HEAD).
 
 Live today inside the library screen (non-gating, post-MVP scope): local
 similar-track scoring + inspector (TF.1/TF.4), Tag Health modal (TF.4/TE.3–TE.4),
@@ -1025,7 +1082,7 @@ provider status + store links (TF.2/TF.4), opt-in enrichment preview → apply �
 
 ### 17.4 Test and quality status
 
-- Current automated suite records **318 total tests passing**: 236 desktop tests (`node --test`), 70 agent tests (+1 skipped), 10 tooling tests, and 2 API integration tests,
+- Current automated suite records **357 tests, 356 passing + 1 skipped** (re-run 2026-11-17 on this branch): 272 desktop tests (`node --test`, 0 fail), 72 agent tests (+1 skipped), 10 tooling tests, and 2 API integration tests,
   with `cargo clippy -D warnings`, `cargo fmt --check`, and `eslint .` clean.
 - Phase 1 added full per-analyzer Rust suites (BPM, key, phrase, vocal, loudness,
   version, registry, pipeline). The portable Rust suite is the gate that runs on
@@ -1034,7 +1091,12 @@ provider status + store links (TF.2/TF.4), opt-in enrichment preview → apply �
 ### 17.5 Recent development activity
 
 Phases and commits are traceable in `git log` and [`CHANGELOG.md`](../../CHANGELOG.md).
-Representative recent work (2026-10-12 → 2026-10-24):
+Representative recent work (2026-10-12 → 2026-11-17):
+
+- `feat(library,player): slices 4–8 — hover-play, mix dock, source tabs, native audio (T2.1.9/T2.1.11/T2.1.12/T2.4) (#80)` — squash `65ca59ad` (2026-11-16).
+- `feat(analysis): dual peak resolutions for the waveform layers (T2.4.1) (#81)` — squash `5a9fced7` (2026-11-16).
+- `fix(metadata): unchanged save is a no-op (B4) (#78)` — squash `fad2d5eb` (2026-11-15).
+- Dependabot group bumps #75/#82–#85 through 2026-11-17 (`main` HEAD `07bccb5c`, rusqlite 0.42).
 
 - `feat(track-panel): shared inspect panel with player entry points (#55)` — squash
   `83831774` (2026-10-24): the seven-tab shared Track panel, inspected-vs-playing
@@ -1254,10 +1316,10 @@ items on 4–6 week cycles.
 - Update it when the **phase status**, **implemented interfaces**, **data model**,
   or **CI posture** changes materially — those are the sections most likely to
   drift.
-- Current status snapshot: **Phase 0 complete** (P0.1–P0.8 pass); **Phase 1 in progress** (analysis engine tasks T1.1.1–T1.1.8 and T1.2.1–T1.2.6 shipped; P1.x exit criteria under verification); **Phase 2 in progress** — Stage 1 shell, T2.1.2 multi-filter/sorting, Slice 3A tags/comments merged in PR #53, player presentations in PR #54, shared Track panel in PR #55, 30k-track virtualized library in PR #56, track context menu in PR #60 (2026-10-27), bulk metadata edit code-complete in PR #65 (2026-10-29), key pills + harmonic relations merged in PR #70 (2026-11-08, head `144292e0`, on `main` via `9551aa41`), the docs-honesty sweep in PR #71 and the rating-cell keyboard-ownership fix in PR #72 (both 2026-11-09). Running-window Passes 1–5 are recorded (Stage 1 shell, Slice 2, Slice 3A, T2.1.8 key pills, Stage 1 §D) with **B4** and the stale expectations (A7/F6/K9) open, T2.1.8's **K10** contrast defect fixed and re-run 2026-11-10, and T2.1.3's multi-select still not automatable here; next implementation slices are Slice 4 Artwork (T2.1.9), Slice 5 Left-Nav Sources (T2.1.12), Slice 6 Mix Suggestions dock (T2.1.11), and Slices 7–8 real audio/peaks; **Phases 3–4 not started**. Live post-MVP foundations: TF.1–TF.6, TD.3,
+- Current status snapshot: **Phase 0 complete** (P0.1–P0.8 pass); **Phase 1 in progress** (analysis engine tasks T1.1.1–T1.1.8 and T1.2.1–T1.2.6 shipped; P1.x exit criteria under verification); **Phase 2 in progress** — Stage 1 shell, T2.1.2 multi-filter/sorting, Slice 3A tags/comments merged in PR #53, player presentations in PR #54, shared Track panel in PR #55, 30k-track virtualized library in PR #56, track context menu in PR #60 (2026-10-27), bulk metadata edit code-complete in PR #65 (2026-10-29), key pills + harmonic relations merged in PR #70 (2026-11-08, head `144292e0`, on `main` via `9551aa41`), the docs-honesty sweep in PR #71 and the rating-cell keyboard-ownership fix in PR #72 (both 2026-11-09), the B4 no-op fix in PR #78 (2026-11-15), Slices 4–8 in PR #80 and dual peak resolutions in PR #81 (both 2026-11-16), and Dependabot merges #75/#82–#85 through 2026-11-17 (`main` HEAD `07bccb5c`). Running-window Passes 1–5 are recorded (Stage 1 shell, Slice 2, Slice 3A, T2.1.8 key pills, Stage 1 §D) with **B4 fixed by PR #78 awaiting its PASS re-run** and the stale expectations (A7/F6/K9) awaiting checklist reconciliation, T2.1.8's **K10** contrast defect fixed and re-run 2026-11-10, and T2.1.3's multi-select still not automatable here; Slices 4–8 (artwork hover-play, source tabs, mix dock, native audio + dual peaks) are **merged but have no running-window QA yet**; remaining Phase 2 implementation is the cue/waveform editor, tag cleanup (T2.3), the full-window Player view, and the open sub-items (mix dock Replace action, collapsed-rail source icons). **Phases 3–4 not started**. Live post-MVP foundations: TF.1–TF.6, TD.3,
   TE.1–TE.4, TM.1/TM.2a.
 - Prefer editing the canonical document first, then reflecting the change here.
 
 ---
 
-*Maintained under `docs/context/`. Last synthesized 2026-11-09.*
+*Maintained under `docs/context/`. Last synthesized 2026-11-17.*

@@ -23,7 +23,7 @@ Scope split agreed up front: **Bucket 1** = fixes and alignment on existing surf
 
 ### Clarify / honesty
 - **Estimated waveform badge** — `WaveformData.isEstimated` flag in `lib/waveform-generator.ts`; `DetailedWaveform` renders an "Estimated waveform" pill while peaks are PRNG-synthesized (docs/ui/06: no fabricated analysis data presented as real).
-- **Synth-audio disclosure** — "Synth preview audio" pill in the player identity row + honest Play tooltip: the engine is a synthesized timing beat until real audio decode ships. LUFS chip removed entirely until real loudness analysis exists. *(2026-10-23: the pills were removed at the user's request; the Play tooltip is now the only disclosure — see [06A §8.1](06A-PLAYER-PRESENTATIONS.md).)*
+- **Synth-audio disclosure** — the Play tooltip is the disclosure: it states that playback is real audio in the desktop app and a synthesized timing beat when the native engine is unavailable (outside Tauri, or after a decode failure). LUFS chip removed entirely until real loudness analysis exists. *(2026-10-23: the pills were removed at the user's request; the Play tooltip is now the only disclosure — see [06A §8.1](06A-PLAYER-PRESENTATIONS.md). Reworded 2026-11-17 after review: the old text still claimed real decode was unimplemented, which PR #80 disproved.)*
 - **Error vs. empty** — `findSimilarTracks` / `storeLinksForTrack` failures now show a distinct error state with **Retry** instead of masquerading as "no results" (`similarError`, `storeLinksError`, `drawerRetry`).
 - **Status honesty** — header status dot bound to a real tone (`ok` / `busy` / `error` via `pushStatus`); error copy sanitized (no raw `${err}` dumps) with a recovery hint; status region is `role="status" aria-live="polite"`.
 - **Analysis chip** — hardcoded green "Indexed" replaced by `ANALYSIS_STATUS_CHIP` keyed on real `track.analysisStatus` (Analyzed / Pending / Failed / Needs review).
@@ -74,7 +74,12 @@ Scope split agreed up front: **Bucket 1** = fixes and alignment on existing surf
 
 ## 3. Remaining (Bucket 2 — feature work, not faked)
 
-- Real audio decode → replaces the synth-audio disclosure and, with it, `isEstimated` waveform pills (flip flag at the decode site).
+- Real audio decode → **shipped 2026-11-16 (PR #80 `cab6d8e5`, cpal + Symphonia
+  `AudioEngine`; per-track peaks via `get_waveform_peaks`, PR #80/#81)** — the
+  `isEstimated` PRNG path now only covers tracks whose decoded peaks are
+  unavailable — no cached peaks, a failed peak read, or the non-Tauri fallback —
+  so the flag and its disclosure stay; running-window QA of the native engine
+  is still pending.
 - Analysis backend → status chips already render real `analysisStatus`; only data arrives.
 - Preparation / Auto Performance views behind their "Planned view" scaffolds; Settings window; command palette; visualizer.
 - Cue-pad roving tabindex within the toolbar (currently each pad + clear × is its own tab stop).

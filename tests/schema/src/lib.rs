@@ -21,6 +21,8 @@ pub const MIGRATION_007: &str =
     include_str!("../../../apps/desktop/src-tauri/migrations/007_track_tags_table.sql");
 pub const MIGRATION_008: &str =
     include_str!("../../../apps/desktop/src-tauri/migrations/008_tracks_removed_at.sql");
+const MIGRATION_009: &str =
+    include_str!("../../../apps/desktop/src-tauri/migrations/009_beatgrid_confidence.sql");
 
 /// The migrations this crate's contract tests need, in the order `db.rs`
 /// applies them: the base schema, the tag columns, the enrichment columns, the
@@ -34,6 +36,7 @@ const MIGRATIONS: &[(i64, &str)] = &[
     (6, MIGRATION_006),
     (7, MIGRATION_007),
     (8, MIGRATION_008),
+    (9, MIGRATION_009),
 ];
 
 /// Opens (or creates) a **file-backed** database at `path`, applies the pragmas and
@@ -184,7 +187,7 @@ pub const TRACK_DETAIL_COLUMNS: &str =
     "id, file_path, file_hash, title, artist, album, genre, label, year, bpm, key_camelot, key_classical, \
      duration_ms, format, analysis_status, user_rating, energy, comments, artwork_hash, created_at, updated_at, \
      file_size, sample_rate, channels, bit_depth, loudness_lufs, \
-     vocal_presence, phrase_confidence, analysis_version, notes";
+     vocal_presence, phrase_confidence, analysis_version, notes, beatgrid_confidence";
 
 /// Column list must match `list_tracks`'s SELECT in commands.rs.
 pub const TRACK_SUMMARY_COLUMNS: &str =

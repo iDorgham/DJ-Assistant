@@ -314,7 +314,7 @@ pub async fn get_track(
     let sql = format!(
         "SELECT {TRACK_SUMMARY_COLUMNS},
                 file_size, sample_rate, channels, bit_depth, loudness_lufs,
-                vocal_presence, phrase_confidence, analysis_version, notes
+                vocal_presence, phrase_confidence, analysis_version, notes, beatgrid_confidence
          FROM tracks WHERE id = ?"
     );
     let mut stmt = conn.prepare(&sql).map_err(|e| e.to_string())?;
@@ -339,6 +339,7 @@ pub async fn get_track(
                 phrase_confidence: row.get(base + 6)?,
                 analysis_version: row.get(base + 7)?,
                 notes: row.get(base + 8)?,
+                beatgrid_confidence: row.get(base + 9)?,
                 cues: Vec::new(),
             })
         })

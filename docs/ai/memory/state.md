@@ -4,6 +4,19 @@ Ephemeral. Newest first. **Rotate aggressively** — if a line would still be tr
 in two weeks, it belongs in [`decisions.md`](./decisions.md); if it is just a
 fact, it belongs in [`facts.md`](./facts.md). Delete anything stale.
 
+## 2026-11-17 · Docs reconciliation on main (PR #78–#85)
+
+- `main` is at `07bccb5c` (rusqlite 0.42). Merged since the last ledger entry:
+  PR #78 (`fad2d5eb`, B4 unchanged-save no-op fix), PR #80 (`65ca59ad`, Slices 4–8:
+  T2.1.9 hover-play, T2.1.11 mix dock, T2.1.12 source tabs, T2.4.1 peaks cache,
+  native cpal/Symphonia audio + review hardening), PR #81 (`5a9fced7`, dual peak
+  resolutions, cache v3), and Dependabot #75/#82–#85.
+- Docs brought in line: `docs/sdd/04-TASKS.md`, the Phase 2 plan slice table and
+  statuses, `docs/context/PROJECT_CONTEXT.md` (baseline §0, IPC tables, UI surface,
+  §17.3–17.5, §24), the Phase 2 plan, CHANGELOG catch-up, and this ledger.
+- **Nothing ticked.** The B4 PASS re-run and any running-window QA for Slices 4–8
+  and the audio/peaks paths have not been executed; the human ticks on `main`.
+
 ## 2026-11-16 · PR #80 DeepSource JavaScript flipped green (head a9c829c2)
 
 - JS-0067 (iife) and JS-R1005 (complexity) are now Ignored in the dashboard,
@@ -46,7 +59,8 @@ fact, it belongs in [`facts.md`](./facts.md). Delete anything stale.
 ## 2026-11-10 · Running-window Pass 3 executed (Slice 3A tags/editor/menu) — B4 open
 
 - Pass 3 of [`../../evidence/2026-11-09-RUNNING-WINDOW-QA.md`](../../evidence/2026-11-09-RUNNING-WINDOW-QA.md)
-  ran over CDP on the live 94-track library: **44 PASS, 1 FAIL, 2 DEVIATION, 1 BLOCKED**.
+  ran over CDP on the live 94-track library: **43 PASS, 1 PARTIAL, 1 FAIL, 2 DEVIATION,
+  1 BLOCKED** (corrected 2026-11-17 — F1 is the partial after its process restart).
 - **B4 is the one real defect**: an unchanged Save takes the backend `nothing to update` error
   path (`crates/core/src/library_writes.rs:189-191`), so the renderer's "Metadata unchanged —
   nothing to save" branch never fires, the dialog closes and the console errors. Fix belongs in
@@ -525,7 +539,12 @@ fact, it belongs in [`facts.md`](./facts.md). Delete anything stale.
   candidates are in `skills.policy.json` → `candidates`.
 - The Rekordbox XML export (audit §7.1) — the whole `dj-rekordbox` reader is
   staged behind it.
-- T2.1.2 / T2.1.4 / T2.1.6 manual running-window QA (PR #51 merged 2026-10-21) —
-  **not executed**; baseline done, checklist in
-  [`docs/engineering/SLICE2_MANUAL_QA_CHECKLIST.md`](../../engineering/SLICE2_MANUAL_QA_CHECKLIST.md),
-  needs a human in the Tauri window.
+- **B4 PASS re-run pending**: PR #78 made the unchanged save a no-op, but Pass 3
+  row B4 has not been re-executed in the running window.
+- **Slices 4–8 have no running-window QA**: T2.1.9, T2.1.11 (Replace action open),
+  T2.1.12 (collapsed-rail source icons open) and T2.4.1/T2.4.2/T2.4.4 (native audio
+  + dual peaks) are merged with automated checks green only.
+- **Stale QA checklist wording** to reconcile: Pass 3 A7 and F6, Pass 4 K9 — the
+  observations are deliberate shipped behaviour contradicting the checklist text.
+- The full-window Player view, cue/waveform editor and tag cleanup (T2.3) remain
+  unimplemented in Phase 2.

@@ -37,9 +37,9 @@ Use this as the UI build order and acceptance gate.
 - [x] **EnergyBars** (1–10 charging-bar meter) — click a segment to set, click it again to clear (T2.1.6)  
 - [x] **TagChips** (compact chips + overflow) — click a chip to filter (T2.1.7; running-window QA pending)  
 - [x] **StarRating** — editable 5 stars — click to set, click the same star again to clear, keys `1`–`5` / `0` (T2.1.4). PR #72 (`307a13fb`, 2026-11-09) made the cell one roving tab stop that claims its digits (`lib/rating-keys.ts`, `data-rating-widget`) so the preview player no longer reads them as hot cues; the running-window pass for it is still unrun  
-- [ ] **ArtworkThumb** — hover play overlay; real embedded art per track  
+- [ ] **ArtworkThumb** — hover play overlay; real embedded art per track — code merged PR #80 (`fb69db68`, 2026-11-16); running-window QA pending  
 - [x] Label + Year columns — present in `library-columns.ts`, default Off (T2.1.7)  
-- [ ] **MixSuggestionsPanel** (right dock) + Options bar button  
+- [ ] **MixSuggestionsPanel** (right dock) + Options bar button — dock merged PR #80 (`a2f9b231`): Preview + Add, persisted width, keyboard splitter; Replace action still open; running-window QA pending  
 - [x] **TrackContextMenu** — the Library `RowContextMenu` ships (PR #60). The approved Playlists → Set Score flow uses suggestion cards with action controls and Why/Confidence, not a second track context menu; superseded Preparation and Auto views do not block this gate.
 - [x] Library menu: Play, Analyze, Edit tags, Fix tags, Add to playlist, Find in playlists, Mix suggestions, Find smaller/similar online, Find new tracks online, Remove from library — Play, Edit tags, Rate, column toggles, Reveal, Copy path, Remove live with soft delete; other items disabled stubs (PR #60)
 - [x] **Edit tags…** editor — title / artist / album / genre / label / year / tags / **comment** — `MetadataEditor`, single-row and bulk, dirty-field diff (T2.1.7/T2.1.13/T2.1.3)  
@@ -51,10 +51,10 @@ Use this as the UI build order and acceptance gate.
 
 - [x] PlayerDock Mini / Full / Hidden — the dock ships with all three modes via PR #54; `PlayerMode` is `"hidden" | "mini" | "full"` (`ui-state.ts:55`)
 - [ ] Full-window **Player view** — the spec's third presentation is not the Full dock: there is no separate player route or `PlayerMode` value for it, so it stays unchecked until a dedicated full-window Player view ships
-- [ ] **WaveformDetailed** = zoomed viewport that **scrolls/moves** with playhead (not full-track strip)
-- [ ] **WaveformOverview** = full-track map + zoom-window highlight (distinct from detailed)  
-- [ ] Per-track peak data (never shared waveform for all files)  
-- [ ] Real audio decode/playback per file (no shared metronome/sample)  
+- [ ] **WaveformDetailed** = zoomed viewport that **scrolls/moves** with playhead (not full-track strip) — reads the real detail-resolution peaks since PR #81; viewport-scroll QA pending
+- [ ] **WaveformOverview** = full-track map + zoom-window highlight (distinct from detailed) — `OverviewMap` reads the overview-resolution peaks since PR #81 (`888861de`)  
+- [ ] Per-track peak data (never shared waveform for all files) — content-addressed cache via `get_waveform_peaks`, dual resolutions (detail 4000 / overview 1000, cache v3), PR #80 (`0a9cd017`) + PR #81; the PRNG fallback stays for tracks without cached peaks (`isEstimated`)  
+- [ ] Real audio decode/playback per file (no shared metronome/sample) — native cpal + Symphonia `AudioEngine` behind six `audio_*` commands, PR #80 (`cab6d8e5`), review-hardened; running-window QA pending  
 - [ ] Beat grid + high detail on detailed wave  
 - [ ] Playhead seek/scrub RAF-locked to audio  
 - [ ] Transport Play↔Pause, Cue, previous/next (no Stop)  

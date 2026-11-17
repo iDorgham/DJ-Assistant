@@ -45,7 +45,7 @@ export function TransportCore({
         title={
           isPlaying
             ? "Pause preview (Space)"
-            : "Play preview — synthesized timing beat; decoding the real audio file is not implemented yet (Space)"
+            : "Play preview — real audio in the desktop app; a synthesized timing beat when the native engine is unavailable (Space)"
         }
         aria-label={isPlaying ? "Pause" : "Play"}
         className={`flex select-none items-center justify-center rounded px-3 transition ${

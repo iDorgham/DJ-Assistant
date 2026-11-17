@@ -1,7 +1,7 @@
 # Phase 2 — Library UX & Player Implementation Plan
 
 **Scope:** T2.1.5 → T2.4 (plus supporting T2.1.1 / T2.1.3 / T2.1.4 as needed)  
-**Status:** Living plan · **Date:** 2026-11-08  
+**Status:** Living plan · **Date:** 2026-11-17 (reconciled with `main` after PR #81)  
 **UI source of truth:** `docs/ui/` (00–03, 06, 09, 11, 12) + `docs/UI_UX_PLAYER_AND_LAYOUT_SPEC.md` v1.9+  
 **Tasks:** `docs/sdd/04-TASKS.md` · **Acceptance:** `docs/sdd/05-ACCEPTANCE.md` P2.1 / P2.1a–d  
 **Does not include:** T2.5 Spectrum Visualizer (optional polish), Tag Surgeon engine (T2.2), Cue Master generation (T2.3.5)
@@ -142,11 +142,11 @@ These get unit tests **first** (TDD-friendly).
 | 1 | Column framework — **done (PR #49, `d037128b`)** | **T2.1.5** | S | — |
 | 2 | Rating + Energy — **done (Slice 2, 2026-10-21)** | **T2.1.4** (rating), **T2.1.6** (energy) | S–M | After 1 |
 | 3 | Tags + Comments + Key — **3A done (PR #53, 2026-10-23); 3B done (PR #70, closed 2026-11-08)** | **T2.1.7**, **T2.1.13** (3A), **T2.1.8** (3B) | M | After 1; key needs playing id |
-| 4 | Artwork | **T2.1.9** | S | After 1 |
-| 5 | Context menu + nav sources — **T2.1.10 shipped (PR #60, 2026-10-27); T2.1.12 open** | **T2.1.10**, **T2.1.12** | M | After 2–4 |
-| 6 | Mix Suggestions | **T2.1.11** | M | After 3 + 5 |
-| 7 | Player modes + real audio — **dock presentations shipped (PR #54); real audio/peaks open** | **T2.4.1**, **T2.4.3** | M | After play path (5) |
-| 8 | Dual-wave + transport — **preview UI shipped (PR #54) over synthesized peaks; real peaks/audio open** | **T2.4.2**, **T2.4.4**, **T2.4.5** | L | After 7 |
+| 4 | Artwork — **done (PR #80, `fb69db68`); native QA open** | **T2.1.9** | S | After 1 |
+| 5 | Context menu + nav sources — **T2.1.10 shipped (PR #60, 2026-10-27); T2.1.12 partial (PR #80, `3f98113c` — source strip + `list_folders`; collapsed-rail icons open)** | **T2.1.10**, **T2.1.12** | M | After 2–4 |
+| 6 | Mix Suggestions — **partial (PR #80, `a2f9b231`); Replace action + native QA open** | **T2.1.11** | M | After 3 + 5 |
+| 7 | Player modes + real audio — **dock presentations (PR #54); native cpal audio + per-track peaks cache shipped (PR #80); T2.4.1 dual resolutions shipped (PR #81, `888861de`); native QA open** | **T2.4.1**, **T2.4.3** | M | After play path (5) |
+| 8 | Dual-wave + transport — **preview UI (PR #54); real decoded peaks per layer (PR #80/#81) over native audio; frame budget, real grid/cue data + native QA open** | **T2.4.2**, **T2.4.4**, **T2.4.5** | L | After 7 |
 | 9 | Hardening — **bulk T2.1.3 code-complete (PR #65); row virtualization shipped (PR #56)** | a11y, perf, **row virtualization**, search fields T2.1.1, bulk T2.1.3 | M | Continuous |
 
 S ≈ 1–2d · M ≈ 2–4d · L ≈ 4–7d (one mid-level engineer).
@@ -230,17 +230,24 @@ Slice 7 real audio ──► Slice 8 dual-wave + transport
 ### Slice 3 — Tags + Key pills + Comments (T2.1.7, T2.1.8, T2.1.13)
 
 **Status:** 3A (tags + comments) **merged 2026-10-23** via PR #53 (squash
-`03991d3c`). Manual running-window QA is pending, so T2.1.7 and T2.1.13 stay
-unticked. 3B (key pills, T2.1.8) is **implemented 2026-10-29** in PR #70,
-stacked on the T2.1.3 branch (PR #65); running-window QA is pending, so its box
-stays unticked. Its review round **closed 2026-11-08**, and three follow-ups
+`03991d3c`). Running-window Pass 3 ran 2026-11-09/10: **43 of 48 rows pass**,
+B4 FAILED (the no-op Save error path — since fixed by **PR #78**, re-run
+pending), A7/F6 are stale checklist expectations and E3 is unreachable on the
+single undo token, so T2.1.7 and T2.1.13 stay unticked. 3B (key pills, T2.1.8)
+is **implemented 2026-10-29** in PR #70, stacked on the T2.1.3 branch (PR #65);
+Pass 4 ran 2026-11-10 — K1–K8/K11 pass, **K10 failed and was fixed the same
+day** (the pill now paints its own opaque ground, D-017), K9 is a stale
+expectation — so its box stays unticked too. Its review round **closed 2026-11-08**, and three follow-ups
 landed since; the implementation is included in the current PR head. The
 Compatible-only filter is now an intent kept separate from the applied key list
 (so a new reference or a Strict/Wide change re-derives the keys), the Key
 chip's × drops that intent with it, Apply no longer clears it when the
 reference is missing, a stranded intent stays enabled and removable instead of
-needing a full reset, and the pill text uses the theme primary token so every
-relation tint clears 4.5:1. Desktop `node --test` is at **222 tests**.
+needing a full reset. The review round moved the pill text onto the theme
+primary token; Pass 4 found that translucent tints over row states still missed
+4.5:1 (**K10**), and the 2026-11-10 fix gives every tinted pill its own opaque
+ground (`lib/key-pill-surface.ts`, gated by `lib/key-pill-contrast.test.ts`).
+Desktop `node --test` was at **222 tests** at that round.
 
 **Split (decided 2026-10-22):** **3A = tags + comments** (T2.1.7, T2.1.13),
 **3B = key pills** (T2.1.8). 3B was deferred because the key-format preference
@@ -291,6 +298,13 @@ decisions (a `track_tags` table; the user comment **overwrites**
 
 ### Slice 4 — Artwork (T2.1.9)
 
+**Status:** Implemented 2026-11-15 (PR #80, commit `fb69db68`). `ArtworkThumb`
+already served the content-addressed `get_artwork` cache with the music-note
+placeholder and cancelled superseded requests (no cross-track bleed); this
+added the hover-play overlay (fades in on hover and focus, loads that track via
+`handlePlayTrack` with `stopPropagation`). The column stays default-off. The DoD
+below awaits the native running-window QA.
+
 **Work**
 - Extract/cache embedded art on import or lazy on first paint (Rust).
 - Protocol for UI: `asset://` / custom scheme / base64 thumbnail — pick one, document in API contracts.
@@ -308,7 +322,14 @@ decisions (a `track_tags` table; the user comment **overwrites**
 
 ### Slice 5 — Context menu + left-nav sources (T2.1.10, T2.1.12)
 
-**Status:** T2.1.10 context menu **shipped in PR #60** (squash `495a0c21`, 2026-10-27) with soft delete (migration 008 `tracks.removed_at` + `skill_runs` transactional snapshot & undo), Play, Rate, Edit tags, column toggles, Reveal, Copy path. T2.1.12 (left-nav sources) remains open.
+**Status:** T2.1.10 context menu **shipped in PR #60** (squash `495a0c21`, 2026-10-27) with soft delete (migration 008 `tracks.removed_at` + `skill_runs` transactional snapshot & undo), Play, Rate, Edit tags, column toggles, Reveal, Copy path. T2.1.12 (left-nav sources) is **partial via PR #80** (`3f98113c`,
+2026-11-15): `source`/`sourceId` thread end to end (`TrackQuery` →
+`list_tracks`), the Library gained a source tab strip (All Library /
+Categories / Browser / Playlists / Flash-Storage) fed by the new `list_folders`
+command, and review landed the folder LIKE-boundary and wildcard-escape fixes
+(`f0c7dde6`, `2694e18b`) plus the bounded folder chip strip (`f583a6b1`). The
+**collapsed left rail still carries no source icons/tooltips**, and native QA
+is open.
 
 **Library `TrackContextMenu`**
 - Play, Analyze, Edit tags, Fix tags (stub → T2.2), Rate submenu, Add to playlist/set, Find in playlists, Mix suggestions, column toggles (Energy/Tags/Rating/Label/Year/Artwork), Reveal in Finder/Explorer, Copy path, Remove from library (soft + Undo).
@@ -332,6 +353,13 @@ decisions (a `track_tags` table; the user comment **overwrites**
 
 ### Slice 6 — Mix Suggestions (T2.1.11)
 
+**Status:** Partially implemented 2026-11-15 (PR #80, commit `a2f9b231`):
+`MixSuggestionsDock` ranks candidates through the existing `findSimilarTracks`
+IPC with score + reason chips, ships Preview and Add actions, the
+select-a-track empty state, loading/error states and a persisted resizable
+width (`dj-assistant.mix-suggestions.width.v1`) with a keyboard-operable
+splitter (`29982ed5`). **Replace selection remains open**; native QA pending.
+
 **Work**
 - Right dock + Options bar toggle; resizable like Skills dock.
 - `mix_suggestions` IPC or client-side score over current page + fetch top-N from Rust for quality.
@@ -349,6 +377,15 @@ decisions (a `track_tags` table; the user comment **overwrites**
 ---
 
 ### Slice 7 — Player modes + real audio (T2.4.1, T2.4.3)
+
+**Status:** Real audio shipped 2026-11-15/16 via PR #80: the cpal-backed
+`AudioEngine` (`apps/desktop/src-tauri/src/audio.rs`, `cab6d8e5` after
+`276a9e7a`) decodes via Symphonia and plays the actual file through six
+`audio_*` commands, with `audio-engine.ts` routing and `audio_state` polling;
+the review round hardened it against load/play races and stale async work
+(details in `04-TASKS.md` T2.4.4). The per-track peaks cache (`0a9cd017`)
+feeds real waveforms, and T2.4.1's dual cached resolutions landed in PR #81
+(`888861de`). The DoD below awaits native QA.
 
 **Critical rules**
 - Decode and play the **actual file** for the loaded track.
@@ -381,6 +418,13 @@ decisions (a `track_tags` table; the user comment **overwrites**
 
 **Never:** identical full-track strips stacked; shared peak buffer; non-moving wave while audio plays.
 
+**Status (2026-11-16):** the data contract is met — since PR #81 the detail and
+overview layers read their **own** peak buffers (real decoded detail 4000 /
+overview 1000, or the decimated synthesized fallback) and native audio drives
+the playhead. Still open: the <16 ms/frame budget is unverified, and phrase
+bands, grid and cue markers still come from the synthesized analysis rather
+than real per-track analysis. The DoD below awaits native QA.
+
 **Transport / grid**
 - Temporary CUE; Hot cues A–H (set / jump / clear / color); numbers 1–8 when focused.
 - Grid snap, nudge, BPM fine, reset; beat jump ±1/4/8/16/32.
@@ -405,7 +449,7 @@ decisions (a `track_tags` table; the user comment **overwrites**
 | T2.1.3 Bulk select + bulk metadata | Undo for bulk rating/tags/energy/comments. **BulkActionBar + bulk metadata dialog shipped (PR #65)**; select-all and the shared bulk actions stay open. |
 | Virtualized track table | **Shipped (PR #56, `ed8d1046`)** — windowed Library body with spacer rows and 500-row pages; the Slice 1 DoD item above and `docs/ui/11-IMPLEMENTATION-CHECKLIST.md` Phase C “TrackTable virtualized” are satisfied. |
 | Virtualization perf | 30k-track native smoke shipped with PR #56 (179 ms to Library + 200 rows; 17.5 ms average / 16.9 ms p95 frame time); keep 5k–20k column-toggle checks open |
-| a11y | Star/Energy names; menu keyboard; focus rings; reduced motion on player height |
+| a11y | Star/Energy names; menu keyboard; focus rings; reduced motion on player height; keyboard-operable dock splitter and honest row-menu labels (PR #80, `29982ed5`) |
 | Empty/error states | No tracks, no peaks yet, analyze failed |
 | Telemetry (opt-in) | Column layout used, mix suggestion accept rate — no audio |
 

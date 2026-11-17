@@ -97,6 +97,13 @@ Phases intentionally overlap once foundations exist.
 
 ### Major Deliverables
 - App shell: three routed views (Library / Preparation / Auto Performance), collapsible left nav, per-view options bar, dark/light/system theming, player dock slot (T2.1.0)
+  > **Superseded (approved v1 plan):** the shipped shell is the six-tab Stage 1
+  > (Library / Playlists / Discover / Statistics / Publish / Settings) with the top-bar
+  > utilities — see `docs/plan/README.md` and the locked hierarchy in
+  > `docs/plan/01-product/information-architecture.md`. (`docs/ui/02-SHELL-AND-NAVIGATION.md`
+  > still describes the pre-supersession three-view shell; do not cite it as current.)
+  > Set building belongs in Playlists → Set Score; the Preparation / Auto Performance
+  > routing above no longer applies.
 - Full library browser (search, filter, bulk actions)
 - Tag Surgeon (fuzzy clustering, canonicalization, aliases, preview, undo)
 - Duplicate + version detection
