@@ -18,9 +18,9 @@
 <p align="center">
   <a href="https://github.com/iDorgham/dj-assistant/actions/workflows/main-ci.yml"><img src="https://github.com/iDorgham/dj-assistant/actions/workflows/main-ci.yml/badge.svg" alt="Main CI"></a>
   <a href="https://github.com/iDorgham/dj-assistant/actions/workflows/desktop-build.yml"><img src="https://github.com/iDorgham/dj-assistant/actions/workflows/desktop-build.yml/badge.svg" alt="Desktop Build"></a>
-  <a href="#status"><img src="https://img.shields.io/badge/Phase_2-In_Progress-00D9FF?style=flat-square&labelColor=0B0D12" alt="Status: Phase 2 in progress"></a>
-  <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-00D9FF?style=flat-square&labelColor=0B0D12" alt="License: MIT"></a>
+  <a href="#roadmap"><img src="https://img.shields.io/badge/Phase_2-In_Progress-00D9FF?style=flat-square&labelColor=0B0D12" alt="Status: Phase 2 in progress"></a>
   <a href="#development"><img src="https://img.shields.io/badge/Tests-394%20Passing-2EA043?style=flat-square&labelColor=0B0D12" alt="Tests: 394 passing"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-00D9FF?style=flat-square&labelColor=0B0D12" alt="License: MIT"></a>
   <img src="https://img.shields.io/badge/Local--First-Offline%20by%20Default-1A1D26?style=flat-square&labelColor=0B0D12" alt="Local-first: offline by default">
 </p>
 
@@ -33,17 +33,16 @@
   <img src="https://img.shields.io/badge/Tailwind_4-06B6D4?style=flat-square&logo=tailwindcss&logoColor=white" alt="Tailwind CSS 4">
   <img src="https://img.shields.io/badge/SQLite-003B57?style=flat-square&logo=sqlite&logoColor=white" alt="SQLite">
   <img src="https://img.shields.io/badge/ONNX_Runtime-005CED?style=flat-square&logo=onnx&logoColor=white" alt="ONNX Runtime">
-  <img src="https://img.shields.io/badge/Node.js_22-5FA04E?style=flat-square&logo=nodedotjs&logoColor=white" alt="Node.js 22">
-  <img src="https://img.shields.io/badge/pnpm_10-F69220?style=flat-square&logo=pnpm&logoColor=white" alt="pnpm 10">
 </p>
 
 <p align="center">
   <a href="#overview">Overview</a> &nbsp;·&nbsp;
-  <a href="#features">Features</a> &nbsp;·&nbsp;
   <a href="#screenshots">Screenshots</a> &nbsp;·&nbsp;
-  <a href="#installation">Install</a> &nbsp;·&nbsp;
+  <a href="#quick-start">Quick start</a> &nbsp;·&nbsp;
+  <a href="#features">Features</a> &nbsp;·&nbsp;
+  <a href="#how-it-works">How it works</a> &nbsp;·&nbsp;
   <a href="#development">Develop</a> &nbsp;·&nbsp;
-  <a href="#status">Status</a> &nbsp;·&nbsp;
+  <a href="#roadmap">Roadmap</a> &nbsp;·&nbsp;
   <a href="#documentation">Docs</a>
 </p>
 
@@ -59,68 +58,18 @@ cues included. Metadata cleanup is reversible by design: every write records a
 before/after snapshot and offers Undo, and a read-only Tag Surgeon report surfaces
 spelling variants across your tags before you change anything.
 
-It is a **preparation** tool, not a live mixer: it does not replace rekordbox,
-Serato, Traktor or CDJs, and it never writes to your audio files. Set sequencing
-and hardware export are on the roadmap, not in today's build.
+**Who it is for.** Working DJs who prep on a laptop before a gig: crate diggers who
+want harmonic and energy-aware suggestions, and anyone tired of tag spelling
+variants (`Deep House`, `deep-house`, `DeepHouse`) splitting their library in three.
 
-**Local-first · non-destructive · reversible · transparent.**
+**What it is not.** A live mixer. It does not replace rekordbox, Serato, Traktor or
+CDJs, and it never writes to your audio files. Set sequencing and hardware export
+are on the [roadmap](#roadmap), not in today's build.
 
-```mermaid
-flowchart LR
-    A["Import<br/>scan · fingerprint · SQLite"]
-    B["Analyze<br/>BPM · key · grid · phrases"]
-    C["Clean<br/>tags · variants · undo"]
-    D["Cue<br/>hot cues · phrase bands"]
-    E["Sequence<br/>constraints · beam search"]
-    F["Export<br/>rekordbox · Serato · USB"]
-
-    A --> B --> C --> D --> E --> F
-
-    classDef shipped fill:#0B3D2E,stroke:#2EA043,color:#E6F4EA;
-    classDef planned fill:#1A1D26,stroke:#64748B,color:#94A3B8,stroke-dasharray: 5 5;
-    class A,B,C,D shipped;
-    class E,F planned;
-```
-
-Solid stages ship today; dashed stages are planned. Each shipped stage is a scoped,
-reversible operation with a recorded snapshot — run the whole chain or step through
-it one stage at a time.
-
-## Features
-
-### Library and import
-
-- **Folder scan with BLAKE3 fingerprinting** — duplicates are detected at scan time; re-scans never double-import a track.
-- **Embedded tag reading** — ID3 / FLAC metadata including embedded cover art, cached content-addressed in the OS app-data directory.
-- **Instant search and real filters** — free text across title, artist, album, path, comment and tags; BPM range, Camelot key, genre, rating, energy, analysis status and a harmonic "compatible only" filter, all server-side with bound parameters.
-- **A table that scales** — 23 configurable columns (visibility, width, order, persisted per view) over a virtualized body verified on a 30,000-track fixture; sortable headers with NULLs-last ordering.
-- **Library sources** — All Library, Categories (genre chips) and Browser (folder tree with library-wide counts); soft remove with Undo.
-
-### On-device analysis
-
-- **BPM + beat grid, key (Camelot and classical), phrase structure, vocal presence and EBU R128 loudness** — deterministic DSP analyzers in Rust, fully offline, with ONNX Runtime activation seams reserved for model-backed inference.
-- **Honest confidence** — low-confidence results are flagged `needs_review`; the player shows the beat grid's own confidence as a `GRID nn%` chip.
-- **Version-stamped results** — every analysis carries a composite pipeline version; re-analysis runs only when the version changes or you force it, with per-track and overall progress events.
-
-### Metadata care, reversible by design
-
-- **Single and bulk metadata editing** with a preview diff, mixed-field seeding for selections, and writes that touch only the fields you changed.
-- **Undo everywhere** — ratings, energy, tags, comments and bulk edits snapshot the previous state; Undo restores it and skips tracks that changed since.
-- **Tag Surgeon report** — read-only fuzzy clustering over case, spacing, accents, punctuation and prefix variants, with representative spellings, track counts and advisory "possibly related" edges. No apply-shaped control until the preview/apply slices land.
-- **Tag Health modal (opt-in online)** — provider picker, live lookup, per-track before → after diffs with tier badges, checkbox selection, bulk apply with confirmation and per-run Undo; a Tag Health Score grades title/artist/album/ISRC/artwork/genre/year/BPM/key gaps. Artwork upgrade fills empty slots only.
-
-### Professional preview player (single deck, prep-only)
-
-- **Native audio playback** — Symphonia decode through cpal, with seek, volume and position polling; local files only.
-- **Dual-layer waveform** — zoomed detail viewport plus full-track overview minimap, each with its own decoded peak resolution cached per content hash; phrase bands, beat/bar lines and cue markers on top.
-- **Hot cues A–H, beat jump, zoom/follow playhead**, Full and Mini dock modes, and a keyboard map for transport and cues.
-- **Mix suggestions dock** — ranked candidates from harmonic distance, BPM and energy deltas with reason chips; Preview loads a candidate, Replace swaps it into your selection in place.
-
-### Privacy and safety
-
-- **No account, no upload, no telemetry by default.** The only network feature is opt-in tag/artwork enrichment, and it sends metadata queries — never audio.
-- **Source files are never modified.** All edits live in the local SQLite database (WAL mode) or supported sidecars.
-- **Optional cloud API** — a separate Fastify service exists for future collaboration; the desktop app is fully functional without it.
+**Why local-first.** Your library is your livelihood. Analysis runs in Rust on your
+CPU, the library lives in a local SQLite database, and the only network feature is
+opt-in metadata enrichment that sends text queries — never audio. No account, no
+upload, no telemetry by default.
 
 ## Screenshots
 
@@ -142,28 +91,7 @@ Captured from the running desktop app (dark theme, 94-track library).
   <sub>Left: the Analysis tab — status, pipeline version, BPM, key, loudness, vocal presence and phrase confidence with one-click re-analysis. Right: the Tags tab — metadata fields plus rating/energy editing, saved immediately and undoable from the library.</sub>
 </p>
 
-## Brand and icons
-
-The mark is a **Groove Meter**: level-meter EQ bars with detached peak-hold caps
-rising out of a vinyl disc — grooves, sheen arc and spindle — so the icon reads
-as "music library" and "level monitoring" at once. The same geometry ships in
-three cuts: the full app tile, a tile-free mark, and a simplified five-bar tray
-glyph that stays legible at 16–32 px.
-
-<p align="center">
-  <img src="./assets/brand-lineup.svg" width="100%" alt="Groove Meter brand lineup: app icon, tray glyph and mark in dark mode; app icon, tray glyph and monochrome mark in light mode">
-</p>
-<p align="center">
-  <sub>Dark and light cuts of the app icon, the OS-theme-aware tray glyph and the tile-free mark. The tray swaps between the two glyphs when the OS theme changes; left-click shows the window, right-click opens a Show/Quit menu.</sub>
-</p>
-
-All artwork lives in [`assets/`](./assets/README.md) as editable SVG sources —
-palette, geometry, rasterising pipeline and wiring are documented there. The
-app icon set under `apps/desktop/src-tauri/icons/` is generated from
-`assets/logo.svg` via `scripts/make_icon.py` + `tauri icon`; never hand-edit the
-generated PNG/ICO/ICNS files.
-
-## Installation
+## Quick start
 
 > No signed installers yet. Build from source, or take a CI artifact from the
 > [`desktop-build`](https://github.com/iDorgham/dj-assistant/actions/workflows/desktop-build.yml) workflow.
@@ -206,7 +134,7 @@ pnpm --filter @dj-assistant/desktop tauri dev
 2. Press **Analyze** to run the on-device queue. Progress streams per track; results land in SQLite and the Track panel's Analysis tab.
 3. Click a row to inspect it, hover-play its artwork (or press Play) to load the preview player.
 
-Where your data lives:
+### Where your data lives
 
 | Item | Location |
 | --- | --- |
@@ -215,7 +143,121 @@ Where your data lives:
 | Analysis models (optional) | `DJ_ASSISTANT_MODELS_DIR` → `./models` → `models/` next to the executable |
 | QA database override | `DJ_ASSISTANT_DB_PATH` points the app at a fixture database |
 
-No account, no upload, no telemetry by default.
+## Features
+
+### Library and import
+
+- **Folder scan with BLAKE3 fingerprinting** — duplicates are detected at scan time; re-scans never double-import a track.
+- **Embedded tag reading** — ID3 / FLAC metadata including embedded cover art, cached content-addressed in the OS app-data directory.
+- **Instant search and real filters** — free text across title, artist, album, path, comment and tags; BPM range, Camelot key, genre, rating, energy, analysis status and a harmonic "compatible only" filter, all server-side with bound parameters.
+- **A table that scales** — 23 configurable columns (visibility, width, order, persisted per view) over a virtualized body verified on a 30,000-track fixture; sortable headers with NULLs-last ordering.
+- **Library sources** — All Library, Categories (genre chips) and Browser (folder tree with library-wide counts); soft remove with Undo.
+
+### On-device analysis
+
+- **BPM + beat grid, key (Camelot and classical), phrase structure, vocal presence and EBU R128 loudness** — deterministic DSP analyzers in Rust, fully offline, with ONNX Runtime activation seams reserved for model-backed inference.
+- **Honest confidence** — low-confidence results are flagged `needs_review`; the player shows the beat grid's own confidence as a `GRID nn%` chip.
+- **Version-stamped results** — every analysis carries a composite pipeline version; re-analysis runs only when the version changes or you force it, with per-track and overall progress events.
+
+### Metadata care, reversible by design
+
+- **Single and bulk metadata editing** with a preview diff, mixed-field seeding for selections, and writes that touch only the fields you changed.
+- **Undo everywhere** — ratings, energy, tags, comments and bulk edits snapshot the previous state; Undo restores it and skips tracks that changed since.
+- **Tag Surgeon report** — read-only fuzzy clustering over case, spacing, accents, punctuation and prefix variants, with representative spellings, track counts and advisory "possibly related" edges. No apply-shaped control until the preview/apply slices land.
+- **Tag Health modal (opt-in online)** — provider picker, live lookup, per-track before → after diffs with tier badges, checkbox selection, bulk apply with confirmation and per-run Undo; a Tag Health Score grades title/artist/album/ISRC/artwork/genre/year/BPM/key gaps. Artwork upgrade fills empty slots only.
+
+### Professional preview player (single deck, prep-only)
+
+- **Native audio playback** — Symphonia decode through cpal, with seek, volume and position polling; local files only.
+- **Dual-layer waveform** — zoomed detail viewport plus full-track overview minimap, each with its own decoded peak resolution cached per content hash; phrase bands, beat/bar lines and cue markers on top.
+- **Hot cues A–H, beat jump, zoom/follow playhead**, Full and Mini dock modes, and a keyboard map for transport and cues.
+- **Mix suggestions dock** — ranked candidates from harmonic distance, BPM and energy deltas with reason chips; Preview loads a candidate, Replace swaps it into your selection in place.
+
+### Privacy and safety
+
+- **No account, no upload, no telemetry by default.** The only network feature is opt-in tag/artwork enrichment, and it sends metadata queries — never audio.
+- **Source files are never modified.** All edits live in the local SQLite database (WAL mode) or supported sidecars.
+- **Optional cloud API** — a separate Fastify service exists for future collaboration; the desktop app is fully functional without it.
+
+## How it works
+
+Every track flows through the same pipeline. Solid stages ship today; dashed
+stages are planned. Each shipped stage is a scoped, reversible operation with a
+recorded snapshot — run the whole chain or step through it one stage at a time.
+
+```mermaid
+%%{init: {"theme": "base", "themeVariables": {
+  "background": "#0B0D12",
+  "primaryColor": "#151A26",
+  "primaryBorderColor": "#2E344A",
+  "primaryTextColor": "#F1F5F9",
+  "lineColor": "#5CE1FF",
+  "fontFamily": "ui-sans-serif, Segoe UI, sans-serif",
+  "fontSize": "14px"
+}}}%%
+flowchart LR
+    A["Import<br/>scan · fingerprint · SQLite"]
+    B["Analyze<br/>BPM · key · grid · phrases"]
+    C["Clean<br/>tags · variants · undo"]
+    D["Cue<br/>hot cues · phrase bands"]
+    E["Sequence<br/>constraints · beam search"]
+    F["Export<br/>rekordbox · Serato · USB"]
+    G[("SQLite WAL<br/>before / after snapshots")]
+
+    A --> B --> C --> D --> E --> F
+    C -. snapshot .-> G
+    G -. undo .-> C
+
+    classDef shipped fill:#0B3D2E,stroke:#2EA043,stroke-width:1.5px,color:#E6F4EA;
+    classDef planned fill:#1A1D26,stroke:#64748B,color:#94A3B8,stroke-dasharray: 5 5;
+    classDef store fill:#151A26,stroke:#00D9FF,stroke-width:1.5px,color:#E6EDF3;
+    class A,B,C,D shipped;
+    class E,F planned;
+    class G store;
+    linkStyle 5,6 stroke:#2EA043,stroke-width:1.5px;
+```
+
+- **Import** walks your folders, fingerprints content with BLAKE3 (not filenames),
+  reads embedded tags and artwork, and upserts into SQLite. Re-scans are cheap and
+  never duplicate a track.
+- **Analyze** decodes audio with Symphonia and runs deterministic DSP: tempo and
+  beat grid, musical key, phrase boundaries, vocal presence and integrated
+  loudness. Results are stamped with a composite pipeline version so improved
+  analyzers re-run only what is stale.
+- **Clean** is where metadata care lives: edits, bulk operations, the Tag Surgeon
+  variant report and opt-in enrichment. Every write snapshots the previous row
+  state first — the green loop in the diagram is the Undo path, and it refuses to
+  restore a track that changed since the snapshot.
+- **Cue** reviews analysis in the player: phrase-band waveforms, beat grids with
+  their own confidence, hot cues A–H and beat jump.
+- **Sequence** (planned) scores and orders a set under harmonic, BPM and energy
+  constraints with beam search.
+- **Export** (planned) verifies the set against rekordbox / Serato / USB targets.
+
+Soft-deleted tracks stay recoverable: library-wide reads filter them out, but
+per-track detail reads do not, so a hidden row can still be revealed and undone.
+
+## Brand and icons
+
+The mark is **The Stack**: three rounded library tiles rising in perspective with
+a play triangle on the front — a crate of tracks, ready to play. It reads as
+"music library" and "press play" at once, and the triangle stays legible down to
+16 px. The same geometry ships in four cuts: the full app tile in dark and light,
+a tile-free mark, a monochrome knockout cut, and a simplified two-layer tray
+glyph whose play triangle is transparent so any taskbar colour shows through.
+
+<p align="center">
+  <img src="./assets/brand-lineup.svg" width="100%" alt="The Stack brand lineup: app icon, tray glyph and mark in dark mode; app icon, tray glyph and monochrome mark in light mode">
+</p>
+<p align="center">
+  <sub>Dark and light cuts of the app icon, the OS-theme-aware tray glyph and the mark. The app tile is inset with a soft squircle so it sits natively in the macOS Dock and reads correctly on Windows 11. The tray swaps between the two glyphs when the OS theme changes; left-click shows the window, right-click opens a Show/Quit menu.</sub>
+</p>
+
+All artwork lives in [`assets/`](./assets/README.md) as editable SVG sources —
+palette, geometry, rasterising pipeline and wiring are documented there. The
+app icon set under `apps/desktop/src-tauri/icons/` is generated from
+`assets/logo.svg` via `scripts/make_icon.py` + `tauri icon`; never hand-edit the
+generated PNG/ICO/ICNS files.
 
 ## Development
 
@@ -259,7 +301,7 @@ scripts/            Workspace tooling (fixtures, hashes, agent routing, icons)
 fixtures/audio      Curated audio fixtures with recorded hashes (never modified)
 ```
 
-## Tech stack
+### Tech stack
 
 | Layer | Technology |
 | --- | --- |
@@ -268,7 +310,7 @@ fixtures/audio      Curated audio fixtures with recorded hashes (never modified)
 | Cloud (optional) | Fastify 5 · PostgreSQL 16 · Redis · BullMQ |
 | Tooling | pnpm 10 · Node.js test runner · ESLint · Prettier · cargo |
 
-## Status
+## Roadmap
 
 **Phase 0 complete · Phase 1 implemented · Phase 2 in progress.**
 

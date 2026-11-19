@@ -1,9 +1,9 @@
 """Generate the DJ Assistant source app icon (1024x1024 PNG) and tray glyphs.
 
-Design ("Groove Meter"): rounded-square dark tile with a diagonal gradient, a
-soft top sheen, vinyl groove rings behind level-meter EQ bars with detached
-peak-hold caps, and a subtle gradient border. Mirrors ``assets/logo.svg``;
-the tray glyphs mirror ``assets/tray-on-dark.svg`` / ``tray-on-light.svg``.
+Design ("The Stack"): rounded-square dark tile holding three rounded library
+tiles in perspective with a glowing play triangle on the front. Mirrors
+``assets/logo.svg``; the tray glyphs mirror ``assets/tray-on-dark.svg`` /
+``tray-on-light.svg`` (two-layer stack, triangle knocked out).
 
 Run:  python scripts/make_icon.py
 Then: pnpm --filter @dj-assistant/desktop exec tauri icon <output png>
@@ -11,6 +11,7 @@ Then: pnpm --filter @dj-assistant/desktop exec tauri icon <output png>
 
 from __future__ import annotations
 
+import math
 import os
 
 import numpy as np
@@ -27,48 +28,51 @@ ICONS_DIR = os.path.join(OUT_DIR, "icons")
 # Brand palette (from assets/logo.svg)
 BG_TOP = (23, 27, 37)         # #171B25
 BG_BOTTOM = (10, 12, 17)      # #0A0C11
-BAR_TOP = (92, 225, 255)      # #5CE1FF
-BAR_BOTTOM = (0, 144, 255)    # #0090FF
+PLAY_TOP = (92, 225, 255)     # #5CE1FF
+PLAY_BOTTOM = (0, 144, 255)   # #0090FF
 BORDER_TOP = (46, 52, 74)     # #2E344A
 BORDER_BOTTOM = (26, 31, 43)  # #1A1F2B
+LAYER_TOP = (35, 41, 57)      # #232939
+LAYER_MID = BORDER_TOP        # #2E344A
+FRONT_TOP = (42, 49, 69)      # #2A3145
+FRONT_BOTTOM = BORDER_BOTTOM  # #1A1F2B
+FRONT_LINE = (58, 66, 88)     # #3A4258
 SHEEN_ALPHA = 20              # ~8% white highlight at the top edge
 
-# Groove Meter geometry on the 128-unit canvas (shared with assets/logo.svg)
-BAR_XS = [18, 32, 46, 60, 74, 88, 102]
-BAR_W = 8
-BAR_BASE = 88
-BAR_HS = [26, 42, 58, 74, 58, 42, 26]
-CAP_H = 4
-CAP_GAP = 3
-DISC_C = (64, 96)
-GROOVE_RS = [26, 20, 14]
-GROOVE_W = 1.5
-SPINDLE_R = 3
-ARC_R = 23
-ARC_W = 2
-ARC_ALPHA = 0.35
+# The Stack geometry on the 128-unit canvas (shared with assets/logo.svg)
+TILE_BOX = (8, 8, 120, 120)
+TILE_R = 26
+TOP_BOX = (42, 24, 86, 44)
+TOP_R = 9
+MID_BOX = (33, 36, 95, 62)
+MID_R = 10
+FRONT_BOX = (24, 50, 104, 106)
+FRONT_R = 12
+FRONT_LINE_W = 1.5
+TRI_A = (56, 65)
+TRI_B = (56, 91)
+TRI_C = (81, 78)
+TRI_ROUND = 4
 
 # Tray glyph geometry on the 32-unit canvas (shared with assets/tray-*.svg)
 TRAY_SIZE = 32
-TRAY_XS = [4.5, 9.5, 14.5, 19.5, 24.5]
-TRAY_W = 3
-TRAY_BASE = 21
-TRAY_HS = [7, 11, 15, 11, 7]
-TRAY_CAP_H = 2
-TRAY_CAP_GAP = 1
-TRAY_DISC_C = (16, 23)
-TRAY_ARC_R = 8.5
-TRAY_ARC_W = 2
-TRAY_SPINDLE_R = 1.5
+TRAY_BACK_BOX = (8, 3, 24, 11)
+TRAY_BACK_R = 3.5
+TRAY_FRONT_BOX = (4, 8, 28, 29)
+TRAY_FRONT_R = 5.5
+TRAY_TRI_A = (13, 13.5)
+TRAY_TRI_B = (13, 23.5)
+TRAY_TRI_C = (22.5, 18.5)
+TRAY_TRI_ROUND = 1.8
 TRAY_DARK = {
-    "bar": BAR_TOP,
-    "cap": (217, 246, 255),   # #D9F6FF
-    "arc_alpha": 0.6,
+    "back": PLAY_BOTTOM,
+    "front_top": PLAY_TOP,
+    "front_bottom": PLAY_BOTTOM,
 }
 TRAY_LIGHT = {
-    "bar": (37, 99, 235),     # #2563EB
-    "cap": (6, 182, 212),     # #06B6D4
-    "arc_alpha": 0.55,
+    "back": (96, 165, 250),    # #60A5FA
+    "front_top": (6, 182, 212),   # #06B6D4
+    "front_bottom": (37, 99, 235),  # #2563EB
 }
 
 
@@ -112,26 +116,60 @@ def make_sheen(size: int, mask: Image.Image) -> Image.Image:
     return Image.fromarray(arr, "RGBA")
 
 
-def draw_disc(d: ImageDraw.ImageDraw, sx, center, groove_rs, groove_w, arc_r, arc_w, arc_color, spindle_r, spindle_color) -> None:
-    """Vinyl groove rings, a lower sheen arc, and the spindle dot."""
-    cx, cy = sx(center[0]), sx(center[1])
-    for r in groove_rs:
-        rr = sx(r)
-        d.ellipse([cx - rr, cy - rr, cx + rr, cy + rr], outline=BORDER_TOP + (255,), width=max(1, int(sx(groove_w))))
-    rr = sx(arc_r)
-    d.arc([cx - rr, cy - rr, cx + rr, cy + rr], start=30, end=150, fill=arc_color, width=max(1, int(sx(arc_w))))
-    rr = sx(spindle_r)
-    d.ellipse([cx - rr, cy - rr, cx + rr, cy + rr], fill=spindle_color)
+def rounded_triangle_points(a, b, c, t: float, steps: int = 12):
+    """Sample the rounded play triangle (quadratic corners, radius ~t)."""
+    verts = (a, b, c)
+    pts = []
+    for i, v in enumerate(verts):
+        p, n = verts[i - 1], verts[(i + 1) % 3]
+
+        def unit(src, dst):
+            dx, dy = dst[0] - src[0], dst[1] - src[1]
+            length = math.hypot(dx, dy)
+            return (dx / length, dy / length)
+
+        u_in = unit(v, p)
+        u_out = unit(v, n)
+        p_in = (v[0] + t * u_in[0], v[1] + t * u_in[1])
+        p_out = (v[0] + t * u_out[0], v[1] + t * u_out[1])
+        if i == 0:
+            pts.append(p_out)
+        else:
+            pts.append(p_in)
+            for s in range(1, steps + 1):
+                q = s / steps
+                x = (1 - q) ** 2 * p_in[0] + 2 * (1 - q) * q * v[0] + q ** 2 * p_out[0]
+                y = (1 - q) ** 2 * p_in[1] + 2 * (1 - q) * q * v[1] + q ** 2 * p_out[1]
+                pts.append((x, y))
+    # close the last corner (A) back to the first point
+    v = verts[0]
+    p, n = verts[-1], verts[1]
+    u_in = (p[0] - v[0], p[1] - v[1])
+    length = math.hypot(*u_in)
+    u_in = (u_in[0] / length, u_in[1] / length)
+    u_out = (n[0] - v[0], n[1] - v[1])
+    length = math.hypot(*u_out)
+    u_out = (u_out[0] / length, u_out[1] / length)
+    p_in = (v[0] + t * u_in[0], v[1] + t * u_in[1])
+    p_out = pts[0]
+    for s in range(1, steps + 1):
+        q = s / steps
+        x = (1 - q) ** 2 * p_in[0] + 2 * (1 - q) * q * v[0] + q ** 2 * p_out[0]
+        y = (1 - q) ** 2 * p_in[1] + 2 * (1 - q) * q * v[1] + q ** 2 * p_out[1]
+        pts.append((x, y))
+    return pts
 
 
-def bar_rects(sx, xs, w, base, hs, cap_h, cap_gap):
-    """Yield (bar_box, cap_box) pairs in scaled pixels."""
-    for x, h in zip(xs, hs):
-        top = base - h
-        yield (
-            [sx(x), sx(top), sx(x + w), sx(base)],
-            [sx(x), sx(top - cap_gap - cap_h), sx(x + w), sx(top - cap_gap)],
-        )
+def gradient_fill(tile: Image.Image, box, radius, grad: Image.Image, sx) -> None:
+    """Paste a full-ramp vertical gradient into a rounded box."""
+    x0, y0, x1, y1 = (int(sx(v)) for v in box)
+    w, h = x1 - x0, y1 - y0
+    piece = Image.new("RGBA", (w, h), (0, 0, 0, 0))
+    piece.paste(grad.crop((0, 0, 1, grad.size[1])).resize((w, h)), (0, 0))
+    mask = Image.new("L", (w, h), 0)
+    ImageDraw.Draw(mask).rounded_rectangle([0, 0, w - 1, h - 1], radius=int(sx(radius)), fill=255)
+    piece.putalpha(mask)
+    tile.paste(piece, (x0, y0), mask)
 
 
 def build() -> Image.Image:
@@ -141,68 +179,65 @@ def build() -> Image.Image:
     # --- Background tile -------------------------------------------------
     tile = Image.new("RGBA", (S, S), (0, 0, 0, 0))
     bg_grad = make_diagonal_gradient(S, BG_TOP, BG_BOTTOM).convert("RGBA")
-    mask = rounded_mask(S, radius=int(S * 0.22))
+    mask = Image.new("L", (S, S), 0)
+    ImageDraw.Draw(mask).rounded_rectangle(
+        [sx(TILE_BOX[0]), sx(TILE_BOX[1]), sx(TILE_BOX[2]), sx(TILE_BOX[3])],
+        radius=int(sx(TILE_R)),
+        fill=255,
+    )
     tile.paste(bg_grad, (0, 0), mask)
-
-    # --- Soft top sheen (depth) -----------------------------------------
     tile.alpha_composite(make_sheen(S, mask))
 
-    # --- Vinyl disc behind the bars --------------------------------------
-    disc = Image.new("RGBA", (S, S), (0, 0, 0, 0))
-    draw_disc(
-        ImageDraw.Draw(disc), sx, DISC_C, GROOVE_RS, GROOVE_W,
-        ARC_R, ARC_W, BAR_TOP + (int(255 * ARC_ALPHA),), SPINDLE_R, BAR_TOP + (255,),
-    )
-    tile.alpha_composite(disc)
+    # --- The Stack: two back layers, then the front tile ------------------
+    layers = Image.new("RGBA", (S, S), (0, 0, 0, 0))
+    ld = ImageDraw.Draw(layers)
+    ld.rounded_rectangle([sx(v) for v in TOP_BOX], radius=int(sx(TOP_R)), fill=LAYER_TOP + (255,))
+    ld.rounded_rectangle([sx(v) for v in MID_BOX], radius=int(sx(MID_R)), fill=LAYER_MID + (255,))
+    tile.alpha_composite(layers)
 
-    # --- EQ bars + peak caps ---------------------------------------------
-    rects = list(bar_rects(sx, BAR_XS, BAR_W, BAR_BASE, BAR_HS, CAP_H, CAP_GAP))
+    front_grad = make_vertical_gradient(S, FRONT_TOP, FRONT_BOTTOM).convert("RGBA")
+    gradient_fill(tile, FRONT_BOX, FRONT_R, front_grad, sx)
+    line = Image.new("RGBA", (S, S), (0, 0, 0, 0))
+    ImageDraw.Draw(line).rounded_rectangle(
+        [sx(v) for v in FRONT_BOX], radius=int(sx(FRONT_R)),
+        outline=FRONT_LINE + (255,), width=max(1, int(sx(FRONT_LINE_W))),
+    )
+    tile.alpha_composite(line)
+
+    # --- Play triangle: soft bloom + tight halo, then gradient fill -------
+    tri = [(sx(x), sx(y)) for x, y in rounded_triangle_points(TRI_A, TRI_B, TRI_C, TRI_ROUND)]
 
     def glow(std: float, opacity: float) -> Image.Image:
-        """Blurred copy of the bars and caps at the given opacity."""
         layer = Image.new("RGBA", (S, S), (0, 0, 0, 0))
-        ld = ImageDraw.Draw(layer)
-        for bar_box, cap_box in rects:
-            ld.rounded_rectangle(bar_box, radius=sx(4), fill=BAR_TOP + (255,))
-            ld.rounded_rectangle(cap_box, radius=sx(2), fill=BAR_TOP + (255,))
+        ImageDraw.Draw(layer).polygon(tri, fill=PLAY_TOP + (255,))
         layer = layer.filter(ImageFilter.GaussianBlur(std))
         a = np.array(layer)
         a[:, :, 3] = (a[:, :, 3] * opacity).astype(np.uint8)
         return Image.fromarray(a, "RGBA")
 
-    # Two layers: a wide soft bloom plus a tight halo.
-    tile.alpha_composite(glow(sx(5), 0.55))
-    tile.alpha_composite(glow(sx(1.5), 0.9))
+    tile.alpha_composite(glow(sx(4), 0.5))
+    tile.alpha_composite(glow(sx(1.2), 0.85))
 
-    # Solid bars with vertical gradient
-    bar_grad = make_vertical_gradient(S, BAR_TOP, BAR_BOTTOM).convert("RGBA")
-    for (bar_box, cap_box) in rects:
-        x0, y0, x1, y1 = (int(v) for v in bar_box)
-        w, h = x1 - x0, y1 - y0
-        # Full gradient ramp per bar: crop a 1px-wide full-height column and
-        # resize it to the bar so every bar spans cyan->blue (cropping the top
-        # h/S would leave tall bars short of blue and tint short bars cyan).
-        bar_tile = Image.new("RGBA", (w, h), (0, 0, 0, 0))
-        bar_tile.paste(bar_grad.crop((0, 0, 1, S)).resize((w, h)), (0, 0))
-        bar_mask = Image.new("L", (w, h), 0)
-        ImageDraw.Draw(bar_mask).rounded_rectangle([0, 0, w - 1, h - 1], radius=int(sx(4)), fill=255)
-        bar_tile.putalpha(bar_mask)
-        tile.paste(bar_tile, (x0, y0), bar_mask)
-
-    # Peak-hold caps in the bright top color
-    cap_layer = Image.new("RGBA", (S, S), (0, 0, 0, 0))
-    cd = ImageDraw.Draw(cap_layer)
-    for _, cap_box in rects:
-        cd.rounded_rectangle(cap_box, radius=sx(2), fill=BAR_TOP + (255,))
-    tile.alpha_composite(cap_layer)
+    play_grad = make_vertical_gradient(S, PLAY_TOP, PLAY_BOTTOM).convert("RGBA")
+    x0 = int(min(p[0] for p in tri))
+    y0 = int(min(p[1] for p in tri))
+    x1 = int(max(p[0] for p in tri)) + 1
+    y1 = int(max(p[1] for p in tri)) + 1
+    w, h = x1 - x0, y1 - y0
+    piece = Image.new("RGBA", (w, h), (0, 0, 0, 0))
+    piece.paste(play_grad.crop((0, 0, 1, S)).resize((w, h)), (0, 0))
+    tri_mask = Image.new("L", (w, h), 0)
+    ImageDraw.Draw(tri_mask).polygon([(x - x0, y - y0) for x, y in tri], fill=255)
+    piece.putalpha(tri_mask)
+    tile.paste(piece, (x0, y0), tri_mask)
 
     # --- Gradient border -------------------------------------------------
     ring = Image.new("L", (S, S), 0)
     ImageDraw.Draw(ring).rounded_rectangle(
-        [sx(1.5), sx(1.5), sx(126.5), sx(126.5)],
-        radius=int(sx(30)),
+        [sx(TILE_BOX[0]), sx(TILE_BOX[1]), sx(TILE_BOX[2]), sx(TILE_BOX[3])],
+        radius=int(sx(TILE_R)),
         outline=255,
-        width=int(sx(3)),
+        width=max(1, int(sx(2.5))),
     )
     border_grad = make_vertical_gradient(S, BORDER_TOP, BORDER_BOTTOM).convert("RGBA")
     tile.paste(border_grad, (0, 0), ring)
@@ -222,16 +257,20 @@ def build_tray(colors: dict) -> Image.Image:
 
     img = Image.new("RGBA", (t, t), (0, 0, 0, 0))
     d = ImageDraw.Draw(img)
-    bar = colors["bar"]
-    arc_color = bar + (int(255 * colors["arc_alpha"]),)
-    cx, cy = sx(TRAY_DISC_C[0]), sx(TRAY_DISC_C[1])
-    rr = sx(TRAY_ARC_R)
-    d.arc([cx - rr, cy - rr, cx + rr, cy + rr], start=30, end=150, fill=arc_color, width=max(1, int(sx(TRAY_ARC_W))))
-    rr = sx(TRAY_SPINDLE_R)
-    d.ellipse([cx - rr, cy - rr, cx + rr, cy + rr], fill=bar + (255,))
-    for bar_box, cap_box in bar_rects(sx, TRAY_XS, TRAY_W, TRAY_BASE, TRAY_HS, TRAY_CAP_H, TRAY_CAP_GAP):
-        d.rounded_rectangle(bar_box, radius=sx(1.5), fill=bar + (255,))
-        d.rounded_rectangle(cap_box, radius=sx(1), fill=colors["cap"] + (255,))
+    d.rounded_rectangle([sx(v) for v in TRAY_BACK_BOX], radius=int(sx(TRAY_BACK_R)), fill=colors["back"] + (255,))
+
+    tri = [(sx(x), sx(y)) for x, y in rounded_triangle_points(TRAY_TRI_A, TRAY_TRI_B, TRAY_TRI_C, TRAY_TRI_ROUND)]
+    front_mask = Image.new("L", (t, t), 0)
+    fd = ImageDraw.Draw(front_mask)
+    fd.rounded_rectangle([sx(v) for v in TRAY_FRONT_BOX], radius=int(sx(TRAY_FRONT_R)), fill=255)
+    fd.polygon(tri, fill=0)  # knock the play triangle out
+
+    grad = make_vertical_gradient(t, colors["front_top"], colors["front_bottom"]).convert("RGBA")
+    x0, y0, x1, y1 = (int(sx(v)) for v in TRAY_FRONT_BOX)
+    w, h = x1 - x0, y1 - y0
+    piece = Image.new("RGBA", (w, h), (0, 0, 0, 0))
+    piece.paste(grad.crop((0, 0, 1, t)).resize((w, h)), (0, 0))
+    img.paste(piece, (x0, y0), front_mask.crop((x0, y0, x1, y1)))
     return img.resize((TRAY_SIZE, TRAY_SIZE), Image.LANCZOS)
 
 

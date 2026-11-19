@@ -1,18 +1,22 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="640" viewBox="0 0 1280 640" role="img" aria-label="DJ Assistant — local-first, non-destructive DJ set preparation">
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="640" viewBox="0 0 1280 640" role="img" aria-label="DJ Assistant — your library in, a set out, nothing leaves your machine">
   <title>DJ Assistant</title>
   <defs>
     <linearGradient id="spBg" x1="0" y1="0" x2="1" y2="1">
       <stop offset="0" stop-color="#0B0D12"/>
       <stop offset="1" stop-color="#161A24"/>
     </linearGradient>
-    <radialGradient id="spRadialA" cx="0.5" cy="0.06" r="0.7">
-      <stop offset="0" stop-color="#2563EB" stop-opacity="0.28"/>
+    <radialGradient id="spRadialA" cx="0.5" cy="0.1" r="0.9">
+      <stop offset="0" stop-color="#2563EB" stop-opacity="0.22"/>
       <stop offset="1" stop-color="#2563EB" stop-opacity="0"/>
     </radialGradient>
     <radialGradient id="spRadialB" cx="0.5" cy="1" r="0.8">
-      <stop offset="0" stop-color="#22D3EE" stop-opacity="0.08"/>
+      <stop offset="0" stop-color="#22D3EE" stop-opacity="0.1"/>
       <stop offset="1" stop-color="#22D3EE" stop-opacity="0"/>
     </radialGradient>
+    <linearGradient id="spBorder" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#2A3040"/>
+      <stop offset="1" stop-color="#171B25"/>
+    </linearGradient>
     <linearGradient id="spTile" x1="0" y1="0" x2="1" y2="1">
       <stop offset="0" stop-color="#171B25"/>
       <stop offset="1" stop-color="#0A0C11"/>
@@ -25,25 +29,20 @@
       <stop offset="0" stop-color="#2E344A"/>
       <stop offset="1" stop-color="#1A1F2B"/>
     </linearGradient>
+    <linearGradient id="spFront" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#2A3145"/>
+      <stop offset="1" stop-color="#1A1F2B"/>
+    </linearGradient>
     <linearGradient id="spEq" x1="0" y1="0" x2="0" y2="1">
       <stop offset="0" stop-color="#5CE1FF"/>
       <stop offset="1" stop-color="#0090FF"/>
     </linearGradient>
-    <linearGradient id="spFade" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0" stop-color="#FFFFFF" stop-opacity="0"/>
-      <stop offset="0.35" stop-color="#FFFFFF" stop-opacity="1"/>
-      <stop offset="0.65" stop-color="#FFFFFF" stop-opacity="1"/>
-      <stop offset="1" stop-color="#FFFFFF" stop-opacity="0"/>
-    </linearGradient>
-    <mask id="spMotifMask">
-      <rect x="180" y="0" width="920" height="640" fill="url(#spFade)"/>
-    </mask>
     <filter id="spGlow" x="-50%" y="-50%" width="200%" height="200%">
-      <feGaussianBlur in="SourceGraphic" stdDeviation="5" result="glowWide"/>
+      <feGaussianBlur in="SourceGraphic" stdDeviation="4" result="glowWide"/>
       <feComponentTransfer in="glowWide" result="glowSoft">
-        <feFuncA type="linear" slope="0.55"/>
+        <feFuncA type="linear" slope="0.5"/>
       </feComponentTransfer>
-      <feGaussianBlur in="SourceGraphic" stdDeviation="1.5" result="glowTight"/>
+      <feGaussianBlur in="SourceGraphic" stdDeviation="1.2" result="glowTight"/>
       <feMerge>
         <feMergeNode in="glowSoft"/>
         <feMergeNode in="glowTight"/>
@@ -51,89 +50,55 @@
       </feMerge>
     </filter>
     <clipPath id="spTileClip">
-      <rect x="1.5" y="1.5" width="125" height="125" rx="30"/>
+      <rect x="8" y="8" width="112" height="112" rx="26"/>
     </clipPath>
   </defs>
 
-  <rect width="1280" height="640" fill="url(#spBg)"/>
-  <rect width="1280" height="640" fill="url(#spRadialA)"/>
-  <rect width="1280" height="640" fill="url(#spRadialB)"/>
+  <rect width="1280" height="640" rx="32" fill="url(#spBg)"/>
+  <rect width="1280" height="640" rx="32" fill="url(#spRadialA)"/>
+  <rect width="1280" height="640" rx="32" fill="url(#spRadialB)"/>
 
-  <!-- Groove-meter motifs flanking the lockup -->
-  <g fill="url(#spEq)" opacity="0.14" mask="url(#spMotifMask)">
-    <path d="M247.5 380A56 56 0 0 0 344.5 380" fill="none" stroke="#5CE1FF" stroke-opacity="0.6" stroke-width="2.5" stroke-linecap="round"/>
-    <path d="M959.5 380A56 56 0 0 0 1056.5 380" fill="none" stroke="#5CE1FF" stroke-opacity="0.6" stroke-width="2.5" stroke-linecap="round"/>
-    <rect x="248" y="300" width="12" height="40" rx="6"/>
-    <rect x="272" y="284" width="12" height="72" rx="6"/>
-    <rect x="296" y="264" width="12" height="112" rx="6"/>
-    <rect x="320" y="296" width="12" height="48" rx="6"/>
-    <rect x="960" y="296" width="12" height="48" rx="6"/>
-    <rect x="984" y="264" width="12" height="112" rx="6"/>
-    <rect x="1008" y="284" width="12" height="72" rx="6"/>
-    <rect x="1032" y="300" width="12" height="40" rx="6"/>
-    <g fill="#5CE1FF">
-      <rect x="248" y="291" width="12" height="5" rx="2.5"/>
-      <rect x="272" y="275" width="12" height="5" rx="2.5"/>
-      <rect x="296" y="255" width="12" height="5" rx="2.5"/>
-      <rect x="320" y="287" width="12" height="5" rx="2.5"/>
-      <rect x="960" y="287" width="12" height="5" rx="2.5"/>
-      <rect x="984" y="255" width="12" height="5" rx="2.5"/>
-      <rect x="1008" y="275" width="12" height="5" rx="2.5"/>
-      <rect x="1032" y="291" width="12" height="5" rx="2.5"/>
+  <!-- Flanking motifs: faint oversized Stacks -->
+  <g opacity="0.15">
+    <g transform="translate(110 190) scale(1.7)">
+      <rect x="42" y="24" width="44" height="20" rx="9" fill="none" stroke="url(#spEq)" stroke-width="1"/>
+      <rect x="33" y="36" width="62" height="26" rx="10" fill="none" stroke="url(#spEq)" stroke-width="1"/>
+      <rect x="24" y="50" width="80" height="56" rx="12" fill="none" stroke="url(#spEq)" stroke-width="1"/>
+      <path d="M56 69 L56 87 Q56 91 59.55 89.16 L77.45 79.84 Q81 78 77.45 76.16 L59.55 66.84 Q56 65 56 69 Z" fill="url(#spEq)"/>
+    </g>
+    <g transform="translate(950 190) scale(1.7)">
+      <rect x="42" y="24" width="44" height="20" rx="9" fill="none" stroke="url(#spEq)" stroke-width="1"/>
+      <rect x="33" y="36" width="62" height="26" rx="10" fill="none" stroke="url(#spEq)" stroke-width="1"/>
+      <rect x="24" y="50" width="80" height="56" rx="12" fill="none" stroke="url(#spEq)" stroke-width="1"/>
+      <path d="M56 69 L56 87 Q56 91 59.55 89.16 L77.45 79.84 Q81 78 77.45 76.16 L59.55 66.84 Q56 65 56 69 Z" fill="url(#spEq)"/>
     </g>
   </g>
 
-  <!-- Centered lockup: the Groove Meter app tile -->
-  <g transform="translate(560 96) scale(1.25)">
-    <rect x="1.5" y="1.5" width="125" height="125" rx="30" fill="url(#spTile)"/>
-    <rect x="1.5" y="1.5" width="125" height="125" fill="url(#spSheen)" clip-path="url(#spTileClip)"/>
+  <!-- Centered app tile -->
+  <g transform="translate(544 120) scale(1.5)">
+    <rect x="8" y="8" width="112" height="112" rx="26" fill="url(#spTile)"/>
+    <rect x="8" y="8" width="112" height="112" fill="url(#spSheen)" clip-path="url(#spTileClip)"/>
     <g clip-path="url(#spTileClip)">
-      <g fill="none" stroke="#2E344A" stroke-width="1.5">
-        <circle cx="64" cy="96" r="26"/>
-        <circle cx="64" cy="96" r="20"/>
-        <circle cx="64" cy="96" r="14"/>
-      </g>
-      <path d="M44.08 107.5A23 23 0 0 0 83.92 107.5" fill="none" stroke="#5CE1FF" stroke-opacity="0.35" stroke-width="2" stroke-linecap="round"/>
-      <circle cx="64" cy="96" r="3" fill="url(#spEq)"/>
-      <g filter="url(#spGlow)">
-        <g fill="url(#spEq)">
-          <rect x="18" y="62" width="8" height="26" rx="4"/>
-          <rect x="32" y="46" width="8" height="42" rx="4"/>
-          <rect x="46" y="30" width="8" height="58" rx="4"/>
-          <rect x="60" y="14" width="8" height="74" rx="4"/>
-          <rect x="74" y="30" width="8" height="58" rx="4"/>
-          <rect x="88" y="46" width="8" height="42" rx="4"/>
-          <rect x="102" y="62" width="8" height="26" rx="4"/>
-        </g>
-        <g fill="#5CE1FF">
-          <rect x="18" y="55" width="8" height="4" rx="2"/>
-          <rect x="32" y="39" width="8" height="4" rx="2"/>
-          <rect x="46" y="23" width="8" height="4" rx="2"/>
-          <rect x="60" y="7" width="8" height="4" rx="2"/>
-          <rect x="74" y="23" width="8" height="4" rx="2"/>
-          <rect x="88" y="39" width="8" height="4" rx="2"/>
-          <rect x="102" y="55" width="8" height="4" rx="2"/>
-        </g>
-      </g>
+      <rect x="42" y="24" width="44" height="20" rx="9" fill="#232939"/>
+      <rect x="33" y="36" width="62" height="26" rx="10" fill="#2E344A"/>
+      <rect x="24" y="50" width="80" height="56" rx="12" fill="url(#spFront)" stroke="#3A4258" stroke-width="1.5"/>
+      <path d="M56 69 L56 87 Q56 91 59.55 89.16 L77.45 79.84 Q81 78 77.45 76.16 L59.55 66.84 Q56 65 56 69 Z"
+            fill="url(#spEq)" filter="url(#spGlow)"/>
     </g>
-    <rect x="1.5" y="1.5" width="125" height="125" rx="30" fill="none" stroke="url(#spTileBorder)" stroke-width="3"/>
+    <rect x="8" y="8" width="112" height="112" rx="26" fill="none" stroke="url(#spTileBorder)" stroke-width="2.5"/>
   </g>
 
-  <text x="640" y="386" text-anchor="middle"
+  <text x="640" y="408" text-anchor="middle"
         font-family="ui-sans-serif, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif"
-        font-size="72" font-weight="700" letter-spacing="-2" fill="#F1F5F9">DJ Assistant</text>
+        font-size="68" font-weight="700" letter-spacing="-2" fill="#F1F5F9">DJ Assistant</text>
 
-  <text x="640" y="440" text-anchor="middle"
+  <text x="640" y="456" text-anchor="middle"
         font-family="ui-sans-serif, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif"
-        font-size="26" font-weight="400" fill="#94A3B8">Turn a music library into a performance-ready DJ set.</text>
+        font-size="26" font-weight="400" fill="#94A3B8">Your library in. A set out. Nothing leaves your machine.</text>
 
-  <text x="640" y="502" text-anchor="middle"
+  <text x="640" y="516" text-anchor="middle"
         font-family="ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, monospace"
-        font-size="18" font-weight="500" letter-spacing="3" fill="#60A5FA">ANALYZE · CLEAN · CUE · SEQUENCE · EXPORT</text>
+        font-size="16" font-weight="500" letter-spacing="3" fill="#60A5FA">LOCAL-FIRST · NON-DESTRUCTIVE · REVERSIBLE · TRANSPARENT</text>
 
-  <rect x="480" y="546" width="320" height="1" fill="#232A38"/>
-
-  <text x="640" y="586" text-anchor="middle"
-        font-family="ui-sans-serif, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif"
-        font-size="18" font-weight="400" fill="#64748B">Local-first · Non-destructive · Offline by default</text>
+  <rect x="0.5" y="0.5" width="1279" height="639" rx="32" fill="none" stroke="url(#spBorder)"/>
 </svg>

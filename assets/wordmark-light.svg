@@ -9,58 +9,38 @@
       <stop offset="0" stop-color="#DCE3EE"/>
       <stop offset="1" stop-color="#C4CFE0"/>
     </linearGradient>
-    <linearGradient id="wmLightEq" x1="0" y1="0" x2="0" y2="1">
+    <linearGradient id="wmLightFront" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#FFFFFF"/>
+      <stop offset="1" stop-color="#F4F7FB"/>
+    </linearGradient>
+    <linearGradient id="wmLightPlay" x1="0" y1="0" x2="0" y2="1">
       <stop offset="0" stop-color="#06B6D4"/>
       <stop offset="1" stop-color="#2563EB"/>
     </linearGradient>
     <filter id="wmLightGlow" x="-50%" y="-50%" width="200%" height="200%">
-      <feGaussianBlur in="SourceGraphic" stdDeviation="5" result="glowWide"/>
+      <feGaussianBlur in="SourceGraphic" stdDeviation="3" result="glowWide"/>
       <feComponentTransfer in="glowWide" result="glowSoft">
-        <feFuncA type="linear" slope="0.35"/>
+        <feFuncA type="linear" slope="0.3"/>
       </feComponentTransfer>
-      <feGaussianBlur in="SourceGraphic" stdDeviation="1.5" result="glowTight"/>
       <feMerge>
         <feMergeNode in="glowSoft"/>
-        <feMergeNode in="glowTight"/>
         <feMergeNode in="SourceGraphic"/>
       </feMerge>
     </filter>
     <clipPath id="wmLightClip">
-      <rect x="1.5" y="1.5" width="125" height="125" rx="30"/>
+      <rect x="8" y="8" width="112" height="112" rx="26"/>
     </clipPath>
   </defs>
   <g transform="translate(8 8) scale(0.5)">
-    <rect x="1.5" y="1.5" width="125" height="125" rx="30" fill="url(#wmLightTile)"/>
+    <rect x="8" y="8" width="112" height="112" rx="26" fill="url(#wmLightTile)"/>
     <g clip-path="url(#wmLightClip)">
-      <g fill="none" stroke="#C4CFE0" stroke-width="1.5">
-        <circle cx="64" cy="96" r="26"/>
-        <circle cx="64" cy="96" r="20"/>
-        <circle cx="64" cy="96" r="14"/>
-      </g>
-      <path d="M44.08 107.5A23 23 0 0 0 83.92 107.5" fill="none" stroke="#2563EB" stroke-opacity="0.3" stroke-width="2" stroke-linecap="round"/>
-      <circle cx="64" cy="96" r="3" fill="url(#wmLightEq)"/>
-      <g filter="url(#wmLightGlow)">
-        <g fill="url(#wmLightEq)">
-          <rect x="18" y="62" width="8" height="26" rx="4"/>
-          <rect x="32" y="46" width="8" height="42" rx="4"/>
-          <rect x="46" y="30" width="8" height="58" rx="4"/>
-          <rect x="60" y="14" width="8" height="74" rx="4"/>
-          <rect x="74" y="30" width="8" height="58" rx="4"/>
-          <rect x="88" y="46" width="8" height="42" rx="4"/>
-          <rect x="102" y="62" width="8" height="26" rx="4"/>
-        </g>
-        <g fill="#06B6D4">
-          <rect x="18" y="55" width="8" height="4" rx="2"/>
-          <rect x="32" y="39" width="8" height="4" rx="2"/>
-          <rect x="46" y="23" width="8" height="4" rx="2"/>
-          <rect x="60" y="7" width="8" height="4" rx="2"/>
-          <rect x="74" y="23" width="8" height="4" rx="2"/>
-          <rect x="88" y="39" width="8" height="4" rx="2"/>
-          <rect x="102" y="55" width="8" height="4" rx="2"/>
-        </g>
-      </g>
+      <rect x="42" y="24" width="44" height="20" rx="9" fill="#DCE3EE"/>
+      <rect x="33" y="36" width="62" height="26" rx="10" fill="#C4CFE0"/>
+      <rect x="24" y="50" width="80" height="56" rx="12" fill="url(#wmLightFront)" stroke="#C4CFE0" stroke-width="1.5"/>
+      <path d="M56 69 L56 87 Q56 91 59.55 89.16 L77.45 79.84 Q81 78 77.45 76.16 L59.55 66.84 Q56 65 56 69 Z"
+            fill="url(#wmLightPlay)" filter="url(#wmLightGlow)"/>
     </g>
-    <rect x="1.5" y="1.5" width="125" height="125" rx="30" fill="none" stroke="url(#wmLightBorder)" stroke-width="3"/>
+    <rect x="8" y="8" width="112" height="112" rx="26" fill="none" stroke="url(#wmLightBorder)" stroke-width="2.5"/>
   </g>
   <text x="88" y="53"
         font-family="ui-sans-serif, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif"

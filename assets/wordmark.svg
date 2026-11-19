@@ -13,16 +13,20 @@
       <stop offset="0" stop-color="#2E344A"/>
       <stop offset="1" stop-color="#1A1F2B"/>
     </linearGradient>
-    <linearGradient id="wmEq" x1="0" y1="0" x2="0" y2="1">
+    <linearGradient id="wmFront" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#2A3145"/>
+      <stop offset="1" stop-color="#1A1F2B"/>
+    </linearGradient>
+    <linearGradient id="wmPlay" x1="0" y1="0" x2="0" y2="1">
       <stop offset="0" stop-color="#5CE1FF"/>
       <stop offset="1" stop-color="#0090FF"/>
     </linearGradient>
     <filter id="wmGlow" x="-50%" y="-50%" width="200%" height="200%">
-      <feGaussianBlur in="SourceGraphic" stdDeviation="5" result="glowWide"/>
+      <feGaussianBlur in="SourceGraphic" stdDeviation="4" result="glowWide"/>
       <feComponentTransfer in="glowWide" result="glowSoft">
-        <feFuncA type="linear" slope="0.55"/>
+        <feFuncA type="linear" slope="0.5"/>
       </feComponentTransfer>
-      <feGaussianBlur in="SourceGraphic" stdDeviation="1.5" result="glowTight"/>
+      <feGaussianBlur in="SourceGraphic" stdDeviation="1.2" result="glowTight"/>
       <feMerge>
         <feMergeNode in="glowSoft"/>
         <feMergeNode in="glowTight"/>
@@ -30,42 +34,20 @@
       </feMerge>
     </filter>
     <clipPath id="wmClip">
-      <rect x="1.5" y="1.5" width="125" height="125" rx="30"/>
+      <rect x="8" y="8" width="112" height="112" rx="26"/>
     </clipPath>
   </defs>
   <g transform="translate(8 8) scale(0.5)">
-    <rect x="1.5" y="1.5" width="125" height="125" rx="30" fill="url(#wmBg)"/>
-    <rect x="1.5" y="1.5" width="125" height="125" fill="url(#wmSheen)" clip-path="url(#wmClip)"/>
+    <rect x="8" y="8" width="112" height="112" rx="26" fill="url(#wmBg)"/>
+    <rect x="8" y="8" width="112" height="112" fill="url(#wmSheen)" clip-path="url(#wmClip)"/>
     <g clip-path="url(#wmClip)">
-      <g fill="none" stroke="#2E344A" stroke-width="1.5">
-        <circle cx="64" cy="96" r="26"/>
-        <circle cx="64" cy="96" r="20"/>
-        <circle cx="64" cy="96" r="14"/>
-      </g>
-      <path d="M44.08 107.5A23 23 0 0 0 83.92 107.5" fill="none" stroke="#5CE1FF" stroke-opacity="0.35" stroke-width="2" stroke-linecap="round"/>
-      <circle cx="64" cy="96" r="3" fill="url(#wmEq)"/>
-      <g filter="url(#wmGlow)">
-        <g fill="url(#wmEq)">
-          <rect x="18" y="62" width="8" height="26" rx="4"/>
-          <rect x="32" y="46" width="8" height="42" rx="4"/>
-          <rect x="46" y="30" width="8" height="58" rx="4"/>
-          <rect x="60" y="14" width="8" height="74" rx="4"/>
-          <rect x="74" y="30" width="8" height="58" rx="4"/>
-          <rect x="88" y="46" width="8" height="42" rx="4"/>
-          <rect x="102" y="62" width="8" height="26" rx="4"/>
-        </g>
-        <g fill="#5CE1FF">
-          <rect x="18" y="55" width="8" height="4" rx="2"/>
-          <rect x="32" y="39" width="8" height="4" rx="2"/>
-          <rect x="46" y="23" width="8" height="4" rx="2"/>
-          <rect x="60" y="7" width="8" height="4" rx="2"/>
-          <rect x="74" y="23" width="8" height="4" rx="2"/>
-          <rect x="88" y="39" width="8" height="4" rx="2"/>
-          <rect x="102" y="55" width="8" height="4" rx="2"/>
-        </g>
-      </g>
+      <rect x="42" y="24" width="44" height="20" rx="9" fill="#232939"/>
+      <rect x="33" y="36" width="62" height="26" rx="10" fill="#2E344A"/>
+      <rect x="24" y="50" width="80" height="56" rx="12" fill="url(#wmFront)" stroke="#3A4258" stroke-width="1.5"/>
+      <path d="M56 69 L56 87 Q56 91 59.55 89.16 L77.45 79.84 Q81 78 77.45 76.16 L59.55 66.84 Q56 65 56 69 Z"
+            fill="url(#wmPlay)" filter="url(#wmGlow)"/>
     </g>
-    <rect x="1.5" y="1.5" width="125" height="125" rx="30" fill="none" stroke="url(#wmBorder)" stroke-width="3"/>
+    <rect x="8" y="8" width="112" height="112" rx="26" fill="none" stroke="url(#wmBorder)" stroke-width="2.5"/>
   </g>
   <text x="88" y="53"
         font-family="ui-sans-serif, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif"

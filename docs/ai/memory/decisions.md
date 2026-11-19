@@ -280,3 +280,21 @@ swapped on OS theme change (`src-tauri/src/tray.rs`).
 directions; it reads as library + level monitoring down to 16px.
 **Reverses if:** the user picks a new mark direction. Geometry is shared between
 `assets/*.svg` and `scripts/make_icon.py` — change both or neither.
+**Superseded by D-020 (2026-11-19)** — the reversal clause was invoked.
+
+## D-020 · The brand mark is The Stack (2026-11-19, supersedes D-019)
+
+App icon, tray glyphs, marks, wordmarks, banner and social card use **The Stack**:
+three rounded library tiles rising in perspective with a rounded play triangle on
+the front tile, in dark and light cuts. The tray/favicon cut is a two-layer glyph
+whose play triangle is a transparent even-odd knockout, so any taskbar colour shows
+through; the tray PNG pair still swaps on OS theme change (`src-tauri/src/tray.rs`,
+filenames unchanged). The app tile is inset (8/128 margin, rx26) to sit natively in
+the macOS Dock and read on Windows 11.
+**Why:** the user supplied five inspiration PNGs (stacked rounded tiles with play
+knockouts) and chose "Stack + Play" over the alternatives, then approved the design
+with "build". It reads as library + press play down to 16px. D-019's reversal
+clause ("the user picks a new mark direction") was invoked.
+**Reverses if:** the user picks a new mark direction. Geometry is shared between
+`assets/*.svg` and `scripts/make_icon.py` — change both or neither; the geometry
+tables live in `assets/README.md`.

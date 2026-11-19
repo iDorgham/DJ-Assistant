@@ -29,6 +29,10 @@
       <stop offset="0" stop-color="#2E344A"/>
       <stop offset="1" stop-color="#1A1F2B"/>
     </linearGradient>
+    <linearGradient id="bnFront" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#2A3145"/>
+      <stop offset="1" stop-color="#1A1F2B"/>
+    </linearGradient>
     <linearGradient id="bnEq" x1="0" y1="0" x2="0" y2="1">
       <stop offset="0" stop-color="#5CE1FF"/>
       <stop offset="1" stop-color="#0090FF"/>
@@ -43,11 +47,11 @@
       <rect x="880" y="0" width="300" height="320" fill="url(#bnFade)"/>
     </mask>
     <filter id="bnGlow" x="-50%" y="-50%" width="200%" height="200%">
-      <feGaussianBlur in="SourceGraphic" stdDeviation="5" result="glowWide"/>
+      <feGaussianBlur in="SourceGraphic" stdDeviation="4" result="glowWide"/>
       <feComponentTransfer in="glowWide" result="glowSoft">
-        <feFuncA type="linear" slope="0.55"/>
+        <feFuncA type="linear" slope="0.5"/>
       </feComponentTransfer>
-      <feGaussianBlur in="SourceGraphic" stdDeviation="1.5" result="glowTight"/>
+      <feGaussianBlur in="SourceGraphic" stdDeviation="1.2" result="glowTight"/>
       <feMerge>
         <feMergeNode in="glowSoft"/>
         <feMergeNode in="glowTight"/>
@@ -55,7 +59,7 @@
       </feMerge>
     </filter>
     <clipPath id="bnTileClip">
-      <rect x="1.5" y="1.5" width="125" height="125" rx="30"/>
+      <rect x="8" y="8" width="112" height="112" rx="26"/>
     </clipPath>
   </defs>
 
@@ -63,70 +67,28 @@
   <rect width="1280" height="320" rx="24" fill="url(#bnRadialA)"/>
   <rect width="1280" height="320" rx="24" fill="url(#bnRadialB)"/>
 
-  <!-- Right motif: a faint vinyl disc with level-meter bars rising off it -->
+  <!-- Right motif: a faint oversized Stack, fading toward the edges -->
   <g opacity="0.18" mask="url(#bnMotifMask)">
-    <g fill="none" stroke="url(#bnEq)" stroke-width="2">
-      <circle cx="1030" cy="250" r="150"/>
-      <circle cx="1030" cy="250" r="126"/>
-      <circle cx="1030" cy="250" r="102"/>
-      <circle cx="1030" cy="250" r="78"/>
-    </g>
-    <path d="M931.28 307A114 114 0 0 0 1128.72 307" fill="none" stroke="#5CE1FF" stroke-opacity="0.5" stroke-width="3" stroke-linecap="round"/>
-    <circle cx="1030" cy="250" r="6" fill="url(#bnEq)"/>
-    <g fill="url(#bnEq)">
-      <rect x="951" y="166" width="14" height="44" rx="7"/>
-      <rect x="975" y="138" width="14" height="72" rx="7"/>
-      <rect x="999" y="106" width="14" height="104" rx="7"/>
-      <rect x="1023" y="74" width="14" height="136" rx="7"/>
-      <rect x="1047" y="106" width="14" height="104" rx="7"/>
-      <rect x="1071" y="138" width="14" height="72" rx="7"/>
-      <rect x="1095" y="166" width="14" height="44" rx="7"/>
-    </g>
-    <g fill="#5CE1FF">
-      <rect x="951" y="155" width="14" height="6" rx="3"/>
-      <rect x="975" y="127" width="14" height="6" rx="3"/>
-      <rect x="999" y="95" width="14" height="6" rx="3"/>
-      <rect x="1023" y="63" width="14" height="6" rx="3"/>
-      <rect x="1047" y="95" width="14" height="6" rx="3"/>
-      <rect x="1071" y="127" width="14" height="6" rx="3"/>
-      <rect x="1095" y="155" width="14" height="6" rx="3"/>
+    <g transform="translate(838 -6) scale(3)">
+      <rect x="42" y="24" width="44" height="20" rx="9" fill="none" stroke="url(#bnEq)" stroke-width="0.8"/>
+      <rect x="33" y="36" width="62" height="26" rx="10" fill="none" stroke="url(#bnEq)" stroke-width="0.8"/>
+      <rect x="24" y="50" width="80" height="56" rx="12" fill="none" stroke="url(#bnEq)" stroke-width="0.8"/>
+      <path d="M56 69 L56 87 Q56 91 59.55 89.16 L77.45 79.84 Q81 78 77.45 76.16 L59.55 66.84 Q56 65 56 69 Z" fill="url(#bnEq)"/>
     </g>
   </g>
 
-  <!-- Left lockup: the Groove Meter app tile -->
+  <!-- Left lockup: The Stack app tile -->
   <g transform="translate(64 112) scale(0.75)">
-    <rect x="1.5" y="1.5" width="125" height="125" rx="30" fill="url(#bnTile)"/>
-    <rect x="1.5" y="1.5" width="125" height="125" fill="url(#bnSheen)" clip-path="url(#bnTileClip)"/>
+    <rect x="8" y="8" width="112" height="112" rx="26" fill="url(#bnTile)"/>
+    <rect x="8" y="8" width="112" height="112" fill="url(#bnSheen)" clip-path="url(#bnTileClip)"/>
     <g clip-path="url(#bnTileClip)">
-      <g fill="none" stroke="#2E344A" stroke-width="1.5">
-        <circle cx="64" cy="96" r="26"/>
-        <circle cx="64" cy="96" r="20"/>
-        <circle cx="64" cy="96" r="14"/>
-      </g>
-      <path d="M44.08 107.5A23 23 0 0 0 83.92 107.5" fill="none" stroke="#5CE1FF" stroke-opacity="0.35" stroke-width="2" stroke-linecap="round"/>
-      <circle cx="64" cy="96" r="3" fill="url(#bnEq)"/>
-      <g filter="url(#bnGlow)">
-        <g fill="url(#bnEq)">
-          <rect x="18" y="62" width="8" height="26" rx="4"/>
-          <rect x="32" y="46" width="8" height="42" rx="4"/>
-          <rect x="46" y="30" width="8" height="58" rx="4"/>
-          <rect x="60" y="14" width="8" height="74" rx="4"/>
-          <rect x="74" y="30" width="8" height="58" rx="4"/>
-          <rect x="88" y="46" width="8" height="42" rx="4"/>
-          <rect x="102" y="62" width="8" height="26" rx="4"/>
-        </g>
-        <g fill="#5CE1FF">
-          <rect x="18" y="55" width="8" height="4" rx="2"/>
-          <rect x="32" y="39" width="8" height="4" rx="2"/>
-          <rect x="46" y="23" width="8" height="4" rx="2"/>
-          <rect x="60" y="7" width="8" height="4" rx="2"/>
-          <rect x="74" y="23" width="8" height="4" rx="2"/>
-          <rect x="88" y="39" width="8" height="4" rx="2"/>
-          <rect x="102" y="55" width="8" height="4" rx="2"/>
-        </g>
-      </g>
+      <rect x="42" y="24" width="44" height="20" rx="9" fill="#232939"/>
+      <rect x="33" y="36" width="62" height="26" rx="10" fill="#2E344A"/>
+      <rect x="24" y="50" width="80" height="56" rx="12" fill="url(#bnFront)" stroke="#3A4258" stroke-width="1.5"/>
+      <path d="M56 69 L56 87 Q56 91 59.55 89.16 L77.45 79.84 Q81 78 77.45 76.16 L59.55 66.84 Q56 65 56 69 Z"
+            fill="url(#bnEq)" filter="url(#bnGlow)"/>
     </g>
-    <rect x="1.5" y="1.5" width="125" height="125" rx="30" fill="none" stroke="url(#bnTileBorder)" stroke-width="3"/>
+    <rect x="8" y="8" width="112" height="112" rx="26" fill="none" stroke="url(#bnTileBorder)" stroke-width="2.5"/>
   </g>
 
   <text x="192" y="176"
@@ -139,7 +101,7 @@
 
   <text x="194" y="256"
         font-family="ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, monospace"
-        font-size="15" font-weight="500" letter-spacing="2" fill="#60A5FA">ANALYZE · CLEAN · CUE · SEQUENCE · EXPORT</text>
+        font-size="15" font-weight="500" letter-spacing="2" fill="#60A5FA">IMPORT · ANALYZE · CLEAN · CUE · SEQUENCE · EXPORT</text>
 
   <rect x="0.5" y="0.5" width="1279" height="319" rx="24" fill="none" stroke="url(#bnBorder)"/>
 </svg>

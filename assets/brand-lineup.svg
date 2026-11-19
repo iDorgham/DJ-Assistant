@@ -1,262 +1,122 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="280" viewBox="0 0 1280 280" role="img" aria-label="DJ Assistant brand lineup: app icon, tray glyph and mark in dark and light mode">
-  <title>DJ Assistant — brand lineup</title>
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="280" viewBox="0 0 1280 280" role="img" aria-label="The Stack brand lineup: app icon, tray glyph and mark in dark and light cuts">
+  <title>DJ Assistant — The Stack lineup</title>
   <defs>
-    <linearGradient id="blTile" x1="0" y1="0" x2="1" y2="1">
+    <linearGradient id="luBg" x1="0" y1="0" x2="1" y2="1">
       <stop offset="0" stop-color="#171B25"/>
       <stop offset="1" stop-color="#0A0C11"/>
     </linearGradient>
-    <linearGradient id="blSheen" x1="0" y1="0" x2="0" y2="1">
+    <linearGradient id="luSheen" x1="0" y1="0" x2="0" y2="1">
       <stop offset="0" stop-color="#FFFFFF" stop-opacity="0.08"/>
       <stop offset="0.45" stop-color="#FFFFFF" stop-opacity="0"/>
     </linearGradient>
-    <linearGradient id="blTileBorder" x1="0" y1="0" x2="0" y2="1">
+    <linearGradient id="luBorder" x1="0" y1="0" x2="0" y2="1">
       <stop offset="0" stop-color="#2E344A"/>
       <stop offset="1" stop-color="#1A1F2B"/>
     </linearGradient>
-    <linearGradient id="blEq" x1="0" y1="0" x2="0" y2="1">
+    <linearGradient id="luFront" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#2A3145"/>
+      <stop offset="1" stop-color="#1A1F2B"/>
+    </linearGradient>
+    <linearGradient id="luPlay" x1="0" y1="0" x2="0" y2="1">
       <stop offset="0" stop-color="#5CE1FF"/>
       <stop offset="1" stop-color="#0090FF"/>
     </linearGradient>
-    <linearGradient id="blLightTile" x1="0" y1="0" x2="1" y2="1">
+    <linearGradient id="luLightBg" x1="0" y1="0" x2="1" y2="1">
       <stop offset="0" stop-color="#FFFFFF"/>
       <stop offset="1" stop-color="#E9EEF6"/>
     </linearGradient>
-    <linearGradient id="blLightBorder" x1="0" y1="0" x2="0" y2="1">
+    <linearGradient id="luLightBorder" x1="0" y1="0" x2="0" y2="1">
       <stop offset="0" stop-color="#DCE3EE"/>
       <stop offset="1" stop-color="#C4CFE0"/>
     </linearGradient>
-    <linearGradient id="blLightEq" x1="0" y1="0" x2="0" y2="1">
+    <linearGradient id="luLightFront" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#FFFFFF"/>
+      <stop offset="1" stop-color="#F4F7FB"/>
+    </linearGradient>
+    <linearGradient id="luLightPlay" x1="0" y1="0" x2="0" y2="1">
       <stop offset="0" stop-color="#06B6D4"/>
       <stop offset="1" stop-color="#2563EB"/>
     </linearGradient>
-    <filter id="blGlow" x="-50%" y="-50%" width="200%" height="200%">
-      <feGaussianBlur in="SourceGraphic" stdDeviation="5" result="glowWide"/>
-      <feComponentTransfer in="glowWide" result="glowSoft">
-        <feFuncA type="linear" slope="0.55"/>
-      </feComponentTransfer>
-      <feGaussianBlur in="SourceGraphic" stdDeviation="1.5" result="glowTight"/>
-      <feMerge>
-        <feMergeNode in="glowSoft"/>
-        <feMergeNode in="glowTight"/>
-        <feMergeNode in="SourceGraphic"/>
-      </feMerge>
-    </filter>
-    <filter id="blLightGlow" x="-50%" y="-50%" width="200%" height="200%">
-      <feGaussianBlur in="SourceGraphic" stdDeviation="5" result="glowWide"/>
-      <feComponentTransfer in="glowWide" result="glowSoft">
-        <feFuncA type="linear" slope="0.35"/>
-      </feComponentTransfer>
-      <feGaussianBlur in="SourceGraphic" stdDeviation="1.5" result="glowTight"/>
-      <feMerge>
-        <feMergeNode in="glowSoft"/>
-        <feMergeNode in="glowTight"/>
-        <feMergeNode in="SourceGraphic"/>
-      </feMerge>
-    </filter>
-    <clipPath id="blTileClip">
-      <rect x="1.5" y="1.5" width="125" height="125" rx="30"/>
+    <linearGradient id="luTrayDark" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#5CE1FF"/>
+      <stop offset="1" stop-color="#0090FF"/>
+    </linearGradient>
+    <linearGradient id="luTrayLight" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#06B6D4"/>
+      <stop offset="1" stop-color="#2563EB"/>
+    </linearGradient>
+    <clipPath id="luClip">
+      <rect x="8" y="8" width="112" height="112" rx="26"/>
     </clipPath>
-    <clipPath id="blCanvas">
-      <rect width="1280" height="280" rx="24"/>
+    <clipPath id="luLightClip">
+      <rect x="8" y="8" width="112" height="112" rx="26"/>
     </clipPath>
   </defs>
 
-  <g clip-path="url(#blCanvas)">
-    <rect width="640" height="280" fill="#0B0D12"/>
-    <rect x="640" width="640" height="280" fill="#F5F7FB"/>
-
-    <text x="64" y="42" font-family="ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, monospace"
-          font-size="12" font-weight="500" letter-spacing="3" fill="#60A5FA">DARK MODE</text>
-    <text x="704" y="42" font-family="ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, monospace"
-          font-size="12" font-weight="500" letter-spacing="3" fill="#2563EB">LIGHT MODE</text>
-
-    <!-- Dark app tile -->
-    <g transform="translate(64 72)">
-      <rect x="1.5" y="1.5" width="125" height="125" rx="30" fill="url(#blTile)"/>
-      <rect x="1.5" y="1.5" width="125" height="125" fill="url(#blSheen)" clip-path="url(#blTileClip)"/>
-      <g clip-path="url(#blTileClip)">
-        <g fill="none" stroke="#2E344A" stroke-width="1.5">
-          <circle cx="64" cy="96" r="26"/>
-          <circle cx="64" cy="96" r="20"/>
-          <circle cx="64" cy="96" r="14"/>
-        </g>
-        <path d="M44.08 107.5A23 23 0 0 0 83.92 107.5" fill="none" stroke="#5CE1FF" stroke-opacity="0.35" stroke-width="2" stroke-linecap="round"/>
-        <circle cx="64" cy="96" r="3" fill="url(#blEq)"/>
-        <g filter="url(#blGlow)">
-          <g fill="url(#blEq)">
-            <rect x="18" y="62" width="8" height="26" rx="4"/>
-            <rect x="32" y="46" width="8" height="42" rx="4"/>
-            <rect x="46" y="30" width="8" height="58" rx="4"/>
-            <rect x="60" y="14" width="8" height="74" rx="4"/>
-            <rect x="74" y="30" width="8" height="58" rx="4"/>
-            <rect x="88" y="46" width="8" height="42" rx="4"/>
-            <rect x="102" y="62" width="8" height="26" rx="4"/>
-          </g>
-          <g fill="#5CE1FF">
-            <rect x="18" y="55" width="8" height="4" rx="2"/>
-            <rect x="32" y="39" width="8" height="4" rx="2"/>
-            <rect x="46" y="23" width="8" height="4" rx="2"/>
-            <rect x="60" y="7" width="8" height="4" rx="2"/>
-            <rect x="74" y="23" width="8" height="4" rx="2"/>
-            <rect x="88" y="39" width="8" height="4" rx="2"/>
-            <rect x="102" y="55" width="8" height="4" rx="2"/>
-          </g>
-        </g>
-      </g>
-      <rect x="1.5" y="1.5" width="125" height="125" rx="30" fill="none" stroke="url(#blTileBorder)" stroke-width="3"/>
+  <!-- Dark panel -->
+  <rect x="0" y="0" width="640" height="280" fill="#0B0D12"/>
+  <text x="32" y="36" font-family="ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, monospace"
+        font-size="12" letter-spacing="2" fill="#64748B">DARK</text>
+  <g transform="translate(62 56) scale(0.9)">
+    <rect x="8" y="8" width="112" height="112" rx="26" fill="url(#luBg)"/>
+    <rect x="8" y="8" width="112" height="112" fill="url(#luSheen)" clip-path="url(#luClip)"/>
+    <g clip-path="url(#luClip)">
+      <rect x="42" y="24" width="44" height="20" rx="9" fill="#232939"/>
+      <rect x="33" y="36" width="62" height="26" rx="10" fill="#2E344A"/>
+      <rect x="24" y="50" width="80" height="56" rx="12" fill="url(#luFront)" stroke="#3A4258" stroke-width="1.5"/>
+      <path d="M56 69 L56 87 Q56 91 59.55 89.16 L77.45 79.84 Q81 78 77.45 76.16 L59.55 66.84 Q56 65 56 69 Z" fill="url(#luPlay)"/>
     </g>
-
-    <!-- Dark tray glyph -->
-    <g transform="translate(268 104) scale(2)">
-      <path d="M8.64 27.25A8.5 8.5 0 0 0 23.36 27.25" fill="none" stroke="#5CE1FF" stroke-opacity="0.6" stroke-width="2" stroke-linecap="round"/>
-      <circle cx="16" cy="23" r="1.5" fill="#5CE1FF"/>
-      <g fill="#5CE1FF">
-        <rect x="4.5" y="14" width="3" height="7" rx="1.5"/>
-        <rect x="9.5" y="10" width="3" height="11" rx="1.5"/>
-        <rect x="14.5" y="6" width="3" height="15" rx="1.5"/>
-        <rect x="19.5" y="10" width="3" height="11" rx="1.5"/>
-        <rect x="24.5" y="14" width="3" height="7" rx="1.5"/>
-      </g>
-      <g fill="#D9F6FF">
-        <rect x="4.5" y="11" width="3" height="2" rx="1"/>
-        <rect x="9.5" y="7" width="3" height="2" rx="1"/>
-        <rect x="14.5" y="3" width="3" height="2" rx="1"/>
-        <rect x="19.5" y="7" width="3" height="2" rx="1"/>
-        <rect x="24.5" y="11" width="3" height="2" rx="1"/>
-      </g>
-    </g>
-
-    <!-- Dark tile-free mark -->
-    <g transform="translate(420 88) scale(0.75)">
-      <g fill="none" stroke="#2E344A" stroke-width="1.5">
-        <circle cx="64" cy="96" r="26"/>
-        <circle cx="64" cy="96" r="20"/>
-        <circle cx="64" cy="96" r="14"/>
-      </g>
-      <path d="M44.08 107.5A23 23 0 0 0 83.92 107.5" fill="none" stroke="#5CE1FF" stroke-opacity="0.35" stroke-width="2" stroke-linecap="round"/>
-      <circle cx="64" cy="96" r="3" fill="url(#blEq)"/>
-      <g filter="url(#blGlow)">
-        <g fill="url(#blEq)">
-          <rect x="18" y="62" width="8" height="26" rx="4"/>
-          <rect x="32" y="46" width="8" height="42" rx="4"/>
-          <rect x="46" y="30" width="8" height="58" rx="4"/>
-          <rect x="60" y="14" width="8" height="74" rx="4"/>
-          <rect x="74" y="30" width="8" height="58" rx="4"/>
-          <rect x="88" y="46" width="8" height="42" rx="4"/>
-          <rect x="102" y="62" width="8" height="26" rx="4"/>
-        </g>
-        <g fill="#5CE1FF">
-          <rect x="18" y="55" width="8" height="4" rx="2"/>
-          <rect x="32" y="39" width="8" height="4" rx="2"/>
-          <rect x="46" y="23" width="8" height="4" rx="2"/>
-          <rect x="60" y="7" width="8" height="4" rx="2"/>
-          <rect x="74" y="23" width="8" height="4" rx="2"/>
-          <rect x="88" y="39" width="8" height="4" rx="2"/>
-          <rect x="102" y="55" width="8" height="4" rx="2"/>
-        </g>
-      </g>
-    </g>
-
-    <!-- Light app tile -->
-    <g transform="translate(704 72)">
-      <rect x="1.5" y="1.5" width="125" height="125" rx="30" fill="url(#blLightTile)"/>
-      <g clip-path="url(#blTileClip)">
-        <g fill="none" stroke="#C4CFE0" stroke-width="1.5">
-          <circle cx="64" cy="96" r="26"/>
-          <circle cx="64" cy="96" r="20"/>
-          <circle cx="64" cy="96" r="14"/>
-        </g>
-        <path d="M44.08 107.5A23 23 0 0 0 83.92 107.5" fill="none" stroke="#2563EB" stroke-opacity="0.3" stroke-width="2" stroke-linecap="round"/>
-        <circle cx="64" cy="96" r="3" fill="url(#blLightEq)"/>
-        <g filter="url(#blLightGlow)">
-          <g fill="url(#blLightEq)">
-            <rect x="18" y="62" width="8" height="26" rx="4"/>
-            <rect x="32" y="46" width="8" height="42" rx="4"/>
-            <rect x="46" y="30" width="8" height="58" rx="4"/>
-            <rect x="60" y="14" width="8" height="74" rx="4"/>
-            <rect x="74" y="30" width="8" height="58" rx="4"/>
-            <rect x="88" y="46" width="8" height="42" rx="4"/>
-            <rect x="102" y="62" width="8" height="26" rx="4"/>
-          </g>
-          <g fill="#06B6D4">
-            <rect x="18" y="55" width="8" height="4" rx="2"/>
-            <rect x="32" y="39" width="8" height="4" rx="2"/>
-            <rect x="46" y="23" width="8" height="4" rx="2"/>
-            <rect x="60" y="7" width="8" height="4" rx="2"/>
-            <rect x="74" y="23" width="8" height="4" rx="2"/>
-            <rect x="88" y="39" width="8" height="4" rx="2"/>
-            <rect x="102" y="55" width="8" height="4" rx="2"/>
-          </g>
-        </g>
-      </g>
-      <rect x="1.5" y="1.5" width="125" height="125" rx="30" fill="none" stroke="url(#blLightBorder)" stroke-width="3"/>
-    </g>
-
-    <!-- Light tray glyph -->
-    <g transform="translate(908 104) scale(2)">
-      <path d="M8.64 27.25A8.5 8.5 0 0 0 23.36 27.25" fill="none" stroke="#2563EB" stroke-opacity="0.55" stroke-width="2" stroke-linecap="round"/>
-      <circle cx="16" cy="23" r="1.5" fill="#2563EB"/>
-      <g fill="#2563EB">
-        <rect x="4.5" y="14" width="3" height="7" rx="1.5"/>
-        <rect x="9.5" y="10" width="3" height="11" rx="1.5"/>
-        <rect x="14.5" y="6" width="3" height="15" rx="1.5"/>
-        <rect x="19.5" y="10" width="3" height="11" rx="1.5"/>
-        <rect x="24.5" y="14" width="3" height="7" rx="1.5"/>
-      </g>
-      <g fill="#06B6D4">
-        <rect x="4.5" y="11" width="3" height="2" rx="1"/>
-        <rect x="9.5" y="7" width="3" height="2" rx="1"/>
-        <rect x="14.5" y="3" width="3" height="2" rx="1"/>
-        <rect x="19.5" y="7" width="3" height="2" rx="1"/>
-        <rect x="24.5" y="11" width="3" height="2" rx="1"/>
-      </g>
-    </g>
-
-    <!-- Mono mark on light -->
-    <g transform="translate(1060 88) scale(0.75)" fill="none">
-      <g stroke="#0F1117" stroke-opacity="0.45" stroke-width="1.5">
-        <circle cx="64" cy="96" r="26"/>
-        <circle cx="64" cy="96" r="20"/>
-        <circle cx="64" cy="96" r="14"/>
-      </g>
-      <path d="M44.08 107.5A23 23 0 0 0 83.92 107.5" stroke="#0F1117" stroke-opacity="0.4" stroke-width="2" stroke-linecap="round"/>
-      <circle cx="64" cy="96" r="3" fill="#0F1117"/>
-      <g fill="#0F1117">
-        <rect x="18" y="62" width="8" height="26" rx="4"/>
-        <rect x="32" y="46" width="8" height="42" rx="4"/>
-        <rect x="46" y="30" width="8" height="58" rx="4"/>
-        <rect x="60" y="14" width="8" height="74" rx="4"/>
-        <rect x="74" y="30" width="8" height="58" rx="4"/>
-        <rect x="88" y="46" width="8" height="42" rx="4"/>
-        <rect x="102" y="62" width="8" height="26" rx="4"/>
-        <rect x="18" y="55" width="8" height="4" rx="2"/>
-        <rect x="32" y="39" width="8" height="4" rx="2"/>
-        <rect x="46" y="23" width="8" height="4" rx="2"/>
-        <rect x="60" y="7" width="8" height="4" rx="2"/>
-        <rect x="74" y="23" width="8" height="4" rx="2"/>
-        <rect x="88" y="39" width="8" height="4" rx="2"/>
-        <rect x="102" y="55" width="8" height="4" rx="2"/>
-      </g>
-    </g>
-
-    <!-- Specimen labels -->
-    <g font-family="ui-sans-serif, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="14" text-anchor="middle">
-      <text x="128" y="232" fill="#94A3B8">App icon</text>
-      <text x="300" y="232" fill="#94A3B8">Tray glyph</text>
-      <text x="468" y="232" fill="#94A3B8">Mark</text>
-      <text x="768" y="232" fill="#475569">App icon</text>
-      <text x="940" y="232" fill="#475569">Tray glyph</text>
-      <text x="1108" y="232" fill="#475569">Mono mark</text>
-    </g>
-    <g font-family="ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, monospace" font-size="11" text-anchor="middle" fill="#64748B">
-      <text x="128" y="252">logo.svg</text>
-      <text x="300" y="252">tray-on-dark.svg</text>
-      <text x="468" y="252">logo-mark.svg</text>
-      <text x="768" y="252">logo-light.svg</text>
-      <text x="940" y="252">tray-on-light.svg</text>
-      <text x="1108" y="252">logo-mark-mono.svg</text>
-    </g>
+    <rect x="8" y="8" width="112" height="112" rx="26" fill="none" stroke="url(#luBorder)" stroke-width="2.5"/>
+  </g>
+  <g transform="translate(288 82) scale(2)">
+    <rect x="8" y="3" width="16" height="8" rx="3.5" fill="#0090FF"/>
+    <path fill="url(#luTrayDark)" fill-rule="evenodd" d="M9.5 8 H22.5 Q28 8 28 13.5 V23.5 Q28 29 22.5 29 H9.5 Q4 29 4 23.5 V13.5 Q4 8 9.5 8 Z
+             M13 15.3 L13 21.7 Q13 23.5 14.59 22.66 L20.91 19.34 Q22.5 18.5 20.91 17.66 L14.59 14.34 Q13 13.5 13 15.3 Z"/>
+  </g>
+  <g transform="translate(462 56) scale(0.9)">
+    <rect x="42" y="24" width="44" height="20" rx="9" fill="#2E344A"/>
+    <rect x="33" y="36" width="62" height="26" rx="10" fill="#3A4258"/>
+    <rect x="24" y="50" width="80" height="56" rx="12" fill="url(#luFront)" stroke="#3A4258" stroke-width="1.5"/>
+    <path d="M56 69 L56 87 Q56 91 59.55 89.16 L77.45 79.84 Q81 78 77.45 76.16 L59.55 66.84 Q56 65 56 69 Z" fill="url(#luPlay)"/>
+  </g>
+  <g font-family="ui-sans-serif, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif"
+     font-size="14" fill="#94A3B8" text-anchor="middle">
+    <text x="120" y="212">App icon</text>
+    <text x="320" y="212">Tray glyph</text>
+    <text x="520" y="212">Mark</text>
   </g>
 
-  <rect x="0.5" y="0.5" width="1279" height="279" rx="24" fill="none" stroke="#2A3040"/>
+  <!-- Light panel -->
+  <rect x="640" y="0" width="640" height="280" fill="#F4F7FB"/>
+  <text x="672" y="36" font-family="ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, monospace"
+        font-size="12" letter-spacing="2" fill="#64748B">LIGHT</text>
+  <g transform="translate(702 56) scale(0.9)">
+    <rect x="8" y="8" width="112" height="112" rx="26" fill="url(#luLightBg)"/>
+    <g clip-path="url(#luLightClip)">
+      <rect x="42" y="24" width="44" height="20" rx="9" fill="#DCE3EE"/>
+      <rect x="33" y="36" width="62" height="26" rx="10" fill="#C4CFE0"/>
+      <rect x="24" y="50" width="80" height="56" rx="12" fill="url(#luLightFront)" stroke="#C4CFE0" stroke-width="1.5"/>
+      <path d="M56 69 L56 87 Q56 91 59.55 89.16 L77.45 79.84 Q81 78 77.45 76.16 L59.55 66.84 Q56 65 56 69 Z" fill="url(#luLightPlay)"/>
+    </g>
+    <rect x="8" y="8" width="112" height="112" rx="26" fill="none" stroke="url(#luLightBorder)" stroke-width="2.5"/>
+  </g>
+  <g transform="translate(928 82) scale(2)">
+    <rect x="8" y="3" width="16" height="8" rx="3.5" fill="#60A5FA"/>
+    <path fill="url(#luTrayLight)" fill-rule="evenodd" d="M9.5 8 H22.5 Q28 8 28 13.5 V23.5 Q28 29 22.5 29 H9.5 Q4 29 4 23.5 V13.5 Q4 8 9.5 8 Z
+             M13 15.3 L13 21.7 Q13 23.5 14.59 22.66 L20.91 19.34 Q22.5 18.5 20.91 17.66 L14.59 14.34 Q13 13.5 13 15.3 Z"/>
+  </g>
+  <g transform="translate(1102 56) scale(0.9)" fill="#0F1117">
+    <rect x="42" y="24" width="44" height="20" rx="9" opacity="0.45"/>
+    <rect x="33" y="36" width="62" height="26" rx="10" opacity="0.7"/>
+    <path fill-rule="evenodd" d="M36 50 H92 Q104 50 104 62 V94 Q104 106 92 106 H36 Q24 106 24 94 V62 Q24 50 36 50 Z
+             M56 69 L56 87 Q56 91 59.55 89.16 L77.45 79.84 Q81 78 77.45 76.16 L59.55 66.84 Q56 65 56 69 Z"/>
+  </g>
+  <g font-family="ui-sans-serif, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif"
+     font-size="14" fill="#475569" text-anchor="middle">
+    <text x="760" y="212">App icon</text>
+    <text x="960" y="212">Tray glyph</text>
+    <text x="1160" y="212">Mono mark</text>
+  </g>
+
+  <rect x="0.5" y="0.5" width="1279" height="279" fill="none" stroke="#2E344A"/>
 </svg>

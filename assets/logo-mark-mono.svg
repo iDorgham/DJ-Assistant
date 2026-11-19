@@ -1,29 +1,9 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="128" height="128" viewBox="0 0 128 128" role="img" aria-label="DJ Assistant" fill="none">
+<svg xmlns="http://www.w3.org/2000/svg" width="128" height="128" viewBox="0 0 128 128" role="img" aria-label="DJ Assistant">
   <title>DJ Assistant</title>
-  <!-- Monochrome Groove Meter mark. Uses currentColor so it inherits the
-       surrounding text colour when inlined. Set a fill on the <svg> for
-       standalone use. -->
-  <g stroke="currentColor" stroke-opacity="0.45" stroke-width="1.5">
-    <circle cx="64" cy="96" r="26"/>
-    <circle cx="64" cy="96" r="20"/>
-    <circle cx="64" cy="96" r="14"/>
-  </g>
-  <path d="M44.08 107.5A23 23 0 0 0 83.92 107.5" stroke="currentColor" stroke-opacity="0.4" stroke-width="2" stroke-linecap="round"/>
-  <circle cx="64" cy="96" r="3" fill="currentColor"/>
-  <g fill="currentColor">
-    <rect x="18" y="62" width="8" height="26" rx="4"/>
-    <rect x="32" y="46" width="8" height="42" rx="4"/>
-    <rect x="46" y="30" width="8" height="58" rx="4"/>
-    <rect x="60" y="14" width="8" height="74" rx="4"/>
-    <rect x="74" y="30" width="8" height="58" rx="4"/>
-    <rect x="88" y="46" width="8" height="42" rx="4"/>
-    <rect x="102" y="62" width="8" height="26" rx="4"/>
-    <rect x="18" y="55" width="8" height="4" rx="2"/>
-    <rect x="32" y="39" width="8" height="4" rx="2"/>
-    <rect x="46" y="23" width="8" height="4" rx="2"/>
-    <rect x="60" y="7" width="8" height="4" rx="2"/>
-    <rect x="74" y="23" width="8" height="4" rx="2"/>
-    <rect x="88" y="39" width="8" height="4" rx="2"/>
-    <rect x="102" y="55" width="8" height="4" rx="2"/>
-  </g>
+  <!-- The Stack, monochrome cut. The play triangle is a knockout (evenodd),
+       so the surrounding surface shows through. Inherits currentColor. -->
+  <rect x="42" y="24" width="44" height="20" rx="9" fill="currentColor" opacity="0.45"/>
+  <rect x="33" y="36" width="62" height="26" rx="10" fill="currentColor" opacity="0.7"/>
+  <path fill="currentColor" fill-rule="evenodd" d="M36 50 H92 Q104 50 104 62 V94 Q104 106 92 106 H36 Q24 106 24 94 V62 Q24 50 36 50 Z
+           M56 69 L56 87 Q56 91 59.55 89.16 L77.45 79.84 Q81 78 77.45 76.16 L59.55 66.84 Q56 65 56 69 Z"/>
 </svg>

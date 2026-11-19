@@ -4,6 +4,25 @@ Ephemeral. Newest first. **Rotate aggressively** — if a line would still be tr
 in two weeks, it belongs in [`decisions.md`](./decisions.md); if it is just a
 fact, it belongs in [`facts.md`](./facts.md). Delete anything stale.
 
+## 2026-11-19 · The Stack brand redesign + README restructure (uncommitted on `main`)
+
+- User approved ("build") a full brand redesign from five inspiration PNGs: the
+  mark is now **The Stack** (D-020 supersedes D-019). All `assets/*.svg` rewritten
+  (logo dark/light, marks, mono, brand-disc, tray pair, favicon, three wordmarks,
+  banner, social-preview, brand-lineup); `scripts/make_icon.py` rewritten to the
+  same geometry; app-icon.png + four tray PNGs regenerated and the platform icon
+  set re-expanded via `tauri icon`; `social-preview.png` re-rasterised via headless
+  Chrome; favicon copied to `apps/desktop/public/`. `tray.rs` untouched (same
+  filenames). Geometry tables + new palette tones documented in `assets/README.md`.
+- README.md restructured top-repo style: banner → pitch → two badge rows (status /
+  stack) → anchor nav → expanded Overview → screenshots → Quick start (requirements,
+  build, first launch, data locations) → Features → How it works (mermaid restyled
+  with app-palette `%%{init}%%` themeVariables, shipped green / planned dashed /
+  snapshot-undo loop) → Brand and icons → Development → Roadmap → Docs →
+  Contributing/License.
+- **Not committed, not pushed** — awaiting the user's explicit request. Gates and
+  one batched visual render round of the new artwork are the remaining steps.
+
 ## 2026-11-17 · Docs reconciliation on main (PR #78–#85)
 
 - `main` is at `07bccb5c` (rusqlite 0.42). Merged since the last ledger entry:
