@@ -76,6 +76,15 @@ not inferable by reading the code.
   the Vite server, and without the Tauri IPC (`__TAURI_INTERNALS__`)
   `apps/desktop/src/services/api.ts` falls back to mock rows and no-op writes —
   so QA that must touch the real library has to run in the `tauri dev` window.
+- Migrations: each `ALTER TABLE … ADD COLUMN` must stay on **one physical line** —
+  `db.rs::without_applied_alters` parses single-line ALTERs only, to skip ones already
+  applied on a crash-retry.
+- **No React component test harness exists**: UI logic lives in pure `lib/*.ts` helpers
+  tested with `node --test` (the desktop script globs `src/**/*.test.ts` only).
+- HTML5 drag-and-drop (column reorder) only fires with `dragDropEnabled: false` in
+  `tauri.conf.json`; with it on, WebView2 swallows the drag.
+- Reversible metadata writes snapshot into a `skill_runs` row in the **same
+  transaction** as the track UPDATE; undo skips tracks edited since the snapshot.
 - A first `tauri dev` run cold-compiles the desktop Rust stack (minutes); later
   runs rebuild only what changed.
 - The app's library DB (`%APPDATA%\com.djassistant.desktop\dj_assistant.db`) is
