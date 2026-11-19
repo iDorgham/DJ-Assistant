@@ -25,6 +25,7 @@ pub mod providers;
 pub mod reveal;
 pub mod riff;
 pub mod similarity;
+pub mod tag_clustering;
 pub mod tags;
 
 pub use aiff::aiff_duration_ms;
@@ -44,9 +45,9 @@ pub use library_query::{
 };
 pub use library_reads::{
     analysis_candidates, enrichment_targets, folder_counts_from_paths, folder_of_path,
-    missing_file_paths_sql, present_rows, tag_health_rows, ReadError, ENRICHMENT_TARGET_COLUMNS,
-    GENRE_COUNTS_SQL, OWNED_ISRC_SQL, PRESENT_FILE_PATHS_SQL, REMOVED_TRACKS_SQL,
-    SIMILAR_CANDIDATES_SQL, TAG_HEALTH_COLUMNS,
+    missing_file_paths_sql, present_rows, tag_health_rows, tag_vocabulary_rows, ReadError,
+    ENRICHMENT_TARGET_COLUMNS, GENRE_COUNTS_SQL, OWNED_ISRC_SQL, PRESENT_FILE_PATHS_SQL,
+    REMOVED_TRACKS_SQL, SIMILAR_CANDIDATES_SQL, TAG_HEALTH_COLUMNS,
 };
 pub use library_remove::{
     after_doc, before_doc, check_undoable, input_doc, parse_states, present_states, read_statement,
@@ -78,6 +79,10 @@ pub use providers::{
 pub use reveal::{reveal_command, RevealCommand};
 pub use riff::wav_duration_ms;
 pub use similarity::{bpm_similarity, camelot_distance, find_similar, ScoredTrack, TrackFeatures};
+pub use tag_clustering::{
+    cluster_tags, normalize_tag, ClusterMember, ClusterReport, PrefixEdge, SpellingCluster,
+    TagValue,
+};
 pub use tags::normalize_tags;
 
 use std::path::Path;

@@ -20,6 +20,8 @@ walkdir = "2.5"
 id3 = "1.17"
 # Reads FLAC Vorbis comments and picture blocks (the extras `audiotags` hides).
 metaflac = "0.2"
+# NFD decomposition + mark detection for the Tag Surgeon's fold key (T2.2.1).
+unicode-normalization = "0.1"
 
 # Only the `scan` diagnostic binary needs SQLite; the library itself stays free of
 # it so it can be tested without a database.

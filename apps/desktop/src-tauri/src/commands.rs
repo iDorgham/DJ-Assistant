@@ -4,8 +4,8 @@ use uuid::Uuid;
 
 use dj_assistant_core::library_query::QueryParam;
 use dj_assistant_core::library_reads::{
-    analysis_candidates, folder_counts_from_paths, tag_health_rows, GENRE_COUNTS_SQL,
-    PRESENT_FILE_PATHS_SQL, REMOVED_TRACKS_SQL, SIMILAR_CANDIDATES_SQL,
+    analysis_candidates, folder_counts_from_paths, tag_health_rows, tag_vocabulary_rows,
+    GENRE_COUNTS_SQL, PRESENT_FILE_PATHS_SQL, REMOVED_TRACKS_SQL, SIMILAR_CANDIDATES_SQL,
 };
 use dj_assistant_core::library_remove::{
     after_doc, before_doc, check_undoable, input_doc, parse_states, present_states, read_statement,
@@ -33,9 +33,10 @@ use crate::models::{
     RemoveTracksResponse, RemovedTrack, RestoreTracksRequest, RestoreTracksResponse,
     RevealInFileManagerRequest, ScanFolderRequest, ScanFolderResponse, SetTrackRatingRequest,
     SetTrackRatingResponse, SimilarTrackResult, StoreLink, StoreLinksRequest, StoreLinksResponse,
-    TagHealthRequest, TagHealthResponse, TagHealthTotals, TrackDetail, TrackGaps, TrackSummary,
-    UndoRemoveTracksRequest, UndoRemoveTracksResponse, UndoTrackMetadataRequest,
-    UndoTrackMetadataResponse, UpdateTrackMetadataRequest, UpdateTrackMetadataResponse,
+    TagClusterRequest, TagHealthRequest, TagHealthResponse, TagHealthTotals, TrackDetail,
+    TrackGaps, TrackSummary, UndoRemoveTracksRequest, UndoRemoveTracksResponse,
+    UndoTrackMetadataRequest, UndoTrackMetadataResponse, UpdateTrackMetadataRequest,
+    UpdateTrackMetadataResponse,
 };
 use crate::scanner::run_scan;
 use crate::security::validate_and_canonicalize_dir;
@@ -831,6 +832,44 @@ pub async fn track_tag_health(
             Some(score_sum / rows.len() as f64)
         },
     })
+}
+
+/// The Tag Surgeon's read-only scan (T2.2.1): folds the selection's tag
+/// vocabulary into duplicate-spelling clusters and advisory prefix edges.
+/// Writes nothing — no DML, no `skill_runs` row; applying a cleanup is T2.2.4.
+#[tauri::command]
+pub async fn tag_cluster(
+    db: State<'_, Arc<Mutex<Database>>>,
+    request: TagClusterRequest,
+) -> Result<dj_assistant_core::ClusterReport, String> {
+    let read = tag_vocabulary_rows(request.track_ids.as_deref()).map_err(|e| e.to_string())?;
+    // Clustering is pure CPU work: run it after the global DB lock is released.
+    let rows: Vec<(String, String)> = {
+        let db_guard = db.lock().map_err(|e| e.to_string())?;
+        let conn = db_guard.conn();
+        let mut stmt = conn.prepare(&read.sql).map_err(|e| e.to_string())?;
+        let rows = stmt
+            .query_map(rusqlite::params_from_iter(read.params.iter()), |row| {
+                Ok((row.get::<_, String>(0)?, row.get::<_, String>(1)?))
+            })
+            .map_err(|e| e.to_string())?
+            .collect::<Result<Vec<_>, _>>()
+            .map_err(|e| e.to_string())?;
+        rows
+    };
+
+    // One vocabulary entry per spelling, carrying every track id that has it:
+    // the engine's affected-track count is a union, not a sum of counts.
+    let mut by_tag: std::collections::BTreeMap<String, Vec<String>> =
+        std::collections::BTreeMap::new();
+    for (track_id, tag) in rows {
+        by_tag.entry(tag).or_default().push(track_id);
+    }
+    let values: Vec<dj_assistant_core::TagValue> = by_tag
+        .into_iter()
+        .map(|(raw, track_ids)| dj_assistant_core::TagValue { raw, track_ids })
+        .collect();
+    Ok(dj_assistant_core::cluster_tags(&values))
 }
 
 /// Builds per-store buy-link search URLs for a track (Beatport, Traxsource,

@@ -61,6 +61,8 @@ interface RowContextMenuProps {
   trackTitle: string;
   /** Opens the metadata editor for the track. */
   onEditTags: () => void;
+  /** Opens the Tag Surgeon scan for the resolved selection (T2.2.1). */
+  onFixTags: () => void;
   /** Closes the menu. */
   onClose: () => void;
   /**
@@ -164,6 +166,7 @@ export function RowContextMenu({
   y,
   trackTitle,
   onEditTags,
+  onFixTags,
   onClose,
   restoreFocus,
   onRate,
@@ -253,6 +256,7 @@ export function RowContextMenu({
   const actions: Record<string, (() => void) | undefined> = {
     play: onPlay,
     editTags: onEditTags,
+    fixTags: onFixTags,
     reveal: onReveal,
     copyPath: onCopyPath,
     remove: onRemove,
