@@ -852,8 +852,8 @@ pub async fn tag_cluster(
             Ok((row.get::<_, String>(0)?, row.get::<_, String>(1)?))
         })
         .map_err(|e| e.to_string())?
-        .flatten()
-        .collect();
+        .collect::<Result<Vec<_>, _>>()
+        .map_err(|e| e.to_string())?;
 
     // One vocabulary entry per spelling, carrying every track id that has it:
     // the engine's affected-track count is a union, not a sum of counts.
