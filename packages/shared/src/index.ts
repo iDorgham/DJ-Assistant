@@ -421,6 +421,10 @@ export interface SpellingCluster {
   members: ClusterMember[];
   /** Union of member track ids, never the sum. */
   distinctTrackCount: number;
+  /** Suggested single spelling (T2.2.2): the representative, trimmed and collapsed. */
+  canonical: string;
+  /** Union of track ids carrying any spelling other than `canonical`. */
+  rewriteTrackCount: number;
 }
 
 export interface PrefixEdge {

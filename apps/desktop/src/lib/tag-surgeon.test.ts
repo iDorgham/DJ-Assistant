@@ -20,6 +20,8 @@ const cluster: SpellingCluster = {
     { raw: "melodic house ", trackCount: 1 },
   ],
   distinctTrackCount: 4,
+  canonical: "Melodic House",
+  rewriteTrackCount: 1,
 };
 
 const edge: PrefixEdge = {

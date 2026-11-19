@@ -60,6 +60,19 @@ pub struct SpellingCluster {
     pub key: String,
     pub members: Vec<ClusterMember>,
     pub distinct_track_count: usize,
+    /// The suggested single spelling (T2.2.2): the representative, trimmed and
+    /// with internal whitespace collapsed. Still folds to `key`.
+    pub canonical: String,
+    /// Tracks carrying at least one spelling other than `canonical` — what a
+    /// bulk apply would touch. A union, like `distinct_track_count`.
+    pub rewrite_track_count: usize,
+}
+
+/// Trims and collapses whitespace, the only change a canonical suggestion
+/// makes to the representative. Folding is unchanged by this, so the result
+/// keeps the cluster's key.
+fn canonical_spelling(raw: &str) -> String {
+    raw.split_whitespace().collect::<Vec<_>>().join(" ")
 }
 
 /// An advisory whole-word prefix relation between two different keys. Never
@@ -139,10 +152,18 @@ pub fn cluster_tags(values: &[TagValue]) -> ClusterReport {
             .iter()
             .flat_map(|value| value.track_ids.iter().map(String::as_str))
             .collect();
+        let canonical = canonical_spelling(&representative(spellings).raw);
+        let rewrite: std::collections::BTreeSet<&str> = spellings
+            .iter()
+            .filter(|value| value.raw != canonical)
+            .flat_map(|value| value.track_ids.iter().map(String::as_str))
+            .collect();
         clusters.push(SpellingCluster {
             key: key.clone(),
             members,
             distinct_track_count: union.len(),
+            canonical,
+            rewrite_track_count: rewrite.len(),
         });
     }
     clusters.sort_by(|a, b| {
@@ -446,6 +467,43 @@ mod tests {
     }
 
     #[test]
+    fn canonical_is_the_representative_trimmed_and_collapsed() {
+        let out = report(&[
+            value("melodic  house ", &["t1", "t2"]),
+            value("Melodic House", &["t3"]),
+        ]);
+        let cluster = &out.clusters[0];
+        assert_eq!(cluster.members[0].raw, "melodic  house ");
+        assert_eq!(cluster.canonical, "melodic house");
+        assert_eq!(normalize_tag(&cluster.canonical), cluster.key);
+    }
+
+    #[test]
+    fn rewrite_counts_tracks_off_the_canonical_spelling_as_a_union() {
+        // Canonical is "House" (2 tracks). t1 carries both spellings and
+        // counts once; t2 carries only the canonical and is not rewritten.
+        let out = report(&[
+            value("House", &["t1", "t2"]),
+            value("house", &["t1", "t3"]),
+            value("HOUSE", &["t4"]),
+        ]);
+        let cluster = &out.clusters[0];
+        assert_eq!(cluster.canonical, "House");
+        assert_eq!(cluster.distinct_track_count, 4);
+        assert_eq!(cluster.rewrite_track_count, 3);
+    }
+
+    #[test]
+    fn a_whitespace_only_variant_is_still_rewritten() {
+        // "house " folds to the same key and trims to the canonical, but its
+        // stored bytes differ, so its tracks must be rewritten.
+        let out = report(&[value("house", &["t1", "t2"]), value("house ", &["t3"])]);
+        let cluster = &out.clusters[0];
+        assert_eq!(cluster.canonical, "house");
+        assert_eq!(cluster.rewrite_track_count, 1);
+    }
+
+    #[test]
     fn the_wire_shape_is_camel_case() {
         let out = report(&[
             value("Melodic House", &["t1"]),
@@ -454,6 +512,8 @@ mod tests {
         let json = serde_json::to_string(&out).unwrap();
         assert!(json.contains("\"scannedTags\""), "{json}");
         assert!(json.contains("\"distinctTrackCount\""), "{json}");
+        assert!(json.contains("\"canonical\""), "{json}");
+        assert!(json.contains("\"rewriteTrackCount\""), "{json}");
         assert!(json.contains("\"trackCount\""), "{json}");
         assert!(json.contains("\"prefixEdges\""), "{json}");
         assert!(!json.contains("scanned_tags"), "{json}");
