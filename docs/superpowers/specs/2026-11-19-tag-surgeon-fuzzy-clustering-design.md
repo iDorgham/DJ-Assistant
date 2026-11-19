@@ -43,7 +43,8 @@ source file.
 function is **idempotent** (folding a key yields the same key), which is a test, not an
 aspiration.
 
-1. Unicode lowercase (`str::to_lowercase`, full case folding, not ASCII-only).
+1. Unicode lowercase (`str::to_lowercase`, not ASCII-only). This is **not** full case
+   folding: `ß` stays `ß` (see the deliberate non-folds below).
 2. NFD-decompose, then drop every character of category Mark.
 3. Replace every character that is not a Unicode letter or digit with a **space** — not with
    nothing. Punctuation in a tag vocabulary is a separator, so this is what folds `Hi-NRG` with
@@ -137,7 +138,7 @@ another file.
 | `crates/core/src/library_reads.rs` | `tag_vocabulary_rows(ids)` → a `Statement` (SQL as data, per the module's existing rule). | existing `Statement` / `ReadError` |
 | `apps/desktop/src-tauri/src/commands.rs` | `tag_cluster`: lock, run the statement, map rows to `TagValue`, call the core, serialize. | core, rusqlite |
 | `packages/shared` | `TagClusterRequest` / `TagClusterReport` TS types mirroring the Rust `serde` shapes. | — |
-| `apps/desktop/src/lib/api.ts` | `tagCluster()` with the mock fallback (a browser tab is a mock: it returns an empty report, never a fake cluster). | shared types |
+| `apps/desktop/src/services/api.ts` | `tagCluster()` with the mock fallback (a browser tab is a mock: it returns an empty report, never a fake cluster). | shared types |
 | `apps/desktop/src/components/TagSurgeonDialog.tsx` **(new)** | Render the report; no editing. | api |
 | `apps/desktop/src/lib/library-menu.ts` | `fixTags` stops being disabled. | — |
 
@@ -198,10 +199,10 @@ WHERE t.removed_at IS NULL            -- the module's one rule, kept by construc
 The `removed_at IS NULL` predicate is the requirement that survives any reshaping of the
 query, and the execution test in §11 pins it.
 
-**Test-fixture drift found while writing this spec:** `source_branch_execution.rs` includes
-migrations 001–008 and omits `009_beatgrid_confidence.sql`. It is harmless today (009 only adds
-a nullable column) but it means that harness executes against a schema one version behind the
-app. Add 009 to the array as part of this slice's work so the fixture stops drifting.
+**Test-fixture drift found while writing this spec — resolved in this slice:**
+`source_branch_execution.rs` included migrations 001–008 and omitted
+`009_beatgrid_confidence.sql`; the fixture array now includes 009, so the harness executes
+against the app's current schema.
 
 ## 8. IPC contract
 
@@ -271,9 +272,11 @@ tags, and honours an id list. `cargo test -p dj-assistant-core --features cli`.
 
 **Coverage of P2.2:** directional only, and recorded as such. P2.2 wants ≥95% precision on
 near-duplicate *artist* names; this slice has no artist surface and the live library has no
-artist near-dupes, so the measurable claim is "no false merge exists by construction" — folds
-are exact key equality, and every prefix relation is advisory. That is a proof obligation on
-the rules, not a percentage; §13 keeps it in view rather than claiming the gate closed.
+artist near-dupes. Fold-key equality is **not** a zero-false-merge proof: the punctuation rule
+merges distinct values such as `C#` and `C` by design. Precision therefore still needs
+negative examples or measured validation; what keeps this slice safe is that the report is
+advisory and read-only — no merge is ever a write. §13 keeps the measurement in view rather
+than claiming the gate closed.
 
 ## 12. QA plan against a library that cannot answer it
 
@@ -281,27 +284,23 @@ the rules, not a percentage; §13 keeps it in view rather than claiming the gate
 data cannot exercise a positive case. This is finding F-019's shape again, and the plan is
 stated instead of quietly unit-tested around:
 
-<!-- coderabbit-ai-generated:v1 -->
-
-<!-- coderabbit-ai-generated-section:v1:3baacdab0d7bb00e0dc1cf6d84acfcaccb4a2104bfc2424d74ab2bfecb75a487 -->
-
-1. In the native Tauri window (`dj-assistant-desktop.exe`, never a browser tab), select two
-   tracks and write punctuation variants such as `Hi-NRG` and `Hi NRG` through
-   **Edit tags…** (DB-only path, undoable). `normalizeTags` preserves these as distinct
-   spellings (`hi-nrg` and `hi nrg`); case-only and trailing-space variants are covered by
-   unit tests because the editor normalizes them before saving.
-
-<!-- /coderabbit-ai-generated:v1 -->
-2. Right-click → **Fix tags** → the dialog shows exactly one cluster holding both spellings,
-   with `distinct_track_count` equal to the number of tracks actually seeded, and the
-   **Possibly related** section empty (nothing prefix-related exists yet).
+1. In the native Tauri window (`dj-assistant-desktop.exe`, never a browser tab), select three
+   tracks and seed punctuation/accent/prefix pairs through **Edit tags…** (DB-only path,
+   undoable): `Hi-NRG` + `Café` + `!!!` on one, `Hi NRG` + `Cafe` on the second,
+   `Hi NRG Techno` on the third. Case + trailing-space variants **cannot** be seeded this
+   way — the editor's `normalizeTags` trims and ASCII-lowercases before writing — so
+   case/space folding stays covered by the engine unit tests, while the live pairs exercise
+   punctuation, accents, the punctuation-only ignore rule and whole-word prefixes.
+2. Right-click → **Fix tags** → the dialog shows two clusters (`cafe`, `hi nrg`), each with
+   `distinct_track_count` 2, one advisory edge `hi nrg ⊂ hi nrg techno` carrying each side's
+   representative track count, and the punctuation-only note; a single-track scan of the
+   first track shows the empty state plus the same note.
 3. Cross-check read-only with `node:sqlite` (`readOnly`, WAL-safe while the app holds it):
    the vocabulary the dialog names equals the rows the DB has. Every count in the UI is checked
    against SQL, never asserted from the screenshot (finding F-015).
-4. Seed a third track with a tag that is a whole-word prefix of the clustered key (e.g.
-   `Melodic House` alongside a `Melodic House Techno` spelling). Confirm it appears as an edge
-   under **Possibly related** and is **not** folded into the cluster, and that a punctuation-only
-   tag is reported under `ignored_tags` rather than clustered.
+4. The third seeded track (`Hi NRG Techno`) must appear as an edge under **Possibly
+   related** and is **not** folded into the `hi nrg` cluster; the punctuation-only tag
+   (`!!!`) is reported under `ignored_tags` rather than clustered.
 5. Revert: delete the seeded tags through the same editor and verify `track_tags` is back to 0
    rows and `tracks` still shows 0 diffs.
 6. Record as `docs/evidence/2026-11-19-T221-TAG-CLUSTERING-QA.md`.

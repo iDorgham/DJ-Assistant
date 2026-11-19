@@ -139,9 +139,12 @@ pub fn cluster_tags(values: &[TagValue]) -> ClusterReport {
             continue;
         }
         let with_boundary = format!("{narrower} ");
-        for broader in &keys {
-            if narrower == broader || !broader.starts_with(&with_boundary) {
-                continue;
+        // Folded keys are sorted, so every key starting with `narrower ` sits in
+        // one contiguous run right after `narrower`: a range walk, not all pairs.
+        let start = keys.partition_point(|key| key.as_str() <= narrower.as_str());
+        for broader in &keys[start..] {
+            if !broader.starts_with(&with_boundary) {
+                break;
             }
             let narrower_rep = representative(&buckets[*narrower]);
             let broader_rep = representative(&buckets[*broader]);

@@ -1331,7 +1331,12 @@ export default function App() {
   const [chartsOpen, setChartsOpen] = useState(false);
   const [mixSuggestionsOpen, setMixSuggestionsOpen] = useState(false);
   dialogsOpenRef.current =
-    healthOpen || chartsOpen || removedOpen || editorTrack !== null || removeConfirm !== null;
+    healthOpen ||
+    chartsOpen ||
+    removedOpen ||
+    editorTrack !== null ||
+    removeConfirm !== null ||
+    surgeonTrack !== null;
   const [chartGenre, setChartGenre] = useState("techno");
   const [chartKind, setChartKind] = useState("top100");
   const [chartData, setChartData] = useState<ChartListResponse | null>(null);

@@ -62,7 +62,7 @@ interface RowContextMenuProps {
   /** Opens the metadata editor for the track. */
   onEditTags: () => void;
   /** Opens the Tag Surgeon scan for the resolved selection (T2.2.1). */
-  onFixTags?: () => void;
+  onFixTags: () => void;
   /** Closes the menu. */
   onClose: () => void;
   /**

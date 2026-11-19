@@ -322,8 +322,8 @@ fn vocabulary(conn: &Connection, ids: Option<&[String]>) -> Vec<(String, String)
         Ok((row.get::<_, String>(0)?, row.get::<_, String>(1)?))
     })
     .expect("the vocabulary must bind and run")
-    .flatten()
-    .collect()
+    .collect::<Result<Vec<_>, _>>()
+    .expect("every vocabulary row must decode")
 }
 
 #[test]

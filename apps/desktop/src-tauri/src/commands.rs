@@ -842,18 +842,21 @@ pub async fn tag_cluster(
     db: State<'_, Arc<Mutex<Database>>>,
     request: TagClusterRequest,
 ) -> Result<dj_assistant_core::ClusterReport, String> {
-    let db_guard = db.lock().map_err(|e| e.to_string())?;
-    let conn = db_guard.conn();
-
     let read = tag_vocabulary_rows(request.track_ids.as_deref()).map_err(|e| e.to_string())?;
-    let mut stmt = conn.prepare(&read.sql).map_err(|e| e.to_string())?;
-    let rows: Vec<(String, String)> = stmt
-        .query_map(rusqlite::params_from_iter(read.params.iter()), |row| {
-            Ok((row.get::<_, String>(0)?, row.get::<_, String>(1)?))
-        })
-        .map_err(|e| e.to_string())?
-        .collect::<Result<Vec<_>, _>>()
-        .map_err(|e| e.to_string())?;
+    // Clustering is pure CPU work: run it after the global DB lock is released.
+    let rows: Vec<(String, String)> = {
+        let db_guard = db.lock().map_err(|e| e.to_string())?;
+        let conn = db_guard.conn();
+        let mut stmt = conn.prepare(&read.sql).map_err(|e| e.to_string())?;
+        let rows = stmt
+            .query_map(rusqlite::params_from_iter(read.params.iter()), |row| {
+                Ok((row.get::<_, String>(0)?, row.get::<_, String>(1)?))
+            })
+            .map_err(|e| e.to_string())?
+            .collect::<Result<Vec<_>, _>>()
+            .map_err(|e| e.to_string())?;
+        rows
+    };
 
     // One vocabulary entry per spelling, carrying every track id that has it:
     // the engine's affected-track count is a union, not a sum of counts.
