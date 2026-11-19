@@ -4,7 +4,7 @@ Ephemeral. Newest first. **Rotate aggressively** — if a line would still be tr
 in two weeks, it belongs in [`decisions.md`](./decisions.md); if it is just a
 fact, it belongs in [`facts.md`](./facts.md). Delete anything stale.
 
-## 2026-11-19 · The Stack brand redesign + README restructure (uncommitted on `main`)
+## 2026-11-19 · The Stack brand redesign + README restructure (shipped to `main` as `aa0ada8e`)
 
 - User approved ("build") a full brand redesign from five inspiration PNGs: the
   mark is now **The Stack** (D-020 supersedes D-019). All `assets/*.svg` rewritten
@@ -20,8 +20,11 @@ fact, it belongs in [`facts.md`](./facts.md). Delete anything stale.
   with app-palette `%%{init}%%` themeVariables, shipped green / planned dashed /
   snapshot-undo loop) → Brand and icons → Development → Roadmap → Docs →
   Contributing/License.
-- **Not committed, not pushed** — awaiting the user's explicit request. Gates and
-  one batched visual render round of the new artwork are the remaining steps.
+- Verified then shipped: lint, typecheck, 394 JS tests (1 skipped), root lint and
+  Prettier clean; one batched headless-Chrome visual round of all ten brand SVGs
+  plus `social-preview.png` passed with no defects. Committed and pushed to
+  `origin/main` as `aa0ada8e` on the user's explicit request (push bypassed the
+  required-status-checks rule; CI runs on the commit).
 
 ## 2026-11-17 · Docs reconciliation on main (PR #78–#85)
 
