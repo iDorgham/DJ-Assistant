@@ -40,6 +40,8 @@ export function TagSurgeonDialog({ trackIds, onClose }: TagSurgeonDialogProps) {
 
   useEffect(() => {
     let cancelled = false;
+    setReport(null);
+    setError(null);
     tagCluster({ trackIds })
       .then((result) => {
         if (!cancelled) setReport(result);

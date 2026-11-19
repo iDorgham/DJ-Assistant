@@ -281,9 +281,17 @@ the rules, not a percentage; §13 keeps it in view rather than claiming the gate
 data cannot exercise a positive case. This is finding F-019's shape again, and the plan is
 stated instead of quietly unit-tested around:
 
+<!-- coderabbit-ai-generated:v1 -->
+
+<!-- coderabbit-ai-generated-section:v1:3baacdab0d7bb00e0dc1cf6d84acfcaccb4a2104bfc2424d74ab2bfecb75a487 -->
+
 1. In the native Tauri window (`dj-assistant-desktop.exe`, never a browser tab), select two
-   tracks and write two tag spellings that differ only by case + trailing space through
-   **Edit tags…** (DB-only path, undoable).
+   tracks and write punctuation variants such as `Hi-NRG` and `Hi NRG` through
+   **Edit tags…** (DB-only path, undoable). `normalizeTags` preserves these as distinct
+   spellings (`hi-nrg` and `hi nrg`); case-only and trailing-space variants are covered by
+   unit tests because the editor normalizes them before saving.
+
+<!-- /coderabbit-ai-generated:v1 -->
 2. Right-click → **Fix tags** → the dialog shows exactly one cluster holding both spellings,
    with `distinct_track_count` equal to the number of tracks actually seeded, and the
    **Possibly related** section empty (nothing prefix-related exists yet).
