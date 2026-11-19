@@ -31,6 +31,8 @@ import type {
   AnalysisCompletedEvent,
   FindSimilarTracksRequest,
   FindSimilarTracksResponse,
+  TagClusterRequest,
+  TagClusterReport,
   TagHealthRequest,
   TagHealthResponse,
   StoreLinksRequest,
@@ -328,6 +330,19 @@ export async function trackTagHealth(req: TagHealthRequest = {}): Promise<TagHea
   }
   const { invoke } = await import("@tauri-apps/api/core");
   return invoke<TagHealthResponse>("track_tag_health", { request: req });
+}
+
+/**
+ * The Tag Surgeon's read-only scan (T2.2.1): duplicate-spelling clusters and
+ * advisory prefix edges over the selection's tags. A browser tab is a mock:
+ * it returns an empty report, never a fake cluster.
+ */
+export async function tagCluster(req: TagClusterRequest = {}): Promise<TagClusterReport> {
+  if (!isTauri) {
+    return { scannedTags: 0, ignoredTags: 0, clusters: [], prefixEdges: [] };
+  }
+  const { invoke } = await import("@tauri-apps/api/core");
+  return invoke<TagClusterReport>("tag_cluster", { request: req });
 }
 
 /**

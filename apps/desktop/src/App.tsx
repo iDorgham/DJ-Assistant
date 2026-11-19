@@ -182,6 +182,7 @@ import { StarRating } from "./components/StarRating";
 import { TagChips } from "./components/TagChips";
 import { RowContextMenu } from "./components/RowContextMenu";
 import { MetadataEditor } from "./components/MetadataEditor";
+import { TagSurgeonDialog } from "./components/TagSurgeonDialog";
 import { SettingsView } from "./components/SettingsView";
 import { previewEngine } from "./lib/audio-engine";
 
@@ -1291,6 +1292,7 @@ export default function App() {
     y: number;
   } | null>(null);
   const [editorTrack, setEditorTrack] = useState<TrackSummary | null>(null);
+  const [surgeonTrack, setSurgeonTrack] = useState<TrackSummary | null>(null);
   // The "Remove from library…" confirmation (§3.5 ends the menu with it). The
   // ids are resolved when the item is chosen, so the dialog says exactly what
   // confirming will take out of the library.
@@ -2313,6 +2315,17 @@ export default function App() {
     // loaded collection: the dialog must not open on an empty selection.
     return { targets: rows.length > 0 ? rows : [editorTrack], trackIds: selection };
   }, [editorTrack, selection, tracks]);
+
+  /**
+   * The ids the Tag Surgeon scans — the same selection resolution the metadata
+   * editor uses: a focus row inside the selection scans the whole selection,
+   * a focus row outside it scans that row alone.
+   */
+  const surgeonTrackIds = useMemo(() => {
+    if (!surgeonTrack) return [] as string[];
+    if (!selection.includes(surgeonTrack.id)) return [surgeonTrack.id];
+    return selection;
+  }, [surgeonTrack, selection]);
 
   /**
    * Sends the patch the editor built, refreshes the library and offers Undo for
@@ -3976,6 +3989,7 @@ export default function App() {
           y={contextMenu.y}
           trackTitle={contextMenu.track.title || "Untitled"}
           onEditTags={() => openMetadataEditor(contextMenu.track)}
+          onFixTags={() => setSurgeonTrack(contextMenu.track)}
           onClose={() => setContextMenu(null)}
           restoreFocus={() => contextRowRef.current?.focus()}
           currentRating={contextMenu.track.userRating ?? null}
@@ -4013,6 +4027,10 @@ export default function App() {
           onSave={handleSaveMetadata}
           onClose={() => setEditorTrack(null)}
         />
+      )}
+
+      {surgeonTrack && (
+        <TagSurgeonDialog trackIds={surgeonTrackIds} onClose={() => setSurgeonTrack(null)} />
       )}
 
       {ui.playerMode !== "hidden" && (

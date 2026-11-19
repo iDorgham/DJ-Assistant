@@ -17,10 +17,13 @@
 //! ```
 
 use dj_assistant_core::library_query::{BuiltQuery, QueryParam, TrackFilters, TrackQuery};
-use dj_assistant_core::library_reads::{folder_counts_from_paths, PRESENT_FILE_PATHS_SQL};
+use dj_assistant_core::library_reads::{
+    folder_counts_from_paths, tag_vocabulary_rows, PRESENT_FILE_PATHS_SQL,
+};
+use dj_assistant_core::{cluster_tags, TagValue};
 use rusqlite::{params, Connection};
 
-const MIGRATIONS: [&str; 8] = [
+const MIGRATIONS: [&str; 9] = [
     include_str!("../../../apps/desktop/src-tauri/migrations/001_initial_schema.sql"),
     include_str!("../../../apps/desktop/src-tauri/migrations/002_track_tags.sql"),
     include_str!("../../../apps/desktop/src-tauri/migrations/003_enrichment_providers.sql"),
@@ -29,6 +32,7 @@ const MIGRATIONS: [&str; 8] = [
     include_str!("../../../apps/desktop/src-tauri/migrations/006_track_energy.sql"),
     include_str!("../../../apps/desktop/src-tauri/migrations/007_track_tags_table.sql"),
     include_str!("../../../apps/desktop/src-tauri/migrations/008_tracks_removed_at.sql"),
+    include_str!("../../../apps/desktop/src-tauri/migrations/009_beatgrid_confidence.sql"),
 ];
 
 /// A current-schema library in memory, exercising every axis the source
@@ -288,4 +292,81 @@ fn present_file_paths_sql_feeds_the_library_wide_folder_counts() {
         counts.iter().all(|(folder, _)| !folder.contains('\\')),
         "separator spellings must fold into one key: {counts:?}"
     );
+}
+
+/// The seeded library plus a tag vocabulary: two spellings on t1, one on t2,
+/// and one on the soft-removed t7 that every read must hide.
+fn tagged() -> Connection {
+    let conn = seeded();
+    for (id, tag) in [
+        ("t1", "Melodic House"),
+        ("t1", "melodic house "),
+        ("t2", "Melodic House"),
+        ("t7", "Removed Tag"),
+    ] {
+        conn.execute(
+            "INSERT INTO track_tags (track_id, tag) VALUES (?1, ?2)",
+            params![id, tag],
+        )
+        .expect("tag insert must succeed");
+    }
+    conn
+}
+
+fn vocabulary(conn: &Connection, ids: Option<&[String]>) -> Vec<(String, String)> {
+    let read = tag_vocabulary_rows(ids).expect("the read must build");
+    let mut stmt = conn
+        .prepare(&read.sql)
+        .expect("the read must run on the app schema");
+    stmt.query_map(rusqlite::params_from_iter(read.params.iter()), |row| {
+        Ok((row.get::<_, String>(0)?, row.get::<_, String>(1)?))
+    })
+    .expect("the vocabulary must bind and run")
+    .flatten()
+    .collect()
+}
+
+#[test]
+fn the_tag_vocabulary_runs_and_excludes_soft_removed_tracks() {
+    let conn = tagged();
+    let mut rows = vocabulary(&conn, None);
+    rows.sort();
+    assert_eq!(
+        rows,
+        [
+            ("t1".to_string(), "Melodic House".to_string()),
+            ("t1".to_string(), "melodic house ".to_string()),
+            ("t2".to_string(), "Melodic House".to_string()),
+        ],
+        "t7's tag must stay hidden with its track"
+    );
+}
+
+#[test]
+fn the_tag_vocabulary_honours_an_id_list() {
+    let conn = tagged();
+    let rows = vocabulary(&conn, Some(&["t2".to_string()]));
+    assert_eq!(rows, [("t2".to_string(), "Melodic House".to_string())]);
+}
+
+#[test]
+fn the_vocabulary_rows_feed_the_clustering_engine_end_to_end() {
+    let conn = tagged();
+    let rows = vocabulary(&conn, None);
+    let mut by_tag: std::collections::BTreeMap<String, Vec<String>> =
+        std::collections::BTreeMap::new();
+    for (track_id, tag) in rows {
+        by_tag.entry(tag).or_default().push(track_id);
+    }
+    let values: Vec<TagValue> = by_tag
+        .into_iter()
+        .map(|(raw, track_ids)| TagValue { raw, track_ids })
+        .collect();
+    let report = cluster_tags(&values);
+    // Two distinct spellings — the three rows group into two vocabulary entries.
+    assert_eq!(report.scanned_tags, 2);
+    assert_eq!(report.clusters.len(), 1);
+    assert_eq!(report.clusters[0].key, "melodic house");
+    // t1 carries both spellings; the union is {t1, t2}, not a sum of 3.
+    assert_eq!(report.clusters[0].distinct_track_count, 2);
 }

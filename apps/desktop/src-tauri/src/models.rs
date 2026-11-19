@@ -282,6 +282,16 @@ pub struct FindSimilarTracksResponse {
     pub results: Vec<SimilarTrackResult>,
 }
 
+// --- Tag Surgeon (T2.2.1): read-only duplicate-spelling scan ---
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct TagClusterRequest {
+    /// Restrict to these tracks; omit to scan the whole library. An empty
+    /// list is refused at the read boundary, never read as the whole library.
+    pub track_ids: Option<Vec<String>>,
+}
+
 // --- Tag health / enrichment gaps (B): local detection, no network ---
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

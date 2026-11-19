@@ -402,6 +402,44 @@ export interface FindSimilarTracksResponse {
   results: SimilarTrackResult[];
 }
 
+// --- Tag Surgeon (T2.2.1): read-only duplicate-spelling scan ---
+
+export interface TagClusterRequest {
+  /** Restrict to these tracks; omit to scan the whole library. An empty list is refused. */
+  trackIds?: string[];
+}
+
+export interface ClusterMember {
+  raw: string;
+  trackCount: number;
+}
+
+export interface SpellingCluster {
+  /** Internal fold key — never rendered; the UI shows raw spellings. */
+  key: string;
+  /** Track count desc, then raw asc — members[0] is the representative spelling. */
+  members: ClusterMember[];
+  /** Union of member track ids, never the sum. */
+  distinctTrackCount: number;
+}
+
+export interface PrefixEdge {
+  narrowerKey: string;
+  narrowerLabel: string;
+  narrowerTracks: number;
+  broaderKey: string;
+  broaderLabel: string;
+  broaderTracks: number;
+  sharedPrefix: string;
+}
+
+export interface TagClusterReport {
+  scannedTags: number;
+  ignoredTags: number;
+  clusters: SpellingCluster[];
+  prefixEdges: PrefixEdge[];
+}
+
 // --- Tag health / enrichment gaps (B) ---
 
 export interface TagHealthRequest {
