@@ -548,3 +548,19 @@ fact, it belongs in [`facts.md`](./facts.md). Delete anything stale.
   observations are deliberate shipped behaviour contradicting the checklist text.
 - The full-window Player view, cue/waveform editor and tag cleanup (T2.3) remain
   unimplemented in Phase 2.
+
+## 2026-11-19 — README refresh (uncommitted on `main`)
+
+- README.md rewritten: real Main CI / Desktop Build badges, Tests-394 passing
+  (287 desktop + 23 shared + 72 agent + 10 tooling + 2 API, 1 skipped), honest
+  shipped/planned split (set sequencing and hardware export are roadmap; Phase 1
+  implemented), three fresh screenshots in `assets/screenshots/`
+  (library-hero, track-analysis, track-tags) captured from the running app;
+  `assets/README.md` documents the folder. The phase0 PNGs stay as evidence
+  (PHASE0_ACCEPTANCE_EVIDENCE links them) but left the README.
+- Artwork: display path fully shipped; the live 94-track library was imported
+  before artwork caching landed and re-scan dedup blocks backfill, so rows show
+  placeholders until a fresh import, the opt-in Tag Health artwork upgrade, or a
+  backfill command (offered, not built; same shape as #89).
+- F-020: a Computer Use scroll over the table caused 38 stray rating/energy
+  writes; all undone through `undo_track_metadata`, DB net-zero verified.

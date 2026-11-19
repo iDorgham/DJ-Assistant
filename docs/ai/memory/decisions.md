@@ -253,3 +253,30 @@ defect was the moving ground, not the hue.
 **Reverses if:** the library rows stop changing background by state, or a design-system-wide
 muted-ink audit lands (that audit is the recorded follow-up) and makes the row grounds close
 enough together that inheritance is safe.
+
+## D-018 · main is protected by the "Protect main" branch ruleset (2026-11-19)
+
+GitHub ruleset "Protect main" (Settings → Rules → Rulesets): Active, target =
+default branch; Restrict deletions + Block force pushes; required status checks
+**JS/TS Lint, Typecheck, Test** and **Rust Fmt, Clippy, Test** (GitHub Actions
+source); bypass = Repository admin role, Always allow.
+**Why:** the Desktop Build matrix children (`… / macos-latest`, `… / windows-latest`)
+are reusable-workflow jobs — on docs-only and Dependabot PRs the calling job is
+skipped and the child check runs are never created, so requiring them would
+block those PRs forever; job-level skips of plain jobs (Rust) do report and
+count as pass. DeepSource stays advisory. The admin bypass keeps the owner's
+direct post-merge tick commits to main working (require-status-checks otherwise
+rejects direct pushes whose commit never ran checks on another ref).
+**Reverses if:** the tick-on-main workflow moves to PRs (drop the bypass), or
+Desktop Build becomes a plain always-reporting job (then it can be required).
+
+## D-019 · The brand mark is the Groove Meter (2026-11-19)
+
+App icon, tray glyphs, marks, wordmarks, banner and social card use the Groove
+Meter: EQ bars with detached peak-hold caps over vinyl grooves (rings, sheen
+arc, spindle), in dark and light cuts; the tray is a tile-free five-bar PNG pair
+swapped on OS theme change (`src-tauri/src/tray.rs`).
+**Why:** the user chose "Vinyl + EQ hybrid" over pure-EQ and pure-disc
+directions; it reads as library + level monitoring down to 16px.
+**Reverses if:** the user picks a new mark direction. Geometry is shared between
+`assets/*.svg` and `scripts/make_icon.py` — change both or neither.

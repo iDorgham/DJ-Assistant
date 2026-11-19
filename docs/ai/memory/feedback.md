@@ -284,3 +284,46 @@ code-side ignore — the right lever for adjudicated-intentional findings
 approval does not cover disabling the checker. Prettier can wrap a long line
 and orphan the marker: keep the marked line under 100 columns or pin it with
 `// prettier-ignore`.
+
+## F-018 · GitHub settings pickers race coordinate clicks; sudo is a hand-off (2026-11-19)
+
+Computer Use on the ruleset UI: the "Add checks" / "Add bypass" popups render
+their actor list asynchronously **after** the screenshot — a click aimed at the
+search field or a remembered row landed on whatever loaded in between and
+silently selected wrong entries (Codacy Production, Deploy keys). Rule: after
+opening a picker, re-observe until the list is stable, click the checkbox (not
+the row edge), and verify the resulting Actors/Checks table — a successful
+click is not proof of the right selection. Also: clicking Create on a GitHub
+settings form can raise the "Confirm access" sudo dialog (GitHub Mobile /
+authenticator / email). That is an authentication boundary — stop input and
+hand off to the user; the form survives behind the dialog.
+
+## F-019 · PR checkboxes must be verifiable in-PR; post-merge acts are notes (2026-11-19)
+
+A test-plan checkbox for a post-merge human action (ticking the `04-TASKS.md`
+ledger box on `main`) stays unchecked while the PR is open and reads as
+unfinished work. PR #90's body was edited to state it as a plain note under the
+checklist instead. Rule: every `- [ ]` in a PR body must be checkable before
+merge; anything owned by the human post-merge is prose, not a checkbox.
+
+## F-020 · Computer Use scroll/drag over the library table writes data (2026-11-19)
+
+`computer.scroll` (and `drag`) over the virtualized library table injects
+animated pointer drags that sweep the RATING/ENERGY cells: one scroll call
+produced 38 real writes (`set_track_rating` / `update_track_metadata`) that kept
+landing ~90 s after the call returned. Recovery: undo every `skill_runs`
+snapshot newest-first through the app's own `undo_track_metadata` (WebView2
+DevTools console), then prove net-zero with a read-only DB poll. Rule: never
+scroll or drag over the table body — navigate with search filters, scrollbar
+track clicks, keyboard or nav clicks. Screenshot ids and coordinates also go
+stale between cells: re-observe before every coordinate action.
+
+## F-021 · Tauri tray: image-png gate; Win11 overflow hides new icons (2026-11-19)
+
+`tauri::image::Image::from_bytes` is gated behind the `image-png` (or
+`image-ico`) feature — not in tauri's defaults, so a tray build fails E0599
+without it. New tray icons land in the Win11 overflow flyout, which has no UIA
+window until opened: prove registration read-only via
+`HKCU:\Control Panel\NotifyIconSettings` (ExecutablePath + InitialTooltip),
+not by walking Shell_TrayWnd (its only "DJ Assistant" button is the taskbar
+app button).
