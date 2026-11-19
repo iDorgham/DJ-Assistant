@@ -8,6 +8,7 @@ pub mod models;
 pub mod scanner;
 pub mod security;
 pub mod streaming;
+pub mod tray;
 
 use std::ffi::OsStr;
 use std::path::{Path, PathBuf};
@@ -61,7 +62,14 @@ pub fn run() {
             app.manage(enrichment::RateLimiter::default());
             app.manage(Arc::new(Mutex::new(audio::AudioEngine::new())));
 
+            tray::setup(app_handle)?;
+
             Ok(())
+        })
+        .on_window_event(|window, event| {
+            if let tauri::WindowEvent::ThemeChanged(theme) = event {
+                tray::apply_theme(window.app_handle(), *theme);
+            }
         })
         .invoke_handler(tauri::generate_handler![
             commands::scan_folder,

@@ -2,14 +2,30 @@
   <title>DJ Assistant</title>
   <!-- Monochrome lockup. Uses currentColor so it inherits the surrounding text
        colour when inlined. Set a fill on the <svg> for standalone use. -->
-  <g transform="translate(0 8) scale(0.5)" fill="currentColor">
-    <rect x="18" y="51" width="8" height="26" rx="4"/>
-    <rect x="32" y="41" width="8" height="46" rx="4"/>
-    <rect x="46" y="30" width="8" height="68" rx="4"/>
-    <rect x="60" y="20" width="8" height="88" rx="4"/>
-    <rect x="74" y="30" width="8" height="68" rx="4"/>
-    <rect x="88" y="41" width="8" height="46" rx="4"/>
-    <rect x="102" y="51" width="8" height="26" rx="4"/>
+  <g transform="translate(0 8) scale(0.5)">
+    <g fill="none" stroke="currentColor" stroke-opacity="0.45" stroke-width="1.5">
+      <circle cx="64" cy="96" r="26"/>
+      <circle cx="64" cy="96" r="20"/>
+      <circle cx="64" cy="96" r="14"/>
+    </g>
+    <path d="M44.08 107.5A23 23 0 0 0 83.92 107.5" stroke="currentColor" stroke-opacity="0.4" stroke-width="2" stroke-linecap="round"/>
+    <circle cx="64" cy="96" r="3" fill="currentColor"/>
+    <g fill="currentColor">
+      <rect x="18" y="62" width="8" height="26" rx="4"/>
+      <rect x="32" y="46" width="8" height="42" rx="4"/>
+      <rect x="46" y="30" width="8" height="58" rx="4"/>
+      <rect x="60" y="14" width="8" height="74" rx="4"/>
+      <rect x="74" y="30" width="8" height="58" rx="4"/>
+      <rect x="88" y="46" width="8" height="42" rx="4"/>
+      <rect x="102" y="62" width="8" height="26" rx="4"/>
+      <rect x="18" y="55" width="8" height="4" rx="2"/>
+      <rect x="32" y="39" width="8" height="4" rx="2"/>
+      <rect x="46" y="23" width="8" height="4" rx="2"/>
+      <rect x="60" y="7" width="8" height="4" rx="2"/>
+      <rect x="74" y="23" width="8" height="4" rx="2"/>
+      <rect x="88" y="39" width="8" height="4" rx="2"/>
+      <rect x="102" y="55" width="8" height="4" rx="2"/>
+    </g>
   </g>
   <text x="76" y="53"
         font-family="ui-sans-serif, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif"

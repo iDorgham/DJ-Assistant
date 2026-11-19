@@ -17,7 +17,7 @@ crate-type = ["rlib"]
 tauri-build = { version = "2.0.0", features = [] }
 
 [dependencies]
-tauri = { version = "2.0.0", features = [] }
+tauri = { version = "2.0.0", features = ["tray-icon", "image-png"] }
 tauri-plugin-dialog = "2.0.0"
 # Tauri-free core logic (discovery, fingerprinting, metadata). Kept as a separate
 # crate so it stays unit-testable without linking WebView2.

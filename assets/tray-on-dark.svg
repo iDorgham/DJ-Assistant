@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32" role="img" aria-label="DJ Assistant">
+  <title>DJ Assistant</title>
+  <!-- Tray glyph for dark taskbars: transparent background, five bars with
+       peak caps over a groove arc. Rasterized by scripts/make_icon.py. -->
+  <path d="M8.64 27.25A8.5 8.5 0 0 0 23.36 27.25" fill="none" stroke="#5CE1FF" stroke-opacity="0.6" stroke-width="2" stroke-linecap="round"/>
+  <circle cx="16" cy="23" r="1.5" fill="#5CE1FF"/>
+  <g fill="#5CE1FF">
+    <rect x="4.5" y="14" width="3" height="7" rx="1.5"/>
+    <rect x="9.5" y="10" width="3" height="11" rx="1.5"/>
+    <rect x="14.5" y="6" width="3" height="15" rx="1.5"/>
+    <rect x="19.5" y="10" width="3" height="11" rx="1.5"/>
+    <rect x="24.5" y="14" width="3" height="7" rx="1.5"/>
+  </g>
+  <g fill="#D9F6FF">
+    <rect x="4.5" y="11" width="3" height="2" rx="1"/>
+    <rect x="9.5" y="7" width="3" height="2" rx="1"/>
+    <rect x="14.5" y="3" width="3" height="2" rx="1"/>
+    <rect x="19.5" y="7" width="3" height="2" rx="1"/>
+    <rect x="24.5" y="11" width="3" height="2" rx="1"/>
+  </g>
+</svg>

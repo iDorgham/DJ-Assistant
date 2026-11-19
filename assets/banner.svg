@@ -63,33 +63,68 @@
   <rect width="1280" height="320" rx="24" fill="url(#bnRadialA)"/>
   <rect width="1280" height="320" rx="24" fill="url(#bnRadialB)"/>
 
-  <!-- Right motif: faint EQ bars, faded top and bottom -->
-  <g fill="url(#bnEq)" opacity="0.18" mask="url(#bnMotifMask)">
-    <rect x="898" y="138" width="14" height="44" rx="7"/>
-    <rect x="922" y="124" width="14" height="72" rx="7"/>
-    <rect x="946" y="104" width="14" height="112" rx="7"/>
-    <rect x="970" y="84" width="14" height="152" rx="7"/>
-    <rect x="994" y="100" width="14" height="120" rx="7"/>
-    <rect x="1018" y="68" width="14" height="184" rx="7"/>
-    <rect x="1042" y="90" width="14" height="140" rx="7"/>
-    <rect x="1066" y="114" width="14" height="92" rx="7"/>
-    <rect x="1090" y="80" width="14" height="160" rx="7"/>
-    <rect x="1114" y="108" width="14" height="104" rx="7"/>
-    <rect x="1138" y="128" width="14" height="64" rx="7"/>
+  <!-- Right motif: a faint vinyl disc with level-meter bars rising off it -->
+  <g opacity="0.18" mask="url(#bnMotifMask)">
+    <g fill="none" stroke="url(#bnEq)" stroke-width="2">
+      <circle cx="1030" cy="250" r="150"/>
+      <circle cx="1030" cy="250" r="126"/>
+      <circle cx="1030" cy="250" r="102"/>
+      <circle cx="1030" cy="250" r="78"/>
+    </g>
+    <path d="M931.28 307A114 114 0 0 0 1128.72 307" fill="none" stroke="#5CE1FF" stroke-opacity="0.5" stroke-width="3" stroke-linecap="round"/>
+    <circle cx="1030" cy="250" r="6" fill="url(#bnEq)"/>
+    <g fill="url(#bnEq)">
+      <rect x="951" y="166" width="14" height="44" rx="7"/>
+      <rect x="975" y="138" width="14" height="72" rx="7"/>
+      <rect x="999" y="106" width="14" height="104" rx="7"/>
+      <rect x="1023" y="74" width="14" height="136" rx="7"/>
+      <rect x="1047" y="106" width="14" height="104" rx="7"/>
+      <rect x="1071" y="138" width="14" height="72" rx="7"/>
+      <rect x="1095" y="166" width="14" height="44" rx="7"/>
+    </g>
+    <g fill="#5CE1FF">
+      <rect x="951" y="155" width="14" height="6" rx="3"/>
+      <rect x="975" y="127" width="14" height="6" rx="3"/>
+      <rect x="999" y="95" width="14" height="6" rx="3"/>
+      <rect x="1023" y="63" width="14" height="6" rx="3"/>
+      <rect x="1047" y="95" width="14" height="6" rx="3"/>
+      <rect x="1071" y="127" width="14" height="6" rx="3"/>
+      <rect x="1095" y="155" width="14" height="6" rx="3"/>
+    </g>
   </g>
 
-  <!-- Left lockup -->
+  <!-- Left lockup: the Groove Meter app tile -->
   <g transform="translate(64 112) scale(0.75)">
     <rect x="1.5" y="1.5" width="125" height="125" rx="30" fill="url(#bnTile)"/>
     <rect x="1.5" y="1.5" width="125" height="125" fill="url(#bnSheen)" clip-path="url(#bnTileClip)"/>
-    <g fill="url(#bnEq)" filter="url(#bnGlow)">
-      <rect x="18" y="51" width="8" height="26" rx="4"/>
-      <rect x="32" y="41" width="8" height="46" rx="4"/>
-      <rect x="46" y="30" width="8" height="68" rx="4"/>
-      <rect x="60" y="20" width="8" height="88" rx="4"/>
-      <rect x="74" y="30" width="8" height="68" rx="4"/>
-      <rect x="88" y="41" width="8" height="46" rx="4"/>
-      <rect x="102" y="51" width="8" height="26" rx="4"/>
+    <g clip-path="url(#bnTileClip)">
+      <g fill="none" stroke="#2E344A" stroke-width="1.5">
+        <circle cx="64" cy="96" r="26"/>
+        <circle cx="64" cy="96" r="20"/>
+        <circle cx="64" cy="96" r="14"/>
+      </g>
+      <path d="M44.08 107.5A23 23 0 0 0 83.92 107.5" fill="none" stroke="#5CE1FF" stroke-opacity="0.35" stroke-width="2" stroke-linecap="round"/>
+      <circle cx="64" cy="96" r="3" fill="url(#bnEq)"/>
+      <g filter="url(#bnGlow)">
+        <g fill="url(#bnEq)">
+          <rect x="18" y="62" width="8" height="26" rx="4"/>
+          <rect x="32" y="46" width="8" height="42" rx="4"/>
+          <rect x="46" y="30" width="8" height="58" rx="4"/>
+          <rect x="60" y="14" width="8" height="74" rx="4"/>
+          <rect x="74" y="30" width="8" height="58" rx="4"/>
+          <rect x="88" y="46" width="8" height="42" rx="4"/>
+          <rect x="102" y="62" width="8" height="26" rx="4"/>
+        </g>
+        <g fill="#5CE1FF">
+          <rect x="18" y="55" width="8" height="4" rx="2"/>
+          <rect x="32" y="39" width="8" height="4" rx="2"/>
+          <rect x="46" y="23" width="8" height="4" rx="2"/>
+          <rect x="60" y="7" width="8" height="4" rx="2"/>
+          <rect x="74" y="23" width="8" height="4" rx="2"/>
+          <rect x="88" y="39" width="8" height="4" rx="2"/>
+          <rect x="102" y="55" width="8" height="4" rx="2"/>
+        </g>
+      </g>
     </g>
     <rect x="1.5" y="1.5" width="125" height="125" rx="30" fill="none" stroke="url(#bnTileBorder)" stroke-width="3"/>
   </g>
