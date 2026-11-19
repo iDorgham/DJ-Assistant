@@ -5,17 +5,36 @@
 
 use unicode_normalization::UnicodeNormalization;
 
-/// The fold key of a tag spelling: lowercase, accent-stripped, punctuation
-/// turned into separators, whitespace collapsed. Idempotent by contract.
+/// The fold key of a tag spelling: lowercase, diacritics stripped (orthographic
+/// marks of other scripts kept), punctuation turned into separators, whitespace
+/// collapsed. Idempotent by contract.
 pub fn normalize_tag(input: &str) -> String {
+    // Diacritic blocks used with Latin/Greek/Cyrillic bases. Marks outside
+    // them (kana voicing, Indic/Thai vowel signs and viramas) are part of the
+    // word, so they stay in the key instead of being stripped or spaced out.
+    fn is_strippable_diacritic(c: char) -> bool {
+        matches!(c as u32,
+            0x0300..=0x036F
+            | 0x1AB0..=0x1AFF
+            | 0x1DC0..=0x1DFF
+            | 0xFE20..=0xFE2F)
+    }
+
     let mut out = String::with_capacity(input.len());
     for c in input.to_lowercase().nfd() {
-        if unicode_normalization::char::is_combining_mark(c) {
+        if is_strippable_diacritic(c) {
             continue;
         }
-        out.push(if c.is_alphanumeric() { c } else { ' ' });
+        out.push(
+            if c.is_alphanumeric() || unicode_normalization::char::is_combining_mark(c) {
+                c
+            } else {
+                ' '
+            },
+        );
     }
-    out.split_whitespace().collect::<Vec<_>>().join(" ")
+    let composed: String = out.nfc().collect();
+    composed.split_whitespace().collect::<Vec<_>>().join(" ")
 }
 
 /// One raw spelling of a tag and the ids of the tracks carrying it. Ids, not
@@ -438,5 +457,20 @@ mod tests {
         assert!(json.contains("\"trackCount\""), "{json}");
         assert!(json.contains("\"prefixEdges\""), "{json}");
         assert!(!json.contains("scanned_tags"), "{json}");
+    }
+
+    #[test]
+    fn orthographic_marks_are_not_accents_and_must_survive_the_fold() {
+        // Kana voicing marks, Thai tone marks and Devanagari vowel signs are
+        // part of the word. Stripping them would fold distinct tags together.
+        assert_ne!(normalize_tag("ガ"), normalize_tag("カ"));
+        assert_ne!(normalize_tag("ば"), normalize_tag("は"));
+        assert_ne!(normalize_tag("ม่า"), normalize_tag("มา"));
+        assert_ne!(normalize_tag("कि"), normalize_tag("क"));
+    }
+
+    #[test]
+    fn precomposed_and_decomposed_kana_fold_together() {
+        assert_eq!(normalize_tag("ガ"), normalize_tag("カ\u{3099}"));
     }
 }

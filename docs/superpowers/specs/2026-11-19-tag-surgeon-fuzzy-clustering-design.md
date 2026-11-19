@@ -45,8 +45,12 @@ aspiration.
 
 1. Unicode lowercase (`str::to_lowercase`, not ASCII-only). This is **not** full case
    folding: `ß` stays `ß` (see the deliberate non-folds below).
-2. NFD-decompose, then drop every character of category Mark.
-3. Replace every character that is not a Unicode letter or digit with a **space** — not with
+2. NFD-decompose, then drop the combining **diacritic** blocks used with Latin, Greek and
+   Cyrillic bases (U+0300–U+036F, U+1AB0–U+1AFF, U+1DC0–U+1DFF, U+FE20–U+FE2F). Marks that
+   are orthographic in other scripts — kana voicing (U+3099/U+309A), Indic and Thai vowel
+   signs and viramas — are **kept** as key characters, and the key is NFC-recomposed.
+   Stripping them would fold `ガ` into `カ`: an invented equivalence, not an accent.
+3. Replace every character that is not a Unicode letter, digit or kept mark with a **space** — not with
    nothing. Punctuation in a tag vocabulary is a separator, so this is what folds `Hi-NRG` with
    `Hi NRG` and `Drum 'n' Bass` with `Drum N Bass`; stripping instead would reattach the halves
    into a third key (`hinrg`) and match neither.
@@ -62,6 +66,8 @@ accents/diacritics, punctuation and symbols.
 "DJ-Lackmus"      → "dj lackmus"      = "DJ Lackmus"
 "Drum 'n' Bass"   → "drum n bass"     = "Drum N Bass"
 "!!!"             → ""                (excluded, see §5)
+"ガ"              → "ガ"              ≠ "カ"   (voicing mark kept)
+"ม่า"             → "ม่า"              ≠ "มา"   (Thai tone mark kept)
 ```
 
 The residual recall loss is a tag written with the punctuation *removed* rather than replaced
@@ -291,8 +297,10 @@ stated instead of quietly unit-tested around:
    way — the editor's `normalizeTags` trims and ASCII-lowercases before writing — so
    case/space folding stays covered by the engine unit tests, while the live pairs exercise
    punctuation, accents, the punctuation-only ignore rule and whole-word prefixes.
-2. Right-click → **Fix tags** → the dialog shows two clusters (`cafe`, `hi nrg`), each with
-   `distinct_track_count` 2, one advisory edge `hi nrg ⊂ hi nrg techno` carrying each side's
+2. Right-click → **Fix tags** → the dialog shows two clusters titled by their raw
+   representatives (`cafe`, `hi nrg` — the editor lowercases on write, so raw spelling and
+   fold key coincide for this seed), each with `distinct_track_count` 2, one advisory edge
+   labelled with raw spellings (`hi nrg ⊂ hi nrg techno`) carrying each side's
    representative track count, and the punctuation-only note; a single-track scan of the
    first track shows the empty state plus the same note.
 3. Cross-check read-only with `node:sqlite` (`readOnly`, WAL-safe while the app holds it):
@@ -313,6 +321,9 @@ preferred over the human's call.
 ## 13. Known limits to carry forward
 
 - Non-folding `ß`/`ı`/`æ` costs recall (§4) — revisit with data, not with eagerness.
+- The diacritic strip list (§4) is block-based: a script whose accents live outside those
+  blocks keeps its marks — a recall cost, never a false merge. Extending the list is a
+  precision decision with its own evidence.
 - The vocabulary is scoped to a selection, so a user must select broadly (or all) to see
   library-wide spread. T2.2.3's preview should decide whether a library-wide entry is warranted.
 - No `skill_runs` row means no history for a scan. Correct for a read; T2.2.4 must not inherit
