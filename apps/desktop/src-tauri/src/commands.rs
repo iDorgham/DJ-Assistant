@@ -4,8 +4,9 @@ use uuid::Uuid;
 
 use dj_assistant_core::library_query::QueryParam;
 use dj_assistant_core::library_reads::{
-    analysis_candidates, folder_counts_from_paths, tag_health_rows, tag_vocabulary_rows,
-    GENRE_COUNTS_SQL, PRESENT_FILE_PATHS_SQL, REMOVED_TRACKS_SQL, SIMILAR_CANDIDATES_SQL,
+    analysis_candidates, folder_counts_from_paths, tag_health_rows, tag_preview_rows,
+    tag_vocabulary_rows, GENRE_COUNTS_SQL, PRESENT_FILE_PATHS_SQL, REMOVED_TRACKS_SQL,
+    SIMILAR_CANDIDATES_SQL,
 };
 use dj_assistant_core::library_remove::{
     after_doc, before_doc, check_undoable, input_doc, parse_states, present_states, read_statement,
@@ -33,10 +34,10 @@ use crate::models::{
     RemoveTracksResponse, RemovedTrack, RestoreTracksRequest, RestoreTracksResponse,
     RevealInFileManagerRequest, ScanFolderRequest, ScanFolderResponse, SetTrackRatingRequest,
     SetTrackRatingResponse, SimilarTrackResult, StoreLink, StoreLinksRequest, StoreLinksResponse,
-    TagClusterRequest, TagHealthRequest, TagHealthResponse, TagHealthTotals, TrackDetail,
-    TrackGaps, TrackSummary, UndoRemoveTracksRequest, UndoRemoveTracksResponse,
-    UndoTrackMetadataRequest, UndoTrackMetadataResponse, UpdateTrackMetadataRequest,
-    UpdateTrackMetadataResponse,
+    TagClusterRequest, TagHealthRequest, TagHealthResponse, TagHealthTotals, TagPreviewRequest,
+    TagPreviewTrack, TrackDetail, TrackGaps, TrackSummary, UndoRemoveTracksRequest,
+    UndoRemoveTracksResponse, UndoTrackMetadataRequest, UndoTrackMetadataResponse,
+    UpdateTrackMetadataRequest, UpdateTrackMetadataResponse,
 };
 use crate::scanner::run_scan;
 use crate::security::validate_and_canonicalize_dir;
@@ -870,6 +871,53 @@ pub async fn tag_cluster(
         .map(|(raw, track_ids)| dj_assistant_core::TagValue { raw, track_ids })
         .collect();
     Ok(dj_assistant_core::cluster_tags(&values))
+}
+
+/// Describes the sample tracks a Tag Surgeon preview shows (T2.2.3): each
+/// track's title, artist and every tag it carries. Read-only, like the scan.
+#[tauri::command]
+pub async fn tag_preview_tracks(
+    db: State<'_, Arc<Mutex<Database>>>,
+    request: TagPreviewRequest,
+) -> Result<Vec<TagPreviewTrack>, String> {
+    let read = tag_preview_rows(&request.track_ids).map_err(|e| e.to_string())?;
+    let rows: Vec<(String, String, String, Option<String>)> = {
+        let db_guard = db.lock().map_err(|e| e.to_string())?;
+        let conn = db_guard.conn();
+        let mut stmt = conn.prepare(&read.sql).map_err(|e| e.to_string())?;
+        let rows = stmt
+            .query_map(rusqlite::params_from_iter(read.params.iter()), |row| {
+                Ok((
+                    row.get::<_, String>(0)?,
+                    row.get::<_, String>(1)?,
+                    row.get::<_, String>(2)?,
+                    row.get::<_, Option<String>>(3)?,
+                ))
+            })
+            .map_err(|e| e.to_string())?
+            .collect::<Result<Vec<_>, _>>()
+            .map_err(|e| e.to_string())?;
+        rows
+    };
+
+    // The query orders by track id, so one track's rows are adjacent.
+    let mut tracks: Vec<TagPreviewTrack> = Vec::new();
+    for (track_id, title, artist, tag) in rows {
+        match tracks.last_mut() {
+            Some(current) if current.track_id == track_id => {
+                if let Some(tag) = tag {
+                    current.tags.push(tag);
+                }
+            }
+            _ => tracks.push(TagPreviewTrack {
+                track_id,
+                title,
+                artist,
+                tags: tag.into_iter().collect(),
+            }),
+        }
+    }
+    Ok(tracks)
 }
 
 /// Builds per-store buy-link search URLs for a track (Beatport, Traxsource,

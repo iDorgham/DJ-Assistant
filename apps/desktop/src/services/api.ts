@@ -33,6 +33,8 @@ import type {
   FindSimilarTracksResponse,
   TagClusterRequest,
   TagClusterReport,
+  TagPreviewRequest,
+  TagPreviewTrack,
   TagHealthRequest,
   TagHealthResponse,
   StoreLinksRequest,
@@ -343,6 +345,17 @@ export async function tagCluster(req: TagClusterRequest = {}): Promise<TagCluste
   }
   const { invoke } = await import("@tauri-apps/api/core");
   return invoke<TagClusterReport>("tag_cluster", { request: req });
+}
+
+/**
+ * The Tag Surgeon preview's sample tracks (T2.2.3): title, artist and every
+ * tag each track carries. Read-only. A browser tab is a mock, so it returns
+ * no samples rather than invented ones.
+ */
+export async function tagPreviewTracks(req: TagPreviewRequest): Promise<TagPreviewTrack[]> {
+  if (!isTauri || req.trackIds.length === 0) return [];
+  const { invoke } = await import("@tauri-apps/api/core");
+  return invoke<TagPreviewTrack[]>("tag_preview_tracks", { request: req });
 }
 
 /**

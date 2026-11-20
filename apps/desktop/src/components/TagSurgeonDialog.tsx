@@ -1,10 +1,10 @@
 import { useEffect, useState } from "react";
 import { X } from "lucide-react";
 
-import type { TagClusterReport } from "@dj-assistant/shared";
+import type { TagClusterReport, TagPreviewTrack } from "@dj-assistant/shared";
 
 import { ModalShell } from "./ModalShell";
-import { tagCluster } from "../services/api";
+import { tagCluster, tagPreviewTracks } from "../services/api";
 import {
   clusterHeading,
   edgeLabel,
@@ -12,16 +12,23 @@ import {
   hasFindings,
   ignoredTagsNote,
   memberLabel,
+  moreAffectedNote,
+  previewSampleIds,
+  rewriteLabel,
+  sampleSpellings,
+  sampleTitle,
   scopeLabel,
 } from "../lib/tag-surgeon";
 
 /**
- * The Tag Surgeon's first surface (T2.2.1): a read-only report of duplicate
- * tag spellings in the selection, plus advisory whole-word prefix relations.
+ * The Tag Surgeon's read-only surfaces: the duplicate-spelling report (T2.2.1),
+ * each cluster's suggested canonical spelling with its preview (T2.2.2–T2.2.3),
+ * and advisory whole-word prefix relations.
  *
- * There is deliberately no apply button — suggesting a canonical spelling is
- * T2.2.2, previewing it T2.2.3, applying it T2.2.4. A dialog that only looks
- * apply-shaped would promise a write this slice cannot make.
+ * There is deliberately no apply button — applying a rewrite is T2.2.4. A
+ * dialog that only looks apply-shaped would promise a write this slice cannot
+ * make. The preview names sample tracks and the spellings that would change;
+ * it never changes a tag.
  *
  * Every label is a raw spelling the user typed; fold keys stay internal to the
  * engine. The wording rules live in `lib/tag-surgeon`, where they are unit
@@ -37,6 +44,8 @@ interface TagSurgeonDialogProps {
 export function TagSurgeonDialog({ trackIds, onClose }: TagSurgeonDialogProps) {
   const [report, setReport] = useState<TagClusterReport | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [samples, setSamples] = useState<Map<string, TagPreviewTrack>>(new Map());
+  const [sampleError, setSampleError] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -53,6 +62,29 @@ export function TagSurgeonDialog({ trackIds, onClose }: TagSurgeonDialogProps) {
       cancelled = true;
     };
   }, [trackIds]);
+
+  // The preview's sample tracks, fetched once per report. A failed sample read
+  // is shown as its own error; the counts above it come from the scan and stay.
+  useEffect(() => {
+    let cancelled = false;
+    setSamples(new Map());
+    setSampleError(null);
+    if (!report) return;
+    const ids = previewSampleIds(report);
+    if (ids.length === 0) return;
+    tagPreviewTracks({ trackIds: ids })
+      .then((tracks) => {
+        if (!cancelled) setSamples(new Map(tracks.map((track) => [track.trackId, track])));
+      })
+      .catch((cause: unknown) => {
+        if (!cancelled) {
+          setSampleError(cause instanceof Error ? cause.message : String(cause));
+        }
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [report]);
 
   const ignoredNote = report ? ignoredTagsNote(report.ignoredTags) : null;
 
@@ -86,6 +118,12 @@ export function TagSurgeonDialog({ trackIds, onClose }: TagSurgeonDialogProps) {
 
         {!error && !report && <p className="text-xs text-dj-text-muted">Scanning tags…</p>}
 
+        {sampleError && (
+          <p className="rounded-sm border border-dj-danger/30 bg-dj-danger/10 px-2 py-1.5 text-[11px] text-dj-danger">
+            Could not load sample tracks: {sampleError}
+          </p>
+        )}
+
         {report && !hasFindings(report) && (
           <p className="text-xs text-dj-text-secondary">{emptyReportMessage(trackIds.length)}</p>
         )}
@@ -107,9 +145,34 @@ export function TagSurgeonDialog({ trackIds, onClose }: TagSurgeonDialogProps) {
                     </li>
                   ))}
                 </ul>
-                <p className="mt-1 text-[11px] text-dj-text-muted">
-                  {scopeLabel(cluster.distinctTrackCount)} affected
+                <p className="mt-1 text-[11px] font-medium text-dj-text-secondary break-words">
+                  {rewriteLabel(cluster)}
                 </p>
+                {cluster.sampleTrackIds.length > 0 && (
+                  <ul className="mt-1 space-y-1 border-t border-dj-border pt-1.5">
+                    {cluster.sampleTrackIds.map((trackId) => {
+                      const track = samples.get(trackId);
+                      // A sample the scan named but the read no longer returns
+                      // (removed meanwhile) is left out rather than invented.
+                      if (!track) return null;
+                      return (
+                        <li key={trackId} className="text-[11px] text-dj-text-muted break-words">
+                          <span className="text-dj-text-secondary">{sampleTitle(track)}</span>
+                          <span className="block">
+                            {sampleSpellings(track, cluster.canonical).join(" · ")}
+                            {" → "}
+                            <span className="text-dj-text-secondary">{cluster.canonical}</span>
+                          </span>
+                        </li>
+                      );
+                    })}
+                    {moreAffectedNote(cluster) && (
+                      <li className="text-[11px] text-dj-text-muted">
+                        {moreAffectedNote(cluster)}
+                      </li>
+                    )}
+                  </ul>
+                )}
               </li>
             ))}
           </ul>

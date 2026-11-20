@@ -6,7 +6,12 @@
  * to the engine and never reach the user.
  */
 
-import type { PrefixEdge, SpellingCluster, TagClusterReport } from "@dj-assistant/shared";
+import type {
+  PrefixEdge,
+  SpellingCluster,
+  TagClusterReport,
+  TagPreviewTrack,
+} from "@dj-assistant/shared";
 
 /** The scope subtitle: how many tracks the scan covered. */
 export function scopeLabel(trackCount: number): string {
@@ -49,6 +54,44 @@ export function emptyReportMessage(trackCount: number): string {
   return trackCount === 1
     ? "No duplicate spellings in this track."
     : `No duplicate spellings in these ${trackCount} tracks.`;
+}
+
+/**
+ * The preview's headline for a cluster (T2.2.3): how many tracks a rewrite
+ * would touch and the spelling it would settle on. Shows no button; applying
+ * is T2.2.4.
+ */
+export function rewriteLabel(cluster: SpellingCluster): string {
+  return `${scopeLabel(cluster.rewriteTrackCount)} would change to "${cluster.canonical}"`;
+}
+
+/** The note for affected tracks the sample list does not name, or null. */
+export function moreAffectedNote(cluster: SpellingCluster): string | null {
+  const hidden = cluster.rewriteTrackCount - cluster.sampleTrackIds.length;
+  if (hidden <= 0) return null;
+  return `and ${hidden} more`;
+}
+
+/** The ids to fetch sample details for, across every cluster, without repeats. */
+export function previewSampleIds(report: TagClusterReport): string[] {
+  const seen = new Set<string>();
+  for (const cluster of report.clusters) {
+    for (const id of cluster.sampleTrackIds) seen.add(id);
+  }
+  return [...seen];
+}
+
+/** A sample track's title line: "Title — Artist". */
+export function sampleTitle(track: TagPreviewTrack): string {
+  return `${track.title} — ${track.artist}`;
+}
+
+/**
+ * The spellings on a sample track that a rewrite would change: its tags other
+ * than the canonical one, each once, in the order the track stores them.
+ */
+export function sampleSpellings(track: TagPreviewTrack, canonical: string): string[] {
+  return [...new Set(track.tags)].filter((tag) => tag !== canonical);
 }
 
 /**

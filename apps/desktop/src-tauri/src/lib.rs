@@ -89,6 +89,7 @@ pub fn run() {
             commands::find_similar_tracks,
             commands::track_tag_health,
             commands::tag_cluster,
+            commands::tag_preview_tracks,
             commands::store_links_for_track,
             commands::provider_status,
             commands::update_track_metadata,

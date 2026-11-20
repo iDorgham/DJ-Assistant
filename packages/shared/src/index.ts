@@ -425,6 +425,22 @@ export interface SpellingCluster {
   canonical: string;
   /** Union of track ids carrying any spelling other than `canonical`. */
   rewriteTrackCount: number;
+  /** Up to 5 ids from that rewrite set, ascending: the preview's sample tracks (T2.2.3). */
+  sampleTrackIds: string[];
+}
+
+/** Sample tracks for the Tag Surgeon preview (T2.2.3). Read-only. */
+export interface TagPreviewRequest {
+  /** The sample track ids to describe. An empty list is refused. */
+  trackIds: string[];
+}
+
+/** One sample track with every tag it carries. */
+export interface TagPreviewTrack {
+  trackId: string;
+  title: string;
+  artist: string;
+  tags: string[];
 }
 
 export interface PrefixEdge {

@@ -66,7 +66,13 @@ pub struct SpellingCluster {
     /// Tracks carrying at least one spelling other than `canonical` — what a
     /// bulk apply would touch. A union, like `distinct_track_count`.
     pub rewrite_track_count: usize,
+    /// Up to `SAMPLE_TRACK_LIMIT` ids from the rewrite set, ascending, so the
+    /// preview can show concrete tracks. A prefix of a sorted union: stable.
+    pub sample_track_ids: Vec<String>,
 }
+
+/// How many affected tracks a cluster carries as preview samples (T2.2.3).
+pub const SAMPLE_TRACK_LIMIT: usize = 5;
 
 /// Trims and collapses whitespace, the only change a canonical suggestion
 /// makes to the representative. Folding is unchanged by this, so the result
@@ -164,6 +170,11 @@ pub fn cluster_tags(values: &[TagValue]) -> ClusterReport {
             distinct_track_count: union.len(),
             canonical,
             rewrite_track_count: rewrite.len(),
+            sample_track_ids: rewrite
+                .iter()
+                .take(SAMPLE_TRACK_LIMIT)
+                .map(|id| (*id).to_string())
+                .collect(),
         });
     }
     clusters.sort_by(|a, b| {
@@ -504,6 +515,34 @@ mod tests {
     }
 
     #[test]
+    fn samples_are_the_rewrite_set_capped_and_ascending() {
+        // Seven affected tracks, one of them carrying the canonical spelling
+        // already: the sample is the first five of the rewrite set, sorted.
+        let out = report(&[
+            value("House", &["t9", "t3", "t1", "t7", "t5", "t2", "t8"]),
+            value("house", &["t4"]),
+        ]);
+        let cluster = &out.clusters[0];
+        assert_eq!(cluster.canonical, "House");
+        assert_eq!(cluster.rewrite_track_count, 1);
+        assert_eq!(cluster.sample_track_ids, vec!["t4"]);
+
+        // Canonical "House" (8 tracks) against "house" on 7 tracks: the rewrite
+        // set is the 7 "house" tracks; the sample is its first five, ascending.
+        let out = report(&[
+            value("House", &["t9", "t3", "t1", "t7", "t5", "t2", "t8", "t6"]),
+            value("house", &["t14", "t12", "t10", "t16", "t18", "t11", "t13"]),
+        ]);
+        let cluster = &out.clusters[0];
+        assert_eq!(cluster.canonical, "House");
+        assert_eq!(cluster.rewrite_track_count, 7);
+        assert_eq!(
+            cluster.sample_track_ids,
+            vec!["t10", "t11", "t12", "t13", "t14"]
+        );
+    }
+
+    #[test]
     fn the_wire_shape_is_camel_case() {
         let out = report(&[
             value("Melodic House", &["t1"]),
@@ -514,6 +553,7 @@ mod tests {
         assert!(json.contains("\"distinctTrackCount\""), "{json}");
         assert!(json.contains("\"canonical\""), "{json}");
         assert!(json.contains("\"rewriteTrackCount\""), "{json}");
+        assert!(json.contains("\"sampleTrackIds\""), "{json}");
         assert!(json.contains("\"trackCount\""), "{json}");
         assert!(json.contains("\"prefixEdges\""), "{json}");
         assert!(!json.contains("scanned_tags"), "{json}");

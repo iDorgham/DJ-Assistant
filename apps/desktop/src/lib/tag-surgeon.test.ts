@@ -1,7 +1,12 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 
-import type { PrefixEdge, SpellingCluster, TagClusterReport } from "@dj-assistant/shared";
+import type {
+  PrefixEdge,
+  SpellingCluster,
+  TagClusterReport,
+  TagPreviewTrack,
+} from "@dj-assistant/shared";
 
 import {
   clusterHeading,
@@ -10,6 +15,11 @@ import {
   hasFindings,
   ignoredTagsNote,
   memberLabel,
+  moreAffectedNote,
+  previewSampleIds,
+  rewriteLabel,
+  sampleSpellings,
+  sampleTitle,
   scopeLabel,
 } from "./tag-surgeon.ts";
 
@@ -22,6 +32,7 @@ const cluster: SpellingCluster = {
   distinctTrackCount: 4,
   canonical: "Melodic House",
   rewriteTrackCount: 1,
+  sampleTrackIds: ["t-melodic"],
 };
 
 const edge: PrefixEdge = {
@@ -79,4 +90,46 @@ test("findings are clusters or edges; ignored-only is still empty", () => {
   // The most interesting finding sits between two singletons: edges alone
   // must keep the dialog out of the empty state.
   assert.equal(hasFindings({ ...emptyReport, prefixEdges: [edge] }), true);
+});
+
+test("the rewrite headline counts the rewrite set and names the canonical spelling", () => {
+  assert.equal(rewriteLabel(cluster), '1 track would change to "Melodic House"');
+  assert.equal(
+    rewriteLabel({ ...cluster, rewriteTrackCount: 12 }),
+    '12 tracks would change to "Melodic House"'
+  );
+});
+
+test("the sample note names only the affected tracks the sample list does not show", () => {
+  assert.equal(moreAffectedNote(cluster), null);
+  assert.equal(
+    moreAffectedNote({ ...cluster, rewriteTrackCount: 7, sampleTrackIds: ["a", "b"] }),
+    "and 5 more"
+  );
+});
+
+test("the preview fetches each sample track once, across clusters", () => {
+  const second: SpellingCluster = {
+    ...cluster,
+    key: "deep house",
+    sampleTrackIds: ["t-melodic", "t-deep"],
+  };
+  assert.deepEqual(previewSampleIds({ ...emptyReport, clusters: [cluster, second] }), [
+    "t-melodic",
+    "t-deep",
+  ]);
+  assert.deepEqual(previewSampleIds(emptyReport), []);
+});
+
+test("a sample lists its title, artist and only the spellings a rewrite would change", () => {
+  const track: TagPreviewTrack = {
+    trackId: "t-melodic",
+    title: "Night Drive",
+    artist: "Someone",
+    tags: ["Melodic House", "melodic house ", "Melodic House"],
+  };
+  assert.equal(sampleTitle(track), "Night Drive — Someone");
+  // The canonical spelling stays off the list; a whitespace-only variant is
+  // a real change, so it stays on, and a repeated tag is shown once.
+  assert.deepEqual(sampleSpellings(track, "Melodic House"), ["melodic house "]);
 });

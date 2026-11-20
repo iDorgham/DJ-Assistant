@@ -292,6 +292,25 @@ pub struct TagClusterRequest {
     pub track_ids: Option<Vec<String>>,
 }
 
+/// Sample tracks for the Tag Surgeon preview (T2.2.3). Read-only.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct TagPreviewRequest {
+    /// The sample track ids to describe. An empty list is refused.
+    pub track_ids: Vec<String>,
+}
+
+/// One sample track and every tag it carries, so the preview can show which
+/// spellings a rewrite would change.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub struct TagPreviewTrack {
+    pub track_id: String,
+    pub title: String,
+    pub artist: String,
+    pub tags: Vec<String>,
+}
+
 // --- Tag health / enrichment gaps (B): local detection, no network ---
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
