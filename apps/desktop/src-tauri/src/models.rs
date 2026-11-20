@@ -32,6 +32,24 @@ pub struct TrackSummary {
     pub artwork_hash: Option<String>,
     pub created_at: String,
     pub updated_at: String,
+    /// Second comment field (Traktor / Serato "Comment 2").
+    pub comment_2: Option<String>,
+    pub composer: Option<String>,
+    pub album_artist: Option<String>,
+    pub remixer: Option<String>,
+    pub producer: Option<String>,
+    pub grouping: Option<String>,
+    pub track_number: Option<i64>,
+    pub disc_number: Option<i64>,
+    pub isrc: Option<String>,
+    pub catalog_number: Option<String>,
+    pub release_date: Option<String>,
+    pub copyright: Option<String>,
+    pub mood: Option<String>,
+    pub mix_name: Option<String>,
+    pub lyrics: Option<String>,
+    /// Derived at scan time from file size and duration.
+    pub bitrate_kbps: Option<i64>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -79,6 +97,17 @@ pub struct ScanFolderRequest {
 pub struct ScanFolderResponse {
     pub job_id: String,
     pub estimated_files: Option<usize>,
+}
+
+/// Outcome of filling artwork pointers for tracks that were imported without them.
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct RefreshArtworkResponse {
+    pub scanned: usize,
+    pub updated: usize,
+    pub missing: usize,
+    pub failed: usize,
+    pub errors: Vec<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -661,8 +690,26 @@ pub struct UpdateTrackMetadataRequest {
     pub label: Option<String>,
     /// Release year. `0` clears the year.
     pub year: Option<i64>,
-    /// Free-text comment. `""` clears the comment.
+    /// Free-text comment. Empty string clears the comment.
     pub comments: Option<String>,
+    /// Second comment field. Empty string clears it.
+    pub comment_2: Option<String>,
+    pub composer: Option<String>,
+    pub album_artist: Option<String>,
+    pub remixer: Option<String>,
+    pub producer: Option<String>,
+    pub grouping: Option<String>,
+    /// Track number. 0 clears it.
+    pub track_number: Option<i64>,
+    /// Disc number. 0 clears it.
+    pub disc_number: Option<i64>,
+    pub isrc: Option<String>,
+    pub catalog_number: Option<String>,
+    pub release_date: Option<String>,
+    pub copyright: Option<String>,
+    pub mood: Option<String>,
+    pub mix_name: Option<String>,
+    pub lyrics: Option<String>,
     /// The **complete** set of custom tags for the track. `Some([])` removes
     /// every tag; `None` leaves the tags untouched.
     pub tags: Option<Vec<String>>,

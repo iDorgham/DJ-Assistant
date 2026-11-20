@@ -22,6 +22,7 @@ use dj_assistant_core::patch::{
     check_metadata_undoable, tags_match, METADATA_SKILL_NAME, RATING_SKILL_NAME,
 };
 use dj_assistant_core::reveal::reveal_command;
+use dj_assistant_core::{cache_artwork, extract_metadata};
 
 use crate::audio;
 use crate::db::Database;
@@ -30,14 +31,14 @@ use crate::models::{
     FindSimilarTracksResponse, FolderCount, GenreCount, GetArtworkRequest, GetTrackRequest,
     GetTrackResponse, GetWaveformPeaksRequest, GetWaveformPeaksResponse, ListFoldersResponse,
     ListGenresResponse, ListRemovedTracksResponse, ListTracksRequest, ListTracksResponse,
-    ProviderAccount, ProviderCapability, ProviderStatusResponse, RemoveTracksRequest,
-    RemoveTracksResponse, RemovedTrack, RestoreTracksRequest, RestoreTracksResponse,
-    RevealInFileManagerRequest, ScanFolderRequest, ScanFolderResponse, SetTrackRatingRequest,
-    SetTrackRatingResponse, SimilarTrackResult, StoreLink, StoreLinksRequest, StoreLinksResponse,
-    TagClusterRequest, TagHealthRequest, TagHealthResponse, TagHealthTotals, TagPreviewRequest,
-    TagPreviewTrack, TrackDetail, TrackGaps, TrackSummary, UndoRemoveTracksRequest,
-    UndoRemoveTracksResponse, UndoTrackMetadataRequest, UndoTrackMetadataResponse,
-    UpdateTrackMetadataRequest, UpdateTrackMetadataResponse,
+    ProviderAccount, ProviderCapability, ProviderStatusResponse, RefreshArtworkResponse,
+    RemoveTracksRequest, RemoveTracksResponse, RemovedTrack, RestoreTracksRequest,
+    RestoreTracksResponse, RevealInFileManagerRequest, ScanFolderRequest, ScanFolderResponse,
+    SetTrackRatingRequest, SetTrackRatingResponse, SimilarTrackResult, StoreLink,
+    StoreLinksRequest, StoreLinksResponse, TagClusterRequest, TagHealthRequest, TagHealthResponse,
+    TagHealthTotals, TagPreviewRequest, TagPreviewTrack, TrackDetail, TrackGaps, TrackSummary,
+    UndoRemoveTracksRequest, UndoRemoveTracksResponse, UndoTrackMetadataRequest,
+    UndoTrackMetadataResponse, UpdateTrackMetadataRequest, UpdateTrackMetadataResponse,
 };
 use crate::scanner::run_scan;
 use crate::security::validate_and_canonicalize_dir;
@@ -51,11 +52,13 @@ const MAX_LIST_LIMIT: i64 = 1000;
 const TRACK_SUMMARY_COLUMNS: &str =
     "id, file_path, file_hash, title, artist, album, genre, label, year, bpm, \
      key_camelot, key_classical, duration_ms, format, analysis_status, user_rating, energy, \
-     comments, artwork_hash, created_at, updated_at";
+     comments, artwork_hash, created_at, updated_at, comment_2, composer, album_artist, \
+     remixer, producer, grouping, track_number, disc_number, isrc, catalog_number, \
+     release_date, copyright, mood, mix_name, lyrics, bitrate_kbps";
 
 /// Number of columns in [`TRACK_SUMMARY_COLUMNS`] — the offset the detail
 /// columns start at in `get_track`.
-const TRACK_SUMMARY_COLUMN_COUNT: usize = 21;
+const TRACK_SUMMARY_COLUMN_COUNT: usize = 37;
 
 #[tauri::command]
 pub async fn scan_folder(
@@ -295,8 +298,24 @@ fn map_track_summary_at(row: &rusqlite::Row, base: usize) -> rusqlite::Result<Tr
         artwork_hash: row.get(base + 18)?,
         created_at: row.get(base + 19)?,
         updated_at: row.get(base + 20)?,
+        comment_2: row.get(base + 21)?,
+        composer: row.get(base + 22)?,
+        album_artist: row.get(base + 23)?,
+        remixer: row.get(base + 24)?,
+        producer: row.get(base + 25)?,
+        grouping: row.get(base + 26)?,
+        track_number: row.get(base + 27)?,
+        disc_number: row.get(base + 28)?,
+        isrc: row.get(base + 29)?,
+        catalog_number: row.get(base + 30)?,
+        release_date: row.get(base + 31)?,
+        copyright: row.get(base + 32)?,
+        mood: row.get(base + 33)?,
+        mix_name: row.get(base + 34)?,
+        lyrics: row.get(base + 35)?,
+        bitrate_kbps: row.get(base + 36)?,
         // The custom tags are read by a second, grouped query (see
-        // `load_tags`): a join would duplicate a track per tag.
+        // load_tags): a join would duplicate a track per tag.
         tags: Vec::new(),
     })
 }
@@ -403,6 +422,110 @@ pub async fn get_artwork(
     let mime = mime.unwrap_or_else(|| "image/jpeg".to_string());
     let encoded = base64::engine::general_purpose::STANDARD.encode(bytes);
     Ok(Some(format!("data:{mime};base64,{encoded}")))
+}
+
+/// Remembers the first few per-track failures without hiding them behind a
+/// success-shaped response.
+fn record_artwork_error(
+    result: &mut RefreshArtworkResponse,
+    track_id: &str,
+    err: impl std::fmt::Display,
+) {
+    if result.errors.len() < 10 {
+        result.errors.push(format!("{track_id}: {err}"));
+    }
+}
+
+/// Fills artwork pointers for tracks imported before embedded art was cached.
+///
+/// This reads the source files only; the image is written to the app's own
+/// content-addressed cache, never back into the audio file. It is a no-op once
+/// every present track has an artwork pointer.
+#[tauri::command]
+pub async fn refresh_artwork(
+    app: AppHandle,
+    db: State<'_, Arc<Mutex<Database>>>,
+) -> Result<RefreshArtworkResponse, String> {
+    let artwork_dir = app
+        .path()
+        .app_data_dir()
+        .map(|dir| dir.join("artwork"))
+        .unwrap_or_else(|_| std::path::PathBuf::from("artwork"));
+
+    // Read the candidate rows under the lock, then release it before touching
+    // disk. Each write below re-acquires it for a single UPDATE.
+    let rows: Vec<(String, String)> = {
+        let db_guard = db.lock().map_err(|e| e.to_string())?;
+        let mut stmt = db_guard
+            .conn()
+            .prepare(
+                "SELECT id, file_path FROM tracks
+                 WHERE removed_at IS NULL
+                   AND (artwork_hash IS NULL OR artwork_path IS NULL OR artwork_mime IS NULL)
+                 ORDER BY id",
+            )
+            .map_err(|e| e.to_string())?;
+        let rows = stmt
+            .query_map([], |row| {
+                Ok((row.get::<_, String>(0)?, row.get::<_, String>(1)?))
+            })
+            .map_err(|e| e.to_string())?
+            .collect::<Result<Vec<_>, _>>()
+            .map_err(|e| e.to_string())?;
+        rows
+    };
+
+    let mut result = RefreshArtworkResponse {
+        scanned: rows.len(),
+        ..Default::default()
+    };
+
+    for (track_id, file_path) in rows {
+        let meta = match extract_metadata(&file_path) {
+            Ok(meta) => meta,
+            Err(err) => {
+                result.failed += 1;
+                record_artwork_error(&mut result, &track_id, err);
+                continue;
+            }
+        };
+        let Some(artwork) = meta.artwork else {
+            result.missing += 1;
+            continue;
+        };
+        let cached = match cache_artwork(&artwork, &artwork_dir) {
+            Ok(cached) => cached,
+            Err(err) => {
+                result.failed += 1;
+                record_artwork_error(&mut result, &track_id, err);
+                continue;
+            }
+        };
+        let cached_path = cached.path.to_string_lossy().to_string();
+        let updated = {
+            let db_guard = db.lock().map_err(|e| e.to_string())?;
+            db_guard.conn().execute(
+                "UPDATE tracks
+                    SET artwork_hash = ?1, artwork_path = ?2, artwork_mime = ?3,
+                        updated_at = datetime('now')
+                  WHERE id = ?4",
+                rusqlite::params![cached.hash, cached_path, cached.mime_type, track_id],
+            )
+        };
+        match updated {
+            Ok(1) => result.updated += 1,
+            Ok(_) => {
+                result.failed += 1;
+                record_artwork_error(&mut result, &track_id, "track no longer present");
+            }
+            Err(err) => {
+                result.failed += 1;
+                record_artwork_error(&mut result, &track_id, err);
+            }
+        }
+    }
+
+    Ok(result)
 }
 
 /// Decodes an audio file and returns normalized amplitude peaks, cached on
@@ -1064,6 +1187,21 @@ pub async fn update_track_metadata(
         rating: request.rating,
         energy: request.energy,
         tags: request.tags,
+        comment_2: request.comment_2,
+        composer: request.composer,
+        album_artist: request.album_artist,
+        remixer: request.remixer,
+        producer: request.producer,
+        grouping: request.grouping,
+        track_number: request.track_number,
+        disc_number: request.disc_number,
+        isrc: request.isrc,
+        catalog_number: request.catalog_number,
+        release_date: request.release_date,
+        copyright: request.copyright,
+        mood: request.mood,
+        mix_name: request.mix_name,
+        lyrics: request.lyrics,
     };
     patch.validate()?;
 

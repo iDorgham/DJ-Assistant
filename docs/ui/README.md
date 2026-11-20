@@ -39,6 +39,7 @@
 | [11-IMPLEMENTATION-CHECKLIST.md](11-IMPLEMENTATION-CHECKLIST.md) | Build phases + acceptance |
 | [12-WIREFRAMES-AND-FLEXIBILITY.md](12-WIREFRAMES-AND-FLEXIBILITY.md) | **Screen wireframes + resizable docks** |
 | [13-REMEDIATION-STATUS.md](13-REMEDIATION-STATUS.md) | 2026-10-19 doc-vs-code remediation: applied vs. remaining |
+| [14-LIBRARY-TABLE-UPGRADES.md](14-LIBRARY-TABLE-UPGRADES.md) | **Proposal** - density, waveform column, track color, column filters, Table/List/Grid views, Tag Manager |
 
 ---
 

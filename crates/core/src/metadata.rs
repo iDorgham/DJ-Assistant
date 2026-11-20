@@ -31,7 +31,7 @@ pub struct CachedArtwork {
 }
 
 /// Metadata pulled from an audio file. Every field is best-effort.
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Default)]
 pub struct ExtractedMetadata {
     /// Tag title, falling back to the filename stem.
     pub title: String,
@@ -57,6 +57,27 @@ pub struct ExtractedMetadata {
     pub comments: Option<String>,
     /// Embedded cover art, if any.
     pub artwork: Option<EmbeddedArtwork>,
+    /// Record label / publisher (ID3 TPUB, Vorbis LABEL).
+    pub label: Option<String>,
+    /// Second comment field (Traktor / Serato "Comment 2").
+    pub comment_2: Option<String>,
+    pub composer: Option<String>,
+    pub album_artist: Option<String>,
+    pub remixer: Option<String>,
+    pub producer: Option<String>,
+    pub grouping: Option<String>,
+    /// Track number within its release (TRCK, TRACKNUMBER), leading integer only.
+    pub track_number: Option<i64>,
+    /// Disc number within a multi-disc release (TPOS, DISCNUMBER).
+    pub disc_number: Option<i64>,
+    pub isrc: Option<String>,
+    pub catalog_number: Option<String>,
+    /// Release date as written in the tag; not normalised, since formats vary.
+    pub release_date: Option<String>,
+    pub copyright: Option<String>,
+    pub mood: Option<String>,
+    pub mix_name: Option<String>,
+    pub lyrics: Option<String>,
 }
 
 fn non_empty(value: Option<&str>) -> Option<String> {
@@ -126,20 +147,12 @@ fn read_id3(path: &Path) -> Option<ExtractedMetadata> {
     Some(ExtractedMetadata {
         title: title.unwrap_or_default(),
         artist: artist.unwrap_or_default(),
+        album_artist: non_empty(tag.album_artist()),
         album,
         genre,
         year,
-        // `id3` has no notion of stream duration.
-        duration_ms: 0,
-        format: String::new(),
-        file_size: 0,
-        // Extras are merged separately by `extract_metadata`.
-        bpm: None,
-        key_camelot: None,
-        key_classical: None,
-        rating: None,
-        comments: None,
-        artwork: None,
+        // Extras are merged separately by extract_metadata.
+        ..Default::default()
     })
 }
 
@@ -170,18 +183,10 @@ pub fn extract_metadata<P: AsRef<Path>>(path: P) -> Result<ExtractedMetadata, St
     let fallback = |duration_ms: i64| ExtractedMetadata {
         title: fallback_title.clone(),
         artist: "Unknown Artist".to_string(),
-        album: None,
-        genre: None,
-        year: None,
         duration_ms,
         format: extension.clone(),
         file_size,
-        bpm: None,
-        key_camelot: None,
-        key_classical: None,
-        rating: None,
-        comments: None,
-        artwork: None,
+        ..Default::default()
     };
 
     let mut meta = match Tag::new().read_from_path(path_ref) {
@@ -203,17 +208,13 @@ pub fn extract_metadata<P: AsRef<Path>>(path: P) -> Result<ExtractedMetadata, St
                 title,
                 artist,
                 album: non_empty(tag.album_title()),
+                album_artist: non_empty(tag.album_artist()),
                 genre: non_empty(tag.genre()),
                 year: tag.year().or_else(|| id3_year_from_file(path_ref)),
                 duration_ms,
                 format: extension,
                 file_size,
-                bpm: None,
-                key_camelot: None,
-                key_classical: None,
-                rating: None,
-                comments: None,
-                artwork: None,
+                ..Default::default()
             }
         }
         // `audiotags` cannot handle this container (notably AIFF). Fall back to a
@@ -231,17 +232,13 @@ pub fn extract_metadata<P: AsRef<Path>>(path: P) -> Result<ExtractedMetadata, St
                     id3_meta.artist
                 },
                 album: id3_meta.album,
+                album_artist: id3_meta.album_artist,
                 genre: id3_meta.genre,
                 year: id3_meta.year,
                 duration_ms: crate::container_duration_ms(path_ref).unwrap_or(0),
                 format: extension,
                 file_size,
-                bpm: None,
-                key_camelot: None,
-                key_classical: None,
-                rating: None,
-                comments: None,
-                artwork: None,
+                ..Default::default()
             },
             None => fallback(crate::container_duration_ms(path_ref).unwrap_or(0)),
         },
@@ -258,11 +255,27 @@ pub fn extract_metadata<P: AsRef<Path>>(path: P) -> Result<ExtractedMetadata, St
 #[derive(Debug, Default, Clone)]
 struct ExtraTags {
     bpm: Option<f64>,
-    /// Raw key string as written in the tag, e.g. `8A`, `Am`, `A minor`.
+    /// Raw key string as written in the tag, e.g. 8A, Am, A minor.
     key_raw: Option<String>,
     rating: Option<i64>,
     comments: Option<String>,
     artwork: Option<EmbeddedArtwork>,
+    label: Option<String>,
+    comment_2: Option<String>,
+    composer: Option<String>,
+    album_artist: Option<String>,
+    remixer: Option<String>,
+    producer: Option<String>,
+    grouping: Option<String>,
+    track_number: Option<i64>,
+    disc_number: Option<i64>,
+    isrc: Option<String>,
+    catalog_number: Option<String>,
+    release_date: Option<String>,
+    copyright: Option<String>,
+    mood: Option<String>,
+    mix_name: Option<String>,
+    lyrics: Option<String>,
 }
 
 impl ExtraTags {
@@ -272,6 +285,22 @@ impl ExtraTags {
             && self.rating.is_none()
             && self.comments.is_none()
             && self.artwork.is_none()
+            && self.label.is_none()
+            && self.comment_2.is_none()
+            && self.composer.is_none()
+            && self.album_artist.is_none()
+            && self.remixer.is_none()
+            && self.producer.is_none()
+            && self.grouping.is_none()
+            && self.track_number.is_none()
+            && self.disc_number.is_none()
+            && self.isrc.is_none()
+            && self.catalog_number.is_none()
+            && self.release_date.is_none()
+            && self.copyright.is_none()
+            && self.mood.is_none()
+            && self.mix_name.is_none()
+            && self.lyrics.is_none()
     }
 }
 
@@ -302,10 +331,28 @@ fn merge_extras(meta: &mut ExtractedMetadata, extra: ExtraTags) {
         return;
     }
 
-    meta.bpm = extra.bpm;
-    meta.rating = extra.rating;
-    meta.comments = extra.comments;
-    meta.artwork = extra.artwork;
+    // Extras only ever fill a field: a value already read from the primary
+    // reader (notably the album artist) is not cleared by an absent extra.
+    fill(&mut meta.bpm, extra.bpm);
+    fill(&mut meta.rating, extra.rating);
+    fill(&mut meta.comments, extra.comments);
+    fill(&mut meta.artwork, extra.artwork);
+    fill(&mut meta.label, extra.label);
+    fill(&mut meta.comment_2, extra.comment_2);
+    fill(&mut meta.composer, extra.composer);
+    fill(&mut meta.album_artist, extra.album_artist);
+    fill(&mut meta.remixer, extra.remixer);
+    fill(&mut meta.producer, extra.producer);
+    fill(&mut meta.grouping, extra.grouping);
+    fill(&mut meta.track_number, extra.track_number);
+    fill(&mut meta.disc_number, extra.disc_number);
+    fill(&mut meta.isrc, extra.isrc);
+    fill(&mut meta.catalog_number, extra.catalog_number);
+    fill(&mut meta.release_date, extra.release_date);
+    fill(&mut meta.copyright, extra.copyright);
+    fill(&mut meta.mood, extra.mood);
+    fill(&mut meta.mix_name, extra.mix_name);
+    fill(&mut meta.lyrics, extra.lyrics);
 
     if let Some(raw) = extra.key_raw {
         match normalize_camelot(&raw) {
@@ -379,6 +426,38 @@ fn id3_extras(tag: &id3::Tag) -> ExtraTags {
             .find(|text| !text.is_empty())
             .map(str::to_string),
         artwork: front.or(fallback),
+        label: text_frame(tag, "TPUB")
+            .or_else(|| extended_text_frame(tag, &["label", "publisher", "organization"])),
+        comment_2: extended_text_frame(tag, &["comment2", "comment 2", "comments2", "comment_2"]),
+        composer: text_frame(tag, "TCOM").or_else(|| extended_text_frame(tag, &["composer"])),
+        album_artist: text_frame(tag, "TPE2")
+            .or_else(|| extended_text_frame(tag, &["albumartist", "album artist"])),
+        remixer: text_frame(tag, "TPE4").or_else(|| extended_text_frame(tag, &["remixer"])),
+        producer: extended_text_frame(tag, &["producer"]),
+        grouping: text_frame(tag, "TIT1").or_else(|| extended_text_frame(tag, &["grouping"])),
+        track_number: text_frame(tag, "TRCK")
+            .as_deref()
+            .and_then(parse_leading_int),
+        disc_number: text_frame(tag, "TPOS")
+            .as_deref()
+            .and_then(parse_leading_int),
+        isrc: text_frame(tag, "TSRC").or_else(|| extended_text_frame(tag, &["isrc"])),
+        catalog_number: extended_text_frame(
+            tag,
+            &["catalognumber", "catalog number", "catalog", "catno"],
+        ),
+        release_date: text_frame(tag, "TDRL")
+            .or_else(|| text_frame(tag, "TDRC"))
+            .or_else(|| extended_text_frame(tag, &["releasedate", "release date", "date"])),
+        copyright: text_frame(tag, "TCOP").or_else(|| extended_text_frame(tag, &["copyright"])),
+        mood: text_frame(tag, "TMOO").or_else(|| extended_text_frame(tag, &["mood"])),
+        mix_name: extended_text_frame(tag, &["mixname", "mix name", "mix", "version"]),
+        lyrics: tag
+            .get("USLT")
+            .and_then(|frame| frame.content().lyrics())
+            .map(|lyrics| lyrics.text.trim())
+            .filter(|text| !text.is_empty())
+            .map(str::to_string),
     }
 }
 
@@ -425,6 +504,26 @@ fn read_flac_extras(path: &Path) -> ExtraTags {
     extra.key_raw = first(&["INITIALKEY", "KEY"]);
     extra.rating = first(&["RATING"]).as_deref().and_then(parse_rating_text);
     extra.comments = first(&["COMMENT", "DESCRIPTION", "COMMENTS"]);
+    extra.label = first(&["LABEL", "ORGANIZATION", "PUBLISHER"]);
+    extra.comment_2 = first(&["COMMENT2", "COMMENT 2", "COMMENTS2"]);
+    extra.composer = first(&["COMPOSER"]);
+    extra.album_artist = first(&["ALBUMARTIST", "ALBUM ARTIST", "ALBUM_ARTIST"]);
+    extra.remixer = first(&["REMIXER"]);
+    extra.producer = first(&["PRODUCER"]);
+    extra.grouping = first(&["GROUPING"]);
+    extra.track_number = first(&["TRACKNUMBER", "TRACK"])
+        .as_deref()
+        .and_then(parse_leading_int);
+    extra.disc_number = first(&["DISCNUMBER", "DISC"])
+        .as_deref()
+        .and_then(parse_leading_int);
+    extra.isrc = first(&["ISRC"]);
+    extra.catalog_number = first(&["CATALOGNUMBER", "CATALOG"]);
+    extra.release_date = first(&["RELEASEDATE", "DATE"]);
+    extra.copyright = first(&["COPYRIGHT"]);
+    extra.mood = first(&["MOOD"]);
+    extra.mix_name = first(&["MIXNAME", "MIX NAME", "VERSION"]);
+    extra.lyrics = first(&["LYRICS", "UNSYNCEDLYRICS"]);
 
     let mut fallback: Option<EmbeddedArtwork> = None;
     for pic in tag.pictures() {
@@ -454,7 +553,24 @@ fn read_flac_extras(path: &Path) -> ExtraTags {
     extra
 }
 
-/// Parses a BPM value, tolerating values like `128`, `128.00` or `128 BPM`.
+/// The leading integer of a tag such as 3 or 3/12; anything else is absent.
+fn parse_leading_int(raw: &str) -> Option<i64> {
+    let digits: String = raw
+        .trim()
+        .chars()
+        .take_while(|c| c.is_ascii_digit())
+        .collect();
+    digits.parse::<i64>().ok().filter(|value| *value >= 0)
+}
+
+/// Fills a field only when the source actually carried a value.
+fn fill<T>(target: &mut Option<T>, value: Option<T>) {
+    if value.is_some() {
+        *target = value;
+    }
+}
+
+/// Parses a BPM value, tolerating values like 128, 128.00 or 128 BPM.
 fn parse_bpm(raw: &str) -> Option<f64> {
     let numeric: String = raw
         .trim()

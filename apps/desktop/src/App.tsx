@@ -2,7 +2,6 @@ import { useEffect, useRef, useState, useMemo, useReducer, useCallback } from "r
 import type {
   MouseEvent as ReactMouseEvent,
   PointerEvent as ReactPointerEvent,
-  FormEvent,
   UIEvent as ReactUIEvent,
 } from "react";
 import type {
@@ -54,6 +53,7 @@ import {
   listRemovedTracks,
   restoreTracks,
   revealInFileManager,
+  refreshArtwork,
 } from "./services/api";
 import {
   FolderOpen,
@@ -66,6 +66,7 @@ import {
   CheckCircle2,
   Check,
   Sparkles,
+  Wand2,
   Columns3,
   Activity,
   ArchiveRestore,
@@ -363,15 +364,25 @@ function TrackTableHeader({
                     event.preventDefault();
                     return;
                   }
+                  // WebView2 needs a payload before it starts the drag, and the
+                  // payload keeps the drop correct even if a render happens
+                  // between drag start and drop.
+                  event.dataTransfer.setData("text/plain", column.id);
+                  event.dataTransfer.effectAllowed = "move";
                   setDraggedId(column.id);
                 }}
                 onDragEnd={() => setDraggedId(null)}
                 onDragOver={(event) => {
-                  if (draggedId && draggedId !== column.id) event.preventDefault();
+                  if (draggedId && draggedId !== column.id) {
+                    event.preventDefault();
+                    event.dataTransfer.dropEffect = "move";
+                  }
                 }}
                 onDrop={(event) => {
                   event.preventDefault();
-                  if (draggedId) onReorder(draggedId, column.id);
+                  const dropped = event.dataTransfer.getData("text/plain");
+                  const movedId = (dropped || draggedId) as ColumnId | null;
+                  if (movedId) onReorder(movedId, column.id);
                   setDraggedId(null);
                 }}
                 title="Drag to reorder · right-click for columns"
@@ -434,6 +445,10 @@ const MONO_COLUMNS: readonly ColumnId[] = [
   "size",
   "fingerprint",
   "format",
+  "trackNumber",
+  "discNumber",
+  "bitrate",
+  "importDate",
 ];
 
 /**
@@ -570,14 +585,16 @@ function TrackCell({
   if (id === "status") {
     const chip = ANALYSIS_STATUS_CHIP[track.analysisStatus] ?? ANALYSIS_STATUS_CHIP.pending;
     const StatusIcon = chip.icon;
+    const label = analysisStatusLabel(track.analysisStatus);
     return (
-      <td className={base}>
+      <td className="py-2.5 px-2 text-center">
         <span
-          className={`inline-flex items-center space-x-1 px-2 py-0.5 rounded-sm text-[11px] font-medium border ${chip.className}`}
-          title={`Analysis status: ${analysisStatusLabel(track.analysisStatus)}`}
+          role="img"
+          aria-label={`Analysis status: ${label}`}
+          title={`Analysis status: ${label}`}
+          className={`inline-flex h-5 w-5 items-center justify-center rounded-sm border ${chip.className}`}
         >
-          <StatusIcon className="w-3 h-3" />
-          <span>{analysisStatusLabel(track.analysisStatus)}</span>
+          <StatusIcon className="h-3 w-3" aria-hidden="true" />
         </span>
       </td>
     );
@@ -1100,7 +1117,7 @@ export default function App() {
   const [loading, setLoading] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
-  const [globalSearch, setGlobalSearch] = useState("");
+  const searchInputRef = useRef<HTMLInputElement>(null);
   const [libraryTotal, setLibraryTotal] = useState(0);
   // Virtualized table (Stage 2): the scroller is measured rather than assumed,
   // so the window survives window resizes and dock/player layout changes.
@@ -1122,17 +1139,6 @@ export default function App() {
   // Why the next reload runs: a write already reported its own outcome, a manual
   // refresh has nothing to protect. The query key alone cannot tell them apart.
   const reloadCauseRef = useRef<"manual" | "write">("write");
-
-  const submitGlobalSearch = (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    setSearchQuery(globalSearch.trim());
-    handleViewChange("library");
-  };
-
-  const clearGlobalSearch = () => {
-    setGlobalSearch("");
-    setSearchQuery("");
-  };
 
   // Library filters + sorting (T2.1.2). Applied server-side in SQL so the view
   // stays correct past the 200-row page instead of filtering a partial window.
@@ -1171,6 +1177,8 @@ export default function App() {
     saveLibraryColumns("library", columns);
   }, [columns]);
   const [reloadToken, setReloadToken] = useState(0);
+  // Repair legacy libraries once per session; StrictMode replays mount effects.
+  const artworkRepairStarted = useRef(false);
   const [currentFolder, setCurrentFolder] = useState<string | null>(null);
   const [scanning, setScanning] = useState(false);
   const [progress, setProgress] = useState<ScanProgressEvent | null>(null);
@@ -1178,10 +1186,10 @@ export default function App() {
   // Tone drives the header status dot — never show a green dot during a
   // failure or a scan in progress (docs/ui/08: status reflects real state).
   const [statusTone, setStatusTone] = useState<"ok" | "busy" | "error">("ok");
-  const pushStatus = (message: string, tone: "ok" | "busy" | "error" = "ok") => {
+  const pushStatus = useCallback((message: string, tone: "ok" | "busy" | "error" = "ok") => {
     setStatusMessage(message);
     setStatusTone(tone);
-  };
+  }, []);
 
   // Analysis queue (T1.2.2): version-aware run with per-track progress events.
   const [analyzing, setAnalyzing] = useState(false);
@@ -1440,7 +1448,16 @@ export default function App() {
         setLoading(false);
       });
     // Only the applied query and reloads drive the fetch; loader helpers are pure.
-  }, [queryKey, normalizedFilters, sortBy, sortDir, reloadToken, librarySource, sourceId]);
+  }, [
+    queryKey,
+    normalizedFilters,
+    sortBy,
+    sortDir,
+    reloadToken,
+    librarySource,
+    sourceId,
+    pushStatus,
+  ]);
 
   /**
    * Starts the next 500-row page unless a load is active or all rows are loaded.
@@ -1482,7 +1499,7 @@ export default function App() {
         appendInFlightRef.current = false;
         setLoadingMore(false);
       });
-  }, [normalizedFilters, sortBy, sortDir, libraryTotal, librarySource, sourceId]);
+  }, [normalizedFilters, sortBy, sortDir, libraryTotal, librarySource, sourceId, pushStatus]);
 
   // Measure the scroll viewport; a window resize or a dock/player layout change
   // changes how many rows are visible, never the row height.
@@ -1550,10 +1567,36 @@ export default function App() {
     };
   }, [reloadToken]);
 
-  const refreshLibrary = (cause: "manual" | "write" = "write") => {
+  const refreshLibrary = useCallback((cause: "manual" | "write" = "write") => {
     reloadCauseRef.current = cause;
     setReloadToken((token) => token + 1);
-  };
+  }, []);
+
+  // Older libraries were imported before embedded artwork was cached, leaving
+  // every artwork column empty. Fill them from the files once on startup so the
+  // thumbnails appear without asking the user to re-import their whole library.
+  useEffect(() => {
+    if (artworkRepairStarted.current) return;
+    artworkRepairStarted.current = true;
+    refreshArtwork()
+      .then((result) => {
+        if (result.failed > 0) {
+          console.warn("Artwork repair reported failures:", result.errors);
+        }
+        if (result.updated === 0) return;
+        refreshLibrary("write");
+        pushStatus(
+          result.failed > 0
+            ? `Restored artwork for ${result.updated} track${result.updated === 1 ? "" : "s"} — ${result.failed} failed.`
+            : `Restored artwork for ${result.updated} track${result.updated === 1 ? "" : "s"}.`,
+          result.failed > 0 ? "error" : "ok"
+        );
+      })
+      .catch((err) => {
+        console.error("Failed to restore artwork:", err);
+        pushStatus("Couldn't restore artwork from your files — check the logs.", "error");
+      });
+  }, [pushStatus, refreshLibrary]);
 
   // The removed view's rows, reloaded with the library: a remove adds one, a
   // restore takes it back, and undoing either changes the set again. Its length
@@ -1954,7 +1997,7 @@ export default function App() {
     };
     // Listeners are registered once; completion handlers bump `reloadToken`
     // through `refreshLibrary`, which reloads with the *current* view state.
-  }, []);
+  }, [pushStatus, refreshLibrary]);
 
   // Esc closes the track panel, the Tag Health/Charts modals, the
   // filter/columns dropdowns, the row context menu and the metadata editor.
@@ -1975,6 +2018,34 @@ export default function App() {
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [closeTrackPanel]);
+
+  /**
+   * docs/ui/03 section 5: the search box is reachable from the keyboard
+   * (`Ctrl/Cmd+F` or `/`). The shell's view shortcuts already ignore keystrokes
+   * made inside a field, so this listener only fires where typing would
+   * otherwise do nothing.
+   */
+  useEffect(() => {
+    const onKey = (event: KeyboardEvent) => {
+      const target = event.target instanceof HTMLElement ? event.target : null;
+      if (
+        target &&
+        (target.tagName === "INPUT" ||
+          target.tagName === "TEXTAREA" ||
+          target.tagName === "SELECT" ||
+          target.isContentEditable)
+      ) {
+        return;
+      }
+      const find = (event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "f";
+      if (!find && event.key !== "/") return;
+      event.preventDefault();
+      searchInputRef.current?.focus();
+      searchInputRef.current?.select();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, []);
 
   const handleSelectFolder = async () => {
     const selected = await openFolderDialog();
@@ -2504,6 +2575,29 @@ export default function App() {
 
   const ThemeIcon = THEME_ICONS[ui.theme];
 
+  /**
+   * Class for the header's secondary-view buttons. They are icon-only, so the
+   * active tone and the backup warning are the only things that differ; keeping
+   * the three in step is what stops the header from reading as three unrelated
+   * pills.
+   */
+  const utilityViewClass = (active: boolean, tone: "accent" | "warning" = "accent"): string => {
+    const base =
+      "flex h-6 w-6 items-center justify-center rounded-sm border transition focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-dj-accent";
+    if (active) {
+      return `${base} ${
+        tone === "warning"
+          ? "border-dj-warning/40 bg-dj-warning/10 text-dj-warning"
+          : "border-dj-accent/40 bg-dj-accent/10 text-dj-accent"
+      }`;
+    }
+    return `${base} ${
+      tone === "warning"
+        ? "border-dj-border bg-dj-elevated text-dj-warning hover:bg-dj-hover"
+        : "border-dj-border bg-dj-elevated text-dj-text-secondary hover:bg-dj-hover hover:text-dj-text"
+    }`;
+  };
+
   return (
     <div className="relative flex h-screen flex-col bg-dj-bg font-sans text-dj-text">
       <a
@@ -2522,54 +2616,23 @@ export default function App() {
           </span>
         </div>
 
-        <div className="ml-2 flex min-w-0 items-center gap-1.5">
-          <form
-            role="search"
-            onSubmit={submitGlobalSearch}
-            className="relative w-44 min-w-0 sm:w-56 xl:w-72"
-          >
-            <Search
-              className="pointer-events-none absolute left-2 top-1.5 h-3 w-3 text-dj-text-muted"
-              aria-hidden="true"
-            />
-            <input
-              id="global-search"
-              name="global-search"
-              type="search"
-              value={globalSearch}
-              onChange={(event) => setGlobalSearch(event.target.value)}
-              placeholder="Search library..."
-              aria-label="Search library"
-              title="Search the library. Playlist and tag-wide search arrives with Stage 2."
-              className="h-6 w-full rounded-sm border border-dj-border bg-dj-bg pl-7 pr-7 text-[11px] text-dj-text placeholder:text-dj-text-muted transition focus:border-dj-accent focus:outline-hidden"
-            />
-            {globalSearch && (
-              <button
-                type="button"
-                onClick={clearGlobalSearch}
-                aria-label="Clear library search"
-                title="Clear search"
-                className="absolute right-0.5 top-0.5 flex h-5 w-5 items-center justify-center rounded-sm text-dj-text-muted transition hover:bg-dj-hover hover:text-dj-text focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-dj-accent"
-              >
-                <X className="h-3 w-3" aria-hidden="true" />
-              </button>
-            )}
-          </form>
-
+        <div className="ml-1 flex items-center gap-1 border-l border-dj-border pl-2">
+          {/*
+            Secondary views live here, not in the primary navigation: they are
+            places you drop into from anywhere, while the sidebar stays the one
+            map of the app. Icon-only with a tooltip keeps the header quiet, and
+            the library toolbar owns the actual import action, so this button
+            names the destination instead of repeating "Scan folder".
+          */}
           <button
             type="button"
             onClick={() => handleViewChange("import")}
             aria-pressed={ui.view === "import"}
             aria-label="Import Center"
-            title="Import Center — import folders, watch folders and the analysis queue"
-            className={`flex h-6 items-center gap-1 rounded-sm border px-2 text-[11px] transition focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-dj-accent ${
-              ui.view === "import"
-                ? "border-dj-accent/40 bg-dj-accent/10 text-dj-accent"
-                : "border-dj-border bg-dj-elevated text-dj-text-secondary hover:bg-dj-hover hover:text-dj-text"
-            }`}
+            title="Import Center - import folders, watch folders and the analysis queue"
+            className={utilityViewClass(ui.view === "import")}
           >
             <FolderOpen className="h-3.5 w-3.5" aria-hidden="true" />
-            <span className="hidden lg:inline">Import Center</span>
           </button>
 
           <button
@@ -2577,31 +2640,21 @@ export default function App() {
             onClick={() => handleViewChange("inbox")}
             aria-pressed={ui.view === "inbox"}
             aria-label="Inbox"
-            title="Inbox — Needs Attention and Updates"
-            className={`flex h-6 items-center gap-1 rounded-sm border px-2 text-[11px] transition focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-dj-accent ${
-              ui.view === "inbox"
-                ? "border-dj-accent/40 bg-dj-accent/10 text-dj-accent"
-                : "border-dj-border bg-dj-elevated text-dj-text-secondary hover:bg-dj-hover hover:text-dj-text"
-            }`}
+            title="Inbox - Needs Attention and Updates"
+            className={utilityViewClass(ui.view === "inbox")}
           >
             <Inbox className="h-3.5 w-3.5" aria-hidden="true" />
-            <span className="hidden md:inline">Inbox</span>
           </button>
 
           <button
             type="button"
             onClick={() => handleViewChange("backup")}
             aria-pressed={ui.view === "backup"}
-            aria-label="Open backup settings. Backup is not configured yet."
-            title="Backup is not configured yet — open backup settings"
-            className={`flex h-6 items-center gap-1 rounded-sm border px-2 text-[11px] transition focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-dj-accent ${
-              ui.view === "backup"
-                ? "border-dj-warning/40 bg-dj-warning/10 text-dj-warning"
-                : "border-dj-border bg-dj-elevated text-dj-text-secondary hover:bg-dj-hover hover:text-dj-text"
-            }`}
+            aria-label="Open backup. Backup is not configured yet."
+            title="Backup is not configured yet - open backup settings"
+            className={utilityViewClass(ui.view === "backup", "warning")}
           >
             <ShieldCheck className="h-3.5 w-3.5" aria-hidden="true" />
-            <span className="hidden xl:inline">Backup not set up</span>
           </button>
         </div>
 
@@ -2821,17 +2874,40 @@ export default function App() {
                 )}
                 {/* Options bar — view-context actions (docs/ui/02) */}
                 <div className="flex h-8 shrink-0 items-center gap-1.5 border-b border-dj-border bg-dj-panel px-3">
+                  {/*
+                    The library search is the app's only search field. The header
+                    used to carry a second one; two boxes filtered the same list,
+                    so the header one is gone and this one carries the label,
+                    the placeholder, the clear action and the tooltip.
+                  */}
                   <div className="relative w-64">
-                    <Search className="absolute left-2.5 top-1.5 h-3.5 w-3.5 text-dj-text-muted" />
+                    <Search
+                      className="pointer-events-none absolute left-2.5 top-1.5 h-3.5 w-3.5 text-dj-text-muted"
+                      aria-hidden="true"
+                    />
                     <input
+                      ref={searchInputRef}
                       id="library-search"
                       name="library-search"
-                      type="text"
+                      type="search"
                       value={searchQuery}
                       onChange={(e) => setSearchQuery(e.target.value)}
                       placeholder="Search title, artist, album, path..."
-                      className="h-6 w-full rounded-sm border border-dj-border bg-dj-elevated pl-8 pr-2 text-[11px] text-dj-text placeholder:text-dj-text-muted transition focus:border-dj-accent focus:outline-hidden"
+                      aria-label="Search the library"
+                      title="Filter the library by title, artist, album or file path (Ctrl/Cmd+F or /)"
+                      className="h-6 w-full rounded-sm border border-dj-border bg-dj-elevated pl-8 pr-7 text-[11px] text-dj-text placeholder:text-dj-text-muted transition focus:border-dj-accent focus:outline-hidden"
                     />
+                    {searchQuery && (
+                      <button
+                        type="button"
+                        onClick={() => setSearchQuery("")}
+                        aria-label="Clear library search"
+                        title="Clear search"
+                        className="absolute right-0.5 top-0.5 flex h-5 w-5 items-center justify-center rounded-sm text-dj-text-muted transition hover:bg-dj-hover hover:text-dj-text focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-dj-accent"
+                      >
+                        <X className="h-3 w-3" aria-hidden="true" />
+                      </button>
+                    )}
                   </div>
                   <button
                     type="button"
@@ -2869,8 +2945,8 @@ export default function App() {
                     disabled={scanning}
                     className="flex h-6 items-center gap-1 rounded-sm border border-dj-accent bg-dj-accent px-2 text-[11px] font-medium text-dj-on-accent transition hover:bg-dj-accent-strong disabled:border-dj-active disabled:bg-dj-active disabled:text-dj-text-muted"
                   >
-                    <FolderOpen className="h-3.5 w-3.5" />
-                    <span>{scanning ? "Scanning…" : "Scan folder"}</span>
+                    <FolderOpen className="h-3.5 w-3.5" aria-hidden="true" />
+                    <span>{scanning ? "Scanning…" : "Import folder"}</span>
                   </button>
                   <button
                     type="button"
@@ -2892,7 +2968,7 @@ export default function App() {
                     }`}
                     title="Mix suggestions for the selected track"
                   >
-                    <Sparkles className="h-3.5 w-3.5" />
+                    <Wand2 className="h-3.5 w-3.5" aria-hidden="true" />
                     <span className="hidden sm:inline">Mix</span>
                   </button>
                   <button

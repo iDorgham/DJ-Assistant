@@ -79,6 +79,8 @@ export interface MetadataEditorValues {
   year: string;
   tags: string[];
   comments: string;
+  /** The second comment field (Traktor / Serato "Comment 2"). */
+  comment2: string;
 }
 
 /**
@@ -99,4 +101,5 @@ export interface MetadataSource {
   year?: number | null;
   tags?: string[];
   comments?: string | null;
+  comment2?: string | null;
 }

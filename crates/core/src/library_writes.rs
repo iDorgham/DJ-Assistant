@@ -122,6 +122,21 @@ pub struct MetadataPatch {
     pub rating: Option<i64>,
     pub energy: Option<i64>,
     pub tags: Option<Vec<String>>,
+    pub comment_2: Option<String>,
+    pub composer: Option<String>,
+    pub album_artist: Option<String>,
+    pub remixer: Option<String>,
+    pub producer: Option<String>,
+    pub grouping: Option<String>,
+    pub track_number: Option<i64>,
+    pub disc_number: Option<i64>,
+    pub isrc: Option<String>,
+    pub catalog_number: Option<String>,
+    pub release_date: Option<String>,
+    pub copyright: Option<String>,
+    pub mood: Option<String>,
+    pub mix_name: Option<String>,
+    pub lyrics: Option<String>,
 }
 
 impl MetadataPatch {
@@ -156,6 +171,64 @@ impl MetadataPatch {
             "year" => self.year.map(|v| ColumnValue::Number(number_value(v))),
             "user_rating" => self.rating.map(|v| ColumnValue::Number(number_value(v))),
             "energy" => self.energy.map(|v| ColumnValue::Number(number_value(v))),
+            "comment_2" => self
+                .comment_2
+                .as_deref()
+                .map(|v| ColumnValue::Text(text_value(v))),
+            "composer" => self
+                .composer
+                .as_deref()
+                .map(|v| ColumnValue::Text(text_value(v))),
+            "album_artist" => self
+                .album_artist
+                .as_deref()
+                .map(|v| ColumnValue::Text(text_value(v))),
+            "remixer" => self
+                .remixer
+                .as_deref()
+                .map(|v| ColumnValue::Text(text_value(v))),
+            "producer" => self
+                .producer
+                .as_deref()
+                .map(|v| ColumnValue::Text(text_value(v))),
+            "grouping" => self
+                .grouping
+                .as_deref()
+                .map(|v| ColumnValue::Text(text_value(v))),
+            "track_number" => self
+                .track_number
+                .map(|v| ColumnValue::Number(number_value(v))),
+            "disc_number" => self
+                .disc_number
+                .map(|v| ColumnValue::Number(number_value(v))),
+            "isrc" => self
+                .isrc
+                .as_deref()
+                .map(|v| ColumnValue::Text(text_value(v))),
+            "catalog_number" => self
+                .catalog_number
+                .as_deref()
+                .map(|v| ColumnValue::Text(text_value(v))),
+            "release_date" => self
+                .release_date
+                .as_deref()
+                .map(|v| ColumnValue::Text(text_value(v))),
+            "copyright" => self
+                .copyright
+                .as_deref()
+                .map(|v| ColumnValue::Text(text_value(v))),
+            "mood" => self
+                .mood
+                .as_deref()
+                .map(|v| ColumnValue::Text(text_value(v))),
+            "mix_name" => self
+                .mix_name
+                .as_deref()
+                .map(|v| ColumnValue::Text(text_value(v))),
+            "lyrics" => self
+                .lyrics
+                .as_deref()
+                .map(|v| ColumnValue::Text(text_value(v))),
             _ => None,
         }
     }
@@ -445,6 +518,21 @@ pub fn input_doc(track_ids: &[String], patch: &MetadataPatch) -> String {
         "year": patch.year,
         "comments": patch.comments,
         "tags": patch.tags,
+        "comment2": patch.comment_2,
+        "composer": patch.composer,
+        "albumArtist": patch.album_artist,
+        "remixer": patch.remixer,
+        "producer": patch.producer,
+        "grouping": patch.grouping,
+        "trackNumber": patch.track_number,
+        "discNumber": patch.disc_number,
+        "isrc": patch.isrc,
+        "catalogNumber": patch.catalog_number,
+        "releaseDate": patch.release_date,
+        "copyright": patch.copyright,
+        "mood": patch.mood,
+        "mixName": patch.mix_name,
+        "lyrics": patch.lyrics,
     })
     .to_string()
 }
@@ -640,7 +728,22 @@ mod tests {
                 "year",
                 "comments",
                 "user_rating",
-                "energy"
+                "energy",
+                "comment_2",
+                "composer",
+                "album_artist",
+                "remixer",
+                "producer",
+                "grouping",
+                "track_number",
+                "disc_number",
+                "isrc",
+                "catalog_number",
+                "release_date",
+                "copyright",
+                "mood",
+                "mix_name",
+                "lyrics"
             ]
         );
     }

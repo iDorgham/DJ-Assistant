@@ -72,6 +72,7 @@ test("a single track seeds every field with its own value", () => {
     year: "2024",
     tags: ["peak"],
     comments: "",
+    comment2: "",
   });
 });
 
@@ -114,6 +115,27 @@ test("clearing a field the selection agreed on writes the empty value", () => {
   assert.deepEqual(changedBulkFields(from, { ...from, year: "" }), ["year"]);
   // `0` is the backend's "clear the year" value.
   assert.equal(patch.year, 0);
+});
+
+test("Comment 2 seeds, surveys and writes like any other text field", () => {
+  const withSecond = track({
+    id: "1",
+    title: "One",
+    genre: "House",
+    comments: "main",
+    comment2: "peak-time edit",
+  });
+  assert.deepEqual(surveyFields([withSecond]).comment2, {
+    state: "single",
+    value: "peak-time edit",
+  });
+
+  const from = bulkSeedValues([withSecond]);
+  assert.equal(from.comment2, "peak-time edit");
+  // Changing only Comment 2 writes only Comment 2: the two comments stay
+  // independent columns.
+  const patch = buildBulkPatch(["1"], from, { ...from, comment2: "closing" });
+  assert.deepEqual(patch, { trackIds: ["1"], comment2: "closing" });
 });
 
 test("removing a chip replaces the whole tag set", () => {

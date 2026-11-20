@@ -143,6 +143,10 @@ pub fn run_scan(
             // Insert into SQLite
             let track_id = Uuid::new_v4().to_string();
             let now = chrono::Utc::now().to_rfc3339();
+            // The summary row carries no file size (that column is detail-only),
+            // so derive the kbps value here: bytes * 8 / milliseconds.
+            let bitrate_kbps = (meta.file_size > 0 && meta.duration_ms > 0)
+                .then(|| (meta.file_size as f64 * 8.0 / meta.duration_ms as f64).round() as i64);
 
             let summary = TrackSummary {
                 id: track_id.clone(),
@@ -152,9 +156,8 @@ pub fn run_scan(
                 artist: meta.artist.clone(),
                 album: meta.album.clone(),
                 genre: meta.genre.clone(),
-                // The file-tag extractor has no label/publisher source, so a
-                // freshly scanned file has no label (the user types it).
-                label: None,
+                // Read from TPUB / Vorbis LABEL; the user can override it later.
+                label: meta.label.clone(),
                 year: meta.year.map(|year| year as i64),
                 bpm: meta.bpm,
                 key_camelot: meta.key_camelot.clone(),
@@ -172,6 +175,22 @@ pub fn run_scan(
                 artwork_hash: artwork_hash.clone(),
                 created_at: now.clone(),
                 updated_at: now.clone(),
+                comment_2: meta.comment_2.clone(),
+                composer: meta.composer.clone(),
+                album_artist: meta.album_artist.clone(),
+                remixer: meta.remixer.clone(),
+                producer: meta.producer.clone(),
+                grouping: meta.grouping.clone(),
+                track_number: meta.track_number,
+                disc_number: meta.disc_number,
+                isrc: meta.isrc.clone(),
+                catalog_number: meta.catalog_number.clone(),
+                release_date: meta.release_date.clone(),
+                copyright: meta.copyright.clone(),
+                mood: meta.mood.clone(),
+                mix_name: meta.mix_name.clone(),
+                lyrics: meta.lyrics.clone(),
+                bitrate_kbps,
             };
 
             {
@@ -185,8 +204,11 @@ pub fn run_scan(
                         duration_ms, format, title, artist, album, genre, year,
                         bpm, key_camelot, key_classical, user_rating, comments,
                         artwork_hash, artwork_path, artwork_mime,
-                        analysis_status, created_at, updated_at
-                    ) VALUES (?, 'default', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', ?, ?)",
+                        analysis_status, created_at, updated_at, label, comment_2,
+                        composer, album_artist, remixer, producer, grouping,
+                        track_number, disc_number, isrc, catalog_number, release_date,
+                        copyright, mood, mix_name, lyrics, bitrate_kbps, label_user_set
+                    ) VALUES (?, 'default', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0)",
                     rusqlite::params![
                         track_id,
                         path_str,
@@ -209,6 +231,23 @@ pub fn run_scan(
                         artwork_mime,
                         now,
                         now,
+                        meta.label,
+                        meta.comment_2,
+                        meta.composer,
+                        meta.album_artist,
+                        meta.remixer,
+                        meta.producer,
+                        meta.grouping,
+                        meta.track_number,
+                        meta.disc_number,
+                        meta.isrc,
+                        meta.catalog_number,
+                        meta.release_date,
+                        meta.copyright,
+                        meta.mood,
+                        meta.mix_name,
+                        meta.lyrics,
+                        bitrate_kbps,
                     ],
                 );
 

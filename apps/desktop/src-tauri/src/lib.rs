@@ -78,6 +78,7 @@ pub fn run() {
             commands::list_genres,
             commands::get_track,
             commands::get_artwork,
+            commands::refresh_artwork,
             commands::audio_load,
             commands::audio_play,
             commands::audio_pause,

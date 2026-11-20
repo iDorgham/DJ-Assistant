@@ -28,6 +28,27 @@ export function TagsTab({
 }: TagsTabProps) {
   const targetLabel =
     targetCount > 1 ? `${targetCount} selected tracks` : track.title || "Untitled";
+  // Only fields the file actually carried are listed: an absent tag is not a
+  // value, and a wall of dashes would bury the ones that exist.
+  const imported = (
+    [
+      ["Album artist", track.albumArtist],
+      ["Composer", track.composer],
+      ["Remixer", track.remixer],
+      ["Producer", track.producer],
+      ["Mix name", track.mixName],
+      ["Grouping", track.grouping],
+      ["Track #", track.trackNumber != null ? String(track.trackNumber) : null],
+      ["Disc #", track.discNumber != null ? String(track.discNumber) : null],
+      ["ISRC", track.isrc],
+      ["Catalog #", track.catalogNumber],
+      ["Released", track.releaseDate],
+      ["Mood", track.mood],
+      ["Copyright", track.copyright],
+      ["Bitrate", track.bitrateKbps != null ? `${track.bitrateKbps} kbps` : null],
+      ["Lyrics", track.lyrics],
+    ] as const
+  ).filter(([, value]) => Boolean(value && value.trim()));
   return (
     <div className="space-y-5">
       <section>
@@ -45,7 +66,21 @@ export function TagsTab({
         <Row label="Label" value={track.label} />
         <Row label="Year" value={track.year != null ? String(track.year) : null} />
         <Row label="Comment" value={track.comments} multiline />
+        <Row label="Comment 2" value={track.comment2} multiline />
       </section>
+
+      {imported.length > 0 && (
+        <section>
+          <h3 className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-dj-text-muted">
+            From the file
+          </h3>
+          <div className="grid grid-cols-2 gap-x-3 gap-y-2 text-xs">
+            {imported.map(([label, value]) => (
+              <Row key={label} label={label} value={value} />
+            ))}
+          </div>
+        </section>
+      )}
 
       <section>
         <h3 className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-dj-text-muted">

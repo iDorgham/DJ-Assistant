@@ -32,6 +32,24 @@ export interface TrackSummary {
   artworkHash?: string | null;
   createdAt: string;
   updatedAt: string;
+  /** Second comment field (Traktor / Serato Comment 2). */
+  comment2?: string | null;
+  composer?: string | null;
+  albumArtist?: string | null;
+  remixer?: string | null;
+  producer?: string | null;
+  grouping?: string | null;
+  trackNumber?: number | null;
+  discNumber?: number | null;
+  isrc?: string | null;
+  catalogNumber?: string | null;
+  releaseDate?: string | null;
+  copyright?: string | null;
+  mood?: string | null;
+  mixName?: string | null;
+  lyrics?: string | null;
+  /** Derived at scan time from file size and duration. */
+  bitrateKbps?: number | null;
 }
 
 export interface CuePoint {
@@ -184,6 +202,20 @@ export interface GetArtworkRequest {
  */
 export type GetArtworkResponse = string | null;
 
+/** Result of filling artwork pointers for tracks imported without them. */
+export interface RefreshArtworkResponse {
+  /** Rows whose embedded artwork was missing from the cache. */
+  scanned: number;
+  /** Rows now pointing at a cached image. */
+  updated: number;
+  /** Rows whose files have no embedded artwork. */
+  missing: number;
+  /** Rows whose file or cache write failed. */
+  failed: number;
+  /** First few failures, for logs and the status bar. */
+  errors: string[];
+}
+
 // --- Track metadata writes (T2.1.4 rating, T2.1.6 energy) ---
 // Every write is logged as a `skill_runs` row that holds the pre-write values,
 // so the UI can offer a real Undo instead of a hopeful re-read.
@@ -214,6 +246,24 @@ export interface UpdateTrackMetadataRequest {
   year?: number;
   /** Free-text comment. `""` clears the comment. */
   comments?: string;
+  /** Second comment field. Empty string clears it. */
+  comment2?: string;
+  composer?: string;
+  albumArtist?: string;
+  remixer?: string;
+  producer?: string;
+  grouping?: string;
+  /** Track number. 0 clears it. */
+  trackNumber?: number;
+  /** Disc number. 0 clears it. */
+  discNumber?: number;
+  isrc?: string;
+  catalogNumber?: string;
+  releaseDate?: string;
+  copyright?: string;
+  mood?: string;
+  mixName?: string;
+  lyrics?: string;
   /**
    * The **complete** set of custom tags. `[]` removes every tag; omitting
    * the field leaves the tags untouched.

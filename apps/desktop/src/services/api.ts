@@ -9,6 +9,7 @@ import type {
   GetTrackResponse,
   GetArtworkRequest,
   GetArtworkResponse,
+  RefreshArtworkResponse,
   UpdateTrackMetadataRequest,
   UpdateTrackMetadataResponse,
   SetTrackRatingRequest,
@@ -120,6 +121,19 @@ export async function getArtwork(req: GetArtworkRequest): Promise<GetArtworkResp
   }
   const { invoke } = await import("@tauri-apps/api/core");
   return invoke<GetArtworkResponse>("get_artwork", { request: req });
+}
+
+/**
+ * One-time repair for libraries imported before embedded artwork was cached.
+ * Reads the audio files and fills the app's own artwork pointers — no audio is
+ * modified. Safe to call on every launch; it is a no-op once rows are filled.
+ */
+export async function refreshArtwork(): Promise<RefreshArtworkResponse> {
+  if (!isTauri) {
+    return { scanned: 0, updated: 0, missing: 0, failed: 0, errors: [] };
+  }
+  const { invoke } = await import("@tauri-apps/api/core");
+  return invoke<RefreshArtworkResponse>("refresh_artwork");
 }
 
 export interface GetWaveformPeaksRequest {

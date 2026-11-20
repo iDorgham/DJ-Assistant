@@ -12,7 +12,7 @@
 ///
 /// The names are interpolated into the SQL text, so this list is a **closed
 /// allow-list** — never a user-supplied string.
-pub const PATCH_COLUMNS: [&str; 9] = [
+pub const PATCH_COLUMNS: [&str; 24] = [
     "title",
     "artist",
     "album",
@@ -22,6 +22,21 @@ pub const PATCH_COLUMNS: [&str; 9] = [
     "comments",
     "user_rating",
     "energy",
+    "comment_2",
+    "composer",
+    "album_artist",
+    "remixer",
+    "producer",
+    "grouping",
+    "track_number",
+    "disc_number",
+    "isrc",
+    "catalog_number",
+    "release_date",
+    "copyright",
+    "mood",
+    "mix_name",
+    "lyrics",
 ];
 
 /// A text value: trimmed, and an empty value clears the column.
@@ -122,7 +137,22 @@ mod tests {
                 "year",
                 "comments",
                 "user_rating",
-                "energy"
+                "energy",
+                "comment_2",
+                "composer",
+                "album_artist",
+                "remixer",
+                "producer",
+                "grouping",
+                "track_number",
+                "disc_number",
+                "isrc",
+                "catalog_number",
+                "release_date",
+                "copyright",
+                "mood",
+                "mix_name",
+                "lyrics"
             ]
         );
     }

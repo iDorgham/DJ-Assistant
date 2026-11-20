@@ -317,20 +317,39 @@ export function MetadataEditor({ targets, trackIds, onSave, onClose }: MetadataE
             </p>
           </div>
 
-          <label className="block">
-            <span className="mb-1 block text-[11px] font-semibold uppercase tracking-wider text-dj-text-muted">
-              Comment
-            </span>
-            <textarea
-              rows={4}
-              value={values.comments}
-              placeholder={fieldHint(survey.comments, bulk) ?? "Your note about this track"}
-              onChange={(event) =>
-                setValues((current) => ({ ...current, comments: event.target.value }))
-              }
-              className={`${INPUT_CLASS} resize-y`}
-            />
-          </label>
+          <div className="grid grid-cols-2 gap-3">
+            <label className="block">
+              <span className="mb-1 block text-[11px] font-semibold uppercase tracking-wider text-dj-text-muted">
+                Comment
+              </span>
+              <textarea
+                rows={3}
+                value={values.comments}
+                placeholder={fieldHint(survey.comments, bulk) ?? "Your note about this track"}
+                onChange={(event) =>
+                  setValues((current) => ({ ...current, comments: event.target.value }))
+                }
+                className={`${INPUT_CLASS} resize-y`}
+              />
+            </label>
+            <label className="block">
+              <span className="mb-1 block text-[11px] font-semibold uppercase tracking-wider text-dj-text-muted">
+                Comment 2
+              </span>
+              <textarea
+                rows={3}
+                value={values.comment2}
+                placeholder={
+                  fieldHint(survey.comment2, bulk) ??
+                  "Second comment, as Traktor and Serato store it"
+                }
+                onChange={(event) =>
+                  setValues((current) => ({ ...current, comment2: event.target.value }))
+                }
+                className={`${INPUT_CLASS} resize-y`}
+              />
+            </label>
+          </div>
 
           {error && (
             <p className="rounded-sm border border-dj-danger/30 bg-dj-danger/10 px-2 py-1.5 text-[11px] text-dj-danger">
