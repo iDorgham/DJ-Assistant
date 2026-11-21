@@ -340,6 +340,33 @@ pub struct TagPreviewTrack {
     pub tags: Vec<String>,
 }
 
+/// One confirmed spelling rewrite: every track carrying `from` gets `to`.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub struct TagRenameRequest {
+    pub from: String,
+    pub to: String,
+}
+
+/// Applies the Tag Surgeon's confirmed rewrites to the selected tracks (T2.2.4).
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct TagApplyRequest {
+    /// The scope the scan covered. An empty list is refused.
+    pub track_ids: Vec<String>,
+    /// The spellings to rewrite, exactly as the preview showed them.
+    pub renames: Vec<TagRenameRequest>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct TagApplyResponse {
+    /// Id of the `skill_runs` row holding the undo snapshot, or empty if no track changed.
+    pub undo_id: String,
+    /// Number of tracks whose tag set changed.
+    pub updated: usize,
+}
+
 // --- Tag health / enrichment gaps (B): local detection, no network ---
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

@@ -4,9 +4,11 @@ import { X } from "lucide-react";
 import type { TagClusterReport, TagPreviewTrack } from "@dj-assistant/shared";
 
 import { ModalShell } from "./ModalShell";
-import { tagCluster, tagPreviewTracks } from "../services/api";
+import { tagApplyRenames, tagCluster, tagPreviewTracks, undoTrackMetadata } from "../services/api";
 import {
+  appliedLabel,
   clusterHeading,
+  confirmLabel,
   edgeLabel,
   emptyReportMessage,
   hasFindings,
@@ -14,21 +16,24 @@ import {
   memberLabel,
   moreAffectedNote,
   previewSampleIds,
+  renamesFor,
   rewriteLabel,
   sampleSpellings,
   sampleTitle,
   scopeLabel,
+  undoneLabel,
 } from "../lib/tag-surgeon";
 
 /**
- * The Tag Surgeon's read-only surfaces: the duplicate-spelling report (T2.2.1),
- * each cluster's suggested canonical spelling with its preview (T2.2.2–T2.2.3),
- * and advisory whole-word prefix relations.
+ * The Tag Surgeon's surfaces: the duplicate-spelling report (T2.2.1), each
+ * cluster's suggested canonical spelling with its preview (T2.2.2–T2.2.3),
+ * advisory whole-word prefix relations, and the confirmed apply (T2.2.4).
  *
- * There is deliberately no apply button — applying a rewrite is T2.2.4. A
- * dialog that only looks apply-shaped would promise a write this slice cannot
- * make. The preview names sample tracks and the spellings that would change;
- * it never changes a tag.
+ * Applying is two steps: the cluster list names what will change, then a
+ * confirm step applies exactly those spellings. The result keeps an undo
+ * until the dialog closes; undo is the metadata undo, so a track edited again
+ * since the apply is left as it is. Prefix relations stay advisory and are
+ * never applied.
  *
  * Every label is a raw spelling the user typed; fold keys stay internal to the
  * engine. The wording rules live in `lib/tag-surgeon`, where they are unit
@@ -39,13 +44,28 @@ interface TagSurgeonDialogProps {
   trackIds: string[];
   /** Closes the dialog. */
   onClose: () => void;
+  /** Called after a rewrite or an undo, so the library view reloads. */
+  onChanged?: () => void;
 }
 
-export function TagSurgeonDialog({ trackIds, onClose }: TagSurgeonDialogProps) {
+/** The latest apply, kept so its undo can be offered. */
+interface AppliedChange {
+  undoId: string;
+  updated: number;
+}
+
+export function TagSurgeonDialog({ trackIds, onClose, onChanged }: TagSurgeonDialogProps) {
   const [report, setReport] = useState<TagClusterReport | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [samples, setSamples] = useState<Map<string, TagPreviewTrack>>(new Map());
   const [sampleError, setSampleError] = useState<string | null>(null);
+  // Bumped after a write, so the scan runs again on the new library state.
+  const [scanRevision, setScanRevision] = useState(0);
+  const [confirming, setConfirming] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [applyError, setApplyError] = useState<string | null>(null);
+  const [applied, setApplied] = useState<AppliedChange | null>(null);
+  const [undoNote, setUndoNote] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -61,7 +81,7 @@ export function TagSurgeonDialog({ trackIds, onClose }: TagSurgeonDialogProps) {
     return () => {
       cancelled = true;
     };
-  }, [trackIds]);
+  }, [trackIds, scanRevision]);
 
   // The preview's sample tracks, fetched once per report. A failed sample read
   // is shown as its own error; the counts above it come from the scan and stay.
@@ -86,7 +106,43 @@ export function TagSurgeonDialog({ trackIds, onClose }: TagSurgeonDialogProps) {
     };
   }, [report]);
 
+  async function applyRenames() {
+    if (!report || busy) return;
+    setBusy(true);
+    setApplyError(null);
+    try {
+      const result = await tagApplyRenames({ trackIds, renames: renamesFor(report) });
+      setApplied({ undoId: result.undoId, updated: result.updated });
+      setUndoNote(null);
+      setConfirming(false);
+      onChanged?.();
+      setScanRevision((revision) => revision + 1);
+    } catch (cause) {
+      setApplyError(cause instanceof Error ? cause.message : String(cause));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function undoApply() {
+    if (!applied?.undoId || busy) return;
+    setBusy(true);
+    setApplyError(null);
+    try {
+      const result = await undoTrackMetadata({ undoId: applied.undoId });
+      setApplied(null);
+      setUndoNote(undoneLabel(result.restored, result.skipped));
+      onChanged?.();
+      setScanRevision((revision) => revision + 1);
+    } catch (cause) {
+      setApplyError(cause instanceof Error ? cause.message : String(cause));
+    } finally {
+      setBusy(false);
+    }
+  }
+
   const ignoredNote = report ? ignoredTagsNote(report.ignoredTags) : null;
+  const renameCount = report ? renamesFor(report).length : 0;
 
   return (
     <ModalShell
@@ -177,6 +233,69 @@ export function TagSurgeonDialog({ trackIds, onClose }: TagSurgeonDialogProps) {
             ))}
           </ul>
         )}
+
+        {/* Hidden while an undo is open: a second apply would replace that undo
+            offer and leave the first change reversible only from history. */}
+        {report && report.clusters.length > 0 && !applied?.undoId && (
+          <div className="rounded-md border border-dj-border px-2.5 py-2">
+            {!confirming ? (
+              <button
+                type="button"
+                onClick={() => setConfirming(true)}
+                disabled={busy}
+                className="rounded-md border border-dj-border bg-dj-elevated px-3 py-1.5 text-xs text-dj-text-secondary transition hover:bg-dj-hover disabled:opacity-50"
+              >
+                Apply these spellings…
+              </button>
+            ) : (
+              <div className="space-y-2">
+                <p className="text-[11px] text-dj-text-secondary">{confirmLabel(renameCount)}</p>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={applyRenames}
+                    disabled={busy}
+                    className="rounded-md border border-dj-border bg-dj-elevated px-3 py-1.5 text-xs font-medium text-dj-text transition hover:bg-dj-hover disabled:opacity-50"
+                  >
+                    {busy ? "Applying…" : "Apply"}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setConfirming(false)}
+                    disabled={busy}
+                    className="rounded-md px-3 py-1.5 text-xs text-dj-text-secondary transition hover:bg-dj-hover disabled:opacity-50"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {applyError && (
+          <p className="rounded-sm border border-dj-danger/30 bg-dj-danger/10 px-2 py-1.5 text-[11px] text-dj-danger">
+            Could not change the tags: {applyError}
+          </p>
+        )}
+
+        {applied && (
+          <div className="flex items-center justify-between gap-2 text-[11px] text-dj-text-secondary">
+            <span>{appliedLabel(applied.updated)}</span>
+            {applied.undoId && (
+              <button
+                type="button"
+                onClick={undoApply}
+                disabled={busy}
+                className="shrink-0 rounded-md border border-dj-border bg-dj-elevated px-2.5 py-1 text-xs text-dj-text-secondary transition hover:bg-dj-hover disabled:opacity-50"
+              >
+                Undo
+              </button>
+            )}
+          </div>
+        )}
+
+        {undoNote && <p className="text-[11px] text-dj-text-secondary">{undoNote}</p>}
 
         {report && report.prefixEdges.length > 0 && (
           <div>

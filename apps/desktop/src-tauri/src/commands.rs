@@ -22,7 +22,10 @@ use dj_assistant_core::patch::{
     check_metadata_undoable, tags_match, METADATA_SKILL_NAME, RATING_SKILL_NAME,
 };
 use dj_assistant_core::reveal::reveal_command;
-use dj_assistant_core::{cache_artwork, extract_metadata};
+use dj_assistant_core::tag_rewrite::{
+    plan_tag_rewrite, tag_rewrite_skill_run, validate_renames, TagRename,
+};
+use dj_assistant_core::{cache_artwork, extract_metadata, MAX_IN_CLAUSE_IDS};
 
 use crate::audio;
 use crate::db::Database;
@@ -35,10 +38,11 @@ use crate::models::{
     RemoveTracksRequest, RemoveTracksResponse, RemovedTrack, RestoreTracksRequest,
     RestoreTracksResponse, RevealInFileManagerRequest, ScanFolderRequest, ScanFolderResponse,
     SetTrackRatingRequest, SetTrackRatingResponse, SimilarTrackResult, StoreLink,
-    StoreLinksRequest, StoreLinksResponse, TagClusterRequest, TagHealthRequest, TagHealthResponse,
-    TagHealthTotals, TagPreviewRequest, TagPreviewTrack, TrackDetail, TrackGaps, TrackSummary,
-    UndoRemoveTracksRequest, UndoRemoveTracksResponse, UndoTrackMetadataRequest,
-    UndoTrackMetadataResponse, UpdateTrackMetadataRequest, UpdateTrackMetadataResponse,
+    StoreLinksRequest, StoreLinksResponse, TagApplyRequest, TagApplyResponse, TagClusterRequest,
+    TagHealthRequest, TagHealthResponse, TagHealthTotals, TagPreviewRequest, TagPreviewTrack,
+    TrackDetail, TrackGaps, TrackSummary, UndoRemoveTracksRequest, UndoRemoveTracksResponse,
+    UndoTrackMetadataRequest, UndoTrackMetadataResponse, UpdateTrackMetadataRequest,
+    UpdateTrackMetadataResponse,
 };
 use crate::scanner::run_scan;
 use crate::security::validate_and_canonicalize_dir;
@@ -1161,6 +1165,99 @@ pub async fn provider_status(
 // toolchain — the desktop crate's own test harness does not load on
 // `stable-x86_64-pc-windows-gnu`. This layer is the executor: it binds the
 // planned statements to a transaction and runs them.
+
+/// Applies the Tag Surgeon's confirmed spelling rewrites (T2.2.4).
+///
+/// `core` plans every change: which tracks carry a renamed spelling, and the
+/// tag set each one ends with. The rewrites and the `skill_runs` snapshot share
+/// one transaction, so a failure leaves the library as it was and a success
+/// always has an undo. Undo is [`undo_track_metadata`]: the snapshot is in the
+/// shape it restores, with the same guard, so a track edited again since the
+/// apply is skipped rather than overwritten.
+#[tauri::command]
+pub async fn tag_apply_renames(
+    db: State<'_, Arc<Mutex<Database>>>,
+    request: TagApplyRequest,
+) -> Result<TagApplyResponse, String> {
+    if request.track_ids.is_empty() || request.track_ids.iter().any(|id| id.trim().is_empty()) {
+        return Err("no tracks selected".to_string());
+    }
+    let renames: Vec<TagRename> = request
+        .renames
+        .iter()
+        .map(|rename| TagRename {
+            from: rename.from.clone(),
+            to: rename.to.clone(),
+        })
+        .collect();
+    let map = validate_renames(&renames)?;
+    let mut ids = request.track_ids.clone();
+    ids.sort();
+    ids.dedup();
+
+    let mut db_guard = db.lock().map_err(|e| e.to_string())?;
+    let tx = db_guard
+        .conn_mut()
+        .transaction()
+        .map_err(|e| e.to_string())?;
+
+    // The same vocabulary the scan reads, so the apply touches exactly what the
+    // preview counted: present tracks only, grouped by track.
+    let mut tracks: std::collections::BTreeMap<String, Vec<String>> =
+        std::collections::BTreeMap::new();
+    for chunk in ids.chunks(MAX_IN_CLAUSE_IDS) {
+        let read = tag_vocabulary_rows(Some(chunk)).map_err(|e| e.to_string())?;
+        let mut stmt = tx.prepare(&read.sql).map_err(|e| e.to_string())?;
+        let rows = stmt
+            .query_map(rusqlite::params_from_iter(read.params.iter()), |row| {
+                Ok((row.get::<_, String>(0)?, row.get::<_, String>(1)?))
+            })
+            .map_err(|e| e.to_string())?
+            .collect::<Result<Vec<_>, _>>()
+            .map_err(|e| e.to_string())?;
+        for (track_id, tag) in rows {
+            tracks.entry(track_id).or_default().push(tag);
+        }
+    }
+    let tracks: Vec<(String, Vec<String>)> = tracks.into_iter().collect();
+
+    let planned = plan_tag_rewrite(&tracks, &map);
+    if planned.is_empty() {
+        tx.commit().map_err(|e| e.to_string())?;
+        return Ok(TagApplyResponse {
+            undo_id: String::new(),
+            updated: 0,
+        });
+    }
+
+    let mut before = serde_json::Map::new();
+    let mut after = serde_json::Map::new();
+    for entry in &planned {
+        for statement in &entry.tag_statements {
+            execute_write(&tx, statement)?;
+        }
+        before.insert(
+            entry.track_id.clone(),
+            serde_json::Value::Object(entry.before.clone()),
+        );
+        after.insert(
+            entry.track_id.clone(),
+            serde_json::Value::Object(entry.after.clone()),
+        );
+    }
+
+    let undo_id = Uuid::new_v4().to_string();
+    let run = tag_rewrite_skill_run(&undo_id, &ids, &renames, before, after);
+    tx.execute(&run.sql, rusqlite::params_from_iter(run.params.iter()))
+        .map_err(|e| e.to_string())?;
+
+    tx.commit().map_err(|e| e.to_string())?;
+
+    Ok(TagApplyResponse {
+        undo_id,
+        updated: planned.len(),
+    })
+}
 
 /// Writes metadata to one or more tracks.
 ///

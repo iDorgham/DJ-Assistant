@@ -493,6 +493,27 @@ export interface TagPreviewTrack {
   tags: string[];
 }
 
+/** One confirmed spelling rewrite: every track carrying `from` gets `to`. */
+export interface TagRenameRequest {
+  from: string;
+  to: string;
+}
+
+/** Applies the Tag Surgeon's confirmed rewrites to the scanned tracks (T2.2.4). */
+export interface TagApplyRequest {
+  /** The scope the scan covered. An empty list is refused. */
+  trackIds: string[];
+  /** The spellings to rewrite, exactly as the preview showed them. */
+  renames: TagRenameRequest[];
+}
+
+export interface TagApplyResponse {
+  /** Id of the undo snapshot, or empty if no track changed. Undo with `undoTrackMetadata`. */
+  undoId: string;
+  /** Number of tracks whose tag set changed. */
+  updated: number;
+}
+
 export interface PrefixEdge {
   narrowerKey: string;
   narrowerLabel: string;

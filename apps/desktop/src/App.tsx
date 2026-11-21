@@ -4111,7 +4111,11 @@ export default function App() {
       )}
 
       {surgeonTrack && (
-        <TagSurgeonDialog trackIds={surgeonTrackIds} onClose={() => setSurgeonTrack(null)} />
+        <TagSurgeonDialog
+          trackIds={surgeonTrackIds}
+          onClose={() => setSurgeonTrack(null)}
+          onChanged={() => refreshLibrary("write")}
+        />
       )}
 
       {ui.playerMode !== "hidden" && (

@@ -11,6 +11,7 @@ import type {
   SpellingCluster,
   TagClusterReport,
   TagPreviewTrack,
+  TagRenameRequest,
 } from "@dj-assistant/shared";
 
 /** The scope subtitle: how many tracks the scan covered. */
@@ -92,6 +93,38 @@ export function sampleTitle(track: TagPreviewTrack): string {
  */
 export function sampleSpellings(track: TagPreviewTrack, canonical: string): string[] {
   return [...new Set(track.tags)].filter((tag) => tag !== canonical);
+}
+
+/**
+ * The renames a scan implies (T2.2.4): every spelling of a cluster other than
+ * its canonical one becomes the canonical one — exactly what the preview shows.
+ */
+export function renamesFor(report: TagClusterReport): TagRenameRequest[] {
+  return report.clusters.flatMap((cluster) =>
+    cluster.members
+      .filter((member) => member.raw !== cluster.canonical)
+      .map((member) => ({ from: member.raw, to: cluster.canonical }))
+  );
+}
+
+/** The confirm-step line naming how many spellings a rewrite replaces. */
+export function confirmLabel(renameCount: number): string {
+  return renameCount === 1
+    ? "1 spelling will be replaced in the tracks that carry it."
+    : `${renameCount} spellings will be replaced in the tracks that carry them.`;
+}
+
+/** The result line after a rewrite: how many tracks changed. */
+export function appliedLabel(updated: number): string {
+  return updated === 0
+    ? "Nothing to change — the tags already match."
+    : `Changed ${scopeLabel(updated)}. Undo is available until you close this dialog.`;
+}
+
+/** The result line after an undo: restored tracks, and any left alone. */
+export function undoneLabel(restored: number, skipped: number): string {
+  if (skipped === 0) return `Restored ${scopeLabel(restored)}.`;
+  return `Restored ${scopeLabel(restored)}; ${skipped} edited since the change, left as they are.`;
 }
 
 /**

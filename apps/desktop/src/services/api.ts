@@ -34,6 +34,8 @@ import type {
   FindSimilarTracksResponse,
   TagClusterRequest,
   TagClusterReport,
+  TagApplyRequest,
+  TagApplyResponse,
   TagPreviewRequest,
   TagPreviewTrack,
   TagHealthRequest,
@@ -370,6 +372,17 @@ export async function tagPreviewTracks(req: TagPreviewRequest): Promise<TagPrevi
   if (!isTauri || req.trackIds.length === 0) return [];
   const { invoke } = await import("@tauri-apps/api/core");
   return invoke<TagPreviewTrack[]>("tag_preview_tracks", { request: req });
+}
+
+/**
+ * Applies the Tag Surgeon's confirmed spelling rewrites (T2.2.4). Reverted with
+ * `undoTrackMetadata` using the returned `undoId`. Unlike the read-only calls,
+ * a browser tab cannot apply a write, so it refuses rather than pretending.
+ */
+export async function tagApplyRenames(req: TagApplyRequest): Promise<TagApplyResponse> {
+  if (!isTauri) throw new Error("Applying tag changes needs the desktop app.");
+  const { invoke } = await import("@tauri-apps/api/core");
+  return invoke<TagApplyResponse>("tag_apply_renames", { request: req });
 }
 
 /**

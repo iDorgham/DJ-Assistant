@@ -59,13 +59,21 @@ pub const METADATA_SKILL_NAME: &str = "update_track_metadata";
 /// The `skill_runs.skill_name` a star-rating write records.
 pub const RATING_SKILL_NAME: &str = "set_track_rating";
 
+/// The `skill_runs.skill_name` a Tag Surgeon apply records (T2.2.4). Its
+/// snapshot holds only `tags`, so the metadata undo restores tag sets.
+pub const TAG_REWRITE_SKILL_NAME: &str = "tag_surgeon_apply";
+
 /// Every write path whose snapshot [`check_metadata_undoable`] accepts.
 ///
 /// The name is the only thing telling an undo which columns its snapshot
 /// describes. Every `skill_runs` row shares one table, so an undo id from
 /// another path can reach this command; [`crate::library_remove`] holds the
 /// remove's own name and guard.
-pub const METADATA_SKILL_NAMES: [&str; 2] = [METADATA_SKILL_NAME, RATING_SKILL_NAME];
+pub const METADATA_SKILL_NAMES: [&str; 3] = [
+    METADATA_SKILL_NAME,
+    RATING_SKILL_NAME,
+    TAG_REWRITE_SKILL_NAME,
+];
 
 /// Guards the metadata undo against a snapshot it has no business restoring.
 ///
@@ -114,7 +122,7 @@ pub fn tags_match(current: &[String], expected: &[String]) -> bool {
 mod tests {
     use super::{
         check_metadata_undoable, number_value, tags_match, text_value, METADATA_SKILL_NAME,
-        METADATA_SKILL_NAMES, PATCH_COLUMNS, RATING_SKILL_NAME,
+        METADATA_SKILL_NAMES, PATCH_COLUMNS, RATING_SKILL_NAME, TAG_REWRITE_SKILL_NAME,
     };
     use crate::library_remove::{REMOVE_SKILL_NAME, RESTORE_SKILL_NAME};
 
@@ -206,7 +214,11 @@ mod tests {
         assert_eq!(RATING_SKILL_NAME, "set_track_rating");
         assert_eq!(
             METADATA_SKILL_NAMES,
-            [METADATA_SKILL_NAME, RATING_SKILL_NAME]
+            [
+                METADATA_SKILL_NAME,
+                RATING_SKILL_NAME,
+                TAG_REWRITE_SKILL_NAME
+            ]
         );
     }
 

@@ -9,7 +9,9 @@ import type {
 } from "@dj-assistant/shared";
 
 import {
+  appliedLabel,
   clusterHeading,
+  confirmLabel,
   edgeLabel,
   emptyReportMessage,
   hasFindings,
@@ -17,10 +19,12 @@ import {
   memberLabel,
   moreAffectedNote,
   previewSampleIds,
+  renamesFor,
   rewriteLabel,
   sampleSpellings,
   sampleTitle,
   scopeLabel,
+  undoneLabel,
 } from "./tag-surgeon.ts";
 
 const cluster: SpellingCluster = {
@@ -132,4 +136,26 @@ test("a sample lists its title, artist and only the spellings a rewrite would ch
   // The canonical spelling stays off the list; a whitespace-only variant is
   // a real change, so it stays on, and a repeated tag is shown once.
   assert.deepEqual(sampleSpellings(track, "Melodic House"), ["melodic house "]);
+});
+
+test("a scan's renames map every non-canonical spelling onto the canonical one", () => {
+  const report: TagClusterReport = { ...emptyReport, clusters: [cluster] };
+  // The cluster's members are "Melodic House" (canonical) and "melodic house ".
+  assert.deepEqual(renamesFor(report), [{ from: "melodic house ", to: "Melodic House" }]);
+  assert.deepEqual(renamesFor(emptyReport), []);
+});
+
+test("the apply lines say how many spellings change and how many tracks did", () => {
+  assert.equal(confirmLabel(1), "1 spelling will be replaced in the tracks that carry it.");
+  assert.equal(confirmLabel(3), "3 spellings will be replaced in the tracks that carry them.");
+  assert.equal(appliedLabel(0), "Nothing to change — the tags already match.");
+  assert.equal(appliedLabel(4), "Changed 4 tracks. Undo is available until you close this dialog.");
+});
+
+test("the undo line reports tracks left alone when they were edited since", () => {
+  assert.equal(undoneLabel(1, 0), "Restored 1 track.");
+  assert.equal(
+    undoneLabel(2, 1),
+    "Restored 2 tracks; 1 edited since the change, left as they are."
+  );
 });

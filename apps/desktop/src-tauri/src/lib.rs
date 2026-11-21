@@ -91,6 +91,7 @@ pub fn run() {
             commands::track_tag_health,
             commands::tag_cluster,
             commands::tag_preview_tracks,
+            commands::tag_apply_renames,
             commands::store_links_for_track,
             commands::provider_status,
             commands::update_track_metadata,
