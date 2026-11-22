@@ -1,7 +1,12 @@
 import { useEffect, useRef, useState } from "react";
 import { X } from "lucide-react";
 
-import type { TagAlias, TagClusterReport, TagPreviewTrack } from "@dj-assistant/shared";
+import type {
+  TagAlias,
+  TagClusterReport,
+  TagHistoryEntry,
+  TagPreviewTrack,
+} from "@dj-assistant/shared";
 
 import { ModalShell } from "./ModalShell";
 import {
@@ -10,6 +15,7 @@ import {
   removeTagAlias,
   tagApplyRenames,
   tagCluster,
+  tagHistory,
   tagPreviewTracks,
   undoTrackMetadata,
 } from "../services/api";
@@ -21,6 +27,9 @@ import {
   edgeLabel,
   emptyReportMessage,
   hasFindings,
+  historyRenamesLabel,
+  historyStatusLabel,
+  historyTimeLabel,
   ignoredTagsNote,
   memberLabel,
   moreAffectedNote,
@@ -39,8 +48,9 @@ import {
  * advisory whole-word prefix relations, and the confirmed apply (T2.2.4).
  *
  * Applying is two steps: the cluster list names what will change, then a
- * confirm step applies exactly those spellings. The result keeps an undo
- * until the dialog closes; undo is the metadata undo, so a track edited again
+ * confirm step applies exactly those spellings. The result offers an undo
+ * right away, and every past apply stays listed under History (T2.2.6) with
+ * its own undo. Undo is the metadata undo either way, so a track edited again
  * since the apply is left as it is. Prefix relations stay advisory and are
  * never applied.
  *
@@ -80,6 +90,25 @@ export function TagSurgeonDialog({ trackIds, onClose, onChanged }: TagSurgeonDia
   const [canonicalDraft, setCanonicalDraft] = useState("");
   const [aliasBusy, setAliasBusy] = useState(false);
   const [aliasError, setAliasError] = useState<string | null>(null);
+  const [history, setHistory] = useState<TagHistoryEntry[] | null>(null);
+  const [historyError, setHistoryError] = useState<string | null>(null);
+  // Bumped after any write, so the history list re-reads the snapshots.
+  const [historyRevision, setHistoryRevision] = useState(0);
+
+  useEffect(() => {
+    let cancelled = false;
+    setHistoryError(null);
+    tagHistory()
+      .then((entries) => {
+        if (!cancelled) setHistory(entries);
+      })
+      .catch((cause: unknown) => {
+        if (!cancelled) setHistoryError(cause instanceof Error ? cause.message : String(cause));
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [historyRevision]);
 
   useEffect(() => {
     let cancelled = false;
@@ -147,6 +176,7 @@ export function TagSurgeonDialog({ trackIds, onClose, onChanged }: TagSurgeonDia
       setConfirming(false);
       onChanged?.();
       setScanRevision((revision) => revision + 1);
+      setHistoryRevision((revision) => revision + 1);
     } catch (cause) {
       setApplyError(cause instanceof Error ? cause.message : String(cause));
     } finally {
@@ -154,16 +184,20 @@ export function TagSurgeonDialog({ trackIds, onClose, onChanged }: TagSurgeonDia
     }
   }
 
-  async function undoApply() {
-    if (!applied?.undoId || busy) return;
+  // One undo for both places it is offered: the latest apply's result line and
+  // a History row. Undoing the latest apply from History clears its result
+  // line too, so the same snapshot is never offered twice.
+  async function undoChange(undoId: string) {
+    if (!undoId || busy) return;
     setBusy(true);
     setApplyError(null);
     try {
-      const result = await undoTrackMetadata({ undoId: applied.undoId });
-      setApplied(null);
+      const result = await undoTrackMetadata({ undoId });
+      setApplied((current) => (current?.undoId === undoId ? null : current));
       setUndoNote(undoneLabel(result.restored, result.skipped));
       onChanged?.();
       setScanRevision((revision) => revision + 1);
+      setHistoryRevision((revision) => revision + 1);
     } catch (cause) {
       setApplyError(cause instanceof Error ? cause.message : String(cause));
     } finally {
@@ -329,6 +363,49 @@ export function TagSurgeonDialog({ trackIds, onClose, onChanged }: TagSurgeonDia
     </li>
   );
 
+  const renderHistoryRow = (entry: TagHistoryEntry) => (
+    <li key={entry.undoId} className="flex items-start justify-between gap-2 text-[11px]">
+      <div className="min-w-0">
+        <p className="text-dj-text-secondary break-words">{historyRenamesLabel(entry.renames)}</p>
+        <p className="text-dj-text-muted">
+          {historyTimeLabel(entry.createdAt)} · {historyStatusLabel(entry)}
+        </p>
+      </div>
+      {!entry.undone && (
+        <button
+          type="button"
+          onClick={() => undoChange(entry.undoId)}
+          disabled={busy}
+          className="shrink-0 rounded-md border border-dj-border bg-dj-elevated px-2 py-0.5 text-[11px] text-dj-text-secondary transition hover:bg-dj-hover disabled:opacity-50"
+        >
+          Undo
+        </button>
+      )}
+    </li>
+  );
+
+  const historyBlock = (
+    <div className="border-t border-dj-border pt-2">
+      <p className="text-[11px] font-semibold uppercase tracking-wider text-dj-text-muted">
+        History
+      </p>
+      <p className="mt-0.5 text-[11px] text-dj-text-muted">
+        Past spelling changes, newest first. Undo leaves any track edited since as it is.
+      </p>
+      {history && history.length === 0 && (
+        <p className="mt-1 text-[11px] text-dj-text-muted">No spelling changes yet.</p>
+      )}
+      {history && history.length > 0 && (
+        <ul className="mt-1 space-y-1.5">{history.map((entry) => renderHistoryRow(entry))}</ul>
+      )}
+      {historyError && (
+        <p className="mt-1.5 rounded-sm border border-dj-danger/30 bg-dj-danger/10 px-2 py-1.5 text-[11px] text-dj-danger">
+          Could not load the history: {historyError}
+        </p>
+      )}
+    </div>
+  );
+
   const aliasesBlock = (
     <div className="border-t border-dj-border pt-2">
       <p className="text-[11px] font-semibold uppercase tracking-wider text-dj-text-muted">
@@ -433,7 +510,7 @@ export function TagSurgeonDialog({ trackIds, onClose, onChanged }: TagSurgeonDia
             {applied.undoId && (
               <button
                 type="button"
-                onClick={undoApply}
+                onClick={() => undoChange(applied.undoId)}
                 disabled={busy}
                 className="shrink-0 rounded-md border border-dj-border bg-dj-elevated px-2.5 py-1 text-xs text-dj-text-secondary transition hover:bg-dj-hover disabled:opacity-50"
               >
@@ -446,6 +523,8 @@ export function TagSurgeonDialog({ trackIds, onClose, onChanged }: TagSurgeonDia
         {undoNote && <p className="text-[11px] text-dj-text-secondary">{undoNote}</p>}
 
         {report && report.prefixEdges.length > 0 && renderPrefixBlock(report.prefixEdges)}
+
+        {historyBlock}
 
         {aliasesBlock}
 

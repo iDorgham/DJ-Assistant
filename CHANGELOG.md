@@ -9,6 +9,12 @@ project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- **Tag Surgeon history (T2.2.6)** — the Tag Surgeon dialog gains a History section:
+  the latest 50 spelling applies, newest first, with their renames, time and changed-track
+  count, and an Undo on each one not yet undone. Backed by the read-only `tag_history`
+  command over the existing `skill_runs` snapshots, so undo keeps the metadata-undo guard
+  (a track edited since the apply is left as it is). No migration. Running-window QA pending.
+
 - **Slices 4–8: artwork hover-play, mix suggestions dock, library source tabs,
   peaks cache and native audio (T2.1.9 / T2.1.11 / T2.1.12 / T2.4, PR #80)** — merged
   2026-11-16 (`65ca59ad`): hover-play overlay on the artwork column; a resizable

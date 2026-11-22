@@ -36,6 +36,7 @@ import type {
   TagClusterReport,
   TagApplyRequest,
   TagApplyResponse,
+  TagHistoryEntry,
   TagAlias,
   AddTagAliasRequest,
   RemoveTagAliasRequest,
@@ -388,6 +389,16 @@ export async function tagApplyRenames(req: TagApplyRequest): Promise<TagApplyRes
   if (!isTauri) throw new Error("Applying tag changes needs the desktop app.");
   const { invoke } = await import("@tauri-apps/api/core");
   return invoke<TagApplyResponse>("tag_apply_renames", { request: req });
+}
+
+/**
+ * The Tag Surgeon's past applies, newest first (T2.2.6). Undo an entry with
+ * `undoTrackMetadata` and its `undoId`. A browser tab has no history to show.
+ */
+export async function tagHistory(): Promise<TagHistoryEntry[]> {
+  if (!isTauri) return [];
+  const { invoke } = await import("@tauri-apps/api/core");
+  return invoke<TagHistoryEntry[]>("tag_history");
 }
 
 /** The stored tag aliases (T2.2.5). A browser tab has none to show. */
