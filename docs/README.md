@@ -1,165 +1,144 @@
 # DJ Assistant — Documentation
 
-Central index for all project documentation. Documents are grouped by category;
-each folder below is self-contained and cross-links to its neighbours.
+Every project document lives in one of the folders below. Each folder answers one
+question; if a new document fits two folders, it belongs in the one that owns the
+**question it answers**.
 
-> New here? Read the [repository README](../README.md) first, then the
-> [Canonical Documentation](./product/CANONICAL_DOCUMENTATION.md) (source of truth),
-> and set up your environment with the [Development Guide](./engineering/DEVELOPMENT.md).
-
----
-
-## Categories
-
-| Folder | What lives here | Start with |
-|--------|-----------------|------------|
-| [`product/`](./product/) | Vision, canonical spec, glossary, milestone sign-off | [Canonical Documentation](./product/CANONICAL_DOCUMENTATION.md) |
-| [`plan/`](./plan/) | Approved v1 product, UX, data, sync, backup and delivery plan; 52 locked decisions and the discussion log | [Plan README](./plan/README.md) |
-| [`architecture/`](./architecture/) | System design, data model, contracts, models, skills | [Architecture](./architecture/ARCHITECTURE.md) |
-| [`engineering/`](./engineering/) | Setup, standards, testing, security, build, task list | [Development Guide](./engineering/DEVELOPMENT.md) |
-| [`devops/`](./devops/) | CI/CD plans, pipeline security, AI automation, workflow templates | [DevOps & CI/CD Plan](./devops/DEVOPS_CICD_PLAN.md) |
-| [`sdd/`](./sdd/) | Specification-Driven Development set (spec → design → plan → tasks → acceptance) | [SDD Overview](./sdd/README.md) |
-| [`diagrams/`](./diagrams/) | Mermaid diagrams for architecture, pipelines, phases, skills, data | [Entire Project Overview](./diagrams/00-ENTIRE-PROJECT-OVERVIEW.md) |
-| [`ui/`](./ui/) | Current UI specification: design system, shell, views, player, settings, dialogs, accessibility | [UI Specification](./ui/README.md) |
-| [`ui-ux/`](./ui-ux/) | Earlier Phase 0 UI docs (superseded where they conflict); deprecated player/layout spec archived under `ui-ux/archive/` | [UI/UX Index](./ui-ux/README.md) |
-| [`ADR/`](./ADR/) | Architecture Decision Records (the "why") | [ADR Index](./ADR/README.md) |
-| [`audit/`](./audit/) | Spec/function/settings audits + TA.1–TA.14 tracking | [Audit summary](./audit/AUDIT-SUMMARY.md) |
-| [`context/`](./context/) | Single-file project digest for humans + AI agents | [Project Context](./context/PROJECT_CONTEXT.md) |
-| [`enhancements/`](./enhancements/) | Optional extensions — MCP server audit, integration plan, recommended MCP config | [MCP & Plugin Enhancement Plan](./enhancements/mcb-plugin-enhancement-plan.md) |
-| [`ai/`](./ai/) | Agent skills inventory, skill routing policy, shared AI memory layers, agent communication protocol, and the agents, commands, and scripts that automate them | [Agents & Automation](./ai/AGENTS.md) · [Communication](./ai/COMMUNICATION.md) · [Memory](./ai/MEMORY.md) · [Skills](./ai/SKILLS.md) |
-| [`evidence/`](./evidence/) | Acceptance evidence (screenshots, captured runs) | [Phase 0 evidence](./engineering/PHASE0_ACCEPTANCE_EVIDENCE.md) |
-| [`approvals/`](./approvals/) | Screenshot-based UI implementation reviews captured from the running app | [UI review 2026-10-19](./approvals/ui-2026-10-19/README.md) |
+> **New here?** Read the [repository README](../README.md), then the
+> [canonical documentation](product/CANONICAL_DOCUMENTATION.md) (source of truth for
+> the product), then set up with the [development guide](engineering/DEVELOPMENT.md).
+> AI agents start at [`AGENTS.md`](../AGENTS.md).
 
 ---
 
-## Product — [`product/`](./product/)
+## Map
 
-| Document | Purpose |
-|----------|---------|
-| [CANONICAL_DOCUMENTATION.md](./product/CANONICAL_DOCUMENTATION.md) | Master product + technical specification (single source of truth) |
-| [PRODUCT_BRIEF.md](./product/PRODUCT_BRIEF.md) | Vision, target user, scope, non-goals |
-| [PO_MILESTONE_CHECKLIST.md](./product/PO_MILESTONE_CHECKLIST.md) | Product-owner milestone sign-off gates |
-| [GLOSSARY.md](./product/GLOSSARY.md) | Product & technical terminology |
+```text
+docs/
+├── product/       WHAT and WHY     canonical spec, brief, vision, IA, glossary, project context
+├── specs/         HOW IT BEHAVES   feature specs: experience, player, data & sync, integrations, features
+├── ui-ux/         HOW IT LOOKS     design system, shell, views, player, components, a11y, guidelines
+├── architecture/  HOW IT'S BUILT   system design, data model, IPC/HTTP contracts, models, skills
+├── adr/           WHY IT'S BUILT SO  architecture decision records
+├── sdd/           THE METHOD SET   spec → design → phases → TASKS → acceptance
+├── plans/         IN WHAT ORDER    v1 plan (Stages 0–12), feature plans, archive
+├── tasks/         WHO DOES WHAT    how tasks are tracked (the tracker is sdd/04-TASKS.md)
+├── audits/        WHAT WE FOUND    dated audits + screenshot evidence
+├── qa/            DID IT WORK      manual checklists, QA evidence, screenshot approvals
+├── diagrams/      PICTURES         Mermaid diagrams 00–18
+├── engineering/   HOW TO WORK      setup, standards, testing, security, Windows build
+├── devops/        HOW IT SHIPS     CI/CD, pipeline security, workflow templates
+├── ai/            AI TOOLING       agents, shared memory, skills routing, MCP
+└── prompts/       REUSABLE PROMPTS for recurring AI-driven reviews
+```
 
-## Approved v1 plan — [`plan/`](./plan/)
+## Sources of truth
 
-The plan is the approved v1 scope and delivery order. It is not a replacement
-for the canonical product spec or the shipped UI token set; where they disagree,
-record the conflict and decide it explicitly.
+When documents disagree, this order decides:
 
-| Document | Purpose |
-|----------|---------|
-| [README.md](./plan/README.md) | Product shape, 52 locked decisions, plan map and current state |
-| [01-product/information-architecture.md](./plan/01-product/information-architecture.md) | Six-tab IA, persistent chrome, routes and cross-navigation |
-| [02-experience/](./plan/02-experience/) | Library, Maintain, Playlists, Discover, Statistics, Publish, Settings and the shared Track panel |
-| [03-player/](./plan/03-player/) | One player engine, EQ8, cues, playlist save/recovery, accessibility |
-| [04-data-and-sync/](./plan/04-data-and-sync/) | Import, data model, source-of-truth sync, backup and restore |
-| [05-design-system/](./plan/05-design-system/) | UI/UX rules and copy/microcopy |
-| [06-delivery/implementation-slices.md](./plan/06-delivery/implementation-slices.md) | Stage 0–12 build order and gates |
-| [06-delivery/discussions.md](./plan/06-delivery/discussions.md) | Decision rationale, rejected alternatives, UI/UX changes and open items |
-| [06-delivery/open-questions.md](./plan/06-delivery/open-questions.md) | Decision register and remaining non-blocking questions |
-
-## Architecture — [`architecture/`](./architecture/)
-
-| Document | Purpose |
-|----------|---------|
-| [ARCHITECTURE.md](./architecture/ARCHITECTURE.md) | Components, data flows, boundaries |
-| [DATA_MODEL.md](./architecture/DATA_MODEL.md) | Local SQLite + cloud PostgreSQL schemas |
-| [API_CONTRACTS.md](./architecture/API_CONTRACTS.md) | Tauri IPC + cloud HTTP contracts |
-| [MODELS.md](./architecture/MODELS.md) | ONNX analysis models, packaging, versioning |
-| [SKILLS_SYSTEM.md](./architecture/SKILLS_SYSTEM.md) | Scoped automation skills design |
-
-## Engineering — [`engineering/`](./engineering/)
-
-| Document | Purpose |
-|----------|---------|
-| [DEVELOPMENT.md](./engineering/DEVELOPMENT.md) | Local setup, tooling, workflows |
-| [CODING_STANDARDS.md](./engineering/CODING_STANDARDS.md) | Style, conventions, PR rules |
-| [TESTING_AND_SECURITY.md](./engineering/TESTING_AND_SECURITY.md) | Test pyramid, security gates, PR checklist |
-| [SECURITY_AND_PRIVACY.md](./engineering/SECURITY_AND_PRIVACY.md) | Threat model, data handling, local-first guarantees |
-| [WINDOWS_NATIVE_BUILD_RUNBOOK.md](./engineering/WINDOWS_NATIVE_BUILD_RUNBOOK.md) | Windows MSVC/GNU build troubleshooting |
-| [DEVELOPMENT_TASK_LIST.md](./engineering/DEVELOPMENT_TASK_LIST.md) | Phased actionable engineering checklist |
-| [PHASE0_ACCEPTANCE_EVIDENCE.md](./engineering/PHASE0_ACCEPTANCE_EVIDENCE.md) | How each Phase 0 criterion was verified |
-
-## DevOps & Process — [`devops/`](./devops/)
-
-| Document | Purpose |
-|----------|---------|
-| [AI_DEVELOPMENT_AUTOMATION_PLAN.md](./devops/AI_DEVELOPMENT_AUTOMATION_PLAN.md) | AI-driven branch → PR → review → fix → merge loop |
-| [DEVOPS_CICD_PLAN.md](./devops/DEVOPS_CICD_PLAN.md) | Pipelines, environments, release, caching, rollout |
-| [CI_CD_PIPELINE_SECURITY.md](./devops/CI_CD_PIPELINE_SECURITY.md) | Actions pinning, secrets, fork safety, supply chain |
-| [github-workflows/](./devops/github-workflows/README.md) | Workflow templates (PR CI, main CI, release, audit, CodeQL) |
-
-## Spec-Driven Development — [`sdd/`](./sdd/)
-
-| # | Document | Purpose |
-|---|----------|---------|
-| 00 | [Overview](./sdd/README.md) | Method overview & navigation |
-| 01 | [Specification](./sdd/01-SPECIFICATION.md) | What we are building (slim MVP; P1 = USB/B2B/Skills + S/F) |
-| 02 | [System Design](./sdd/02-SYSTEM-DESIGN.md) | How it is structured |
-| 03 | [Phases & Plan](./sdd/03-PHASES-AND-PLAN.md) | When and in what order |
-| 04 | [Task Breakdown](./sdd/04-TASKS.md) | Concrete engineering tasks (incl. audit-driven `TA.1–TA.14`) |
-| 05 | [Acceptance Criteria](./sdd/05-ACCEPTANCE.md) | How we know it is done (golden fixtures, contract/settings gates) |
-
-## Audit — [`audit/`](./audit/)
-
-| Document | Purpose |
-|----------|---------|
-| [AUDIT-SUMMARY.md](./audit/AUDIT-SUMMARY.md) | Combined pros/cons/fixes/proposals |
-| [01-specs-audit.md](./audit/01-specs-audit.md) | Plan specs review |
-| [02-functions-audit.md](./audit/02-functions-audit.md) | Functions/features review |
-| [03-settings-audit.md](./audit/03-settings-audit.md) | Settings/config review |
-| [04-improvements.md](./audit/04-improvements.md) | Prioritized fixes (TA.1–TA.14) |
-| [05-proposed-specs-functions.md](./audit/05-proposed-specs-functions.md) | New settings S-1–S-7, functions F-1–F-10 / X-1–X-6 |
-
-## Enhancements — [`enhancements/`](./enhancements/)
-
-Optional, opt-in extensions to the agent layer. Nothing in this folder is active by
-default: the recommended MCP config ships disabled and is enabled one server at a
-time, after the audit and plan are read.
-
-| Document | Purpose |
-|----------|---------|
-| [mcb-plugin-audit.md](./enhancements/mcb-plugin-audit.md) | Audit of MCP servers, OpenCode plugins and skills — current state, gaps, candidate matrix, findings |
-| [mcb-plugin-enhancement-plan.md](./enhancements/mcb-plugin-enhancement-plan.md) | Integration plan: decision table, safety model, testing, rollback, sequencing |
-| [mcp.recommended.jsonc](./enhancements/mcp.recommended.jsonc) | Commented MCP config template — copy to `opencode.json`, flip `enabled` per server |
-
-## Diagrams — [`diagrams/`](./diagrams/)
-
-See the [diagram index](./diagrams/README.md) for the full set (00–17).
-
-## UI/UX — [`ui/`](./ui/) and [`ui-ux/`](./ui-ux/)
-
-The 2026-10-19 specification in [`ui/`](./ui/README.md) is the current source for design tokens, the shell, views, and the player. The [`ui-ux/`](./ui-ux/) set is the earlier Phase 0 design documentation; its design system is superseded by [`ui/01-DESIGN-SYSTEM.md`](./ui/01-DESIGN-SYSTEM.md). Deprecated specifications are archived under [`ui-ux/archive/`](./ui-ux/archive/), and nothing in `ui-ux/` overrides `ui/`.
-
-| Document | Purpose |
-|----------|---------|
-| [ui/README.md](./ui/README.md) | Current UI spec index and document map |
-| [ui/01-DESIGN-SYSTEM.md](./ui/01-DESIGN-SYSTEM.md) | Design tokens (current) |
-| [ui/02-SHELL-AND-NAVIGATION.md](./ui/02-SHELL-AND-NAVIGATION.md) | Shell, navigation, workspaces |
-| [ui/06-PLAYER.md](./ui/06-PLAYER.md) | Player modes, waveform, cues, grid |
-| [ui/11-IMPLEMENTATION-CHECKLIST.md](./ui/11-IMPLEMENTATION-CHECKLIST.md) | Build order and acceptance gate |
-
-Earlier set — [`ui-ux/`](./ui-ux/):
-
-| Document | Purpose |
-|----------|---------|
-| [README.md](./ui-ux/README.md) | UI/UX index, current status, and the five things to remember |
-| [UX_PRINCIPLES.md](./ui-ux/UX_PRINCIPLES.md) | Personas, the prep loop, design principles, IA, interaction patterns, voice |
-| [DESIGN_SYSTEM.md](./ui-ux/DESIGN_SYSTEM.md) | Colour, typography, spacing, motion, and the component inventory |
-| [SCREENS_AND_FLOWS.md](./ui-ux/SCREENS_AND_FLOWS.md) | Screen inventory, wireframes, and end-to-end flows per phase |
-| ~~wireframes/~~ | Removed 2026-10-19 — wireframes live in [`ui/12-WIREFRAMES-AND-FLEXIBILITY.md`](./ui/12-WIREFRAMES-AND-FLEXIBILITY.md) |
-| [ACCESSIBILITY.md](./ui-ux/ACCESSIBILITY.md) | WCAG targets, contrast findings, keyboard model, motion, test checklist |
-| [archive/PLAYER_AND_LAYOUT_SPEC_2026-10-19.md](./ui-ux/archive/PLAYER_AND_LAYOUT_SPEC_2026-10-19.md) | Archived: historical v1.7 app shell / player / layout proposal |
-
-## Decisions — [`ADR/`](./ADR/)
-
-Architecture Decision Records. See the [ADR index](./ADR/README.md).
-
-## Evidence — [`evidence/`](./evidence/)
-
-Captured acceptance evidence, grouped by phase (e.g. [`evidence/phase0/`](./evidence/phase0/)). The [Phase 0 evidence index](./evidence/phase0/README.md) lists the captured runs, and [UI review 2026-10-19](./approvals/ui-2026-10-19/README.md) records the screenshot-based implementation approval pass against the running app.
+| Question | Authority |
+|----------|-----------|
+| What the product is | [product/CANONICAL_DOCUMENTATION.md](product/CANONICAL_DOCUMENTATION.md) |
+| Navigation and IA (locked) | [product/information-architecture.md](product/information-architecture.md) |
+| UI rules | [ui-ux/guidelines/ui-ux-guidelines.md](ui-ux/guidelines/ui-ux-guidelines.md), then [ui-ux/01-DESIGN-SYSTEM.md](ui-ux/01-DESIGN-SYSTEM.md) for tokens and components |
+| Delivery order | [plans/v1/implementation-slices.md](plans/v1/implementation-slices.md) |
+| Task status | [sdd/04-TASKS.md](sdd/04-TASKS.md) (the only tracker) |
+| Done-ness | [sdd/05-ACCEPTANCE.md](sdd/05-ACCEPTANCE.md) + evidence in [qa/evidence/](qa/evidence/) |
+| Why a technical choice was made | [adr/](adr/README.md) |
+| Current progress snapshot | [ai/memory/state.md](ai/memory/state.md) · [product/PROJECT_CONTEXT.md](product/PROJECT_CONTEXT.md) |
 
 ---
 
-*Product requirements live in the [Canonical Documentation](./product/CANONICAL_DOCUMENTATION.md); this folder is the engineering home for how we build them.*
+## Folders
+
+### [`product/`](product/) — what and why
+
+| Document | Purpose |
+|----------|---------|
+| [CANONICAL_DOCUMENTATION.md](product/CANONICAL_DOCUMENTATION.md) | Master product + technical specification |
+| [PRODUCT_BRIEF.md](product/PRODUCT_BRIEF.md) | Vision, target user, scope, non-goals |
+| [vision-and-principles.md](product/vision-and-principles.md) | v1 product vision and principles |
+| [information-architecture.md](product/information-architecture.md) | Six-tab IA, persistent chrome, routes (locked) |
+| [lifecycle-and-vocabulary.md](product/lifecycle-and-vocabulary.md) · [onboarding.md](product/onboarding.md) | Track lifecycle, vocabulary, first run |
+| [GLOSSARY.md](product/GLOSSARY.md) | Terminology |
+| [PO_MILESTONE_CHECKLIST.md](product/PO_MILESTONE_CHECKLIST.md) | Product-owner sign-off gates |
+| [PROJECT_CONTEXT.md](product/PROJECT_CONTEXT.md) | Single-file digest of the whole project |
+
+### [`specs/`](specs/README.md) — how features behave
+
+[experience/](specs/experience/) (every tab and workspace) ·
+[player/](specs/player/) · [data-and-sync/](specs/data-and-sync/) ·
+[integrations/](specs/integrations/api-access-guide.md) · [features/](specs/features/) (dated feature designs).
+
+### [`ui-ux/`](ui-ux/README.md) — how it looks
+
+Numbered spec `00`–`14` (design system, shell, library, player, settings, dialogs,
+components, accessibility, checklist, wireframes, table upgrades),
+[guidelines/](ui-ux/guidelines/), [wireframes/](ui-ux/wireframes/README.md),
+[reference/](ui-ux/reference/) and [archive/](ui-ux/archive/). Precedence is in the
+[UI README](ui-ux/README.md#folder-layout-and-precedence).
+
+### [`architecture/`](architecture/ARCHITECTURE.md) and [`adr/`](adr/README.md)
+
+[ARCHITECTURE](architecture/ARCHITECTURE.md) · [DATA_MODEL](architecture/DATA_MODEL.md) ·
+[API_CONTRACTS](architecture/API_CONTRACTS.md) · [MODELS](architecture/MODELS.md) ·
+[SKILLS_SYSTEM](architecture/SKILLS_SYSTEM.md) · ADRs 0001–0007.
+
+### [`sdd/`](sdd/README.md) — specification-driven development
+
+[01 Specification](sdd/01-SPECIFICATION.md) · [02 System design](sdd/02-SYSTEM-DESIGN.md) ·
+[03 Phases](sdd/03-PHASES-AND-PLAN.md) (framing; order follows the v1 stages) ·
+[04 Tasks](sdd/04-TASKS.md) (**the tracker**) · [05 Acceptance](sdd/05-ACCEPTANCE.md).
+
+### [`plans/`](plans/README.md) — delivery
+
+[v1 plan](plans/v1/README.md) (D-001–D-052, Stages 0–12) ·
+[Phase 2 Library + Player](plans/phase2-library-player.md) ·
+[UI simplification 2026-11](plans/ui-simplification-2026-11.md) · [archive/](plans/archive/).
+The [plans index](plans/README.md) says which plan governs and maps Stages to task IDs.
+
+### [`tasks/`](tasks/README.md), [`audits/`](audits/README.md), [`qa/`](qa/README.md)
+
+- Tasks: ID scheme and where work is listed; tracker is [sdd/04-TASKS.md](sdd/04-TASKS.md).
+- Audits: latest are the [UI/UX audit](audits/2026-11-22-ui-ux-audit.md) and the
+  [docs and plans audit](audits/2026-11-22-docs-and-plans-audit.md).
+- QA: [checklists](qa/checklists/), [evidence](qa/evidence/), [approvals](qa/approvals/).
+
+### [`engineering/`](engineering/DEVELOPMENT.md), [`devops/`](devops/DEVOPS_CICD_PLAN.md), [`diagrams/`](diagrams/README.md)
+
+- Engineering: [DEVELOPMENT](engineering/DEVELOPMENT.md) · [CODING_STANDARDS](engineering/CODING_STANDARDS.md) ·
+  [TESTING_AND_SECURITY](engineering/TESTING_AND_SECURITY.md) · [SECURITY_AND_PRIVACY](engineering/SECURITY_AND_PRIVACY.md) ·
+  [WINDOWS_NATIVE_BUILD_RUNBOOK](engineering/WINDOWS_NATIVE_BUILD_RUNBOOK.md).
+- DevOps: [CI/CD plan](devops/DEVOPS_CICD_PLAN.md) · [pipeline security](devops/CI_CD_PIPELINE_SECURITY.md) ·
+  [AI dev automation](devops/AI_DEVELOPMENT_AUTOMATION_PLAN.md) · [workflow templates](devops/github-workflows/README.md).
+- Diagrams: [index](diagrams/README.md), starting with the [project overview](diagrams/00-ENTIRE-PROJECT-OVERVIEW.md).
+
+### [`ai/`](ai/AGENTS.md) and [`prompts/`](prompts/README.md)
+
+[Agents & automation](ai/AGENTS.md) · [communication](ai/COMMUNICATION.md) ·
+[memory](ai/MEMORY.md) ([layers](ai/memory/README.md)) · [skills](ai/SKILLS.md) ·
+[routing](ai/SKILL_ROUTING.md) · [MCP / plugins](ai/mcp/mcb-plugin-enhancement-plan.md) ·
+[reusable prompts](prompts/README.md).
+
+---
+
+## Where does a new document go?
+
+| You are writing… | Put it in | Name |
+|------------------|-----------|------|
+| A feature's behaviour or a design for one feature | `specs/features/` | `YYYY-MM-DD-<feature>-design.md` |
+| A screen, component or visual rule | `ui-ux/` (amend the numbered doc) | — |
+| An order of work with slices and exit criteria | `plans/` | `<topic>-<yyyy-mm>.md` |
+| A task | a line in `sdd/04-TASKS.md` | existing prefix |
+| A review of what exists | `audits/` | `YYYY-MM-DD-<topic>.md`, assets in `audits/assets/` |
+| Proof a task works | `qa/evidence/` | `YYYY-MM-DD-<task>-QA.md` |
+| A technical decision | `adr/` | next `NNNN-<title>.md` |
+| A how-to for developers | `engineering/` or `devops/` | — |
+
+Rules: no new top-level files in `docs/`; date-stamp anything that records a point
+in time; move finished plans to `plans/archive/` rather than deleting them; and
+update this README when a folder is added.
+
+*The 2026-11-22 reorganisation is recorded in the
+[docs and plans audit](audits/2026-11-22-docs-and-plans-audit.md); the old → new path
+map is in [`scripts/docs-reorg-2026-11.cjs`](../scripts/docs-reorg-2026-11.cjs).*

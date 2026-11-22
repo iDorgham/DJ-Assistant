@@ -13,7 +13,7 @@ interface GridToolsSectionProps {
 /**
  * Compact grid toolbar used in Full's "Grid & beat" panel. Every control keeps
  * a visible label or tooltip; the group scrolls horizontally rather than
- * silently dropping controls when the dock is narrow (docs/ui/12).
+ * silently dropping controls when the dock is narrow (docs/ui-ux/12).
  */
 export function GridToolsSection({
   snapMode,

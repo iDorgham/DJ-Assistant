@@ -187,7 +187,7 @@ export interface DecodedPeakLayers {
  *
  * Upsampling the decoded peaks to 16000 would fix the indexing but keep those
  * synthetic bands, and this patch clears `isEstimated`, which tells the UI the
- * waveform was decoded (docs/ui/06 forbids passing invented analysis off as
+ * waveform was decoded (docs/ui-ux/06 forbids passing invented analysis off as
  * decoded). The bands are dropped instead: zero-filled at the decoded length.
  * The waveform still renders — `DetailedWaveform` always draws the body layer
  * and simply has no mid/low height left to draw.

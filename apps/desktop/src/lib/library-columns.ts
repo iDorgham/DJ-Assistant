@@ -14,7 +14,7 @@ import type { AppView, StorageLike } from "./ui-state.ts";
 /**
  * Column model for the Library track table (T2.1.5).
  *
- * The ids and their default visibility follow `docs/ui/03-LIBRARY-VIEW.md` §3.2.
+ * The ids and their default visibility follow `docs/ui-ux/03-LIBRARY-VIEW.md` §3.2.
  * The rich cells the spec describes for later slices (tag chips, cue counts,
  * file size, …) have no field on `TrackSummary` yet, so those columns exist
  * here as plain-text placeholders and default to hidden exactly as the table

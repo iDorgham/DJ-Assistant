@@ -5,7 +5,7 @@ import { Star } from "lucide-react";
 import { RATING_WIDGET_ATTRIBUTE, handleRatingKey, ratingTabStop } from "../lib/rating-keys";
 
 /**
- * Editable 5-star rating (T2.1.4, `docs/ui/03-LIBRARY-VIEW.md` §3.4).
+ * Editable 5-star rating (T2.1.4, `docs/ui-ux/03-LIBRARY-VIEW.md` §3.4).
  *
  * The widget is deliberately dumb: it reports the star that was clicked and
  * nothing else. Clearing, persistence and Undo belong to the caller, so the

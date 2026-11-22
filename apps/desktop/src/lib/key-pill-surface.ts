@@ -2,7 +2,7 @@ import type { CamelotColor } from "./camelot.ts";
 import type { HarmonicMatch } from "./harmonic.ts";
 
 /**
- * The paint rule behind `KeyPill` (`docs/ui/01-DESIGN-SYSTEM.md` §4).
+ * The paint rule behind `KeyPill` (`docs/ui-ux/01-DESIGN-SYSTEM.md` §4).
  *
  * A pill is described as the ground it owns plus a translucent hue layer
  * painted over that ground. Splitting the two is what keeps the text legible:

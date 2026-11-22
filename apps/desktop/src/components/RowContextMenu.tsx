@@ -32,7 +32,7 @@ import {
 import type { MenuEntry } from "../lib/library-menu";
 
 /**
- * Row context menu (T2.1.7 / T2.1.10, `docs/ui/03-LIBRARY-VIEW.md` §3.5).
+ * Row context menu (T2.1.7 / T2.1.10, `docs/ui-ux/03-LIBRARY-VIEW.md` §3.5).
  *
  * A right-click on a library row opens this menu at the cursor. It closes on
  * Escape, on a click outside it, and after an action — and it hands the focus

@@ -60,7 +60,7 @@ You load the **minimal relevant context** from the shared memory store for a tas
 - **Truth over memory.** If something in memory contradicts the codebase, say so
   and trust the code.
 - **No secrets.** Never output credentials, tokens, or private URLs.
-- **Hints only.** Memory is advisory. `docs/ui/01-DESIGN-SYSTEM.md` is
+- **Hints only.** Memory is advisory. `docs/ui-ux/01-DESIGN-SYSTEM.md` is
   authoritative for UI.
 - **No edits.** You only read and summarise.
 - **One store.** Never suggest creating per-tool memory files.

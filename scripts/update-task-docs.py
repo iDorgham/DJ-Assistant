@@ -42,27 +42,8 @@ DONE_SDD = [
     "T0.2.11",  # graceful skip + log
 ]
 
-# Lines in DEVELOPMENT_TASK_LIST.md identified by their exact text.
-DONE_DEV = [
-    "Initialize monorepo (`pnpm` workspace + Cargo workspace)",
-    "Create `apps/desktop` (Tauri v2 + React + TypeScript + Tailwind)",
-    "Create `apps/api` skeleton (Fastify + TypeScript) — can be minimal",
-    "Create `packages/shared` for shared types",
-    "Set up `cargo fmt` + Clippy in CI",
-    "Add `.env.example` files and document required variables",
-    "Create `scripts/download-models.sh` (placeholder)",
-    "Tauri v2 project boots and shows a React “Hello DJ Assistant” screen",
-    "Folder picker dialog (native)",
-    "Recursive folder scan (with progress)",
-    "BLAKE3 hashing of files (first 1MB + duration for fingerprint)",
-    "Deduplication by hash",
-    "Metadata extraction via `audiotags` (title, artist, album, duration, existing tags, artwork if easy)",
-    "Local SQLite database with migration system",
-    "`tracks` table (id, path, blake3_hash, basic metadata, timestamps)",
-    "Workspace / library isolation concept (even if single-library for now)",
-    "Minimal Library list UI (path, title, artist, duration, hash status)",
-    "Basic IPC commands: `scan_folder`, `list_tracks`, `get_track`",
-]
+# The retired docs/tasks/archive/DEVELOPMENT_TASK_LIST.md is frozen; only the
+# tracker, sdd/04-TASKS.md, is updated.
 
 
 def flip(path: str, needle: str) -> bool:
@@ -79,7 +60,6 @@ def flip(path: str, needle: str) -> bool:
 
 def main() -> int:
     sdd = os.path.join(ROOT, "docs", "sdd", "04-TASKS.md")
-    dev = os.path.join(ROOT, "docs", "engineering", "DEVELOPMENT_TASK_LIST.md")
 
     missing: list[str] = []
     done = 0
@@ -88,11 +68,6 @@ def main() -> int:
             done += 1
         else:
             missing.append(f"SDD {tid}")
-    for text in DONE_DEV:
-        if flip(dev, text):
-            done += 1
-        else:
-            missing.append(f"DEV {text[:60]}")
 
     print(f"checked off {done} tasks")
     if missing:

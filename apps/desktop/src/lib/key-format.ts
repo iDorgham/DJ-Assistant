@@ -1,7 +1,7 @@
 import { parseCamelot } from "./camelot.ts";
 
 /**
- * Key notation preference (T2.1.8, `docs/ui/03-LIBRARY-VIEW.md` §3.3).
+ * Key notation preference (T2.1.8, `docs/ui-ux/03-LIBRARY-VIEW.md` §3.3).
  *
  * Camelot (`8A`) is the default because the key column's colours are built on
  * the Camelot wheel. The classical option uses the compact Open Key style the

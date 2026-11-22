@@ -152,7 +152,7 @@ export function CompactWaveform({
     setHoverX(e.clientX - rect.left);
   };
 
-  // Keyboard seeking (docs/ui/10): arrows seek ±2s (Shift ±10s), Home/End jump.
+  // Keyboard seeking (docs/ui-ux/10): arrows seek ±2s (Shift ±10s), Home/End jump.
   const handleKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
     let nextMs: number | null = null;
     if (e.key === "ArrowLeft" || e.key === "ArrowDown") {

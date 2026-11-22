@@ -1,7 +1,7 @@
 //! The Tag Surgeon's clustering engine (T2.2.1): fold, cluster, prefix edge.
 //!
 //! Pure algorithm — no SQL, no Tauri, no I/O. The contract lives in
-//! `docs/superpowers/specs/2026-11-19-tag-surgeon-fuzzy-clustering-design.md`.
+//! `docs/specs/features/2026-11-19-tag-surgeon-fuzzy-clustering-design.md`.
 
 use unicode_normalization::UnicodeNormalization;
 

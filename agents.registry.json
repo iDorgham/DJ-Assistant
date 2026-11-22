@@ -345,10 +345,10 @@
     {
       "id": "ui",
       "label": "UI",
-      "paths": ["docs/ui/**", "apps/desktop/src/**/*.tsx", "apps/desktop/src/**/*.css"],
+      "paths": ["docs/ui-ux/**", "apps/desktop/src/**/*.tsx", "apps/desktop/src/**/*.css"],
       "keywords": ["ui", "design system", "component", "layout", "tailwind", "accessibility"],
       "commands": [],
-      "note": "docs/ui/01-DESIGN-SYSTEM.md is authoritative — a generic design skill never overrides it."
+      "note": "docs/ui-ux/01-DESIGN-SYSTEM.md is authoritative — a generic design skill never overrides it."
     },
     {
       "id": "docs",

@@ -1,7 +1,7 @@
 # DJ Assistant — Windows Native Build Runbook
 
 **Audience:** Engineers setting up the Windows desktop environment for local compilation.  
-**Related Spec:** `docs/engineering/DEVELOPMENT.md`, `docs/ADR/0002-monorepo-layout.md`, `docs/sdd/05-ACCEPTANCE.md`.
+**Related Spec:** `docs/engineering/DEVELOPMENT.md`, `docs/adr/0002-monorepo-layout.md`, `docs/sdd/05-ACCEPTANCE.md`.
 
 ---
 

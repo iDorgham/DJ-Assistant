@@ -110,7 +110,7 @@ system — here: the window is the `tauri dev` shell, the database is
 (`dj-query`) confirms the rows the UI claims to have written. A PASS needs the
 observation **and** the independent check; a mock-backed session is not
 evidence. See F-009 in [`state.md`](./state.md) and the checklist in
-[`docs/engineering/SLICE2_MANUAL_QA_CHECKLIST.md`](../../engineering/SLICE2_MANUAL_QA_CHECKLIST.md).
+[`docs/qa/checklists/SLICE2_MANUAL_QA_CHECKLIST.md`](../../qa/checklists/SLICE2_MANUAL_QA_CHECKLIST.md).
 
 ## F-010 · Never stash to "check something else" in this worktree (2026-10-27)
 
@@ -188,7 +188,7 @@ across minutes. Mechanical note: `resolveReviewThread` takes `threadId`, not
 ## F-014 · The library UI *can* be driven from here — two input paths, one of them CDP (2026-11-09)
 
 Supersedes the "multi-select has no automated route" half of F-012, proven while closing
-Pass 2 of [`../../evidence/2026-11-09-RUNNING-WINDOW-QA.md`](../../evidence/2026-11-09-RUNNING-WINDOW-QA.md).
+Pass 2 of [`../../qa/evidence/2026-11-09-RUNNING-WINDOW-QA.md`](../../qa/evidence/2026-11-09-RUNNING-WINDOW-QA.md).
 
 - **Coordinate input maps 1:1 only in the window's restored geometry.** A maximized window
   hands back a 1428×768 capture against a 1183-wide window and the first click only
@@ -219,7 +219,7 @@ index" is no longer evidence that a row needs a human.
 
 ## F-015 · Four counting and transport traps in CDP-driven QA (2026-11-10)
 
-Proven while executing Pass 3 of [`../../evidence/2026-11-09-RUNNING-WINDOW-QA.md`](../../evidence/2026-11-09-RUNNING-WINDOW-QA.md).
+Proven while executing Pass 3 of [`../../qa/evidence/2026-11-09-RUNNING-WINDOW-QA.md`](../../qa/evidence/2026-11-09-RUNNING-WINDOW-QA.md).
 
 - **Never read a filtered count from `tbody tr`.** The library table is virtualised: ~25 rows
   mount whatever the filter, and `aria-rowcount` is always full-count + 1. The status-bar label
@@ -241,7 +241,7 @@ from the DB. A single-source number is not evidence.
 ## F-016 · Contrast is computed by compositing, and per row state (2026-11-10)
 
 Proven while executing Passes 4–5 of
-[../../evidence/2026-11-09-RUNNING-WINDOW-QA.md](../../evidence/2026-11-09-RUNNING-WINDOW-QA.md).
+[../../qa/evidence/2026-11-09-RUNNING-WINDOW-QA.md](../../qa/evidence/2026-11-09-RUNNING-WINDOW-QA.md).
 
 - **A tint claim needs alpha math, not a screenshot.** `getComputedStyle` gives the pill’s
   `rgba` fill and text colour; composite the fill over the row background, up to the opaque page

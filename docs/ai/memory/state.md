@@ -24,7 +24,7 @@ fact, it belongs in [`facts.md`](./facts.md). Delete anything stale.
 - **Unmerged, unpushed: `chore/phase2-qa-closeout`** (2 docs commits, 2026-11-19): B4,
   Stage 1 C3 and T2.1.10 View columns re-run **PASS**; Slice 4–8 risk rows PASS; artwork
   rows **BLOCKED** (all 94 rows have NULL `artwork_path`). Evidence
-  `docs/evidence/2026-11-19-PHASE2-QA-CLOSEOUT.md`. **Its `feedback.md` adds F-018–F-020,
+  `docs/qa/evidence/2026-11-19-PHASE2-QA-CLOSEOUT.md`. **Its `feedback.md` adds F-018–F-020,
   which collide with main's F-018–F-021** — renumber them (to F-022+) before it merges.
 - Other worktrees: `dj-artwork-backfill` (`feature/artwork-backfill`, 0 commits ahead —
   backfill not started), `dj-pr65-fixes` (`pr65-fixes`, 7 ahead / 68 behind, stale),
@@ -33,7 +33,7 @@ fact, it belongs in [`facts.md`](./facts.md). Delete anything stale.
 ## 2026-11-19 · Library table upgrades pass (uncommitted on `main`)
 
 - 24 modified files + migration `010_track_extra_metadata.sql` implement part of the
-  **proposal** `docs/ui/14-LIBRARY-TABLE-UPGRADES.md` (v0.2, not approved; its §0.1 lists
+  **proposal** `docs/ui-ux/14-LIBRARY-TABLE-UPGRADES.md` (v0.2, not approved; its §0.1 lists
   what shipped): 17 import-time tag columns (comment_2, composer, album_artist, remixer,
   producer, grouping, track/disc number, isrc, catalog_number, release_date, copyright,
   mood, mix_name, lyrics, bitrate_kbps) + `label_user_set`; label now read on import
@@ -43,7 +43,7 @@ fact, it belongs in [`facts.md`](./facts.md). Delete anything stale.
 - Not done: label backfill + label search; density, waveform column, track color, column
   filters, Table/List/Grid views, Tag Manager.
 - **No checks recorded for this pass**, and its owner is unknown — do not stage, reformat
-  or revert it from another task (F-005, F-010). Also untracked: `docs/ui/*.png` reference
+  or revert it from another task (F-005, F-010). Also untracked: `docs/ui-ux/*.png` reference
   images, `.pr72.json`, `.agents/`.
 
 ## 2026-11-19 · The Stack brand redesign + README restructure (shipped to `main` as `aa0ada8e`)
@@ -76,7 +76,7 @@ fact, it belongs in [`facts.md`](./facts.md). Delete anything stale.
   native cpal/Symphonia audio + review hardening), PR #81 (`5a9fced7`, dual peak
   resolutions, cache v3), and Dependabot #75/#82–#85.
 - Docs brought in line: `docs/sdd/04-TASKS.md`, the Phase 2 plan slice table and
-  statuses, `docs/context/PROJECT_CONTEXT.md` (baseline §0, IPC tables, UI surface,
+  statuses, `docs/product/PROJECT_CONTEXT.md` (baseline §0, IPC tables, UI surface,
   §17.3–17.5, §24), the Phase 2 plan, CHANGELOG catch-up, and this ledger.
 - **Nothing ticked.** The B4 PASS re-run and any running-window QA for Slices 4–8
   and the audio/peaks paths have not been executed; the human ticks on `main`.
@@ -122,7 +122,7 @@ fact, it belongs in [`facts.md`](./facts.md). Delete anything stale.
 
 ## 2026-11-10 · Running-window Pass 3 executed (Slice 3A tags/editor/menu) — B4 open
 
-- Pass 3 of [`../../evidence/2026-11-09-RUNNING-WINDOW-QA.md`](../../evidence/2026-11-09-RUNNING-WINDOW-QA.md)
+- Pass 3 of [`../../qa/evidence/2026-11-09-RUNNING-WINDOW-QA.md`](../../qa/evidence/2026-11-09-RUNNING-WINDOW-QA.md)
   ran over CDP on the live 94-track library: **43 PASS, 1 PARTIAL, 1 FAIL, 2 DEVIATION,
   1 BLOCKED** (corrected 2026-11-17 — F1 is the partial after its process restart).
 - **B4 is the one real defect**: an unchanged Save takes the backend `nothing to update` error
@@ -152,7 +152,7 @@ fact, it belongs in [`facts.md`](./facts.md). Delete anything stale.
   2026-11-10 entry, which also notes B4 as the one open FAIL), so T2.1.0 (§D still
   unrun), T2.1.2, T2.1.3, T2.1.4, T2.1.6, T2.1.7, T2.1.8 and T2.1.13 all stay open (F-012).
 - **The QA session’s own work is still uncommitted and is not mine to commit:**
-  `docs/evidence/2026-11-09-RUNNING-WINDOW-QA.md`, the `RowContextMenu.test.tsx` deletion
+  `docs/qa/evidence/2026-11-09-RUNNING-WINDOW-QA.md`, the `RowContextMenu.test.tsx` deletion
   and the `library-menu.ts` / `.test.ts` helper extraction. Those 6 tests are why this tree
   measures **242** desktop tests while merged `main` measures **236** — keep them out of
   docs commits (F-010).
@@ -184,9 +184,9 @@ fact, it belongs in [`facts.md`](./facts.md). Delete anything stale.
   `assertSkillName` helper to reject empty, non-string, absolute, and traversal
   names; tests verify a traversal name cannot create the mirror.
 - **Audit references:** the `TrackSummary` mapping is documented in the
-  [professional system audit](../../audit/PROFESSIONAL_DJ_SYSTEM_AUDIT.md), and
+  [professional system audit](../../audits/2026-10-14-spec-audit/PROFESSIONAL_DJ_SYSTEM_AUDIT.md), and
   the reversible-write undo guard in the
-  [strategic report assessment](../../audit/06-strategic-report-assessment.md).
+  [strategic report assessment](../../audits/2026-10-14-spec-audit/06-strategic-report-assessment.md).
 - **QA-helper corrections:** `reset_qa_baseline.sql` now instructs users to
   target an explicit database copy instead of claiming a nonexistent
   `QA_COPY_PATH` guard; `check_schema.py` no longer claims it cannot open the
@@ -239,11 +239,11 @@ fact, it belongs in [`facts.md`](./facts.md). Delete anything stale.
   on 2026-11-08: mark those checkers Ignored in the DeepSource dashboard instead
   of reshaping code to satisfy them. Nothing is branch-protected, so the check
   blocks nothing.
-- **Docs and context sweep complete (2026-11-08):** `docs/context/PROJECT_CONTEXT.md`
+- **Docs and context sweep complete (2026-11-08):** `docs/product/PROJECT_CONTEXT.md`
   brought up to date with PR #60 (context menu + soft remove migration 008), PR #65
   (bulk metadata edit + BulkActionBar), PR #70 (key pills + harmonic relations),
   migrations 006–008, new IPC commands, and audit report assessment;
-  `PHASE2_LIBRARY_PLAYER_IMPLEMENTATION_PLAN.md` and `docs/ui/11-IMPLEMENTATION-CHECKLIST.md`
+  `PHASE2_LIBRARY_PLAYER_IMPLEMENTATION_PLAN.md` and `docs/ui-ux/11-IMPLEMENTATION-CHECKLIST.md`
   reconciled. The full automated test suite passed.
 - The Slice 4–8 targets listed here were since merged (PR #80/#81, 2026-11-16).
 - **QA status / DoD gates:** No task box was ticked — native running-window QA

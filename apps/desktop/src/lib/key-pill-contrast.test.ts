@@ -8,7 +8,7 @@ import { EMPTY_KEY_PAINT, pillPaint, RELATION_TONE, type PillPaint } from "./key
 
 /**
  * The K10 gate: every text colour a key pill can ask for, measured against
- * every surface it can end up on, at WCAG AA (`docs/ui/01-DESIGN-SYSTEM.md` §4,
+ * every surface it can end up on, at WCAG AA (`docs/ui-ux/01-DESIGN-SYSTEM.md` §4,
  * "Pills … stay legible in both themes").
  *
  * The tokens are parsed from `index.css` rather than restated here, so changing

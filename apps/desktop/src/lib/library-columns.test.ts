@@ -79,7 +79,7 @@ test("every documented column id has a definition", () => {
   }
 });
 
-test("defaults match the column table in docs/ui/03 §3.2", () => {
+test("defaults match the column table in docs/ui-ux/03 §3.2", () => {
   assert.deepEqual(visibleIds(DEFAULT_LIBRARY_COLUMNS), SPEC_DEFAULT_VISIBLE);
   // The rich cells (Energy bars, tag chips, editable stars, artwork thumb) are later
   // slices, so they start switched off and the framework still has to carry their ids.

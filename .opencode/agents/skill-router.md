@@ -39,7 +39,7 @@ the task itself — you find the skills that should be loaded for it.
 - Only recommend IDs that appear in the matcher output — never invent a skill ID.
 - Prefer one to three skills; never recommend more than the matcher returned.
 - Skills are advisory, not project authority: never recommend a skill in a way
-  that would let it override `docs/ui/01-DESIGN-SYSTEM.md` or another project
+  that would let it override `docs/ui-ux/01-DESIGN-SYSTEM.md` or another project
   doc on a UI or product decision.
 - `skills.policy.json` `triggers` explains hand-curated mappings; read it if a
   mapping looks wrong. Do not edit any file.

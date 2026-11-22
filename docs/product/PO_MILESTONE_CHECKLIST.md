@@ -27,7 +27,7 @@ Use this to accept phase exits in **product language**. Engineering detail and t
 **PO decision:** ☑ Accepted · ☐ Accepted with waivers · ☐ Rejected  
 
 **Sign-off Date:** 2026-10-12  
-**Notes / waivers:** Accepted based on verified criteria P0.1–P0.8 in [PHASE0_ACCEPTANCE_EVIDENCE.md](../engineering/PHASE0_ACCEPTANCE_EVIDENCE.md). CI multi-platform build matrix (`windows-latest` and `macos-latest`), local folder scan on 94 real tracks, metadata enrichment, and SQLite persistence are all fully operational. Non-blocking plan gap noted: GitHub branch protection pending Pro plan upgrade.
+**Notes / waivers:** Accepted based on verified criteria P0.1–P0.8 in [PHASE0_ACCEPTANCE_EVIDENCE.md](../qa/evidence/phase0/PHASE0_ACCEPTANCE_EVIDENCE.md). CI multi-platform build matrix (`windows-latest` and `macos-latest`), local folder scan on 94 real tracks, metadata enrichment, and SQLite persistence are all fully operational. Non-blocking plan gap noted: GitHub branch protection pending Pro plan upgrade.
 
 ---
 
@@ -135,4 +135,4 @@ Items here are **out of the 90-day MVP** and do not block any phase. They are ca
 - [Product Brief](./PRODUCT_BRIEF.md)  
 - [SDD Acceptance](../sdd/05-ACCEPTANCE.md)  
 - [Canonical Documentation](./CANONICAL_DOCUMENTATION.md)  
-- [Development Task List](../engineering/DEVELOPMENT_TASK_LIST.md)  
+- [Task tracker (sdd/04-TASKS.md)](../sdd/04-TASKS.md)  

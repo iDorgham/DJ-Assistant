@@ -32,7 +32,7 @@ export interface WaveformData {
   /**
    * True while peaks are synthesized locally (PRNG) instead of decoded from
    * the audio file. The UI discloses this in the Play tooltip and the
-   * waveform's accessible description — docs/ui/06 forbids presenting
+   * waveform's accessible description — docs/ui-ux/06 forbids presenting
    * fabricated analysis data as if it were decoded.
    */
   isEstimated: boolean;

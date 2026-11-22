@@ -5,7 +5,7 @@ import { canHideColumn, columnDefinition } from "../lib/library-columns";
 import type { ColumnId, ColumnState } from "../lib/library-columns";
 
 /**
- * Column checklist for the Library table (T2.1.5, docs/ui/03 §3.2).
+ * Column checklist for the Library table (T2.1.5, docs/ui-ux/03 §3.2).
  *
  * It only ever edits the column list through the pure helpers in
  * `lib/library-columns` — the invariant that a table keeps at least one identity

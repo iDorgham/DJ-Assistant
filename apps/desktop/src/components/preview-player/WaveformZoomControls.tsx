@@ -11,7 +11,7 @@ interface WaveformZoomControlsProps {
 
 /**
  * Floating zoom cluster pinned to the detailed waveform's top-right.
- * Zoom affects the detailed waveform only (docs/ui/06 §3).
+ * Zoom affects the detailed waveform only (docs/ui-ux/06 §3).
  */
 export function WaveformZoomControls({
   zoomLevel,

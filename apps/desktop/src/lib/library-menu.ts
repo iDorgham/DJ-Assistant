@@ -5,7 +5,7 @@
  * `node --test` — the component itself is `.tsx` and the desktop harness runs
  * `.test.ts` only, so anything decided here is decided where it can be proven.
  *
- * `docs/ui/03-LIBRARY-VIEW.md` §3.5 is the source for both lists below: which
+ * `docs/ui-ux/03-LIBRARY-VIEW.md` §3.5 is the source for both lists below: which
  * items exist, which of them are not built yet, and which ones act on the whole
  * selection rather than the row under the pointer.
  */
@@ -142,7 +142,7 @@ const item = (id: string, label: string, tooltip?: string): MenuEntry => ({
 const divider: MenuEntry = { kind: "divider" };
 
 /**
- * The menu, in `docs/ui/03-LIBRARY-VIEW.md` §3.5 order.
+ * The menu, in `docs/ui-ux/03-LIBRARY-VIEW.md` §3.5 order.
  *
  * The order lives here rather than in the component because the component is
  * `.tsx` and the desktop harness runs `.test.ts` — a row moved in the JSX could
