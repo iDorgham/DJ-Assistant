@@ -44,8 +44,9 @@ pub const GRID_BACKFILL_UPDATE_SQL: &str = "UPDATE tracks SET beatgrid_confidenc
        AND beatgrid_confidence IS NULL";
 
 /// How far the recomputed BPM may sit from the stored one and still be the
-/// same grid. Both come from the same `f32` detector, so a matching file gives
-/// the identical value; the tolerance only absorbs the `REAL` round trip.
+/// same grid. This is a deliberate allowance, not storage slack: the `f32`
+/// detector value widens losslessly to the stored 8-byte `REAL`, so a matching
+/// file gives the identical value and only a changed file or detector drifts.
 pub const GRID_BPM_TOLERANCE: f64 = 0.01;
 
 /// What the backfill does with one recomputed grid.

@@ -1620,7 +1620,8 @@ export default function App() {
   // Tracks analysed before migration 009 have a beat grid but no stored
   // confidence, so the player shows no grid chip for them (issue #89). Measure
   // it once per install from the files. Unlike the artwork repair, the flag is
-  // set only when the pass completes: a failed call runs again next launch.
+  // set only when the pass completes with no per-track failures, so a failed
+  // call or an unreadable file runs again next launch.
   useEffect(() => {
     if (gridBackfillStarted.current) return;
     gridBackfillStarted.current = true;
@@ -1632,10 +1633,14 @@ export default function App() {
     }
     backfillGridConfidence()
       .then((result) => {
-        try {
-          window.localStorage.setItem(backfillKey, "1");
-        } catch {
-          // Storage blocked: nothing to record.
+        // Rows that failed to decode stay owed a value, so leave the marker
+        // unset and retry them next launch; filled rows drop out of the query.
+        if (result.failed === 0) {
+          try {
+            window.localStorage.setItem(backfillKey, "1");
+          } catch {
+            // Storage blocked: nothing to record.
+          }
         }
         if (result.failed > 0) {
           console.warn("Beat-grid confidence backfill reported failures:", result.errors);

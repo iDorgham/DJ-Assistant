@@ -18,7 +18,8 @@ project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   differs from the stored one by more than 0.01 are skipped, and the UPDATE repeats
   the selection predicate so a concurrent analysis or removal wins. The app runs it
   once per install on launch (`dj-assistant.grid-confidence-backfill.v1`, set only
-  when the call succeeds) and reports the count in the status line.
+  when the call succeeds with no per-track failures) and reports the count in the
+  status line. Running-window QA on a live library pending.
 - **Slices 4–8: artwork hover-play, mix suggestions dock, library source tabs,
   peaks cache and native audio (T2.1.9 / T2.1.11 / T2.1.12 / T2.4, PR #80)** — merged
   2026-11-16 (`65ca59ad`): hover-play overlay on the artwork column; a resizable
