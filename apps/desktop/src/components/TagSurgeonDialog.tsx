@@ -203,6 +203,176 @@ export function TagSurgeonDialog({ trackIds, onClose, onChanged }: TagSurgeonDia
   const ignoredNote = report ? ignoredTagsNote(report.ignoredTags) : null;
   const renameCount = report ? renamesFor(report).length : 0;
 
+  // The render pieces below are separate values or functions, so no single
+  // JSX tree nests past the depth the lint rule allows (JS-0415).
+  const renderSample = (cluster: TagClusterReport["clusters"][number], trackId: string) => {
+    const track = samples.get(trackId);
+    // A sample the scan named but the read no longer returns (removed
+    // meanwhile) is left out rather than invented.
+    if (!track) return null;
+    return (
+      <li key={trackId} className="text-[11px] text-dj-text-muted break-words">
+        <span className="text-dj-text-secondary">{sampleTitle(track)}</span>
+        <span className="block">
+          {sampleSpellings(
+            track,
+            cluster.canonical,
+            cluster.members.map((member) => member.raw)
+          ).join(" · ")}
+          {" → "}
+          <span className="text-dj-text-secondary">{cluster.canonical}</span>
+        </span>
+      </li>
+    );
+  };
+
+  const renderCluster = (cluster: TagClusterReport["clusters"][number]) => (
+    <li key={cluster.key} className="rounded-md border border-dj-border bg-dj-elevated px-2.5 py-2">
+      <p className="text-xs font-semibold text-dj-text break-words">{clusterHeading(cluster)}</p>
+      <ul className="mt-1 space-y-0.5">
+        {cluster.members.map((member) => (
+          <li key={member.raw} className="text-[11px] text-dj-text-secondary break-words">
+            {memberLabel(member)}
+          </li>
+        ))}
+      </ul>
+      <p className="mt-1 text-[11px] font-medium text-dj-text-secondary break-words">
+        {rewriteLabel(cluster)}
+      </p>
+      {cluster.sampleTrackIds.length > 0 && (
+        <ul className="mt-1 space-y-1 border-t border-dj-border pt-1.5">
+          {cluster.sampleTrackIds.map((trackId) => renderSample(cluster, trackId))}
+          {moreAffectedNote(cluster) && (
+            <li className="text-[11px] text-dj-text-muted">{moreAffectedNote(cluster)}</li>
+          )}
+        </ul>
+      )}
+    </li>
+  );
+
+  const applyBlock = (
+    <div className="rounded-md border border-dj-border px-2.5 py-2">
+      {!confirming ? (
+        <button
+          type="button"
+          onClick={() => setConfirming(true)}
+          disabled={busy}
+          className="rounded-md border border-dj-border bg-dj-elevated px-3 py-1.5 text-xs text-dj-text-secondary transition hover:bg-dj-hover disabled:opacity-50"
+        >
+          Apply these spellings…
+        </button>
+      ) : (
+        <div className="space-y-2">
+          <p className="text-[11px] text-dj-text-secondary">{confirmLabel(renameCount)}</p>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={applyRenames}
+              disabled={busy}
+              className="rounded-md border border-dj-border bg-dj-elevated px-3 py-1.5 text-xs font-medium text-dj-text transition hover:bg-dj-hover disabled:opacity-50"
+            >
+              {busy ? "Applying…" : "Apply"}
+            </button>
+            <button
+              type="button"
+              onClick={() => setConfirming(false)}
+              disabled={busy}
+              className="rounded-md px-3 py-1.5 text-xs text-dj-text-secondary transition hover:bg-dj-hover disabled:opacity-50"
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+
+  const renderPrefixBlock = (edges: TagClusterReport["prefixEdges"]) => (
+    <div>
+      <p className="text-[11px] font-semibold uppercase tracking-wider text-dj-text-muted">
+        Possibly related
+      </p>
+      <p className="mt-0.5 text-[11px] text-dj-text-muted">
+        One tag starts with another as a whole word. Shown for review — nothing here is a proposed
+        change.
+      </p>
+      <ul className="mt-1 space-y-1">
+        {edges.map((edge) => (
+          <li
+            key={`${edge.narrowerKey}→${edge.broaderKey}`}
+            className="text-[11px] text-dj-text-secondary"
+          >
+            <span className="break-words">{edgeLabel(edge)}</span>
+            <span className="ml-1.5 text-dj-text-muted">
+              ({scopeLabel(edge.narrowerTracks)} · {scopeLabel(edge.broaderTracks)})
+            </span>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+
+  const renderAliasRow = (item: TagAlias) => (
+    <li
+      key={item.alias}
+      className="flex items-center justify-between gap-2 text-[11px] text-dj-text-secondary"
+    >
+      <span className="break-words">{aliasLabel(item)}</span>
+      <button
+        type="button"
+        onClick={() => removeAlias(item.alias)}
+        disabled={aliasBusy}
+        className="shrink-0 rounded-md px-2 py-0.5 text-[11px] text-dj-text-muted transition hover:bg-dj-hover disabled:opacity-50"
+      >
+        Remove
+      </button>
+    </li>
+  );
+
+  const aliasesBlock = (
+    <div className="border-t border-dj-border pt-2">
+      <p className="text-[11px] font-semibold uppercase tracking-wider text-dj-text-muted">
+        Aliases
+      </p>
+      <p className="mt-0.5 text-[11px] text-dj-text-muted">
+        Tags saved with an alias take its canonical spelling from now on. Tracks already in the
+        library are not changed.
+      </p>
+      {aliases.length > 0 && (
+        <ul className="mt-1 space-y-1">{aliases.map((item) => renderAliasRow(item))}</ul>
+      )}
+      <div className="mt-2 flex flex-wrap items-center gap-2">
+        <input
+          aria-label="Alias"
+          placeholder="Alias, e.g. melodic h"
+          value={aliasDraft}
+          onChange={(event) => setAliasDraft(event.target.value)}
+          className="min-w-0 flex-1 rounded-md border border-dj-border bg-dj-elevated px-2 py-1 text-xs text-dj-text"
+        />
+        <input
+          aria-label="Saved as"
+          placeholder="Saved as, e.g. melodic house"
+          value={canonicalDraft}
+          onChange={(event) => setCanonicalDraft(event.target.value)}
+          className="min-w-0 flex-1 rounded-md border border-dj-border bg-dj-elevated px-2 py-1 text-xs text-dj-text"
+        />
+        <button
+          type="button"
+          onClick={addAlias}
+          disabled={aliasBusy || !aliasDraft.trim() || !canonicalDraft.trim()}
+          className="shrink-0 rounded-md border border-dj-border bg-dj-elevated px-3 py-1 text-xs text-dj-text-secondary transition hover:bg-dj-hover disabled:opacity-50"
+        >
+          Add
+        </button>
+      </div>
+      {aliasError && (
+        <p className="mt-1.5 rounded-sm border border-dj-danger/30 bg-dj-danger/10 px-2 py-1.5 text-[11px] text-dj-danger">
+          {aliasError}
+        </p>
+      )}
+    </div>
+  );
+
   return (
     <ModalShell
       onClose={onClose}
@@ -244,97 +414,12 @@ export function TagSurgeonDialog({ trackIds, onClose, onChanged }: TagSurgeonDia
         )}
 
         {report && report.clusters.length > 0 && (
-          <ul className="space-y-2">
-            {report.clusters.map((cluster) => (
-              <li
-                key={cluster.key}
-                className="rounded-md border border-dj-border bg-dj-elevated px-2.5 py-2"
-              >
-                <p className="text-xs font-semibold text-dj-text break-words">
-                  {clusterHeading(cluster)}
-                </p>
-                <ul className="mt-1 space-y-0.5">
-                  {cluster.members.map((member) => (
-                    <li key={member.raw} className="text-[11px] text-dj-text-secondary break-words">
-                      {memberLabel(member)}
-                    </li>
-                  ))}
-                </ul>
-                <p className="mt-1 text-[11px] font-medium text-dj-text-secondary break-words">
-                  {rewriteLabel(cluster)}
-                </p>
-                {cluster.sampleTrackIds.length > 0 && (
-                  <ul className="mt-1 space-y-1 border-t border-dj-border pt-1.5">
-                    {cluster.sampleTrackIds.map((trackId) => {
-                      const track = samples.get(trackId);
-                      // A sample the scan named but the read no longer returns
-                      // (removed meanwhile) is left out rather than invented.
-                      if (!track) return null;
-                      return (
-                        <li key={trackId} className="text-[11px] text-dj-text-muted break-words">
-                          <span className="text-dj-text-secondary">{sampleTitle(track)}</span>
-                          <span className="block">
-                            {sampleSpellings(
-                              track,
-                              cluster.canonical,
-                              cluster.members.map((member) => member.raw)
-                            ).join(" · ")}
-                            {" → "}
-                            <span className="text-dj-text-secondary">{cluster.canonical}</span>
-                          </span>
-                        </li>
-                      );
-                    })}
-                    {moreAffectedNote(cluster) && (
-                      <li className="text-[11px] text-dj-text-muted">
-                        {moreAffectedNote(cluster)}
-                      </li>
-                    )}
-                  </ul>
-                )}
-              </li>
-            ))}
-          </ul>
+          <ul className="space-y-2">{report.clusters.map((cluster) => renderCluster(cluster))}</ul>
         )}
 
         {/* Hidden while an undo is open: a second apply would replace that undo
             offer and leave the first change reversible only from history. */}
-        {report && report.clusters.length > 0 && !applied?.undoId && (
-          <div className="rounded-md border border-dj-border px-2.5 py-2">
-            {!confirming ? (
-              <button
-                type="button"
-                onClick={() => setConfirming(true)}
-                disabled={busy}
-                className="rounded-md border border-dj-border bg-dj-elevated px-3 py-1.5 text-xs text-dj-text-secondary transition hover:bg-dj-hover disabled:opacity-50"
-              >
-                Apply these spellings…
-              </button>
-            ) : (
-              <div className="space-y-2">
-                <p className="text-[11px] text-dj-text-secondary">{confirmLabel(renameCount)}</p>
-                <div className="flex items-center gap-2">
-                  <button
-                    type="button"
-                    onClick={applyRenames}
-                    disabled={busy}
-                    className="rounded-md border border-dj-border bg-dj-elevated px-3 py-1.5 text-xs font-medium text-dj-text transition hover:bg-dj-hover disabled:opacity-50"
-                  >
-                    {busy ? "Applying…" : "Apply"}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setConfirming(false)}
-                    disabled={busy}
-                    className="rounded-md px-3 py-1.5 text-xs text-dj-text-secondary transition hover:bg-dj-hover disabled:opacity-50"
-                  >
-                    Cancel
-                  </button>
-                </div>
-              </div>
-            )}
-          </div>
-        )}
+        {report && report.clusters.length > 0 && !applied?.undoId && applyBlock}
 
         {applyError && (
           <p className="rounded-sm border border-dj-danger/30 bg-dj-danger/10 px-2 py-1.5 text-[11px] text-dj-danger">
@@ -360,89 +445,9 @@ export function TagSurgeonDialog({ trackIds, onClose, onChanged }: TagSurgeonDia
 
         {undoNote && <p className="text-[11px] text-dj-text-secondary">{undoNote}</p>}
 
-        {report && report.prefixEdges.length > 0 && (
-          <div>
-            <p className="text-[11px] font-semibold uppercase tracking-wider text-dj-text-muted">
-              Possibly related
-            </p>
-            <p className="mt-0.5 text-[11px] text-dj-text-muted">
-              One tag starts with another as a whole word. Shown for review — nothing here is a
-              proposed change.
-            </p>
-            <ul className="mt-1 space-y-1">
-              {report.prefixEdges.map((edge) => (
-                <li
-                  key={`${edge.narrowerKey}→${edge.broaderKey}`}
-                  className="text-[11px] text-dj-text-secondary"
-                >
-                  <span className="break-words">{edgeLabel(edge)}</span>
-                  <span className="ml-1.5 text-dj-text-muted">
-                    ({scopeLabel(edge.narrowerTracks)} · {scopeLabel(edge.broaderTracks)})
-                  </span>
-                </li>
-              ))}
-            </ul>
-          </div>
-        )}
+        {report && report.prefixEdges.length > 0 && renderPrefixBlock(report.prefixEdges)}
 
-        <div className="border-t border-dj-border pt-2">
-          <p className="text-[11px] font-semibold uppercase tracking-wider text-dj-text-muted">
-            Aliases
-          </p>
-          <p className="mt-0.5 text-[11px] text-dj-text-muted">
-            Tags saved with an alias take its canonical spelling from now on. Tracks already in the
-            library are not changed.
-          </p>
-          {aliases.length > 0 && (
-            <ul className="mt-1 space-y-1">
-              {aliases.map((item) => (
-                <li
-                  key={item.alias}
-                  className="flex items-center justify-between gap-2 text-[11px] text-dj-text-secondary"
-                >
-                  <span className="break-words">{aliasLabel(item)}</span>
-                  <button
-                    type="button"
-                    onClick={() => removeAlias(item.alias)}
-                    disabled={aliasBusy}
-                    className="shrink-0 rounded-md px-2 py-0.5 text-[11px] text-dj-text-muted transition hover:bg-dj-hover disabled:opacity-50"
-                  >
-                    Remove
-                  </button>
-                </li>
-              ))}
-            </ul>
-          )}
-          <div className="mt-2 flex flex-wrap items-center gap-2">
-            <input
-              aria-label="Alias"
-              placeholder="Alias, e.g. melodic h"
-              value={aliasDraft}
-              onChange={(event) => setAliasDraft(event.target.value)}
-              className="min-w-0 flex-1 rounded-md border border-dj-border bg-dj-elevated px-2 py-1 text-xs text-dj-text"
-            />
-            <input
-              aria-label="Saved as"
-              placeholder="Saved as, e.g. melodic house"
-              value={canonicalDraft}
-              onChange={(event) => setCanonicalDraft(event.target.value)}
-              className="min-w-0 flex-1 rounded-md border border-dj-border bg-dj-elevated px-2 py-1 text-xs text-dj-text"
-            />
-            <button
-              type="button"
-              onClick={addAlias}
-              disabled={aliasBusy || !aliasDraft.trim() || !canonicalDraft.trim()}
-              className="shrink-0 rounded-md border border-dj-border bg-dj-elevated px-3 py-1 text-xs text-dj-text-secondary transition hover:bg-dj-hover disabled:opacity-50"
-            >
-              Add
-            </button>
-          </div>
-          {aliasError && (
-            <p className="mt-1.5 rounded-sm border border-dj-danger/30 bg-dj-danger/10 px-2 py-1.5 text-[11px] text-dj-danger">
-              {aliasError}
-            </p>
-          )}
-        </div>
+        {aliasesBlock}
 
         {ignoredNote && <p className="text-[11px] text-dj-text-muted">{ignoredNote}</p>}
       </div>
