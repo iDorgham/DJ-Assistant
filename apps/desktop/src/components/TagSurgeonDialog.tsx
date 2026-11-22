@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { X } from "lucide-react";
 
 import type { TagAlias, TagClusterReport, TagPreviewTrack } from "@dj-assistant/shared";
@@ -113,25 +113,27 @@ export function TagSurgeonDialog({ trackIds, onClose, onChanged }: TagSurgeonDia
 
   // The preview's sample tracks, fetched once per report. A failed sample read
   // is shown as its own error; the counts above it come from the scan and stay.
+  // Each fetch takes a number; only the latest one may write, so a slow reply
+  // for an earlier report cannot overwrite the current samples.
+  const sampleRequest = useRef(0);
   useEffect(() => {
-    let cancelled = false;
+    const request = ++sampleRequest.current;
     setSamples(new Map());
     setSampleError(null);
     const ids = report ? previewSampleIds(report) : [];
     if (ids.length > 0) {
       tagPreviewTracks({ trackIds: ids })
         .then((tracks) => {
-          if (!cancelled) setSamples(new Map(tracks.map((track) => [track.trackId, track])));
+          if (request === sampleRequest.current) {
+            setSamples(new Map(tracks.map((track) => [track.trackId, track])));
+          }
         })
         .catch((cause: unknown) => {
-          if (!cancelled) {
+          if (request === sampleRequest.current) {
             setSampleError(cause instanceof Error ? cause.message : String(cause));
           }
         });
     }
-    return () => {
-      cancelled = true;
-    };
   }, [report]);
 
   async function applyRenames() {
