@@ -2,6 +2,9 @@ use std::sync::{Arc, Mutex};
 use tauri::{AppHandle, Manager, State};
 use uuid::Uuid;
 
+use dj_assistant_core::grid_backfill::{
+    decide_grid_backfill, GridBackfill, GRID_BACKFILL_ROWS_SQL, GRID_BACKFILL_UPDATE_SQL,
+};
 use dj_assistant_core::library_query::QueryParam;
 use dj_assistant_core::library_reads::{
     analysis_candidates, folder_counts_from_paths, tag_health_rows, tag_preview_rows,
@@ -35,19 +38,20 @@ use dj_assistant_core::{cache_artwork, extract_metadata, MAX_IN_CLAUSE_IDS};
 use crate::audio;
 use crate::db::Database;
 use crate::models::{
-    AddTagAliasRequest, AnalyzeLibraryRequest, AnalyzeLibraryResponse, CuePoint,
-    FindSimilarTracksRequest, FindSimilarTracksResponse, FolderCount, GenreCount,
-    GetArtworkRequest, GetTrackRequest, GetTrackResponse, GetWaveformPeaksRequest,
-    GetWaveformPeaksResponse, ListFoldersResponse, ListGenresResponse, ListRemovedTracksResponse,
-    ListTracksRequest, ListTracksResponse, ProviderAccount, ProviderCapability,
-    ProviderStatusResponse, RefreshArtworkResponse, RemoveTagAliasRequest, RemoveTracksRequest,
-    RemoveTracksResponse, RemovedTrack, RestoreTracksRequest, RestoreTracksResponse,
-    RevealInFileManagerRequest, ScanFolderRequest, ScanFolderResponse, SetTrackRatingRequest,
-    SetTrackRatingResponse, SimilarTrackResult, StoreLink, StoreLinksRequest, StoreLinksResponse,
-    TagAlias, TagApplyRequest, TagApplyResponse, TagClusterRequest, TagHealthRequest,
-    TagHealthResponse, TagHealthTotals, TagPreviewRequest, TagPreviewTrack, TrackDetail, TrackGaps,
-    TrackSummary, UndoRemoveTracksRequest, UndoRemoveTracksResponse, UndoTrackMetadataRequest,
-    UndoTrackMetadataResponse, UpdateTrackMetadataRequest, UpdateTrackMetadataResponse,
+    AddTagAliasRequest, AnalyzeLibraryRequest, AnalyzeLibraryResponse,
+    BackfillGridConfidenceResponse, CuePoint, FindSimilarTracksRequest, FindSimilarTracksResponse,
+    FolderCount, GenreCount, GetArtworkRequest, GetTrackRequest, GetTrackResponse,
+    GetWaveformPeaksRequest, GetWaveformPeaksResponse, ListFoldersResponse, ListGenresResponse,
+    ListRemovedTracksResponse, ListTracksRequest, ListTracksResponse, ProviderAccount,
+    ProviderCapability, ProviderStatusResponse, RefreshArtworkResponse, RemoveTagAliasRequest,
+    RemoveTracksRequest, RemoveTracksResponse, RemovedTrack, RestoreTracksRequest,
+    RestoreTracksResponse, RevealInFileManagerRequest, ScanFolderRequest, ScanFolderResponse,
+    SetTrackRatingRequest, SetTrackRatingResponse, SimilarTrackResult, StoreLink,
+    StoreLinksRequest, StoreLinksResponse, TagAlias, TagApplyRequest, TagApplyResponse,
+    TagClusterRequest, TagHealthRequest, TagHealthResponse, TagHealthTotals, TagPreviewRequest,
+    TagPreviewTrack, TrackDetail, TrackGaps, TrackSummary, UndoRemoveTracksRequest,
+    UndoRemoveTracksResponse, UndoTrackMetadataRequest, UndoTrackMetadataResponse,
+    UpdateTrackMetadataRequest, UpdateTrackMetadataResponse,
 };
 use crate::scanner::run_scan;
 use crate::security::validate_and_canonicalize_dir;
@@ -590,6 +594,98 @@ pub async fn refresh_artwork(
     }
 
     Ok(result)
+}
+
+/// Fills `beatgrid_confidence` for rows analysed before migration 009 (issue #89).
+///
+/// `core::grid_backfill` decides which rows are owed a value and what may be
+/// written; this decodes each file once and runs the beat-grid detector only —
+/// no ONNX model, no version bump, and no column other than the confidence is
+/// written. The decode runs on a blocking thread and the database lock is held
+/// only for the selection and each single-row UPDATE. Source audio is only
+/// read. A no-op once every owed row is filled.
+#[tauri::command]
+pub async fn backfill_grid_confidence(
+    db: State<'_, Arc<Mutex<Database>>>,
+) -> Result<BackfillGridConfidenceResponse, String> {
+    let version = dj_assistant_analysis::analysis_version();
+    let rows: Vec<(String, String, Option<f64>)> = {
+        let db_guard = db.lock().map_err(|e| e.to_string())?;
+        let mut stmt = db_guard
+            .conn()
+            .prepare(GRID_BACKFILL_ROWS_SQL)
+            .map_err(|e| e.to_string())?;
+        let rows = stmt
+            .query_map([&version], |row| {
+                Ok((row.get(0)?, row.get(1)?, row.get(2)?))
+            })
+            .map_err(|e| e.to_string())?
+            .collect::<Result<Vec<_>, _>>()
+            .map_err(|e| e.to_string())?;
+        rows
+    };
+    if rows.is_empty() {
+        return Ok(BackfillGridConfidenceResponse::default());
+    }
+
+    let db = Arc::clone(&db);
+    tauri::async_runtime::spawn_blocking(move || {
+        let mut result = BackfillGridConfidenceResponse {
+            scanned: rows.len(),
+            ..Default::default()
+        };
+        let record_error = |result: &mut BackfillGridConfidenceResponse,
+                            track_id: &str,
+                            err: &dyn std::fmt::Display| {
+            result.failed += 1;
+            if result.errors.len() < 10 {
+                result.errors.push(format!("{track_id}: {err}"));
+            }
+        };
+        for (track_id, file_path, stored_bpm) in rows {
+            let grid = match dj_assistant_analysis::run_beat_grid_only(&file_path) {
+                Ok(grid) => grid,
+                Err(err) => {
+                    record_error(&mut result, &track_id, &err);
+                    continue;
+                }
+            };
+            let confidence = match decide_grid_backfill(
+                stored_bpm,
+                f64::from(grid.bpm),
+                f64::from(grid.confidence),
+            ) {
+                GridBackfill::Write(confidence) => confidence,
+                GridBackfill::NoTempo => {
+                    result.no_tempo += 1;
+                    continue;
+                }
+                GridBackfill::BpmMismatch => {
+                    result.mismatched += 1;
+                    continue;
+                }
+            };
+            let written = db.lock().map_err(|e| e.to_string()).and_then(|guard| {
+                guard
+                    .conn()
+                    .execute(
+                        GRID_BACKFILL_UPDATE_SQL,
+                        rusqlite::params![confidence, track_id, version],
+                    )
+                    .map_err(|e| e.to_string())
+            });
+            match written {
+                Ok(1) => result.updated += 1,
+                // A full analysis or a removal changed the row since it was
+                // selected; that write stands.
+                Ok(_) => {}
+                Err(err) => record_error(&mut result, &track_id, &err),
+            }
+        }
+        result
+    })
+    .await
+    .map_err(|e| e.to_string())
 }
 
 /// Decodes an audio file and returns normalized amplitude peaks, cached on

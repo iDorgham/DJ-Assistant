@@ -24,3 +24,28 @@ export function formatGridConfidence(confidence: number | null | undefined): str
   if (gridConfidenceTier(confidence) === "unknown") return null;
   return `${Math.round((confidence as number) * 100)}%`;
 }
+
+/** The counts the launch backfill (issue #89) reports back. */
+export interface GridBackfillCounts {
+  updated: number;
+  failed: number;
+}
+
+/**
+ * Status-line wording for the one-off launch backfill, or null when it filled
+ * nothing and has nothing to report. Failures alone are logged, not shown: the
+ * user did not start this pass and those rows keep showing no chip, as before.
+ */
+export function gridBackfillStatus(
+  counts: GridBackfillCounts
+): { message: string; tone: "ok" | "error" } | null {
+  if (counts.updated <= 0) return null;
+  const tracks = `${counts.updated} track${counts.updated === 1 ? "" : "s"}`;
+  if (counts.failed > 0) {
+    return {
+      message: `Measured beat-grid confidence for ${tracks} — ${counts.failed} couldn't be read.`,
+      tone: "error",
+    };
+  }
+  return { message: `Measured beat-grid confidence for ${tracks}.`, tone: "ok" };
+}

@@ -10,6 +10,7 @@ import type {
   GetArtworkRequest,
   GetArtworkResponse,
   RefreshArtworkResponse,
+  BackfillGridConfidenceResponse,
   UpdateTrackMetadataRequest,
   UpdateTrackMetadataResponse,
   SetTrackRatingRequest,
@@ -139,6 +140,19 @@ export async function refreshArtwork(): Promise<RefreshArtworkResponse> {
   }
   const { invoke } = await import("@tauri-apps/api/core");
   return invoke<RefreshArtworkResponse>("refresh_artwork");
+}
+
+/**
+ * One-time backfill of the beat-grid confidence for tracks analysed before it
+ * was stored (issue #89). Decodes those files and recomputes the beat grid
+ * only; no audio is modified and no other column changes. A no-op once filled.
+ */
+export async function backfillGridConfidence(): Promise<BackfillGridConfidenceResponse> {
+  if (!isTauri) {
+    return { scanned: 0, updated: 0, noTempo: 0, mismatched: 0, failed: 0, errors: [] };
+  }
+  const { invoke } = await import("@tauri-apps/api/core");
+  return invoke<BackfillGridConfidenceResponse>("backfill_grid_confidence");
 }
 
 export interface GetWaveformPeaksRequest {

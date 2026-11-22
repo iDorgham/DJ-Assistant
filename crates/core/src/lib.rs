@@ -12,6 +12,7 @@ pub mod audio;
 pub mod dedup;
 pub mod enrichment;
 pub mod fingerprint;
+pub mod grid_backfill;
 pub mod library_query;
 pub mod library_reads;
 pub mod library_remove;

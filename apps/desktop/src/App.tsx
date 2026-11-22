@@ -54,7 +54,9 @@ import {
   restoreTracks,
   revealInFileManager,
   refreshArtwork,
+  backfillGridConfidence,
 } from "./services/api";
+import { gridBackfillStatus } from "./lib/grid-confidence";
 import {
   FolderOpen,
   Music,
@@ -1179,6 +1181,7 @@ export default function App() {
   const [reloadToken, setReloadToken] = useState(0);
   // Repair legacy libraries once per session; StrictMode replays mount effects.
   const artworkRepairStarted = useRef(false);
+  const gridBackfillStarted = useRef(false);
   const [currentFolder, setCurrentFolder] = useState<string | null>(null);
   const [scanning, setScanning] = useState(false);
   const [progress, setProgress] = useState<ScanProgressEvent | null>(null);
@@ -1611,6 +1614,39 @@ export default function App() {
       .catch((err) => {
         console.error("Failed to restore artwork:", err);
         pushStatus("Couldn't restore artwork from your files — check the logs.", "error");
+      });
+  }, [pushStatus, refreshLibrary]);
+
+  // Tracks analysed before migration 009 have a beat grid but no stored
+  // confidence, so the player shows no grid chip for them (issue #89). Measure
+  // it once per install from the files. Unlike the artwork repair, the flag is
+  // set only when the pass completes: a failed call runs again next launch.
+  useEffect(() => {
+    if (gridBackfillStarted.current) return;
+    gridBackfillStarted.current = true;
+    const backfillKey = "dj-assistant.grid-confidence-backfill.v1";
+    try {
+      if (window.localStorage.getItem(backfillKey) === "1") return;
+    } catch {
+      // Storage blocked: the backfill runs again next launch, a no-op once done.
+    }
+    backfillGridConfidence()
+      .then((result) => {
+        try {
+          window.localStorage.setItem(backfillKey, "1");
+        } catch {
+          // Storage blocked: nothing to record.
+        }
+        if (result.failed > 0) {
+          console.warn("Beat-grid confidence backfill reported failures:", result.errors);
+        }
+        const status = gridBackfillStatus(result);
+        if (!status) return;
+        refreshLibrary("write");
+        pushStatus(status.message, status.tone);
+      })
+      .catch((err) => {
+        console.error("Failed to backfill beat-grid confidence:", err);
       });
   }, [pushStatus, refreshLibrary]);
 
