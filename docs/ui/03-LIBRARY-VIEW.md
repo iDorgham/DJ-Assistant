@@ -93,7 +93,8 @@ import falls back to a `TXXX` user-text frame with one of these descriptions
 (case-insensitive): Comment 2 (`comment2`, `comment 2`), Producer (`producer`),
 Catalog # (`catalognumber`, `catalog number`, `catalog`, `catno`), Mix Name
 (`mixname`, `mix name`, `mix`, `version`), and the same pattern for the other
-fields. MP4/M4A files have no reader for these fields in this build, so they
+text fields. Track and disc numbers (`TRCK`, `TPOS`) and lyrics (`USLT`) have
+no `TXXX` fallback: they import only from their standard frame. MP4/M4A files have no reader for these fields in this build, so they
 import blank and show the table dash. A tag the file does not carry renders the
 table dash, never a fake value. Bitrate, File Name and Import Date are derived
 from fields the summary already carries, so no column invents data. Comment 2

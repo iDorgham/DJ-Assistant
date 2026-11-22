@@ -1940,7 +1940,12 @@ fn apply_metadata_patch(
 
     // The scalar columns this patch touches. The names come from the fixed
     // allow-list in `core`, never from user input.
-    let columns = patch_columns(patch);
+    let mut columns = patch_columns(patch);
+    // The label's provenance flag is read with the label, so the snapshot can
+    // restore it on undo. It is never written from the patch itself.
+    if patch.label.is_some() {
+        columns.push("label_user_set");
+    }
     // Ids are bound, never interpolated into the SQL text. A selection larger
     // than core's conservative batch size is split into several statements, so
     // the read is a list the executor runs and concatenates.

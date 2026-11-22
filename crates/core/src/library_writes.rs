@@ -446,6 +446,15 @@ pub fn plan_metadata_write(
         // A label the user writes is theirs from now on: a later file refresh
         // must not overwrite it. Migration 010 records this as label_user_set.
         if before_values.contains_key("label") {
+            // The snapshot keeps the flag as it stood, so an undo restores the
+            // label's provenance along with its text.
+            if let Some(index) = columns.iter().position(|c| *c == "label_user_set") {
+                before_values.insert(
+                    "label_user_set".to_string(),
+                    current_values[index].to_json(),
+                );
+                after_values.insert("label_user_set".to_string(), WriteValue::Int(1).to_json());
+            }
             assignments.push("label_user_set = 1".to_string());
         }
 
@@ -606,11 +615,15 @@ pub fn plan_metadata_undo(
         // The columns this snapshot touches. Only those are written back, so
         // an undo never touches anything else. `tags` is not a column — it is
         // a set of rows in `track_tags`.
-        let columns: Vec<&str> = PATCH_COLUMNS
+        let mut columns: Vec<&str> = PATCH_COLUMNS
             .iter()
             .copied()
             .filter(|column| values.get(*column).is_some())
             .collect();
+        // A label write also snapshots the label's provenance flag.
+        if values.get("label_user_set").is_some() {
+            columns.push("label_user_set");
+        }
         let restores_tags = values.get("tags").is_some();
         if columns.is_empty() && !restores_tags {
             continue;
@@ -1263,5 +1276,39 @@ mod tests {
             normalize_tags(&[" Peak ".into(), "PEAK".into(), "warmup".into()]),
             vec!["peak".to_string(), "warmup".to_string()]
         );
+    }
+
+    #[test]
+    fn a_label_write_snapshots_and_undo_restores_its_provenance_flag() {
+        // A file-derived label (flag 0) is replaced by a user label: the write
+        // sets the flag, and the snapshot keeps the 0 so undo can put it back.
+        let patch = MetadataPatch {
+            label: Some("Warp".into()),
+            ..MetadataPatch::default()
+        };
+        let columns = vec!["label", "label_user_set"];
+        let rows = vec![(
+            "t1".to_string(),
+            vec![text("Old Label"), WriteValue::Int(0)],
+        )];
+        let planned = plan_metadata_write(&rows, &[], &columns, &patch);
+        assert_eq!(planned.len(), 1);
+        let update = planned[0].update.as_ref().expect("the label changes");
+        assert!(update.sql.contains("label_user_set = 1"));
+        assert_eq!(
+            planned[0].before.get("label_user_set"),
+            Some(&serde_json::json!(0))
+        );
+        assert_eq!(
+            planned[0].after.get("label_user_set"),
+            Some(&serde_json::json!(1))
+        );
+
+        let before = serde_json::json!({ "t1": planned[0].before });
+        let after = serde_json::json!({ "t1": planned[0].after });
+        let restores = plan_metadata_undo(&before, &after).unwrap();
+        let restore = restores[0].restore.as_ref().expect("the snapshot restores");
+        assert!(restore.sql.contains("label_user_set = ?"));
+        assert!(restore.params.contains(&WriteValue::Int(0)));
     }
 }
