@@ -21,6 +21,17 @@ project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   count, and an Undo on each one not yet undone. Backed by the read-only `tag_history`
   command over the existing `skill_runs` snapshots, so undo keeps the metadata-undo guard
   (a track edited since the apply is left as it is). No migration. Running-window QA pending.
+- **Beat-grid confidence backfill on launch (issue #89, T2.4.3)** — tracks
+  analysed before migration 009 kept a NULL `beatgrid_confidence` and showed no
+  `GRID` chip until a forced re-analysis. A new `backfill_grid_confidence` command
+  re-runs only the beat-grid detector (`run_beat_grid_only`: decode + grid, no ONNX
+  model, no version bump) for `complete` rows at the current `analysis_version`
+  that are still NULL, and writes the confidence alone. Rows whose recomputed BPM
+  differs from the stored one by more than 0.01 are skipped, and the UPDATE repeats
+  the selection predicate so a concurrent analysis or removal wins. The app runs it
+  once per install on launch (`dj-assistant.grid-confidence-backfill.v1`, set only
+  when the call succeeds with no per-track failures) and reports the count in the
+  status line. Running-window QA on a live library pending.
 - **Slices 4–8: artwork hover-play, mix suggestions dock, library source tabs,
   peaks cache and native audio (T2.1.9 / T2.1.11 / T2.1.12 / T2.4, PR #80)** — merged
   2026-11-16 (`65ca59ad`): hover-play overlay on the artwork column; a resizable
