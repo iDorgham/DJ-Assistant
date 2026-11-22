@@ -4,6 +4,15 @@ Ephemeral. Newest first. **Rotate aggressively** — if a line would still be tr
 in two weeks, it belongs in [`decisions.md`](./decisions.md); if it is just a
 fact, it belongs in [`facts.md`](./facts.md). Delete anything stale.
 
+## 2026-11-22 · Tag Surgeon history (T2.2.6) on `feat/t2.2.6-tag-surgeon-history`
+
+- Tag Surgeon T2.2.1–T2.2.6 are now all code-shipped (supersedes the 11-19 "unbuilt"
+  line below); every box waits on running-window QA (F-012).
+- T2.2.6 adds `tag_history` (read-only, latest 50 `tag_surgeon_apply` runs) and a History
+  section with per-entry Undo via `undo_track_metadata`. Checks: lint, typecheck,
+  303 desktop tests, `rust:test:portable`, clippy (core + desktop), `cargo fmt --check`.
+  The desktop command itself has no test here (STATUS_ENTRYPOINT_NOT_FOUND harness).
+
 ## 2026-11-22 · Audit correction (supersedes the 11-19 snapshot below where they differ)
 
 - **Update (same day):** the branch was merged as **PR #91** (merge commit `8f5d2253`, 2026-11-22 10:23 UTC, merging all 13 branch commits). `origin/main` = `8f5d2253`. No PR is needed for that branch.

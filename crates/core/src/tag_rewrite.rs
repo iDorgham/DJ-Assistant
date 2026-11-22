@@ -196,13 +196,93 @@ pub fn tag_rewrite_skill_run(
     })
 }
 
+/// How many past applies the history list shows (T2.2.6).
+pub const TAG_HISTORY_LIMIT: i64 = 50;
+
+/// The Tag Surgeon's past applies, newest first (T2.2.6). `?1` is
+/// [`TAG_REWRITE_SKILL_NAME`], `?2` the row limit. Only rows this path writes
+/// (`success`) or its undo leaves (`undone`) are listed; `rowid` breaks ties
+/// between applies stamped in the same second.
+pub const TAG_HISTORY_SQL: &str = "SELECT id, status, input_summary, after_state, created_at \
+     FROM skill_runs \
+     WHERE skill_name = ?1 AND status IN ('success', 'undone') \
+     ORDER BY created_at DESC, rowid DESC \
+     LIMIT ?2";
+
+/// One past apply, as the history list shows it.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct TagHistoryEntry {
+    /// The `skill_runs` id — the same id the metadata undo takes.
+    pub undo_id: String,
+    /// SQLite `datetime('now')`: UTC, `YYYY-MM-DD HH:MM:SS`.
+    pub created_at: String,
+    /// The apply was already undone, so it cannot be undone again.
+    pub undone: bool,
+    /// The spellings the apply rewrote, in the order they were confirmed.
+    pub renames: Vec<TagRename>,
+    /// The tracks whose tag set the apply changed.
+    pub track_count: usize,
+}
+
+/// Reads one history row. The row is written only by
+/// [`tag_rewrite_skill_run`], so a summary or snapshot that does not parse is
+/// a damaged row and is reported, not shown as an empty apply.
+pub fn parse_tag_history_entry(
+    undo_id: &str,
+    status: &str,
+    input_summary: Option<&str>,
+    after_state: Option<&str>,
+    created_at: &str,
+) -> Result<TagHistoryEntry, String> {
+    let damaged = |what: &str| format!("tag history {undo_id}: {what}");
+    let undone = match status {
+        "success" => false,
+        "undone" => true,
+        other => return Err(damaged(&format!("unexpected status {other:?}"))),
+    };
+    let input: serde_json::Value =
+        serde_json::from_str(input_summary.ok_or_else(|| damaged("no input summary"))?)
+            .map_err(|_| damaged("input summary is not JSON"))?;
+    let renames = input
+        .get("renames")
+        .and_then(serde_json::Value::as_array)
+        .ok_or_else(|| damaged("input summary has no renames"))?
+        .iter()
+        .map(|item| {
+            let side = |key: &str| item.get(key).and_then(serde_json::Value::as_str);
+            match (side("from"), side("to")) {
+                (Some(from), Some(to)) => Ok(TagRename {
+                    from: from.to_string(),
+                    to: to.to_string(),
+                }),
+                _ => Err(damaged("a rename is missing a side")),
+            }
+        })
+        .collect::<Result<Vec<_>, _>>()?;
+    let after: serde_json::Value =
+        serde_json::from_str(after_state.ok_or_else(|| damaged("no snapshot"))?)
+            .map_err(|_| damaged("snapshot is not JSON"))?;
+    let track_count = after
+        .as_object()
+        .ok_or_else(|| damaged("snapshot is not a track map"))?
+        .len();
+    Ok(TagHistoryEntry {
+        undo_id: undo_id.to_string(),
+        created_at: created_at.to_string(),
+        undone,
+        renames,
+        track_count,
+    })
+}
+
 #[cfg(test)]
 mod tests {
     use super::{
-        plan_tag_rewrite, renames_from_report, rewritten_tags, tag_rewrite_skill_run,
-        validate_renames, TagRename,
+        parse_tag_history_entry, plan_tag_rewrite, renames_from_report, rewritten_tags,
+        tag_rewrite_skill_run, validate_renames, TagRename, TAG_HISTORY_SQL,
     };
     use crate::library_writes::{plan_metadata_undo, WriteValue};
+    use crate::patch::TAG_REWRITE_SKILL_NAME;
     use crate::tag_clustering::{cluster_tags, TagValue};
 
     fn rename(from: &str, to: &str) -> TagRename {
@@ -369,5 +449,81 @@ mod tests {
             restores[0].tag_statements[0].params[0],
             WriteValue::Text("t1".to_string())
         );
+    }
+
+    #[test]
+    fn a_written_apply_reads_back_as_its_history_entry() {
+        let renames = [
+            rename("Melodic House ", "melodic house"),
+            rename("TECHNO", "techno"),
+        ];
+        let mut after = serde_json::Map::new();
+        for id in ["t1", "t2", "t3"] {
+            after.insert(
+                id.to_string(),
+                serde_json::json!({ "tags": ["melodic house"] }),
+            );
+        }
+        let run = tag_rewrite_skill_run(
+            "u1",
+            &tags(&["t1", "t2", "t3", "t4"]),
+            &renames,
+            serde_json::Map::new(),
+            after,
+        );
+        // Bound in skill_run_insert order: id, workspace, skill, input, before, after.
+        let entry = parse_tag_history_entry(
+            &run.params[0],
+            "success",
+            Some(&run.params[3]),
+            Some(&run.params[5]),
+            "2026-11-22 10:15:00",
+        )
+        .unwrap();
+        assert_eq!(entry.undo_id, "u1");
+        assert!(!entry.undone);
+        assert_eq!(entry.renames, renames.to_vec());
+        // Changed tracks come from the snapshot, not the scanned scope.
+        assert_eq!(entry.track_count, 3);
+        assert_eq!(entry.created_at, "2026-11-22 10:15:00");
+    }
+
+    #[test]
+    fn an_undone_apply_is_marked_undone() {
+        let entry = parse_tag_history_entry(
+            "u2",
+            "undone",
+            Some(r#"{"trackIds":["t1"],"renames":[{"from":"A","to":"a"}]}"#),
+            Some(r#"{"t1":{"tags":["a"]}}"#),
+            "2026-11-22 10:16:00",
+        )
+        .unwrap();
+        assert!(entry.undone);
+        assert_eq!(entry.track_count, 1);
+    }
+
+    #[test]
+    fn a_damaged_history_row_is_reported_not_shown_empty() {
+        let ok_input = Some(r#"{"renames":[{"from":"A","to":"a"}]}"#);
+        let ok_after = Some(r#"{"t1":{}}"#);
+        let parse = |status, input, after| parse_tag_history_entry("u3", status, input, after, "x");
+        assert!(parse("failed", ok_input, ok_after).is_err());
+        assert!(parse("success", None, ok_after).is_err());
+        assert!(parse("success", Some("not json"), ok_after).is_err());
+        assert!(parse("success", Some(r#"{"trackIds":[]}"#), ok_after).is_err());
+        assert!(parse("success", Some(r#"{"renames":[{"from":"A"}]}"#), ok_after).is_err());
+        assert!(parse("success", ok_input, None).is_err());
+        assert!(parse("success", ok_input, Some("[]")).is_err());
+        let message = parse("success", None, ok_after).unwrap_err();
+        assert!(message.contains("u3"), "{message}");
+    }
+
+    #[test]
+    fn the_history_query_lists_only_this_paths_rows() {
+        assert_eq!(TAG_REWRITE_SKILL_NAME, "tag_surgeon_apply");
+        assert!(TAG_HISTORY_SQL.contains("skill_name = ?1"));
+        assert!(TAG_HISTORY_SQL.contains("status IN ('success', 'undone')"));
+        assert!(TAG_HISTORY_SQL.contains("ORDER BY created_at DESC, rowid DESC"));
+        assert!(TAG_HISTORY_SQL.contains("LIMIT ?2"));
     }
 }

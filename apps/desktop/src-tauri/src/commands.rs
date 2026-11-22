@@ -20,6 +20,7 @@ use dj_assistant_core::library_writes::{
 };
 use dj_assistant_core::patch::{
     check_metadata_undoable, tags_match, METADATA_SKILL_NAME, RATING_SKILL_NAME,
+    TAG_REWRITE_SKILL_NAME,
 };
 use dj_assistant_core::reveal::reveal_command;
 use dj_assistant_core::tag_aliases::{
@@ -28,7 +29,8 @@ use dj_assistant_core::tag_aliases::{
 };
 use dj_assistant_core::tag_clustering::normalize_tag;
 use dj_assistant_core::tag_rewrite::{
-    plan_tag_rewrite, tag_rewrite_skill_run, validate_renames, TagRename,
+    parse_tag_history_entry, plan_tag_rewrite, tag_rewrite_skill_run, validate_renames, TagRename,
+    TAG_HISTORY_LIMIT, TAG_HISTORY_SQL,
 };
 use dj_assistant_core::{cache_artwork, extract_metadata, MAX_IN_CLAUSE_IDS};
 
@@ -45,9 +47,10 @@ use crate::models::{
     RevealInFileManagerRequest, ScanFolderRequest, ScanFolderResponse, SetTrackRatingRequest,
     SetTrackRatingResponse, SimilarTrackResult, StoreLink, StoreLinksRequest, StoreLinksResponse,
     TagAlias, TagApplyRequest, TagApplyResponse, TagClusterRequest, TagHealthRequest,
-    TagHealthResponse, TagHealthTotals, TagPreviewRequest, TagPreviewTrack, TrackDetail, TrackGaps,
-    TrackSummary, UndoRemoveTracksRequest, UndoRemoveTracksResponse, UndoTrackMetadataRequest,
-    UndoTrackMetadataResponse, UpdateTrackMetadataRequest, UpdateTrackMetadataResponse,
+    TagHealthResponse, TagHealthTotals, TagHistoryEntry, TagPreviewRequest, TagPreviewTrack,
+    TagRenameRequest, TrackDetail, TrackGaps, TrackSummary, UndoRemoveTracksRequest,
+    UndoRemoveTracksResponse, UndoTrackMetadataRequest, UndoTrackMetadataResponse,
+    UpdateTrackMetadataRequest, UpdateTrackMetadataResponse,
 };
 use crate::scanner::run_scan;
 use crate::security::validate_and_canonicalize_dir;
@@ -1317,6 +1320,64 @@ pub async fn tag_apply_renames(
         undo_id,
         updated: planned.len(),
     })
+}
+
+/// The Tag Surgeon's past applies, newest first (T2.2.6).
+///
+/// Read-only. Each entry's `undoId` goes to [`undo_track_metadata`], whose
+/// guard skips a track edited since the apply, so an old entry can be undone
+/// without overwriting newer work. A damaged row fails the read instead of
+/// being listed as an empty apply.
+#[tauri::command]
+pub async fn tag_history(
+    db: State<'_, Arc<Mutex<Database>>>,
+) -> Result<Vec<TagHistoryEntry>, String> {
+    let db_guard = db.lock().map_err(|e| e.to_string())?;
+    let mut stmt = db_guard
+        .conn()
+        .prepare(TAG_HISTORY_SQL)
+        .map_err(|e| e.to_string())?;
+    let rows = stmt
+        .query_map(
+            rusqlite::params![TAG_REWRITE_SKILL_NAME, TAG_HISTORY_LIMIT],
+            |row| {
+                Ok((
+                    row.get::<_, String>(0)?,
+                    row.get::<_, String>(1)?,
+                    row.get::<_, Option<String>>(2)?,
+                    row.get::<_, Option<String>>(3)?,
+                    row.get::<_, String>(4)?,
+                ))
+            },
+        )
+        .map_err(|e| e.to_string())?
+        .collect::<Result<Vec<_>, _>>()
+        .map_err(|e| e.to_string())?;
+    rows.iter()
+        .map(|(id, status, input, after, created_at)| {
+            let entry = parse_tag_history_entry(
+                id,
+                status,
+                input.as_deref(),
+                after.as_deref(),
+                created_at,
+            )?;
+            Ok(TagHistoryEntry {
+                undo_id: entry.undo_id,
+                created_at: entry.created_at,
+                undone: entry.undone,
+                renames: entry
+                    .renames
+                    .into_iter()
+                    .map(|rename| TagRenameRequest {
+                        from: rename.from,
+                        to: rename.to,
+                    })
+                    .collect(),
+                track_count: entry.track_count,
+            })
+        })
+        .collect()
 }
 
 /// The stored tag aliases, keyed by alias fold key (T2.2.5).

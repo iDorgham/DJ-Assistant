@@ -16,7 +16,11 @@ import {
   edgeLabel,
   emptyReportMessage,
   hasFindings,
+  historyRenamesLabel,
+  historyStatusLabel,
+  historyTimeLabel,
   ignoredTagsNote,
+  parseSqliteUtc,
   memberLabel,
   moreAffectedNote,
   previewSampleIds,
@@ -155,7 +159,43 @@ test("the apply lines say how many spellings change and how many tracks did", ()
   assert.equal(confirmLabel(1), "1 spelling will be replaced in the tracks that carry it.");
   assert.equal(confirmLabel(3), "3 spellings will be replaced in the tracks that carry them.");
   assert.equal(appliedLabel(0), "Nothing to change — the tags already match.");
-  assert.equal(appliedLabel(4), "Changed 4 tracks. Undo is available until you close this dialog.");
+  assert.equal(appliedLabel(4), "Changed 4 tracks. Undo it here, or later from History.");
+});
+
+test("a history row names its first rewrites and folds the rest", () => {
+  assert.equal(historyRenamesLabel([]), "No spellings recorded");
+  assert.equal(
+    historyRenamesLabel([{ from: "Melodic House ", to: "melodic house" }]),
+    "Melodic House → melodic house"
+  );
+  assert.equal(
+    historyRenamesLabel([
+      { from: "A", to: "a" },
+      { from: "B", to: "b" },
+      { from: "C", to: "c" },
+      { from: "D", to: "d" },
+    ]),
+    "A → a, B → b, +2 more"
+  );
+});
+
+test("a history time is read as UTC, and anything else is shown raw", () => {
+  assert.equal(parseSqliteUtc("2026-11-22 10:15:30")?.toISOString(), "2026-11-22T10:15:30.000Z");
+  assert.equal(parseSqliteUtc("2026-11-22T10:15:30Z"), null);
+  assert.equal(parseSqliteUtc(""), null);
+  assert.equal(historyTimeLabel("not a time"), "not a time");
+});
+
+test("a history row says its scope and whether it was undone", () => {
+  const entry = {
+    undoId: "u1",
+    createdAt: "2026-11-22 10:15:30",
+    undone: false,
+    renames: [],
+    trackCount: 3,
+  };
+  assert.equal(historyStatusLabel(entry), "3 tracks");
+  assert.equal(historyStatusLabel({ ...entry, undone: true, trackCount: 1 }), "1 track · undone");
 });
 
 test("an alias row reads as the spelling typed, then the spelling it saves as", () => {
