@@ -23,7 +23,6 @@ const seeds = [
 ];
 
 db.exec("BEGIN");
-db.prepare("DELETE FROM track_tags WHERE tag IN ('Peak Time', 'peaktime', 'Peak-Time')").run();
 for (const [trackId, tag] of seeds) insert.run(trackId, tag);
 db.exec("COMMIT");
 

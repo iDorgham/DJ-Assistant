@@ -32,8 +32,7 @@ function rightClickTitle(title) {
     (element) => element.getAttribute("aria-label") === `Play ${title}`
   );
   if (!cell) return "no-play-button";
-  let row = cell;
-  for (let i = 0; i < 8 && row && !row.textContent.includes(title); i++) row = row.parentElement;
+  const row = cell.closest("tr") || cell;
   const target = row.querySelector("[role=gridcell], td, div") || row;
   target.dispatchEvent(
     new globalThis.MouseEvent("contextmenu", {
@@ -53,8 +52,7 @@ function clickRow(title, options) {
     (element) => element.getAttribute("aria-label") === `Play ${title}`
   );
   if (!cell) return `no-row:${title}`;
-  let row = cell;
-  for (let i = 0; i < 8 && row && !row.textContent.includes(title); i++) row = row.parentElement;
+  const row = cell.closest("tr") || cell;
   const target =
     [...row.querySelectorAll("td,[role=gridcell],div")].find(
       (node) => node.textContent.trim() === title

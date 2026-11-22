@@ -7,17 +7,19 @@ aliases) and the library table pass.
 seeded with tag spelling variants, read through `DJ_ASSISTANT_DB_PATH`. The live
 library (`%APPDATA%\com.djassistant.desktop\dj_assistant.db`, mtime 2026-11-19)
 was not opened or written.
-**Driver:** Node scripts talking Chrome DevTools Protocol to WebView2 on port 9222
-(`scripts/qa/fixture-run/`: `seed.cjs` builds the fixture seeds and baseline,
+**Driver:** Node 22+ scripts talking Chrome DevTools Protocol to WebView2 on port
+9222 (`scripts/qa/fixture-run/`: `seed.cjs` builds the fixture seeds and baseline,
 `cdp.cjs` is the client, `lib.cjs` holds the page-side helpers, and
-`run-checks.cjs <step>` runs each step in the order the table lists). Run it with
-`DJ_ASSISTANT_DB_PATH` pointing at a copy of the fixture. Not a desktop
-computer-use session: no native-window clicks.
+`run-checks.cjs <step>` runs each step). Mouse and keyboard were simulated through
+DOM events and `Input.insertText`. Not a desktop computer-use session: no
+native-window clicks.
 
-**Caveat:** the driver was rewritten after this run (for DeepSource). The step
-functions were not re-run against the app; only syntax, lint and the seed script
-were checked.
-Mouse and keyboard were simulated through DOM events and `Input.insertText`.
+**What ran, and what did not:** the checks in the table were run during the session
+with ad-hoc queries. The driver was rewritten afterwards (for DeepSource), so its
+step functions have not been re-run against the app. Since the rewrite, these were
+checked: ESLint and Prettier, syntax, that every page-side expression compiles, that
+`seed.cjs` reproduces the baseline, and that `run-checks.cjs readback` reports
+`identical_to_baseline=true` on a fresh seeded copy.
 
 ## Fixture setup
 
@@ -41,17 +43,26 @@ Mouse and keyboard were simulated through DOM events and `Input.insertText`.
 | TS2 | Tag Surgeon | Scan finds one cluster, canonical `dark groove`, 3 tracks to change | PASS | dialog text matches `tag_cluster` IPC |
 | TS3 | Tag Surgeon | Apply asks for confirmation, then rewrites exactly the 3 tracks | PASS | DB: tracks 00001, 00003, 00004 → `dark groove`; 00002 unchanged; 207 rows |
 | TS4 | Tag Surgeon | "Changed 3 tracks. Undo is available…" shown | PASS | dialog text |
-| TS5 | Tag Surgeon | Undo restores every tag row | PASS | "Restored 3 tracks."; all 207 `track_tags` rows match the baseline row by row (track id and tag, ordered compare) |
+| TS5 | Tag Surgeon | Undo restores every tag row | PASS | "Restored 3 tracks."; all 207 `track_tags` rows match the baseline row by row |
 | M1 | Mix dock | Mix button opens the dock with ranked candidates and reason chips | PASS | candidates listed with "same key", "energy-boost", BPM deltas |
 | M2 | Mix dock | Preview loads the candidate in the player | PASS | player shows `Synthetic Track 00121`, 3:30 = 210 s (DB) |
-| M3 | Mix dock | Add adds the candidate to the selection | PASS | selection 1 → "2 tracks selected". The readbacks taken after the dock checks are listed under Net-zero; no other write is claimed |
+| M3 | Mix dock | Add adds the candidate to the selection | PASS | selection 1 → "2 tracks selected". Readbacks taken after the dock checks are under "Readbacks after the dock checks" below; no other write is claimed |
 | M4 | Mix dock | Resize handle exposes its width | PASS (read only) | `aria-valuenow` = 320 |
 | M5 | Mix dock | Close removes the dock | PASS | dock gone after click |
 
-**Readbacks after the dock checks:** `tracks` = 300, every `track_tags` row matched
-the baseline (a full row-by-row compare, not only the count), and `skill_runs` = 1,
-the Tag Surgeon undo snapshot from TS3. These are the only tables read back, so
-the report makes no claim about other tables. The live database was not opened.
+## Readbacks after the dock checks
+
+- `tracks` = 300.
+- Every `track_tags` row matched the baseline (an ordered row-by-row compare).
+- `skill_runs` = 1, the Tag Surgeon undo snapshot from TS3.
+
+These are the only tables read back, so the report makes no claim about other
+tables. The live database was not opened.
+
+**How these were read:** ad-hoc Node queries against the fixture copy, not the
+committed driver. The same comparison is the committed step
+`run-checks.cjs readback baseline.json` (with `DJ_ASSISTANT_DB_PATH` set). That step
+has been run on a fresh copy, but not against this run's database.
 
 ## Observations (not failures)
 
@@ -71,5 +82,6 @@ the report makes no claim about other tables. The live database was not opened.
 - Dock resize by drag, and keyboard resize.
 - Rust test suite on this run. The desktop test binary still does not start on
   this box (AGENTS.local.md); the core and schema suites were not run here.
+- The step functions of the rewritten driver, against the app (see the top).
 - The live library. It was deliberately left alone.
 - Ticks in `docs/sdd/04-TASKS.md`. Those stay with the human, per F-012.

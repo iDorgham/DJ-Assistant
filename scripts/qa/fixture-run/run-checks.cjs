@@ -1,21 +1,47 @@
 /* eslint-disable @typescript-eslint/no-require-imports -- CommonJS, so the DeepSource JS analyzer does not reject imports. */
 // Drives the desktop app over DevTools for the 2026-11-22 fixture QA run.
-// Usage: node scripts/qa/fixture-run/run-checks.cjs <step>
+// Usage: node scripts/qa/fixture-run/run-checks.cjs <step> [baseline.json]
 // Steps, in the order the evidence records them:
-//   library      headers, load-all, search and clear
+//   library      headers, load-all, search, empty state and clear
 //   open-ts      select four seeded tracks and open the Tag Surgeon scan
 //   apply        open the confirmation step (read only)
 //   confirm      confirm the apply
 //   undo         undo the apply
 //   mix-open     open the mix dock for one track and read it
 //   mix-actions  preview, add and close in the mix dock
-// Each step needs the app running with DJ_ASSISTANT_DB_PATH pointing at a copy
-// of the fixture and WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS=--remote-debugging-port=9222.
+//   readback     read the fixture database and compare it with the baseline
+// The app steps need Node 22+, the app running with DJ_ASSISTANT_DB_PATH
+// pointing at a copy of the fixture, and
+// WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS=--remote-debugging-port=9222.
+// A step stops with an error when an action does not succeed, so a missing
+// control cannot produce a passing record.
+const { DatabaseSync } = require("node:sqlite");
+const { readFileSync } = require("node:fs");
 const { connect } = require("./cdp.cjs");
 const { expr, setInput, clickByText, rightClickTitle, clickRow, loadAll } = require("./lib.cjs");
 
 const out = (value) => process.stdout.write(`${value}\n`);
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+// Results from page helpers that count as success. Anything else is a failure.
+const SUCCESS = /^(ok|clicked|ctx:|loaded:|closed prior|none open)/;
+
+/** Runs a page helper, fails the step unless it reports success, and prints the value. */
+async function act(client, fn, args, label) {
+  const value = await client.evaluate(expr(fn, ...args));
+  if (typeof value !== "string" || !SUCCESS.test(value)) {
+    throw new Error(`${label} did not succeed: ${value}`);
+  }
+  out(`${label}: ${value}`);
+  return value;
+}
+
+/** Runs a page reader and prints the value without a success check. */
+async function read(client, fn, args, label) {
+  const value = await client.evaluate(expr(fn, ...args));
+  out(`${label}: ${value}`);
+  return value;
+}
 
 function closeOpenDialog() {
   const button = [...globalThis.document.querySelectorAll("[role=dialog] button")].find(
@@ -48,14 +74,14 @@ function readPlayLabels() {
 
 function readHeaders() {
   const names = ["Title", "Artist", "BPM", "Key", "Energy", "Rating", "Time"];
-  const headers = [...globalThis.document.querySelectorAll("th,[role=columnheader]")].map((e) =>
-    e.textContent.trim()
+  const headers = [...globalThis.document.querySelectorAll("th,[role=columnheader]")].map((node) =>
+    node.textContent.trim()
   );
   return JSON.stringify(names.map((name) => headers.includes(name)));
 }
 
-function readStatus() {
-  const match = globalThis.document.body.innerText.match(/[0-9]+ of [0-9]+ tracks/);
+function readLoadedCount() {
+  const match = globalThis.document.body.innerText.match(/Library loaded: [0-9]+ tracks/);
   return match ? match[0] : "none";
 }
 
@@ -94,7 +120,9 @@ function readMixButtonState() {
   ];
   return JSON.stringify({
     dock: Boolean(globalThis.document.querySelector('[aria-label="Mix suggestions"]')),
-    mixButton: buttons.map((b) => (b.className.includes("text-dj-accent") ? "open" : "closed")),
+    mixButton: buttons.map((item) =>
+      item.className.includes("text-dj-accent") ? "open" : "closed"
+    ),
   });
 }
 
@@ -133,115 +161,147 @@ function readHandle() {
 }
 
 async function clearAndLoad(client) {
-  out(await client.evaluate(expr(clickByText, "button", "Clear search & filters")));
+  await act(client, clickByText, ["button", "Clear search & filters"], "clear filters");
   await sleep(800);
-  out(await client.evaluate(expr(loadAll)));
+  await act(client, loadAll, [], "load all");
   await sleep(600);
 }
 
 async function selectSeededTracks(client) {
-  out(
-    await client.evaluate(
-      expr(setInput, 'input[aria-label="Search the library"]', "Synthetic Track 0000")
-    )
+  await act(
+    client,
+    setInput,
+    ['input[aria-label="Search the library"]', "Synthetic Track 0000"],
+    "search seeded"
   );
   await sleep(1500);
-  out(await client.evaluate(expr(clickRow, "Synthetic Track 00001")));
+  await act(client, clickRow, ["Synthetic Track 00001"], "select 00001");
   await sleep(300);
-  out(await client.evaluate(expr(clickRow, "Synthetic Track 00004", { shift: true })));
+  await act(client, clickRow, ["Synthetic Track 00004", { shift: true }], "shift-select 00004");
   await sleep(400);
 }
 
 async function openFixTags(client) {
-  out(await client.evaluate(expr(rightClickTitle, "Synthetic Track 00001")));
+  await act(client, rightClickTitle, ["Synthetic Track 00001"], "context menu");
   await sleep(500);
-  out(await client.evaluate(expr(clickByText, "[role=menu] button, [role=menuitem]", "Fix tags")));
+  await act(client, clickByText, ["[role=menu] button, [role=menuitem]", "Fix tags"], "Fix tags");
   await sleep(2000);
 }
 
 const steps = {
   async library(client) {
-    out(`L1 headers: ${await client.evaluate(expr(readHeaders))}`);
-    out(`L2 status before load-all: ${await client.evaluate(expr(readStatus))}`);
+    await read(client, readHeaders, [], "L1 headers Title..Time");
+    await read(client, readPlayLabels, [], "L2 rows before load-all");
     await clearAndLoad(client);
-    out(`L4 status after load-all: ${await client.evaluate(expr(readStatus))}`);
-    out(
-      await client.evaluate(
-        expr(setInput, 'input[aria-label="Search the library"]', "Synthetic Track 00042")
-      )
+    await act(
+      client,
+      setInput,
+      ['input[aria-label="Search the library"]', "Synthetic Track 00042"],
+      "L3 search one title"
     );
     await sleep(1500);
-    out(`L3 rows: ${await client.evaluate(expr(readPlayLabels))}`);
-    out(
-      await client.evaluate(
-        expr(setInput, 'input[aria-label="Search the library"]', "zzz-no-such-track")
-      )
+    await read(client, readPlayLabels, [], "L3 rows");
+    await act(
+      client,
+      setInput,
+      ['input[aria-label="Search the library"]', "zzz-no-such-track"],
+      "L4 search no match"
     );
     await sleep(1500);
-    out(`L4 empty state: ${await client.evaluate(expr(readNoMatch))}`);
-    out(await client.evaluate(expr(clickByText, "button", "Clear search & filters")));
+    await read(client, readNoMatch, [], "L4 empty state shown");
+    await act(client, clickByText, ["button", "Clear search & filters"], "L5 clear");
     await sleep(1200);
-    out(`L5 rows after clear: ${await client.evaluate(expr(readPlayLabels))}`);
+    await read(client, readPlayLabels, [], "L5 rows after clear");
+    await read(client, readLoadedCount, [], "L6 header");
   },
 
   async "open-ts"(client) {
-    out(await client.evaluate(expr(closeOpenDialog)));
+    await act(client, closeOpenDialog, [], "close prior dialog");
     await sleep(500);
     await clearAndLoad(client);
     await selectSeededTracks(client);
     await openFixTags(client);
-    out(await client.evaluate(expr(readDialog, 1500)));
+    await read(client, readDialog, [1500], "scan dialog");
   },
 
   async apply(client) {
-    out(await client.evaluate(expr(clickByText, "[role=dialog] button", "Apply these spellings…")));
+    await act(
+      client,
+      clickByText,
+      ["[role=dialog] button", "Apply these spellings…"],
+      "open apply"
+    );
     await sleep(800);
-    out(await client.evaluate(expr(readDialog, 700)));
+    await read(client, readDialog, [700], "confirmation");
   },
 
   async confirm(client) {
-    out(await client.evaluate(expr(clickByText, "[role=dialog] button", "Apply")));
+    await act(client, clickByText, ["[role=dialog] button", "Apply"], "confirm apply");
     await sleep(2000);
-    out(await client.evaluate(expr(readDialog, 500)));
+    await read(client, readDialog, [500], "after apply");
   },
 
   async undo(client) {
-    out(await client.evaluate(expr(clickByText, "[role=dialog] button", "Undo")));
+    await act(client, clickByText, ["[role=dialog] button", "Undo"], "undo");
     await sleep(2000);
-    out(await client.evaluate(expr(readDialog, 400)));
+    await read(client, readDialog, [400], "after undo");
   },
 
   async "mix-open"(client) {
-    out(await client.evaluate(expr(closeOpenDialog)));
+    await act(client, closeOpenDialog, [], "close prior dialog");
     await sleep(500);
-    out(await client.evaluate(expr(clickRow, "Synthetic Track 00001")));
+    await act(client, clickRow, ["Synthetic Track 00001"], "select 00001");
     await sleep(400);
-    out(`before: ${await client.evaluate(expr(readMixButtonState))}`);
-    out(await client.evaluate(expr(clickMixButton)));
+    await read(client, readMixButtonState, [], "mix button before");
+    await act(client, clickMixButton, [], "open mix dock");
     await sleep(2500);
-    out(`after: ${await client.evaluate(expr(readMixButtonState))}`);
-    out(await client.evaluate(expr(readDock)));
+    await read(client, readMixButtonState, [], "mix button after");
+    await read(client, readDock, [], "dock");
   },
 
   async "mix-actions"(client) {
-    out(`selection before add: ${await client.evaluate(expr(readSelectedCount))}`);
-    out(await client.evaluate(expr(clickDockButton, "Preview Synthetic Track 00121")));
+    await read(client, readSelectedCount, [], "selection before add");
+    await act(client, clickDockButton, ["Preview Synthetic Track 00121"], "preview");
     await sleep(1200);
-    out(`player titles: ${await client.evaluate(expr(readPlayerTitles))}`);
-    out(await client.evaluate(expr(clickDockButton, "Add Synthetic Track 00121")));
+    await read(client, readPlayerTitles, [], "player titles");
+    await act(client, clickDockButton, ["Add Synthetic Track 00121"], "add");
     await sleep(1200);
-    out(`selection after add: ${await client.evaluate(expr(readSelectedCount))}`);
-    out(`handle aria-valuenow: ${await client.evaluate(expr(readHandle))}`);
-    out(await client.evaluate(expr(clickNamedButton, "Close mix suggestions")));
+    await read(client, readSelectedCount, [], "selection after add");
+    await read(client, readHandle, [], "handle aria-valuenow");
+    await act(client, clickNamedButton, ["Close mix suggestions"], "close dock");
     await sleep(900);
-    out(`dock open after close: ${await client.evaluate(expr(readDockOpen))}`);
+    await read(client, readDockOpen, [], "dock open after close");
   },
 };
 
+/** Compares the fixture database with the baseline the seed script wrote. No app needed. */
+function readback(baselinePath) {
+  const dbPath = process.env.DJ_ASSISTANT_DB_PATH;
+  if (!dbPath || !baselinePath) {
+    throw new Error("readback needs DJ_ASSISTANT_DB_PATH and a baseline.json path");
+  }
+  const db = new DatabaseSync(dbPath, { readOnly: true });
+  const baseline = JSON.parse(readFileSync(baselinePath, "utf8"));
+  const tracks = db.prepare("SELECT COUNT(*) AS n FROM tracks").get().n;
+  const skillRuns = db.prepare("SELECT COUNT(*) AS n FROM skill_runs").get().n;
+  const rows = db.prepare("SELECT track_id, tag FROM track_tags ORDER BY 1, 2").all();
+  const identical = JSON.stringify(rows) === JSON.stringify(baseline.tag_rows);
+  out(
+    `tracks=${tracks} skill_runs=${skillRuns} track_tags=${rows.length} identical_to_baseline=${identical}`
+  );
+  if (!identical) process.exitCode = 1;
+}
+
 async function main() {
   const name = process.argv[2];
-  if (!steps[name]) {
-    process.stderr.write(`usage: run-checks.cjs <${Object.keys(steps).join("|")}>\n`);
+  if (name === "readback") {
+    readback(process.argv[3]);
+    return;
+  }
+  if (!Object.hasOwn(steps, name)) {
+    process.stderr.write(
+      `usage: run-checks.cjs <${[...Object.keys(steps), "readback"].join("|")}>\n`
+    );
     process.exit(2);
   }
   const client = await connect(9222, { timeoutMs: 60000 });
