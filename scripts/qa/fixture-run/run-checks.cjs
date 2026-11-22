@@ -1,4 +1,3 @@
-/* global document */
 /* eslint-disable @typescript-eslint/no-require-imports -- CommonJS, so the DeepSource JS analyzer does not reject imports. */
 // Drives the desktop app over DevTools for the 2026-11-22 fixture QA run.
 // Usage: node scripts/qa/fixture-run/run-checks.cjs <step>
@@ -19,7 +18,7 @@ const out = (value) => process.stdout.write(`${value}\n`);
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
 function closeOpenDialog() {
-  const button = [...document.querySelectorAll("[role=dialog] button")].find(
+  const button = [...globalThis.document.querySelectorAll("[role=dialog] button")].find(
     (item) => item.textContent.trim() === "Close"
   );
   if (button) {
@@ -30,10 +29,10 @@ function closeOpenDialog() {
 }
 
 function readDialog(limit) {
-  const dialog = document.querySelector("[role=dialog]");
+  const dialog = globalThis.document.querySelector("[role=dialog]");
   return JSON.stringify({
     dialog: dialog?.innerText?.slice(0, limit),
-    buttons: [...document.querySelectorAll("[role=dialog] button")]
+    buttons: [...globalThis.document.querySelectorAll("[role=dialog] button")]
       .map((item) => item.textContent.trim())
       .filter(Boolean),
   });
@@ -41,7 +40,7 @@ function readDialog(limit) {
 
 function readPlayLabels() {
   return JSON.stringify(
-    [...document.querySelectorAll('[aria-label^="Play "]')].map((element) =>
+    [...globalThis.document.querySelectorAll('[aria-label^="Play "]')].map((element) =>
       element.getAttribute("aria-label")
     )
   );
@@ -49,33 +48,33 @@ function readPlayLabels() {
 
 function readHeaders() {
   const names = ["Title", "Artist", "BPM", "Key", "Energy", "Rating", "Time"];
-  const headers = [...document.querySelectorAll("th,[role=columnheader]")].map((e) =>
+  const headers = [...globalThis.document.querySelectorAll("th,[role=columnheader]")].map((e) =>
     e.textContent.trim()
   );
   return JSON.stringify(names.map((name) => headers.includes(name)));
 }
 
 function readStatus() {
-  const match = document.body.innerText.match(/[0-9]+ of [0-9]+ tracks/);
+  const match = globalThis.document.body.innerText.match(/[0-9]+ of [0-9]+ tracks/);
   return match ? match[0] : "none";
 }
 
 function readNoMatch() {
-  return document.body.innerText.includes("No tracks match");
+  return globalThis.document.body.innerText.includes("No tracks match");
 }
 
 function readSelectedCount() {
-  const match = document.body.innerText.match(/([0-9]+) selected/);
+  const match = globalThis.document.body.innerText.match(/([0-9]+) selected/);
   return match ? match[0] : "no-selected-text";
 }
 
 function readPlayerTitles() {
-  const titles = document.body.innerText.match(/Synthetic Track 00[0-9]+/g) || [];
+  const titles = globalThis.document.body.innerText.match(/Synthetic Track 00[0-9]+/g) || [];
   return JSON.stringify([...new Set(titles)].slice(0, 4));
 }
 
 function readDock() {
-  const dock = document.querySelector('[aria-label="Mix suggestions"]');
+  const dock = globalThis.document.querySelector('[aria-label="Mix suggestions"]');
   return JSON.stringify({
     open: Boolean(dock),
     text: dock ? dock.innerText.slice(0, 700) : null,
@@ -89,43 +88,47 @@ function readDock() {
 
 function readMixButtonState() {
   const buttons = [
-    ...document.querySelectorAll('button[title="Mix suggestions for the selected track"]'),
+    ...globalThis.document.querySelectorAll(
+      'button[title="Mix suggestions for the selected track"]'
+    ),
   ];
   return JSON.stringify({
-    dock: Boolean(document.querySelector('[aria-label="Mix suggestions"]')),
+    dock: Boolean(globalThis.document.querySelector('[aria-label="Mix suggestions"]')),
     mixButton: buttons.map((b) => (b.className.includes("text-dj-accent") ? "open" : "closed")),
   });
 }
 
 function clickMixButton() {
-  const button = document.querySelector('button[title="Mix suggestions for the selected track"]');
+  const button = globalThis.document.querySelector(
+    'button[title="Mix suggestions for the selected track"]'
+  );
   if (!button) return "no mix button";
   button.click();
   return "clicked mix";
 }
 
 function clickDockButton(label) {
-  const button = [...document.querySelectorAll('[aria-label="Mix suggestions"] button')].find(
-    (item) => item.getAttribute("aria-label") === label
-  );
+  const button = [
+    ...globalThis.document.querySelectorAll('[aria-label="Mix suggestions"] button'),
+  ].find((item) => item.getAttribute("aria-label") === label);
   if (!button) return `missing:${label}`;
   button.click();
   return `clicked:${label}`;
 }
 
 function clickNamedButton(label) {
-  const button = document.querySelector(`[aria-label="${label}"]`);
+  const button = globalThis.document.querySelector(`[aria-label="${label}"]`);
   if (!button) return `no:${label}`;
   button.click();
   return "clicked";
 }
 
 function readDockOpen() {
-  return Boolean(document.querySelector('[aria-label="Mix suggestions"]'));
+  return Boolean(globalThis.document.querySelector('[aria-label="Mix suggestions"]'));
 }
 
 function readHandle() {
-  const handle = document.querySelector('[aria-label="Resize mix suggestions dock"]');
+  const handle = globalThis.document.querySelector('[aria-label="Resize mix suggestions dock"]');
   return handle ? handle.getAttribute("aria-valuenow") : null;
 }
 

@@ -1,8 +1,8 @@
-/* global document, MouseEvent */
 // Page-side helpers for the DevTools driver. Each function is serialised with
-// toString() and run inside the WebView, so the browser executes this exact
-// source. Arguments are passed as JSON. Only `document`, `window` and the
-// arguments are used: no closures.
+// toString() and run inside the WebView, so the browser executes exactly this
+// source. Only its own body and its arguments are available there, so every
+// page function is self-contained: no helper calls, no closures. Arguments are
+// passed as JSON.
 
 /** Builds the expression that calls `fn` in the page with JSON arguments. */
 function expr(fn, ...args) {
@@ -10,16 +10,16 @@ function expr(fn, ...args) {
 }
 
 function setInput(selector, value) {
-  const el = document.querySelector(selector);
+  const el = globalThis.document.querySelector(selector);
   if (!el) throw new Error(`no input ${selector}`);
   const setter = Object.getOwnPropertyDescriptor(Object.getPrototypeOf(el), "value").set;
   setter.call(el, value);
-  el.dispatchEvent(new Event("input", { bubbles: true }));
+  el.dispatchEvent(new globalThis.Event("input", { bubbles: true }));
   return "ok";
 }
 
 function clickByText(selector, text) {
-  const el = [...document.querySelectorAll(selector)].find(
+  const el = [...globalThis.document.querySelectorAll(selector)].find(
     (element) => element.textContent.trim() === text
   );
   if (!el) return `missing:${text}`;
@@ -27,20 +27,16 @@ function clickByText(selector, text) {
   return "clicked";
 }
 
-function findPlayCell(title) {
-  return [...document.querySelectorAll('[aria-label^="Play "]')].find(
+function rightClickTitle(title) {
+  const cell = [...globalThis.document.querySelectorAll('[aria-label^="Play "]')].find(
     (element) => element.getAttribute("aria-label") === `Play ${title}`
   );
-}
-
-function rightClickTitle(title) {
-  const cell = findPlayCell(title);
   if (!cell) return "no-play-button";
   let row = cell;
   for (let i = 0; i < 8 && row && !row.textContent.includes(title); i++) row = row.parentElement;
   const target = row.querySelector("[role=gridcell], td, div") || row;
   target.dispatchEvent(
-    new MouseEvent("contextmenu", {
+    new globalThis.MouseEvent("contextmenu", {
       bubbles: true,
       cancelable: true,
       clientX: 300,
@@ -53,7 +49,9 @@ function rightClickTitle(title) {
 
 function clickRow(title, options) {
   const { shift = false, ctrl = false } = options || {};
-  const cell = findPlayCell(title);
+  const cell = [...globalThis.document.querySelectorAll('[aria-label^="Play "]')].find(
+    (element) => element.getAttribute("aria-label") === `Play ${title}`
+  );
   if (!cell) return `no-row:${title}`;
   let row = cell;
   for (let i = 0; i < 8 && row && !row.textContent.includes(title); i++) row = row.parentElement;
@@ -69,16 +67,16 @@ function clickRow(title, options) {
     ctrlKey: ctrl,
     metaKey: false,
   };
-  target.dispatchEvent(new MouseEvent("mousedown", opts));
-  target.dispatchEvent(new MouseEvent("mouseup", opts));
-  target.dispatchEvent(new MouseEvent("click", opts));
+  target.dispatchEvent(new globalThis.MouseEvent("mousedown", opts));
+  target.dispatchEvent(new globalThis.MouseEvent("mouseup", opts));
+  target.dispatchEvent(new globalThis.MouseEvent("click", opts));
   return `clicked:${row.tagName}`;
 }
 
 async function loadAll() {
   for (let i = 0; i < 40; i++) {
-    const match = document.body.innerText.match(/([0-9]+) of ([0-9]+) tracks/);
-    const btn = [...document.querySelectorAll("button")].find(
+    const match = globalThis.document.body.innerText.match(/([0-9]+) of ([0-9]+) tracks/);
+    const btn = [...globalThis.document.querySelectorAll("button")].find(
       (item) => item.textContent.trim() === "Load more"
     );
     if (!btn) return `loaded:${match ? match[0] : "no-count"}`;
