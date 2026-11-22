@@ -11,6 +11,7 @@ import type {
   SpellingCluster,
   TagAlias,
   TagClusterReport,
+  TagHistoryEntry,
   TagPreviewTrack,
   TagRenameRequest,
 } from "@dj-assistant/shared";
@@ -130,7 +131,55 @@ export function confirmLabel(renameCount: number): string {
 export function appliedLabel(updated: number): string {
   return updated === 0
     ? "Nothing to change — the tags already match."
-    : `Changed ${scopeLabel(updated)}. Undo is available until you close this dialog.`;
+    : `Changed ${scopeLabel(updated)}. Undo it here, or later from History.`;
+}
+
+/** How many renames a history row names before folding the rest into "+N more". */
+export const HISTORY_RENAMES_SHOWN = 2;
+
+/** A history row's rewrites: the first few as `from → to`, then "+N more". */
+export function historyRenamesLabel(renames: TagRenameRequest[]): string {
+  if (renames.length === 0) return "No spellings recorded";
+  const shown = renames
+    .slice(0, HISTORY_RENAMES_SHOWN)
+    .map((rename) => `${rename.from.trim()} → ${rename.to}`)
+    .join(", ");
+  const rest = renames.length - HISTORY_RENAMES_SHOWN;
+  return rest > 0 ? `${shown}, +${rest} more` : shown;
+}
+
+/**
+ * Reads SQLite's `datetime('now')` (UTC, `YYYY-MM-DD HH:MM:SS`) as a Date.
+ * Returns null for anything else, so the caller can show the raw text.
+ */
+export function parseSqliteUtc(createdAt: string): Date | null {
+  const match = /^(\d{4})-(\d{2})-(\d{2}) (\d{2}):(\d{2}):(\d{2})$/.exec(createdAt);
+  if (!match) return null;
+  const [, y, mo, d, h, mi, s] = match.map(Number);
+  const date = new Date(Date.UTC(y, mo - 1, d, h, mi, s));
+  // Date.UTC rolls out-of-range fields over (month 13 → next January), so a
+  // value is only accepted when every field reads back as it was written.
+  const exact =
+    date.getUTCFullYear() === y &&
+    date.getUTCMonth() === mo - 1 &&
+    date.getUTCDate() === d &&
+    date.getUTCHours() === h &&
+    date.getUTCMinutes() === mi &&
+    date.getUTCSeconds() === s;
+  return exact ? date : null;
+}
+
+/** When a history row ran, in the viewer's own time zone. */
+export function historyTimeLabel(createdAt: string): string {
+  const date = parseSqliteUtc(createdAt);
+  return date
+    ? date.toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" })
+    : createdAt;
+}
+
+/** A history row's scope and state. */
+export function historyStatusLabel(entry: TagHistoryEntry): string {
+  return entry.undone ? `${scopeLabel(entry.trackCount)} · undone` : scopeLabel(entry.trackCount);
 }
 
 /** The result line after an undo: restored tracks, and any left alone. */

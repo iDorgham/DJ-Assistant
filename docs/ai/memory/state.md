@@ -4,6 +4,13 @@ Ephemeral. Newest first. **Rotate aggressively** — if a line would still be tr
 in two weeks, it belongs in [`decisions.md`](./decisions.md); if it is just a
 fact, it belongs in [`facts.md`](./facts.md). Delete anything stale.
 
+## 2026-11-22 · Tag Surgeon history (T2.2.6)
+
+- Tag Surgeon T2.2.1–T2.2.6 are now all code-shipped (supersedes the 11-19 "unbuilt"
+  line below). T2.2.1 has its running-window QA recorded and waits only on the human
+  tick; T2.2.2–T2.2.6 still need running-window QA (F-012).
+- T2.2.6 details: `04-TASKS.md` and `CHANGELOG.md`.
+
 ## 2026-11-22 · Audit correction (supersedes the 11-19 snapshot below where they differ)
 
 - **Update (same day):** the branch was merged as **PR #91** (merge commit `8f5d2253`, 2026-11-22 10:23 UTC, merging all 13 branch commits). `origin/main` = `8f5d2253`. No PR is needed for that branch.
@@ -265,4 +272,4 @@ fact, it belongs in [`facts.md`](./facts.md). Delete anything stale.
 - PR #53/#54 review nits (2026-10-24, unverified since): logging redactor misses bare
   `token` / JSON-quoted keys; waveform cache unbounded; `effectiveBpm` not clamped to
   40–240; `OverviewMap` offset unclamped; shortcut test skips Meta.
-- Full-window Player view, cue/waveform editor and Tag Surgeon apply (T2.2.2+) unbuilt.
+- Full-window Player view and cue/waveform editor unbuilt.
