@@ -36,6 +36,9 @@ import type {
   TagClusterReport,
   TagApplyRequest,
   TagApplyResponse,
+  TagAlias,
+  AddTagAliasRequest,
+  RemoveTagAliasRequest,
   TagPreviewRequest,
   TagPreviewTrack,
   TagHealthRequest,
@@ -383,6 +386,27 @@ export async function tagApplyRenames(req: TagApplyRequest): Promise<TagApplyRes
   if (!isTauri) throw new Error("Applying tag changes needs the desktop app.");
   const { invoke } = await import("@tauri-apps/api/core");
   return invoke<TagApplyResponse>("tag_apply_renames", { request: req });
+}
+
+/** The stored tag aliases (T2.2.5). A browser tab has none to show. */
+export async function listTagAliases(): Promise<TagAlias[]> {
+  if (!isTauri) return [];
+  const { invoke } = await import("@tauri-apps/api/core");
+  return invoke<TagAlias[]>("list_tag_aliases_command");
+}
+
+/** Adds or re-points a tag alias (T2.2.5). Returns the full list. */
+export async function addTagAlias(req: AddTagAliasRequest): Promise<TagAlias[]> {
+  if (!isTauri) throw new Error("Saving a tag alias needs the desktop app.");
+  const { invoke } = await import("@tauri-apps/api/core");
+  return invoke<TagAlias[]>("add_tag_alias", { request: req });
+}
+
+/** Removes a tag alias (T2.2.5). Returns the full list. */
+export async function removeTagAlias(req: RemoveTagAliasRequest): Promise<TagAlias[]> {
+  if (!isTauri) throw new Error("Removing a tag alias needs the desktop app.");
+  const { invoke } = await import("@tauri-apps/api/core");
+  return invoke<TagAlias[]>("remove_tag_alias", { request: req });
 }
 
 /**

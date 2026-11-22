@@ -507,6 +507,21 @@ export interface TagApplyRequest {
   renames: TagRenameRequest[];
 }
 
+/** A tag spelling alias: tags written with `alias` are saved as `canonical` (T2.2.5). */
+export interface TagAlias {
+  alias: string;
+  canonical: string;
+}
+
+export interface AddTagAliasRequest {
+  alias: string;
+  canonical: string;
+}
+
+export interface RemoveTagAliasRequest {
+  alias: string;
+}
+
 export interface TagApplyResponse {
   /** Id of the undo snapshot, or empty if no track changed. Undo with `undoTrackMetadata`. */
   undoId: string;

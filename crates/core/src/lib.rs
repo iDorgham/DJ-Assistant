@@ -25,6 +25,7 @@ pub mod providers;
 pub mod reveal;
 pub mod riff;
 pub mod similarity;
+pub mod tag_aliases;
 pub mod tag_clustering;
 pub mod tag_rewrite;
 pub mod tags;

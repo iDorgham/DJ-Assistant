@@ -9,6 +9,7 @@
 import type {
   PrefixEdge,
   SpellingCluster,
+  TagAlias,
   TagClusterReport,
   TagPreviewTrack,
   TagRenameRequest,
@@ -105,6 +106,11 @@ export function renamesFor(report: TagClusterReport): TagRenameRequest[] {
       .filter((member) => member.raw !== cluster.canonical)
       .map((member) => ({ from: member.raw, to: cluster.canonical }))
   );
+}
+
+/** One alias row: the spelling typed, then the spelling it is saved as. */
+export function aliasLabel(alias: TagAlias): string {
+  return `${alias.alias} → ${alias.canonical}`;
 }
 
 /** The confirm-step line naming how many spellings a rewrite replaces. */

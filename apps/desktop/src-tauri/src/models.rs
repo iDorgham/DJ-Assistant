@@ -358,6 +358,28 @@ pub struct TagApplyRequest {
     pub renames: Vec<TagRenameRequest>,
 }
 
+/// A tag spelling alias: the spelling typed, and the canonical spelling tags
+/// with it are saved as from now on (T2.2.5).
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub struct TagAlias {
+    pub alias: String,
+    pub canonical: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct AddTagAliasRequest {
+    pub alias: String,
+    pub canonical: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct RemoveTagAliasRequest {
+    pub alias: String,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct TagApplyResponse {

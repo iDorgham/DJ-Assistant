@@ -25,6 +25,7 @@ const MIGRATIONS: &[(i64, &str)] = &[
         10,
         include_str!("../migrations/010_track_extra_metadata.sql"),
     ),
+    (11, include_str!("../migrations/011_tag_aliases.sql")),
 ];
 
 impl Database {

@@ -25,6 +25,8 @@ const MIGRATION_009: &str =
     include_str!("../../../apps/desktop/src-tauri/migrations/009_beatgrid_confidence.sql");
 const MIGRATION_010: &str =
     include_str!("../../../apps/desktop/src-tauri/migrations/010_track_extra_metadata.sql");
+const MIGRATION_011: &str =
+    include_str!("../../../apps/desktop/src-tauri/migrations/011_tag_aliases.sql");
 
 /// The migrations this crate's contract tests need, in the order `db.rs`
 /// applies them: the base schema, the tag columns, the enrichment columns, the
@@ -42,6 +44,7 @@ const MIGRATIONS: &[(i64, &str)] = &[
     (8, MIGRATION_008),
     (9, MIGRATION_009),
     (10, MIGRATION_010),
+    (11, MIGRATION_011),
 ];
 
 /// Opens (or creates) a **file-backed** database at `path`, applies the pragmas and

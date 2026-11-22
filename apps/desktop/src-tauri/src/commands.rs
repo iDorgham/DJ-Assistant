@@ -22,6 +22,11 @@ use dj_assistant_core::patch::{
     check_metadata_undoable, tags_match, METADATA_SKILL_NAME, RATING_SKILL_NAME,
 };
 use dj_assistant_core::reveal::reveal_command;
+use dj_assistant_core::tag_aliases::{
+    map_tags, validate_alias, AliasMap, DELETE_TAG_ALIAS_SQL, LIST_TAG_ALIASES_SQL,
+    UPSERT_TAG_ALIAS_SQL,
+};
+use dj_assistant_core::tag_clustering::normalize_tag;
 use dj_assistant_core::tag_rewrite::{
     plan_tag_rewrite, tag_rewrite_skill_run, validate_renames, TagRename,
 };
@@ -30,19 +35,19 @@ use dj_assistant_core::{cache_artwork, extract_metadata, MAX_IN_CLAUSE_IDS};
 use crate::audio;
 use crate::db::Database;
 use crate::models::{
-    AnalyzeLibraryRequest, AnalyzeLibraryResponse, CuePoint, FindSimilarTracksRequest,
-    FindSimilarTracksResponse, FolderCount, GenreCount, GetArtworkRequest, GetTrackRequest,
-    GetTrackResponse, GetWaveformPeaksRequest, GetWaveformPeaksResponse, ListFoldersResponse,
-    ListGenresResponse, ListRemovedTracksResponse, ListTracksRequest, ListTracksResponse,
-    ProviderAccount, ProviderCapability, ProviderStatusResponse, RefreshArtworkResponse,
-    RemoveTracksRequest, RemoveTracksResponse, RemovedTrack, RestoreTracksRequest,
-    RestoreTracksResponse, RevealInFileManagerRequest, ScanFolderRequest, ScanFolderResponse,
-    SetTrackRatingRequest, SetTrackRatingResponse, SimilarTrackResult, StoreLink,
-    StoreLinksRequest, StoreLinksResponse, TagApplyRequest, TagApplyResponse, TagClusterRequest,
-    TagHealthRequest, TagHealthResponse, TagHealthTotals, TagPreviewRequest, TagPreviewTrack,
-    TrackDetail, TrackGaps, TrackSummary, UndoRemoveTracksRequest, UndoRemoveTracksResponse,
-    UndoTrackMetadataRequest, UndoTrackMetadataResponse, UpdateTrackMetadataRequest,
-    UpdateTrackMetadataResponse,
+    AddTagAliasRequest, AnalyzeLibraryRequest, AnalyzeLibraryResponse, CuePoint,
+    FindSimilarTracksRequest, FindSimilarTracksResponse, FolderCount, GenreCount,
+    GetArtworkRequest, GetTrackRequest, GetTrackResponse, GetWaveformPeaksRequest,
+    GetWaveformPeaksResponse, ListFoldersResponse, ListGenresResponse, ListRemovedTracksResponse,
+    ListTracksRequest, ListTracksResponse, ProviderAccount, ProviderCapability,
+    ProviderStatusResponse, RefreshArtworkResponse, RemoveTagAliasRequest, RemoveTracksRequest,
+    RemoveTracksResponse, RemovedTrack, RestoreTracksRequest, RestoreTracksResponse,
+    RevealInFileManagerRequest, ScanFolderRequest, ScanFolderResponse, SetTrackRatingRequest,
+    SetTrackRatingResponse, SimilarTrackResult, StoreLink, StoreLinksRequest, StoreLinksResponse,
+    TagAlias, TagApplyRequest, TagApplyResponse, TagClusterRequest, TagHealthRequest,
+    TagHealthResponse, TagHealthTotals, TagPreviewRequest, TagPreviewTrack, TrackDetail, TrackGaps,
+    TrackSummary, UndoRemoveTracksRequest, UndoRemoveTracksResponse, UndoTrackMetadataRequest,
+    UndoTrackMetadataResponse, UpdateTrackMetadataRequest, UpdateTrackMetadataResponse,
 };
 use crate::scanner::run_scan;
 use crate::security::validate_and_canonicalize_dir;
@@ -1259,6 +1264,87 @@ pub async fn tag_apply_renames(
     })
 }
 
+/// The stored tag aliases, keyed by alias fold key (T2.2.5).
+fn load_tag_aliases(conn: &rusqlite::Connection) -> Result<AliasMap, String> {
+    let mut stmt = conn
+        .prepare(LIST_TAG_ALIASES_SQL)
+        .map_err(|e| e.to_string())?;
+    let rows = stmt
+        .query_map([], |row| {
+            Ok((row.get::<_, String>(0)?, row.get::<_, String>(1)?))
+        })
+        .map_err(|e| e.to_string())?
+        .collect::<Result<Vec<_>, _>>()
+        .map_err(|e| e.to_string())?;
+    Ok(rows
+        .into_iter()
+        .map(|(alias, canonical)| (normalize_tag(&alias), canonical))
+        .collect())
+}
+
+/// The stored aliases in alias order, for the Tag Surgeon's alias list (T2.2.5).
+fn list_tag_aliases(conn: &rusqlite::Connection) -> Result<Vec<TagAlias>, String> {
+    let mut stmt = conn
+        .prepare(LIST_TAG_ALIASES_SQL)
+        .map_err(|e| e.to_string())?;
+    let aliases = stmt
+        .query_map([], |row| {
+            Ok(TagAlias {
+                alias: row.get(0)?,
+                canonical: row.get(1)?,
+            })
+        })
+        .map_err(|e| e.to_string())?
+        .collect::<Result<Vec<_>, _>>()
+        .map_err(|e| e.to_string())?;
+    Ok(aliases)
+}
+
+/// Lists the tag aliases (T2.2.5).
+#[tauri::command]
+pub async fn list_tag_aliases_command(
+    db: State<'_, Arc<Mutex<Database>>>,
+) -> Result<Vec<TagAlias>, String> {
+    let db_guard = db.lock().map_err(|e| e.to_string())?;
+    list_tag_aliases(db_guard.conn())
+}
+
+/// Adds a tag alias, or changes the canonical spelling of an existing one
+/// (T2.2.5). Tracks already in the library are not changed; the alias applies
+/// to tags written from now on. Returns the full list.
+#[tauri::command]
+pub async fn add_tag_alias(
+    db: State<'_, Arc<Mutex<Database>>>,
+    request: AddTagAliasRequest,
+) -> Result<Vec<TagAlias>, String> {
+    let mut db_guard = db.lock().map_err(|e| e.to_string())?;
+    let conn = db_guard.conn_mut();
+    let existing = load_tag_aliases(conn)?;
+    let key = validate_alias(&request.alias, &request.canonical, &existing)?;
+    conn.execute(
+        UPSERT_TAG_ALIAS_SQL,
+        rusqlite::params![key, request.alias.trim(), request.canonical],
+    )
+    .map_err(|e| e.to_string())?;
+    list_tag_aliases(conn)
+}
+
+/// Removes a tag alias (T2.2.5). Returns the full list.
+#[tauri::command]
+pub async fn remove_tag_alias(
+    db: State<'_, Arc<Mutex<Database>>>,
+    request: RemoveTagAliasRequest,
+) -> Result<Vec<TagAlias>, String> {
+    let mut db_guard = db.lock().map_err(|e| e.to_string())?;
+    let conn = db_guard.conn_mut();
+    conn.execute(
+        DELETE_TAG_ALIAS_SQL,
+        rusqlite::params![normalize_tag(&request.alias)],
+    )
+    .map_err(|e| e.to_string())?;
+    list_tag_aliases(conn)
+}
+
 /// Writes metadata to one or more tracks.
 ///
 /// The write is reversible: the previous values are snapshotted in a
@@ -1834,6 +1920,24 @@ fn apply_metadata_patch(
     track_ids: &[String],
     patch: &MetadataPatch,
 ) -> Result<(String, usize), String> {
+    // Tag aliases (T2.2.5) shape any tag set the write carries, so a track is
+    // saved under the canonical spelling. Tracks already in the library are not
+    // touched: only what this write saves is mapped.
+    let mapped_patch;
+    let patch = if patch.tags.is_some() {
+        let aliases = load_tag_aliases(conn)?;
+        mapped_patch = MetadataPatch {
+            tags: Some(map_tags(
+                patch.tags.as_deref().unwrap_or_default(),
+                &aliases,
+            )),
+            ..patch.clone()
+        };
+        &mapped_patch
+    } else {
+        patch
+    };
+
     // The scalar columns this patch touches. The names come from the fixed
     // allow-list in `core`, never from user input.
     let columns = patch_columns(patch);

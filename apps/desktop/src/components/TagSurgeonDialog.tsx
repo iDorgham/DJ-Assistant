@@ -1,11 +1,20 @@
 import { useEffect, useState } from "react";
 import { X } from "lucide-react";
 
-import type { TagClusterReport, TagPreviewTrack } from "@dj-assistant/shared";
+import type { TagAlias, TagClusterReport, TagPreviewTrack } from "@dj-assistant/shared";
 
 import { ModalShell } from "./ModalShell";
-import { tagApplyRenames, tagCluster, tagPreviewTracks, undoTrackMetadata } from "../services/api";
 import {
+  addTagAlias,
+  listTagAliases,
+  removeTagAlias,
+  tagApplyRenames,
+  tagCluster,
+  tagPreviewTracks,
+  undoTrackMetadata,
+} from "../services/api";
+import {
+  aliasLabel,
   appliedLabel,
   clusterHeading,
   confirmLabel,
@@ -66,6 +75,25 @@ export function TagSurgeonDialog({ trackIds, onClose, onChanged }: TagSurgeonDia
   const [applyError, setApplyError] = useState<string | null>(null);
   const [applied, setApplied] = useState<AppliedChange | null>(null);
   const [undoNote, setUndoNote] = useState<string | null>(null);
+  const [aliases, setAliases] = useState<TagAlias[]>([]);
+  const [aliasDraft, setAliasDraft] = useState("");
+  const [canonicalDraft, setCanonicalDraft] = useState("");
+  const [aliasBusy, setAliasBusy] = useState(false);
+  const [aliasError, setAliasError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    listTagAliases()
+      .then((list) => {
+        if (!cancelled) setAliases(list);
+      })
+      .catch((cause: unknown) => {
+        if (!cancelled) setAliasError(cause instanceof Error ? cause.message : String(cause));
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -138,6 +166,35 @@ export function TagSurgeonDialog({ trackIds, onClose, onChanged }: TagSurgeonDia
       setApplyError(cause instanceof Error ? cause.message : String(cause));
     } finally {
       setBusy(false);
+    }
+  }
+
+  async function addAlias() {
+    if (aliasBusy) return;
+    setAliasBusy(true);
+    setAliasError(null);
+    try {
+      const next = await addTagAlias({ alias: aliasDraft, canonical: canonicalDraft });
+      setAliases(next);
+      setAliasDraft("");
+      setCanonicalDraft("");
+    } catch (cause) {
+      setAliasError(cause instanceof Error ? cause.message : String(cause));
+    } finally {
+      setAliasBusy(false);
+    }
+  }
+
+  async function removeAlias(alias: string) {
+    if (aliasBusy) return;
+    setAliasBusy(true);
+    setAliasError(null);
+    try {
+      setAliases(await removeTagAlias({ alias }));
+    } catch (cause) {
+      setAliasError(cause instanceof Error ? cause.message : String(cause));
+    } finally {
+      setAliasBusy(false);
     }
   }
 
@@ -321,6 +378,65 @@ export function TagSurgeonDialog({ trackIds, onClose, onChanged }: TagSurgeonDia
             </ul>
           </div>
         )}
+
+        <div className="border-t border-dj-border pt-2">
+          <p className="text-[11px] font-semibold uppercase tracking-wider text-dj-text-muted">
+            Aliases
+          </p>
+          <p className="mt-0.5 text-[11px] text-dj-text-muted">
+            Tags saved with an alias take its canonical spelling from now on. Tracks already in the
+            library are not changed.
+          </p>
+          {aliases.length > 0 && (
+            <ul className="mt-1 space-y-1">
+              {aliases.map((item) => (
+                <li
+                  key={item.alias}
+                  className="flex items-center justify-between gap-2 text-[11px] text-dj-text-secondary"
+                >
+                  <span className="break-words">{aliasLabel(item)}</span>
+                  <button
+                    type="button"
+                    onClick={() => removeAlias(item.alias)}
+                    disabled={aliasBusy}
+                    className="shrink-0 rounded-md px-2 py-0.5 text-[11px] text-dj-text-muted transition hover:bg-dj-hover disabled:opacity-50"
+                  >
+                    Remove
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+          <div className="mt-2 flex flex-wrap items-center gap-2">
+            <input
+              aria-label="Alias"
+              placeholder="Alias, e.g. melodic h"
+              value={aliasDraft}
+              onChange={(event) => setAliasDraft(event.target.value)}
+              className="min-w-0 flex-1 rounded-md border border-dj-border bg-dj-elevated px-2 py-1 text-xs text-dj-text"
+            />
+            <input
+              aria-label="Saved as"
+              placeholder="Saved as, e.g. melodic house"
+              value={canonicalDraft}
+              onChange={(event) => setCanonicalDraft(event.target.value)}
+              className="min-w-0 flex-1 rounded-md border border-dj-border bg-dj-elevated px-2 py-1 text-xs text-dj-text"
+            />
+            <button
+              type="button"
+              onClick={addAlias}
+              disabled={aliasBusy || !aliasDraft.trim() || !canonicalDraft.trim()}
+              className="shrink-0 rounded-md border border-dj-border bg-dj-elevated px-3 py-1 text-xs text-dj-text-secondary transition hover:bg-dj-hover disabled:opacity-50"
+            >
+              Add
+            </button>
+          </div>
+          {aliasError && (
+            <p className="mt-1.5 rounded-sm border border-dj-danger/30 bg-dj-danger/10 px-2 py-1.5 text-[11px] text-dj-danger">
+              {aliasError}
+            </p>
+          )}
+        </div>
 
         {ignoredNote && <p className="text-[11px] text-dj-text-muted">{ignoredNote}</p>}
       </div>

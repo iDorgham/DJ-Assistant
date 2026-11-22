@@ -9,6 +9,7 @@ import type {
 } from "@dj-assistant/shared";
 
 import {
+  aliasLabel,
   appliedLabel,
   clusterHeading,
   confirmLabel,
@@ -150,6 +151,13 @@ test("the apply lines say how many spellings change and how many tracks did", ()
   assert.equal(confirmLabel(3), "3 spellings will be replaced in the tracks that carry them.");
   assert.equal(appliedLabel(0), "Nothing to change — the tags already match.");
   assert.equal(appliedLabel(4), "Changed 4 tracks. Undo is available until you close this dialog.");
+});
+
+test("an alias row reads as the spelling typed, then the spelling it saves as", () => {
+  assert.equal(
+    aliasLabel({ alias: "melodic h", canonical: "melodic house" }),
+    "melodic h → melodic house"
+  );
 });
 
 test("the undo line reports tracks left alone when they were edited since", () => {
