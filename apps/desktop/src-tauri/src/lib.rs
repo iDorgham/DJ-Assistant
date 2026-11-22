@@ -4,6 +4,7 @@ pub mod charts;
 pub mod commands;
 pub mod db;
 pub mod enrichment;
+pub mod maintain;
 pub mod models;
 pub mod scanner;
 pub mod security;
@@ -107,6 +108,11 @@ pub fn run() {
             commands::list_removed_tracks,
             commands::restore_tracks,
             commands::reveal_in_file_manager,
+            maintain::library_duplicates,
+            maintain::dismiss_duplicate_group,
+            maintain::forget_duplicate_copy,
+            maintain::library_versions,
+            maintain::library_health,
             enrichment::enrichment_preview,
             enrichment::enrichment_apply,
             enrichment::enrichment_undo,

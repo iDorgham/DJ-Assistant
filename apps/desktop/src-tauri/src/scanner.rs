@@ -9,6 +9,8 @@ use dj_assistant_core::{
     ScanDeduplicator,
 };
 
+use dj_assistant_core::library_hygiene::{is_distinct_copy, RECORD_COPY_SQL, TRACK_BY_HASH_SQL};
+
 use crate::db::Database;
 use crate::models::{ScanCompletedEvent, ScanProgressEvent, TrackSummary};
 
@@ -83,6 +85,15 @@ pub fn run_scan(
 
             if duplicate_kind.is_duplicate() {
                 total_duplicates += 1;
+                // A byte-identical file at another path can never become a row of
+                // its own (UNIQUE file_hash), so record it for the Duplicates review
+                // — otherwise the copy is invisible. A rescan of the same file is
+                // not a copy and records nothing.
+                if let Ok(db_guard) = db.lock() {
+                    if let Err(err) = record_duplicate_copy(db_guard.conn(), &hash, &path_str) {
+                        log::warn!("Failed to record duplicate copy {}: {}", path_str, err);
+                    }
+                }
                 let _ = app.emit(
                     "scan:progress",
                     ScanProgressEvent {
@@ -299,4 +310,27 @@ pub fn run_scan(
             },
         );
     });
+}
+
+/// Records `path` as a byte-identical copy of the library row that owns
+/// `hash`, unless it *is* that row's file (a rescan). Returns whether a copy
+/// was recorded.
+fn record_duplicate_copy(
+    conn: &rusqlite::Connection,
+    hash: &str,
+    path: &str,
+) -> rusqlite::Result<bool> {
+    use rusqlite::OptionalExtension;
+    let owner: Option<(String, String)> = conn
+        .query_row(TRACK_BY_HASH_SQL, [hash], |row| {
+            Ok((row.get(0)?, row.get(1)?))
+        })
+        .optional()?;
+    match owner {
+        Some((track_id, owner_path)) if is_distinct_copy(&owner_path, path) => {
+            conn.execute(RECORD_COPY_SQL, rusqlite::params![path, track_id, hash])?;
+            Ok(true)
+        }
+        _ => Ok(false),
+    }
 }

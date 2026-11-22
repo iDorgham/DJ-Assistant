@@ -4,6 +4,14 @@ Ephemeral. Newest first. **Rotate aggressively** — if a line would still be tr
 in two weeks, it belongs in [`decisions.md`](./decisions.md); if it is just a
 fact, it belongs in [`facts.md`](./facts.md). Delete anything stale.
 
+## 2026-11-23 · T2.3.1–T2.3.3 Maintain dialog (branch `feat/t2.3-library-hygiene`, uncommitted)
+
+- Duplicates, versions and Library Health Score code-shipped; migration 012. Details in
+  `04-TASKS.md` and `CHANGELOG.md`. Checks passed: lint, typecheck, 319 desktop tests,
+  clippy (core, schema-tests, desktop), `rust:test:portable`, hash audit. Desktop crate
+  tests (`db.rs` table list) not runnable on this box. Running-window QA pending.
+- Supersedes the 11-19 "unbuilt: T2.3.x" line for T2.3.1–T2.3.3 only.
+
 ## 2026-11-22 · Tag Surgeon history (T2.2.6)
 
 - Tag Surgeon T2.2.1–T2.2.6 are now all code-shipped (supersedes the 11-19 "unbuilt"
