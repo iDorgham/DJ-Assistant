@@ -1,5 +1,5 @@
 // Shared helpers for DOM interaction in the React app.
-export const setInput = (sel, value) => `(() => {
+const setInput = (sel, value) => `(() => {
   const el = document.querySelector(${JSON.stringify(sel)});
   if (!el) throw new Error('no input ' + ${JSON.stringify(sel)});
   const proto = Object.getPrototypeOf(el);
@@ -7,12 +7,12 @@ export const setInput = (sel, value) => `(() => {
   el.dispatchEvent(new Event('input', { bubbles: true }));
   return 'ok';
 })()`;
-export const clickByText = (sel, text) => `(() => {
+const clickByText = (sel, text) => `(() => {
   const el = [...document.querySelectorAll(${JSON.stringify(sel)})].find(e => e.textContent.trim() === ${JSON.stringify(text)});
   if (!el) return 'missing:' + ${JSON.stringify(text)};
   el.click(); return 'clicked';
 })()`;
-export const rightClickTitle = (title) => `(() => {
+const rightClickTitle = (title) => `(() => {
   const cell = [...document.querySelectorAll('[aria-label^="Play "]')].find(e => e.getAttribute('aria-label') === ${JSON.stringify("Play " + title)});
   if (!cell) return 'no-play-button';
   let row = cell; for (let i = 0; i < 8 && row && !row.textContent.includes(${JSON.stringify(title)}); i++) row = row.parentElement;
@@ -20,7 +20,7 @@ export const rightClickTitle = (title) => `(() => {
   target.dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true, clientX: 300, clientY: 300, button: 2 }));
   return 'ctx:' + row.tagName + ':' + (row.className || '').toString().slice(0, 60);
 })()`;
-export const clickRow = (title, { shift = false, ctrl = false } = {}) => `(() => {
+const clickRow = (title, { shift = false, ctrl = false } = {}) => `(() => {
   const cell = [...document.querySelectorAll('[aria-label^="Play "]')].find(e => e.getAttribute('aria-label') === ${JSON.stringify("Play " + title)});
   if (!cell) return 'no-row:' + ${JSON.stringify(title)};
   let row = cell; for (let i = 0; i < 8 && row && !row.textContent.includes(${JSON.stringify(title)}); i++) row = row.parentElement;
@@ -31,7 +31,7 @@ export const clickRow = (title, { shift = false, ctrl = false } = {}) => `(() =>
   target.dispatchEvent(new MouseEvent('click', opts));
   return 'clicked:' + row.tagName;
 })()`;
-export const loadAllJs = `(async () => {
+const loadAllJs = `(async () => {
   for (let i = 0; i < 40; i++) {
     const m = document.body.innerText.match(/([0-9]+) of ([0-9]+) tracks/);
     const btn = [...document.querySelectorAll('button')].find(b => b.textContent.trim() === 'Load more');
@@ -41,3 +41,5 @@ export const loadAllJs = `(async () => {
   }
   return 'gave-up';
 })()`;
+
+module.exports = { setInput, clickByText, rightClickTitle, clickRow, loadAllJs };

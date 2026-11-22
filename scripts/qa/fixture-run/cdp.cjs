@@ -1,6 +1,6 @@
 // Minimal Chrome DevTools Protocol client for the WebView2 test window.
 // Connects to the page target on the remote-debugging port and evaluates JS.
-export async function connect(port = 9222, { timeoutMs = 240000 } = {}) {
+async function connect(port = 9222, { timeoutMs = 240000 } = {}) {
   const deadline = Date.now() + timeoutMs;
   let target;
   while (Date.now() < deadline) {
@@ -51,3 +51,5 @@ export async function connect(port = 9222, { timeoutMs = 240000 } = {}) {
 
   return { evaluate, call: send, close: () => ws.close(), url: target.url };
 }
+
+module.exports = { connect };

@@ -1,14 +1,15 @@
+/* eslint-disable @typescript-eslint/no-require-imports -- CommonJS, so the DeepSource JS analyzer does not reject imports. */
 // Seeds tag spelling variants into a QA fixture and writes a baseline snapshot.
-// Usage: node scripts/qa/fixture-run/seed.mjs <fixture.db> <baseline.json>
+// Usage: node scripts/qa/fixture-run/seed.cjs <fixture.db> <baseline.json>
 // Only case, spacing and accent variants are seeded: the Tag Surgeon scan skips
 // spellings that differ in punctuation (tag_clustering::cluster_tags).
-import { DatabaseSync } from "node:sqlite";
-import { writeFileSync } from "node:fs";
+const { DatabaseSync } = require("node:sqlite");
+const { writeFileSync } = require("node:fs");
 
 const dbPath = process.argv[2];
 const baselinePath = process.argv[3];
 if (!dbPath || !baselinePath) {
-  console.error("usage: seed.mjs <fixture.db> <baseline.json>");
+  console.error("usage: seed.cjs <fixture.db> <baseline.json>");
   process.exit(2);
 }
 
