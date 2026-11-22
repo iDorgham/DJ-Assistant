@@ -229,10 +229,14 @@ pub struct TagHistoryEntry {
 /// [`tag_rewrite_skill_run`], so a summary or snapshot that does not parse is
 /// a damaged row and is reported, not shown as an empty apply.
 ///
-/// The snapshot pair is checked with [`plan_metadata_undo`], the same plan the
-/// Undo button runs, so the list never offers an undo that would then fail to
-/// read its own snapshot. An empty track map is damage too: the writer only
-/// records an apply that changed at least one track.
+/// The snapshot pair must have exactly the shape the writer leaves: the same
+/// non-empty set of tracks on both sides, each `{ "tags": [string, …] }`. That
+/// is stricter than [`plan_metadata_undo`], which reads a missing `tags` as an
+/// empty set: a damaged after-state would then become a guard that matches any
+/// tagless track, and Undo could restore over a later edit. Such a row is
+/// reported here instead of being offered an Undo. The pair is then planned
+/// with [`plan_metadata_undo`] too, the same plan the Undo button runs. An
+/// empty renames list is damage as well: [`validate_renames`] refuses one.
 pub fn parse_tag_history_entry(
     undo_id: &str,
     status: &str,
@@ -266,16 +270,43 @@ pub fn parse_tag_history_entry(
             }
         })
         .collect::<Result<Vec<_>, _>>()?;
+    if renames.is_empty() {
+        return Err(damaged("input summary names no renames"));
+    }
     let snapshot = |raw: Option<&str>, side: &str| -> Result<serde_json::Value, String> {
-        serde_json::from_str(raw.ok_or_else(|| damaged(&format!("no {side} snapshot")))?)
-            .map_err(|_| damaged(&format!("{side} snapshot is not JSON")))
+        let value: serde_json::Value =
+            serde_json::from_str(raw.ok_or_else(|| damaged(&format!("no {side} snapshot")))?)
+                .map_err(|_| damaged(&format!("{side} snapshot is not JSON")))?;
+        let tracks = value
+            .as_object()
+            .ok_or_else(|| damaged(&format!("{side} snapshot is not a track map")))?;
+        for (track_id, entry) in tracks {
+            let tag_set = entry
+                .as_object()
+                .filter(|fields| fields.len() == 1)
+                .and_then(|fields| fields.get("tags"))
+                .and_then(serde_json::Value::as_array);
+            let well_formed = tag_set.is_some_and(|tags| tags.iter().all(|tag| tag.is_string()));
+            if !well_formed {
+                return Err(damaged(&format!(
+                    "{side} snapshot for track {track_id} is not a tag set"
+                )));
+            }
+        }
+        Ok(value)
     };
     let before = snapshot(before_state, "before")?;
     let after = snapshot(after_state, "after")?;
-    let track_count = after
-        .as_object()
-        .ok_or_else(|| damaged("after snapshot is not a track map"))?
-        .len();
+    let (before_tracks, after_tracks) = (
+        before
+            .as_object()
+            .map(|m| m.keys().collect::<BTreeSet<_>>()),
+        after.as_object().map(|m| m.keys().collect::<BTreeSet<_>>()),
+    );
+    if before_tracks != after_tracks {
+        return Err(damaged("before and after snapshots name different tracks"));
+    }
+    let track_count = after_tracks.map_or(0, |tracks| tracks.len());
     if track_count == 0 {
         return Err(damaged("snapshot names no tracks"));
     }
@@ -569,5 +600,57 @@ mod tests {
                 "before = {before:?}"
             );
         }
+    }
+
+    #[test]
+    fn an_apply_with_no_renames_is_damage() {
+        let message = parse_tag_history_entry(
+            "u6",
+            "success",
+            Some(r#"{"trackIds":["t1"],"renames":[]}"#),
+            Some(r#"{"t1":{"tags":["A"]}}"#),
+            Some(r#"{"t1":{"tags":["a"]}}"#),
+            "x",
+        )
+        .unwrap_err();
+        assert!(message.contains("no renames"), "{message}");
+    }
+
+    #[test]
+    fn a_snapshot_that_would_fabricate_an_undo_guard_is_not_listed() {
+        let input = Some(r#"{"renames":[{"from":"A","to":"a"}]}"#);
+        let good = r#"{"t1":{"tags":["a"]}}"#;
+        // plan_metadata_undo reads each of these after-states as an empty tag
+        // set, which would match any tagless track; or the two sides name
+        // different tracks. None may be offered an Undo.
+        let damaged_pairs = [
+            (r#"{"t1":{"tags":["A"]}}"#, r#"{"t1":{}}"#),
+            (r#"{"t1":{"tags":["A"]}}"#, r#"{"t1":{"tags":"a"}}"#),
+            (r#"{"t1":{"tags":["A"]}}"#, r#"{"t1":{"tags":[1]}}"#),
+            (
+                r#"{"t1":{"tags":["A"]}}"#,
+                r#"{"t1":{"tags":["a"],"rating":3}}"#,
+            ),
+            (r#"{"t1":{}}"#, good),
+            (r#"{"t2":{"tags":["A"]}}"#, good),
+            (r#"{"t1":{"tags":["A"]},"t2":{"tags":["B"]}}"#, good),
+        ];
+        for (before, after) in damaged_pairs {
+            assert!(
+                parse_tag_history_entry("u7", "success", input, Some(before), Some(after), "x")
+                    .is_err(),
+                "before = {before}, after = {after}"
+            );
+        }
+        // An empty tag set is a real outcome, not damage.
+        assert!(parse_tag_history_entry(
+            "u8",
+            "success",
+            input,
+            Some(r#"{"t1":{"tags":["A"]}}"#),
+            Some(r#"{"t1":{"tags":[]}}"#),
+            "x"
+        )
+        .is_ok());
     }
 }
