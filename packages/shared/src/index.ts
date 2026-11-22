@@ -545,6 +545,20 @@ export interface TagApplyResponse {
   updated: number;
 }
 
+/** One past Tag Surgeon apply in the history list (T2.2.6). */
+export interface TagHistoryEntry {
+  /** The snapshot id; undo it with `undoTrackMetadata`. */
+  undoId: string;
+  /** When the apply ran: UTC, `YYYY-MM-DD HH:MM:SS` (SQLite `datetime('now')`). */
+  createdAt: string;
+  /** Already undone, so it cannot be undone again. */
+  undone: boolean;
+  /** The spellings it rewrote. */
+  renames: TagRenameRequest[];
+  /** Tracks whose tag set it changed. */
+  trackCount: number;
+}
+
 export interface PrefixEdge {
   narrowerKey: string;
   narrowerLabel: string;

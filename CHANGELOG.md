@@ -9,6 +9,11 @@ project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- **Tag Surgeon history (T2.2.6)** — the Tag Surgeon dialog gains a History section:
+  the latest 50 spelling applies, newest first, with their renames, time and changed-track
+  count, and an Undo on each one not yet undone. Backed by the read-only `tag_history`
+  command over the existing `skill_runs` snapshots, so undo keeps the metadata-undo guard
+  (a track edited since the apply is left as it is). No migration. Running-window QA pending.
 - **Beat-grid confidence backfill on launch (issue #89, T2.4.3)** — tracks
   analysed before migration 009 kept a NULL `beatgrid_confidence` and showed no
   `GRID` chip until a forced re-analysis. A new `backfill_grid_confidence` command

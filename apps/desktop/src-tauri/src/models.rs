@@ -408,6 +408,22 @@ pub struct TagApplyResponse {
     pub updated: usize,
 }
 
+/// One past Tag Surgeon apply in the history list (T2.2.6).
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct TagHistoryEntry {
+    /// The snapshot id; undo it with `undo_track_metadata`.
+    pub undo_id: String,
+    /// When the apply ran: UTC, `YYYY-MM-DD HH:MM:SS`.
+    pub created_at: String,
+    /// Already undone, so it cannot be undone again.
+    pub undone: bool,
+    /// The spellings it rewrote.
+    pub renames: Vec<TagRenameRequest>,
+    /// Tracks whose tag set it changed.
+    pub track_count: usize,
+}
+
 // --- Tag health / enrichment gaps (B): local detection, no network ---
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

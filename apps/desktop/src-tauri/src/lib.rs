@@ -93,6 +93,7 @@ pub fn run() {
             commands::tag_cluster,
             commands::tag_preview_tracks,
             commands::tag_apply_renames,
+            commands::tag_history,
             commands::list_tag_aliases_command,
             commands::add_tag_alias,
             commands::remove_tag_alias,
