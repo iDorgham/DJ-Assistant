@@ -140,7 +140,7 @@ export function StarRating({
       {describesRatingKeys ? (
         <span id={descriptionId} className="sr-only">
           Press 1 through 5 to set the rating, 0 to clear it. Left and right arrows move between
-          stars.
+          stars; Home moves to the first star and End to the last.
         </span>
       ) : null}
       {Array.from({ length: STAR_COUNT }, (_, index) => {
