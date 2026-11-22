@@ -175,7 +175,7 @@ backup and sync surfaces.
   `pnpm lint:root` pass.
 - `pnpm lint:eslint` has 0 errors and 3 pre-existing Player `exhaustive-deps`
   warnings.
-- `docs/plans/v1/` contains 30 files.
+- `docs/plan/` contains 30 files.
 - No factory repository files were touched.
 
 ---
@@ -369,7 +369,7 @@ implementation reference; the original plan-mode copy remains an archive.
 
 ### Verification for this entry
 
-- Plan mirrored: `docs/plans/v1/` contains 30 files.
+- Plan mirrored: `docs/plan/` contains 30 files.
 - Slice 3A protected: commit `ec2b191f`, tag `slice-3a-code-complete`.
 - Working tree clean after the baseline commit.
 - No factory repository files were touched.

@@ -8,6 +8,15 @@
 //
 // Kept in the repo as the record of how old paths map to new ones; the
 // RULES table below is the authoritative old -> new path map.
+//
+// Known quirks of the 2026-11-22 run, both corrected by hand afterwards:
+// - rewriteRootPaths stops at a space, so `docs/ui/library (1).png`-style names
+//   were not rewritten by the exact-match rule (those PNGs were untracked and
+//   moved and renamed by hand);
+// - root-level Markdown links were rewritten twice (rewriteLinks, then
+//   rewriteRootPaths), sending docs/ui-ux/... to the archive; AGENTS.md,
+//   CLAUDE.md and README.md were fixed afterwards.
+// The --apply guard below stops a second run on the new layout.
 const { execFileSync } = require("node:child_process");
 const fs = require("node:fs");
 const path = require("node:path");

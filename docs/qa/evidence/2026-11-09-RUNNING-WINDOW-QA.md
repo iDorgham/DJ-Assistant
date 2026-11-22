@@ -42,10 +42,10 @@ Each row gets **PASS / FAIL / BLOCKED / PARTIAL**, the exact toast or status
 text observed, and any deviation. A PASS needs the human observation *and* a
 `dj-query` cross-check where the item writes data. The source checklists are:
 
-- [`../engineering/STAGE1_MANUAL_QA_CHECKLIST.md`](../checklists/STAGE1_MANUAL_QA_CHECKLIST.md)
-- [`../engineering/SLICE2_MANUAL_QA_CHECKLIST.md`](../checklists/SLICE2_MANUAL_QA_CHECKLIST.md)
+- [`../checklists/STAGE1_MANUAL_QA_CHECKLIST.md`](../checklists/STAGE1_MANUAL_QA_CHECKLIST.md)
+- [`../checklists/SLICE2_MANUAL_QA_CHECKLIST.md`](../checklists/SLICE2_MANUAL_QA_CHECKLIST.md)
 - [`../engineering/SLICE3A_MANUAL_QA_CHECKLIST.md`](../checklists/SLICE3A_MANUAL_QA_CHECKLIST.md)
-- T2.1.8 DoD in [`../PHASE2_LIBRARY_PLAYER_IMPLEMENTATION_PLAN.md`](../../plans/phase2-library-player.md) §Slice 3B
+- T2.1.8 DoD in [`../../plans/phase2-library-player.md`](../../plans/phase2-library-player.md) §Slice 3B
 
 ---
 

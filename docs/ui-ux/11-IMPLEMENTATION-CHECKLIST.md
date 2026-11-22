@@ -106,7 +106,7 @@ Source: [UI/UX audit](../audits/2026-11-22-ui-ux-audit.md) · plan:
 
 ## Phase H — Polish
 
-- [ ] ~~Adobe-style options bar content complete~~ — descoped for v1 (audit U-28); toolbar rules are TU.6  
+- [ ] Adobe-style options bar content complete — the Library toolbar part is TU.6  
 - [ ] Ableton-style collapse all docks  
 - [ ] Harmonic colors Strict/Wide preference  
 - [ ] Accessibility pass (focus, contrast, a11y names)  
@@ -138,4 +138,4 @@ Source: [UI/UX audit](../audits/2026-11-22-ui-ux-audit.md) · plan:
 | Components | [09-COMPONENTS.md](09-COMPONENTS.md) |
 | A11y | [10-ACCESSIBILITY-AND-KEYBOARD.md](10-ACCESSIBILITY-AND-KEYBOARD.md) |
 | Wireframes & flexibility | [12-WIREFRAMES-AND-FLEXIBILITY.md](12-WIREFRAMES-AND-FLEXIBILITY.md) |
-| Master narrative | [../UI_UX_PLAYER_AND_LAYOUT_SPEC.md](reference/APP_VIEWS_PLAYER_LAYOUT_SPEC_v1.9.md) |
+| Master narrative | [reference/APP_VIEWS_PLAYER_LAYOUT_SPEC_v1.9.md](reference/APP_VIEWS_PLAYER_LAYOUT_SPEC_v1.9.md) |

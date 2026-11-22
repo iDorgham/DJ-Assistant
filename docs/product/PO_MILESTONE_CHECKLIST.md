@@ -135,4 +135,4 @@ Items here are **out of the 90-day MVP** and do not block any phase. They are ca
 - [Product Brief](./PRODUCT_BRIEF.md)  
 - [SDD Acceptance](../sdd/05-ACCEPTANCE.md)  
 - [Canonical Documentation](./CANONICAL_DOCUMENTATION.md)  
-- [Development Task List](../tasks/archive/DEVELOPMENT_TASK_LIST.md)  
+- [Task tracker (sdd/04-TASKS.md)](../sdd/04-TASKS.md)  

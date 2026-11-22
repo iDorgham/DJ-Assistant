@@ -1,5 +1,5 @@
 /**
- * Bulk metadata editing (T2.1.3, `docs/ui-ux/03-LIBRARY-VIEW.md` §3.5).
+ * Bulk metadata editing (T2.1.3, `docs/ui-ux/03-LIBRARY-VIEW.md` §6 Bulk actions).
  *
  * The rules the dialog needs when the write targets a selection rather than one
  * row, kept out of the component so they are testable without a DOM:

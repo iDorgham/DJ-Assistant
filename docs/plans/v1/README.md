@@ -4,7 +4,7 @@ Last updated: 2026-10-24
 Status: **Approved and mirrored**. The plan is mirrored into the project at `docs/plans/v1/`; use the project copy as the implementation reference. This source copy is retained as the planning archive.
 
 ```text
-D:\Work\AI\Projects\DJ Assistant\docs\plan\
+D:\Work\AI\Projects\DJ Assistant\docs\plans\v1\
 ```
 
 The plan's decision IDs (**D-001–D-052**) are scoped to this tree. They are separate from the repository's agent-memory decision ledger (`docs/ai/memory/decisions.md`, currently D-001–D-017).
@@ -252,7 +252,7 @@ If a feature needs its own vocabulary, inspector or status model, it is not read
 The plan and baseline are secured, **Stage 1 is shipped** and **Stage 2 is in progress**; native acceptance QA for Stage 1 is still pending.
 
 1. ~~Confirm the hybrid tag model (D-026).~~ Locked.
-2. ~~Resolve the remaining decisions.~~ Locked as D-043–D-052; non-blocking items remain in `06-delivery/open-questions.md`.
+2. ~~Resolve the remaining decisions.~~ Locked as D-043–D-052; non-blocking items remain in [`open-questions.md`](open-questions.md).
 3. ~~Secure Slice 3A with a commit/tag.~~ Done: `ec2b191f`, tag `slice-3a-code-complete`.
 4. ~~Mirror the plan into `docs/plans/v1/`.~~ Done.
 5. ~~Merge Stage 1 and Slice 3A.~~ Done: PR #53 (squash `03991d3c`), plus PR #54 (squash `5e7334eb`) for the player presentations.
@@ -264,4 +264,4 @@ The plan and baseline are secured, **Stage 1 is shipped** and **Stage 2 is in pr
 
 ## 11. Decision log
 
-The detailed decision log lives in `06-delivery/open-questions.md` and in each relevant document. Locked decisions should not be reopened without a written reason.
+The detailed decision log lives in [`open-questions.md`](open-questions.md) and in each relevant document. Locked decisions should not be reopened without a written reason.

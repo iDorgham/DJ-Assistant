@@ -5,8 +5,11 @@ the UI simplification slices land, or every few stages.
 
 **Needs:** the desktop app running with the WebView2 DevTools port
 (`WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS=--remote-debugging-port=9222`), ideally on
-the 300-track fixture (`scripts/make-library-fixture.mjs` + `DJ_ASSISTANT_DB_PATH`).
-Drive it with `scripts/qa/fixture-run/cdp.cjs` (`Page.captureScreenshot`).
+the 300-track fixture
+(`node scripts/make-library-fixture.mjs --out <path> --tracks 300`, then start the
+app with `DJ_ASSISTANT_DB_PATH=<path>`). Drive it with
+`scripts/qa/fixture-run/cdp.cjs` (`Page.captureScreenshot`), which needs Node 22+
+for the global `WebSocket`.
 
 ```text
 You are a senior information architect and product designer for DJ Assistant

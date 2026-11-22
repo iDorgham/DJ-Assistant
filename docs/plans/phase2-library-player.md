@@ -253,7 +253,7 @@ Desktop `node --test` was at **222 tests** at that round.
 **3B = key pills** (T2.1.8). 3B was deferred because the key-format preference
 needed a Settings surface the app did not have; that surface now exists
 (Settings → Key display). The implementation plan for 3A is
-[`SLICE3A_PLAN.md`](archive/slice-3a-tags-comments.md) — it records the locked
+[`archive/slice-3a-tags-comments.md`](archive/slice-3a-tags-comments.md) — it records the locked
 decisions (a `track_tags` table; the user comment **overwrites**
 `tracks.comments`) and the exact work list.
 

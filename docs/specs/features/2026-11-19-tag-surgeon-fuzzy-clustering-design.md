@@ -225,12 +225,12 @@ matching the existing command models).
 
 ## 9. UI
 
-- `fixTags` moves out of the stub path in [`library-menu.ts`](../../apps/desktop/src/lib/library-menu.ts):
+- `fixTags` moves out of the stub path in [`library-menu.ts`](../../../apps/desktop/src/lib/library-menu.ts):
   delete the `id === "fixTags"` clause from `isDisabled` and the layout's "Tag cleaning arrives…"
   tooltip. It is already in `SELECTION_ACTIONS`, which §5's scope now honors.
 - `RowContextMenu`'s `actions` map gains `fixTags: onFixTags`; `App.tsx` passes
   `onFixTags={() => openTagSurgeon(editorScope)}` — the **same** selection resolution the
-  metadata editor uses, so `docs/ui-ux/03-LIBRARY-VIEW.md:161`'s "on selection" and §3.5's
+  metadata editor uses, so `docs/ui-ux/03-LIBRARY-VIEW.md:174`'s "on selection" and §3.5's
   multi-select rule cannot diverge between the two menus.
 - `TagSurgeonDialog`: title "Tag Surgeon — duplicate spellings"; a subtitle naming the scope
   ("N tracks"); the cluster list (`melodic house` ×3 · `Melodic House ` ×1 → 4 tracks); a

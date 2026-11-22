@@ -88,7 +88,7 @@ Footer : 94 tracks · N need review · N analysed
 
 | Task | Change | Done when |
 |------|--------|-----------|
-| TU.14 | Rewrite Settings intro, placeholder pages, Tags-tab notice and tooltips per [copy-and-microcopy](../ui-ux/guidelines/copy-and-microcopy.md); placeholder sub-tabs removed until their stage; sub-tab names follow [information-architecture](../product/information-architecture.md). | `grep -E "Stage [0-9]|T[0-9]\.[0-9]|docs/"` over `apps/desktop/src/**/*.tsx` user-visible strings is empty |
+| TU.14 | Rewrite Settings intro, placeholder pages, Tags-tab notice and tooltips per [copy-and-microcopy](../ui-ux/guidelines/copy-and-microcopy.md); placeholder sub-tabs removed until their stage; sub-tab names follow [information-architecture](../product/information-architecture.md). | `rg --glob '*.tsx' 'Stage [0-9]|T[0-9]\.[0-9]|docs/' apps/desktop/src` finds no user-visible string |
 | TU.15 | Tag Health becomes the first view of Library › Maintain (ISRC excluded from the default score); Charts moves to Discover. | Neither appears in the Library toolbar |
 
 ### Slice S7 — Polish (P2) · TU.16

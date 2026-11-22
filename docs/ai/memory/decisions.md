@@ -5,7 +5,9 @@ the ledger, and the date in each heading is when the decision was made, which is
 not necessarily when it was written down (D-002 and D-005 predate D-001). Each
 entry records **what** was chosen, **why**, and what would reverse it. Never edit
 an old entry — add a new one that supersedes it, and never renumber or reorder,
-because the IDs are cited from other files.
+because the IDs are cited from other files. Exception: a link or path that
+only moved (see D-021) may be updated in place, since the decision itself is
+unchanged.
 
 ## D-001 · Canonical AI memory is shared, not per-tool (2026-10-20)
 

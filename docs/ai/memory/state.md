@@ -122,7 +122,7 @@ fact, it belongs in [`facts.md`](./facts.md). Delete anything stale.
 
 ## 2026-11-10 · Running-window Pass 3 executed (Slice 3A tags/editor/menu) — B4 open
 
-- Pass 3 of [`../../evidence/2026-11-09-RUNNING-WINDOW-QA.md`](../../qa/evidence/2026-11-09-RUNNING-WINDOW-QA.md)
+- Pass 3 of [`../../qa/evidence/2026-11-09-RUNNING-WINDOW-QA.md`](../../qa/evidence/2026-11-09-RUNNING-WINDOW-QA.md)
   ran over CDP on the live 94-track library: **43 PASS, 1 PARTIAL, 1 FAIL, 2 DEVIATION,
   1 BLOCKED** (corrected 2026-11-17 — F1 is the partial after its process restart).
 - **B4 is the one real defect**: an unchanged Save takes the backend `nothing to update` error

@@ -365,10 +365,10 @@ flowchart LR
 
 ## References
 
-- Implementation plan: [`../PHASE2_LIBRARY_PLAYER_IMPLEMENTATION_PLAN.md`](../plans/phase2-library-player.md)
-- UI checklist: [`../ui/11-IMPLEMENTATION-CHECKLIST.md`](../ui-ux/11-IMPLEMENTATION-CHECKLIST.md)
-- Player spec: [`../ui/06-PLAYER.md`](../ui-ux/06-PLAYER.md)
-- Library spec: [`../ui/03-LIBRARY-VIEW.md`](../ui-ux/03-LIBRARY-VIEW.md)
+- Implementation plan: [`../plans/phase2-library-player.md`](../plans/phase2-library-player.md)
+- UI checklist: [`../ui-ux/11-IMPLEMENTATION-CHECKLIST.md`](../ui-ux/11-IMPLEMENTATION-CHECKLIST.md)
+- Player spec: [`../ui-ux/06-PLAYER.md`](../ui-ux/06-PLAYER.md)
+- Library spec: [`../ui-ux/03-LIBRARY-VIEW.md`](../ui-ux/03-LIBRARY-VIEW.md)
 - Acceptance: [`../sdd/05-ACCEPTANCE.md`](../sdd/05-ACCEPTANCE.md)
 
 ---

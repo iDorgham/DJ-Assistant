@@ -1,7 +1,7 @@
 # 13 — UI/UX Remediation Status
 
 **Date:** 2026-10-19
-**Sources:** [`../UI_UX_PLAYER_AND_LAYOUT_SPEC.md`](../ui-ux/reference/APP_VIEWS_PLAYER_LAYOUT_SPEC_v1.9.md) v1.9 (master) · this doc set · shipped code in `apps/desktop/src/`
+**Sources:** [`../ui-ux/reference/APP_VIEWS_PLAYER_LAYOUT_SPEC_v1.9.md`](../ui-ux/reference/APP_VIEWS_PLAYER_LAYOUT_SPEC_v1.9.md) v1.9 (master) · this doc set · shipped code in `apps/desktop/src/`
 **Baseline:** Impeccable critique `2026-10-19T12-15-18Z__src-app-tsx.md` — 24/40, 3× P1
 **Method:** doc-vs-code delta analysis, then phased remediation (clarify → distill → harden → typeset → adapt → layout → polish → document).
 

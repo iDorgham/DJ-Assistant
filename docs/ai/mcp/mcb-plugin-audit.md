@@ -315,7 +315,7 @@ at all.
 | **F-7** | `server-memory` would create a **second** memory store, contradicting D-001. `mcp-ffmpeg` exposes `execute_ffmpeg_command` — arbitrary command execution. Both rejected. | High | §3.1 |
 | **F-8** | The Playwright MCP was **skipped by maintainer decision**: `playwright-cli` + the `ui-verification` skill already run the same checks inside the Tauri/React stack, and the MCP's per-step tool cost and timeout risk buy no new capability. | Info | §3.1 |
 | **F-9** | Every MCP tool is advertised on **every step**. The 240-skill library already costs ~15.4k tokens/step; each added server adds more. Another reason to keep the set to one or two. | Med | §1.3 |
-| **F-10** | `docs/ai/mcp/` already existed (empty) — the two documents in this folder have a home, and `docs/README.md` should index them. | Low | §6 |
+| **F-10** | `docs/enhancements/` (moved to `docs/ai/mcp/` on 2026-11-22) already existed (empty) — the two documents in this folder have a home, and `docs/README.md` should index them. | Low | §6 |
 | **F-11** | **Rekordbox's `master.db` is encrypted** (header `77 82 f1 a3 …`, not `SQLite format 3`). `rusqlite` cannot read it; only `pyrekordbox` can. Any plan that assumes a direct SQL read of the DJ's library is wrong. | High | §3.3 |
 | **F-12** | **No read-only Rekordbox MCP exists.** The npm registry has only libraries (`rekordbox-parser`, `rekordbox-connect`, `rbox-js`, `rekordbox-js`, `rekordxml`, `onelibrary-connect`); the two MCP candidates are unsuitable (`mcp-dj` edits other tools' global config, `dj-setbox` writes cues). The gap must be closed by our own Rust code. | High | §3.3 |
 | **F-13** | The stated library path `D:\Music\DJ_Library` **does not exist** on this workstation; the real library is `D:\Music\Music Library` with sets in `D:\Music\My Sets`. Any hard-coded path would break on the first run, so the path stays configurable. | Med | §0 |
@@ -378,7 +378,7 @@ builder does not model yet — and it points at a **snapshot**, never the live D
 | The plan | [`docs/ai/mcp/mcb-plugin-enhancement-plan.md`](mcb-plugin-enhancement-plan.md) |
 | Ready-to-copy config | [`docs/ai/mcp/mcp.recommended.jsonc`](mcp.recommended.jsonc) |
 
-`docs/ai/mcp/` existed but was empty; `docs/README.md` now indexes it and
+`docs/enhancements/` (now `docs/ai/mcp/`) existed but was empty; `docs/README.md` now indexes it and
 all three documents.
 
 ---

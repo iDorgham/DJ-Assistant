@@ -73,7 +73,8 @@ Shared shell: menus · header · options bar · left nav · **flexible docks** �
 
 - Resizable left nav, right inspector/Skills/insights, player height  
 - Collapse to icon rail or hide  
-- Named workspaces: Library · Prepare · Validate · Custom save  
+- Named workspaces (Library · Prepare · Validate · Custom save) and the custom menu
+  bar are **post-v1** (audit U-28, TU.12)  
 - Details: [12-WIREFRAMES-AND-FLEXIBILITY.md](12-WIREFRAMES-AND-FLEXIBILITY.md)
 
 ---

@@ -914,7 +914,7 @@ Neutral Carbon grayscale hierarchy (**IBM Carbon** g100 dark / g10 light — the
 
 - Prefer **hairline borders + very subtle elevation** over heavy shadows (Ableton philosophy; Carbon is flat)
 - Splitters: 1px line, **4–6px hit target** (Ableton-style grab)
-- Selected row: background step + font weight (no colored side tab — see docs/ui-ux remediation)
+- Selected row: background step + font weight (no colored side tab — see the [remediation record](../../audits/2026-10-19-ui-remediation-status.md))
 - No skeuomorphism; no neon; accent used sparingly (playhead, primary button, active view, waveform): Carbon **Cyan-40 `#33B1FF`** dark / **Cyan-60 `#0072C3`** light for music data, **Blue 60 `#0F62FE`** for actions
 
 ### 16.3 Radius, spacing, controls (2026 compact)

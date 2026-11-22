@@ -127,8 +127,9 @@ single task list.
 
 - Relative-link check over all 198 Markdown files: **1 broken link before, the
   same 1 after** — `specs/features/2026-11-19-tag-surgeon-fuzzy-clustering-design.md`
-  points at `apps/desktop/src/lib/library-menu.ts`, which does not exist (it
-  pre-dates this pass and is left for its owner).
+  points at `apps/desktop/src/lib/library-menu.ts` with `../../`, which resolves to
+  `docs/apps/...`; the file exists, so the link needed `../../../`. It pre-dates
+  this pass and is now fixed.
 - `pnpm agent:sync --write` regenerated the 33 mirrored agent files;
   `pnpm skills:inventory` regenerated the routing summary; `pnpm agent:doctor`
   reports 0 hard problems.

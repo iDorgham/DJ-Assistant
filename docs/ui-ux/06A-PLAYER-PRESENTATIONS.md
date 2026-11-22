@@ -3,7 +3,7 @@
 **Version:** 1.4 · **Date:** 2026-10-23  
 **Status:** Canonical UI reference for the three player presentations.  
 **Target:** Locked presentation model; visual details proposed where the plan does not fix them.  
-**Companions:** [06-PLAYER.md](06-PLAYER.md) · [01-DESIGN-SYSTEM.md](01-DESIGN-SYSTEM.md) · [`../plan/03-player/player-model-and-layouts.md`](../specs/player/player-model-and-layouts.md) · [`../plan/02-experience/track-panel-and-player.md`](../specs/experience/track-panel-and-player.md)
+**Companions:** [06-PLAYER.md](06-PLAYER.md) · [01-DESIGN-SYSTEM.md](01-DESIGN-SYSTEM.md) · [`../specs/player/player-model-and-layouts.md`](../specs/player/player-model-and-layouts.md) · [`../specs/experience/track-panel-and-player.md`](../specs/experience/track-panel-and-player.md)
 
 > **One engine, three presentations.** Mini and Full are different views of the same player state. **Hidden** is a visibility state, not a presentation. **Visualizer Expanded** is an optional visualizer surface, not a third player. Extended was removed; Full swaps between **Hot cues** and **Grid & beat** via a segmented control.
 
@@ -224,7 +224,7 @@ Extended was retired on 2026-10-23. It was a taller duplicate of Full whose only
 
 - `PlayerMode` is `hidden | mini | full`; a persisted legacy `extended` session migrates to `full`.
 - The old 380–440px dock height is gone. Full is resizable from 230px to 440px.
-- Historical references to a four-presentation model are superseded by this section and the 2026-10-23 decision entry in [`../plan/06-delivery/discussions.md`](../plans/v1/discussions.md).
+- Historical references to a four-presentation model are superseded by this section and the 2026-10-23 decision entry in [`../plans/v1/discussions.md`](../plans/v1/discussions.md).
 - The playlist/track/loop/EQ8 rails once planned for Extended are **not** part of Full; they belong to Player view and later player work.
 
 ---
