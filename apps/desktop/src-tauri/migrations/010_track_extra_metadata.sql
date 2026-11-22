@@ -26,7 +26,7 @@ ALTER TABLE tracks ADD COLUMN producer TEXT;
 ALTER TABLE tracks ADD COLUMN grouping TEXT;
 ALTER TABLE tracks ADD COLUMN track_number INTEGER;
 ALTER TABLE tracks ADD COLUMN disc_number INTEGER;
-ALTER TABLE tracks ADD COLUMN isrc TEXT;
+-- isrc is already added by migration 003 (the chart and enrichment join key).
 ALTER TABLE tracks ADD COLUMN catalog_number TEXT;
 ALTER TABLE tracks ADD COLUMN release_date TEXT;
 ALTER TABLE tracks ADD COLUMN copyright TEXT;
