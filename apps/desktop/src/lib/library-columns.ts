@@ -49,7 +49,25 @@ export type ColumnId =
   | "path"
   | "size"
   | "format"
-  | "fingerprint";
+  | "fingerprint"
+  | "comment2"
+  | "composer"
+  | "albumArtist"
+  | "remixer"
+  | "producer"
+  | "grouping"
+  | "trackNumber"
+  | "discNumber"
+  | "isrc"
+  | "catalogNumber"
+  | "releaseDate"
+  | "copyright"
+  | "mood"
+  | "mixName"
+  | "lyrics"
+  | "bitrate"
+  | "fileName"
+  | "importDate";
 
 export interface ColumnState {
   id: ColumnId;
@@ -88,9 +106,7 @@ const HEADER_SORT_PX = 16;
 /** Extra width the cell's own widget adds around its text. */
 const CELL_CHROME_PX: Partial<Record<ColumnId, number>> = {
   key: 14, // KeyPill: 12px horizontal padding plus two 1px borders.
-  // Chip `px-2` + status icon `w-3` + `space-x-1`.
-  status: 16 + 12 + 4,
-  // Pill `px-1.5` plus its border on each side.
+  // Pill px-1.5 plus its border on each side.
   format: 12 + 2,
 };
 /** The 36px (`h-9`) artwork thumb inside a `px-2` cell. */
@@ -245,8 +261,10 @@ const DEFINITIONS: Record<ColumnId, ColumnDefinition> = {
   },
   status: {
     id: "status",
+    // The cell is an icon only; the header keeps its word so the column can
+    // be identified and screen readers still get a label.
     label: "Status",
-    defaultWidth: 136,
+    defaultWidth: 76,
     align: "center",
     sortable: null,
     identity: false,
@@ -309,11 +327,174 @@ const DEFINITIONS: Record<ColumnId, ColumnDefinition> = {
     identity: false,
     defaultVisible: true,
   },
+  comment2: {
+    id: "comment2",
+    label: "Comment 2",
+    defaultWidth: 200,
+    align: "left",
+    sortable: null,
+    identity: false,
+    defaultVisible: false,
+  },
+  composer: {
+    id: "composer",
+    label: "Composer",
+    defaultWidth: 160,
+    align: "left",
+    sortable: null,
+    identity: false,
+    defaultVisible: false,
+  },
+  albumArtist: {
+    id: "albumArtist",
+    label: "Album Artist",
+    defaultWidth: 160,
+    align: "left",
+    sortable: null,
+    identity: false,
+    defaultVisible: false,
+  },
+  remixer: {
+    id: "remixer",
+    label: "Remixer",
+    defaultWidth: 160,
+    align: "left",
+    sortable: null,
+    identity: false,
+    defaultVisible: false,
+  },
+  producer: {
+    id: "producer",
+    label: "Producer",
+    defaultWidth: 160,
+    align: "left",
+    sortable: null,
+    identity: false,
+    defaultVisible: false,
+  },
+  grouping: {
+    id: "grouping",
+    label: "Grouping",
+    defaultWidth: 140,
+    align: "left",
+    sortable: null,
+    identity: false,
+    defaultVisible: false,
+  },
+  trackNumber: {
+    id: "trackNumber",
+    label: "Track #",
+    defaultWidth: 72,
+    align: "center",
+    sortable: null,
+    identity: false,
+    defaultVisible: false,
+  },
+  discNumber: {
+    id: "discNumber",
+    label: "Disc #",
+    defaultWidth: 64,
+    align: "center",
+    sortable: null,
+    identity: false,
+    defaultVisible: false,
+  },
+  isrc: {
+    id: "isrc",
+    label: "ISRC",
+    defaultWidth: 140,
+    align: "left",
+    sortable: null,
+    identity: false,
+    defaultVisible: false,
+  },
+  catalogNumber: {
+    id: "catalogNumber",
+    label: "Catalog #",
+    defaultWidth: 140,
+    align: "left",
+    sortable: null,
+    identity: false,
+    defaultVisible: false,
+  },
+  releaseDate: {
+    id: "releaseDate",
+    label: "Release Date",
+    defaultWidth: 110,
+    align: "center",
+    sortable: null,
+    identity: false,
+    defaultVisible: false,
+  },
+  copyright: {
+    id: "copyright",
+    label: "Copyright",
+    defaultWidth: 180,
+    align: "left",
+    sortable: null,
+    identity: false,
+    defaultVisible: false,
+  },
+  mood: {
+    id: "mood",
+    label: "Mood",
+    defaultWidth: 120,
+    align: "left",
+    sortable: null,
+    identity: false,
+    defaultVisible: false,
+  },
+  mixName: {
+    id: "mixName",
+    label: "Mix Name",
+    defaultWidth: 160,
+    align: "left",
+    sortable: null,
+    identity: false,
+    defaultVisible: false,
+  },
+  lyrics: {
+    id: "lyrics",
+    label: "Lyrics",
+    defaultWidth: 220,
+    align: "left",
+    sortable: null,
+    identity: false,
+    defaultVisible: false,
+  },
+  bitrate: {
+    id: "bitrate",
+    label: "Bitrate",
+    defaultWidth: 96,
+    align: "center",
+    sortable: null,
+    identity: false,
+    defaultVisible: false,
+  },
+  fileName: {
+    id: "fileName",
+    label: "File Name",
+    defaultWidth: 200,
+    align: "left",
+    sortable: null,
+    identity: false,
+    defaultVisible: false,
+  },
+  importDate: {
+    id: "importDate",
+    label: "Import Date",
+    defaultWidth: 110,
+    align: "center",
+    sortable: null,
+    identity: false,
+    defaultVisible: false,
+  },
 };
 
 /** Spec order — also the order untouched defaults and appended columns follow. */
 export const COLUMN_IDS: readonly ColumnId[] = [
   "index",
+  "status",
   "artwork",
   "title",
   "artist",
@@ -329,13 +510,30 @@ export const COLUMN_IDS: readonly ColumnId[] = [
   "year",
   "lufs",
   "color",
-  "status",
   "cues",
   "comment",
   "path",
   "size",
   "format",
   "fingerprint",
+  "comment2",
+  "composer",
+  "albumArtist",
+  "remixer",
+  "producer",
+  "grouping",
+  "trackNumber",
+  "discNumber",
+  "isrc",
+  "catalogNumber",
+  "releaseDate",
+  "copyright",
+  "mood",
+  "mixName",
+  "lyrics",
+  "bitrate",
+  "fileName",
+  "importDate",
 ];
 
 export function columnDefinition(id: ColumnId): ColumnDefinition {
@@ -548,6 +746,28 @@ export function columnStorageKey(view: AppView): string {
   return `${STORAGE_PREFIX}${view}`;
 }
 
+/** Bumped when a new default layout has to reach existing saved configs. */
+const COLUMN_CONFIG_VERSION = 3;
+
+/**
+ * Moves the status column to sit immediately after the row number.
+ *
+ * Saved configs keep their own order, which is what makes a reorder durable.
+ * Version 3 is the one exception: the status column changed from a wide text
+ * chip to a compact icon and its documented place is right after #, so an
+ * older config is moved once instead of leaving every existing user with the
+ * old layout.
+ */
+function upgradeColumnLayout(columns: ColumnState[], version: number): ColumnState[] {
+  if (version >= COLUMN_CONFIG_VERSION) return columns;
+  const status = columns.find((column) => column.id === "status");
+  if (!status) return columns;
+  const rest = columns.filter((column) => column.id !== "status");
+  const indexAt = rest.findIndex((column) => column.id === "index");
+  rest.splice(indexAt + 1, 0, status);
+  return rest;
+}
+
 export function loadLibraryColumns(view: AppView, storage?: StorageLike): ColumnState[] {
   const store = storage ?? defaultStorage();
   if (!store) return resetLibraryColumns();
@@ -559,18 +779,13 @@ export function loadLibraryColumns(view: AppView, storage?: StorageLike): Column
   }
   if (!raw) return resetLibraryColumns();
   const payload = parseJson(raw);
-  const versioned =
-    payload !== null &&
-    typeof payload === "object" &&
-    "version" in payload &&
-    payload.version === 2;
-  const validated = validateColumnConfig(
-    versioned && "columns" in payload ? payload.columns : payload
-  );
+  const payloadVersion = configVersion(payload);
+  const versioned = payloadVersion >= 2;
+  const validated = validateColumnConfig(versioned ? configColumns(payload) : payload);
   if (validated === null) return resetLibraryColumns();
   // Legacy arrays did not distinguish an untouched default from a resize.
   // Version new saves so a deliberate 72px resize stays intact thereafter.
-  return mergeWithDefaults(
+  const merged = mergeWithDefaults(
     versioned
       ? validated
       : validated.map((column) =>
@@ -579,6 +794,20 @@ export function loadLibraryColumns(view: AppView, storage?: StorageLike): Column
             : column
         )
   );
+  return upgradeColumnLayout(merged, payloadVersion);
+}
+
+/** The saved config version, or 0 for a legacy bare array. */
+function configVersion(payload: unknown): number {
+  if (typeof payload !== "object" || payload === null) return 0;
+  const version = (payload as { version?: unknown }).version;
+  return typeof version === "number" ? version : 0;
+}
+
+/** The `columns` array of a versioned config, or the payload itself. */
+function configColumns(payload: unknown): unknown {
+  if (typeof payload !== "object" || payload === null) return payload;
+  return (payload as { columns?: unknown }).columns ?? payload;
 }
 
 function parseJson(raw: string): unknown {
@@ -600,7 +829,7 @@ export function saveLibraryColumns(
   try {
     store.setItem(
       columnStorageKey(view),
-      JSON.stringify({ version: 2, columns: mergeWithDefaults([...columns]) })
+      JSON.stringify({ version: 3, columns: mergeWithDefaults([...columns]) })
     );
   } catch {
     // Best-effort, like `persistUiState`: blocked or full storage must not break the table.
@@ -657,7 +886,8 @@ export function trackColumnText(track: TrackSummary, id: ColumnId): string {
     case "fingerprint":
       return shortHash(track.fileHash);
     case "status":
-      return analysisStatusLabel(track.analysisStatus);
+      // The cell is an icon; the label lives in its tooltip and aria-label.
+      return "";
     case "energy":
       return formatEnergy(track.energy);
     case "tags":
@@ -666,12 +896,55 @@ export function trackColumnText(track: TrackSummary, id: ColumnId): string {
       return track.label?.trim() || PLACEHOLDER;
     case "year":
       return track.year != null ? String(track.year) : PLACEHOLDER;
+    case "comment2":
+      return truncateComment(track.comment2, COMMENT_CELL_LENGTH);
+    case "composer":
+      return track.composer?.trim() || PLACEHOLDER;
+    case "albumArtist":
+      return track.albumArtist?.trim() || PLACEHOLDER;
+    case "remixer":
+      return track.remixer?.trim() || PLACEHOLDER;
+    case "producer":
+      return track.producer?.trim() || PLACEHOLDER;
+    case "grouping":
+      return track.grouping?.trim() || PLACEHOLDER;
+    case "trackNumber":
+      return track.trackNumber != null ? String(track.trackNumber) : PLACEHOLDER;
+    case "discNumber":
+      return track.discNumber != null ? String(track.discNumber) : PLACEHOLDER;
+    case "isrc":
+      return track.isrc?.trim() || PLACEHOLDER;
+    case "catalogNumber":
+      return track.catalogNumber?.trim() || PLACEHOLDER;
+    case "releaseDate":
+      return track.releaseDate?.trim() || PLACEHOLDER;
+    case "copyright":
+      return track.copyright?.trim() || PLACEHOLDER;
+    case "mood":
+      return track.mood?.trim() || PLACEHOLDER;
+    case "mixName":
+      return track.mixName?.trim() || PLACEHOLDER;
+    case "lyrics":
+      return truncateComment(track.lyrics, COMMENT_CELL_LENGTH);
+    case "bitrate":
+      return track.bitrateKbps != null ? `${track.bitrateKbps} kbps` : PLACEHOLDER;
+    case "fileName":
+      return fileNameFromPath(track.filePath);
+    case "importDate":
+      return track.createdAt?.slice(0, 10) || PLACEHOLDER;
     case "lufs":
     case "color":
     case "cues":
     case "size":
+    default:
       return PLACEHOLDER;
   }
+}
+
+/** The basename of a path, tolerating both separators. */
+function fileNameFromPath(path: string): string {
+  const name = path.split(/[\\/]/).pop()?.trim();
+  return name || PLACEHOLDER;
 }
 
 /**
@@ -695,6 +968,10 @@ export function trackColumnTooltip(track: TrackSummary, id: ColumnId): string | 
       return track.userRating != null ? `${track.userRating} / 5` : "Unrated";
     case "energy":
       return track.energy != null ? `Energy ${track.energy} / 10` : "No energy set";
+    case "comment2":
+      return track.comment2?.trim() || undefined;
+    case "lyrics":
+      return track.lyrics?.trim() || undefined;
     case "tags":
       // The cell shows a couple of chips and a `+N` overflow, so the tooltip
       // carries the whole list.

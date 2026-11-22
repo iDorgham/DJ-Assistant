@@ -6,7 +6,14 @@
  * to the engine and never reach the user.
  */
 
-import type { PrefixEdge, SpellingCluster, TagClusterReport } from "@dj-assistant/shared";
+import type {
+  PrefixEdge,
+  SpellingCluster,
+  TagAlias,
+  TagClusterReport,
+  TagPreviewTrack,
+  TagRenameRequest,
+} from "@dj-assistant/shared";
 
 /** The scope subtitle: how many tracks the scan covered. */
 export function scopeLabel(trackCount: number): string {
@@ -49,6 +56,87 @@ export function emptyReportMessage(trackCount: number): string {
   return trackCount === 1
     ? "No duplicate spellings in this track."
     : `No duplicate spellings in these ${trackCount} tracks.`;
+}
+
+/**
+ * The preview's headline for a cluster (T2.2.3): how many tracks a rewrite
+ * would touch and the spelling it would settle on. Shows no button; applying
+ * is T2.2.4.
+ */
+export function rewriteLabel(cluster: SpellingCluster): string {
+  return `${scopeLabel(cluster.rewriteTrackCount)} would change to "${cluster.canonical}"`;
+}
+
+/** The note for affected tracks the sample list does not name, or null. */
+export function moreAffectedNote(cluster: SpellingCluster): string | null {
+  const hidden = cluster.rewriteTrackCount - cluster.sampleTrackIds.length;
+  if (hidden <= 0) return null;
+  return `and ${hidden} more`;
+}
+
+/** The ids to fetch sample details for, across every cluster, without repeats. */
+export function previewSampleIds(report: TagClusterReport): string[] {
+  const seen = new Set<string>();
+  for (const cluster of report.clusters) {
+    for (const id of cluster.sampleTrackIds) seen.add(id);
+  }
+  return [...seen];
+}
+
+/** A sample track's title line: "Title — Artist". */
+export function sampleTitle(track: TagPreviewTrack): string {
+  return `${track.title} — ${track.artist}`;
+}
+
+/**
+ * The spellings on a sample track that a rewrite would change: its tags that
+ * are members of this cluster, other than the canonical one, each once, in the
+ * order the track stores them. A track's unrelated tags are not changes.
+ */
+export function sampleSpellings(
+  track: TagPreviewTrack,
+  canonical: string,
+  memberSpellings: readonly string[]
+): string[] {
+  const members = new Set(memberSpellings);
+  return [...new Set(track.tags)].filter((tag) => tag !== canonical && members.has(tag));
+}
+
+/**
+ * The renames a scan implies (T2.2.4): every spelling of a cluster other than
+ * its canonical one becomes the canonical one — exactly what the preview shows.
+ */
+export function renamesFor(report: TagClusterReport): TagRenameRequest[] {
+  return report.clusters.flatMap((cluster) =>
+    cluster.members
+      .filter((member) => member.raw !== cluster.canonical)
+      .map((member) => ({ from: member.raw, to: cluster.canonical }))
+  );
+}
+
+/** One alias row: the spelling typed, then the spelling it is saved as. */
+export function aliasLabel(alias: TagAlias): string {
+  return `${alias.alias} → ${alias.canonical}`;
+}
+
+/** The confirm-step line naming how many spellings a rewrite replaces. */
+export function confirmLabel(renameCount: number): string {
+  return renameCount === 1
+    ? "1 spelling will be replaced in the tracks that carry it."
+    : `${renameCount} spellings will be replaced in the tracks that carry them.`;
+}
+
+/** The result line after a rewrite: how many tracks changed. */
+export function appliedLabel(updated: number): string {
+  return updated === 0
+    ? "Nothing to change — the tags already match."
+    : `Changed ${scopeLabel(updated)}. Undo is available until you close this dialog.`;
+}
+
+/** The result line after an undo: restored tracks, and any left alone. */
+export function undoneLabel(restored: number, skipped: number): string {
+  if (skipped === 0) return `Restored ${scopeLabel(restored)}.`;
+  return `Restored ${scopeLabel(restored)}; ${skipped} edited since the change, left as they are.`;
 }
 
 /**

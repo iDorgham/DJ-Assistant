@@ -2,7 +2,7 @@ use serde::{Deserialize, Serialize};
 
 use dj_assistant_core::library_query::TrackFilters;
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct TrackSummary {
     pub id: String,
@@ -32,6 +32,24 @@ pub struct TrackSummary {
     pub artwork_hash: Option<String>,
     pub created_at: String,
     pub updated_at: String,
+    /// Second comment field (Traktor / Serato "Comment 2").
+    pub comment_2: Option<String>,
+    pub composer: Option<String>,
+    pub album_artist: Option<String>,
+    pub remixer: Option<String>,
+    pub producer: Option<String>,
+    pub grouping: Option<String>,
+    pub track_number: Option<i64>,
+    pub disc_number: Option<i64>,
+    pub isrc: Option<String>,
+    pub catalog_number: Option<String>,
+    pub release_date: Option<String>,
+    pub copyright: Option<String>,
+    pub mood: Option<String>,
+    pub mix_name: Option<String>,
+    pub lyrics: Option<String>,
+    /// Derived at scan time from file size and duration.
+    pub bitrate_kbps: Option<i64>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -79,6 +97,17 @@ pub struct ScanFolderRequest {
 pub struct ScanFolderResponse {
     pub job_id: String,
     pub estimated_files: Option<usize>,
+}
+
+/// Outcome of filling artwork pointers for tracks that were imported without them.
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct RefreshArtworkResponse {
+    pub scanned: usize,
+    pub updated: usize,
+    pub missing: usize,
+    pub failed: usize,
+    pub errors: Vec<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -290,6 +319,74 @@ pub struct TagClusterRequest {
     /// Restrict to these tracks; omit to scan the whole library. An empty
     /// list is refused at the read boundary, never read as the whole library.
     pub track_ids: Option<Vec<String>>,
+}
+
+/// Sample tracks for the Tag Surgeon preview (T2.2.3). Read-only.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct TagPreviewRequest {
+    /// The sample track ids to describe. An empty list is refused.
+    pub track_ids: Vec<String>,
+}
+
+/// One sample track and every tag it carries, so the preview can show which
+/// spellings a rewrite would change.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub struct TagPreviewTrack {
+    pub track_id: String,
+    pub title: String,
+    pub artist: String,
+    pub tags: Vec<String>,
+}
+
+/// One confirmed spelling rewrite: every track carrying `from` gets `to`.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub struct TagRenameRequest {
+    pub from: String,
+    pub to: String,
+}
+
+/// Applies the Tag Surgeon's confirmed rewrites to the selected tracks (T2.2.4).
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct TagApplyRequest {
+    /// The scope the scan covered. An empty list is refused.
+    pub track_ids: Vec<String>,
+    /// The spellings to rewrite, exactly as the preview showed them.
+    pub renames: Vec<TagRenameRequest>,
+}
+
+/// A tag spelling alias: the spelling typed, and the canonical spelling tags
+/// with it are saved as from now on (T2.2.5).
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub struct TagAlias {
+    pub alias: String,
+    pub canonical: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct AddTagAliasRequest {
+    pub alias: String,
+    pub canonical: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct RemoveTagAliasRequest {
+    pub alias: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct TagApplyResponse {
+    /// Id of the `skill_runs` row holding the undo snapshot, or empty if no track changed.
+    pub undo_id: String,
+    /// Number of tracks whose tag set changed.
+    pub updated: usize,
 }
 
 // --- Tag health / enrichment gaps (B): local detection, no network ---
@@ -642,8 +739,26 @@ pub struct UpdateTrackMetadataRequest {
     pub label: Option<String>,
     /// Release year. `0` clears the year.
     pub year: Option<i64>,
-    /// Free-text comment. `""` clears the comment.
+    /// Free-text comment. Empty string clears the comment.
     pub comments: Option<String>,
+    /// Second comment field. Empty string clears it.
+    pub comment_2: Option<String>,
+    pub composer: Option<String>,
+    pub album_artist: Option<String>,
+    pub remixer: Option<String>,
+    pub producer: Option<String>,
+    pub grouping: Option<String>,
+    /// Track number. 0 clears it.
+    pub track_number: Option<i64>,
+    /// Disc number. 0 clears it.
+    pub disc_number: Option<i64>,
+    pub isrc: Option<String>,
+    pub catalog_number: Option<String>,
+    pub release_date: Option<String>,
+    pub copyright: Option<String>,
+    pub mood: Option<String>,
+    pub mix_name: Option<String>,
+    pub lyrics: Option<String>,
     /// The **complete** set of custom tags for the track. `Some([])` removes
     /// every tag; `None` leaves the tags untouched.
     pub tags: Option<Vec<String>>,

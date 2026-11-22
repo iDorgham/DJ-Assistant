@@ -25,7 +25,9 @@ pub mod providers;
 pub mod reveal;
 pub mod riff;
 pub mod similarity;
+pub mod tag_aliases;
 pub mod tag_clustering;
+pub mod tag_rewrite;
 pub mod tags;
 
 pub use aiff::aiff_duration_ms;
@@ -70,7 +72,7 @@ pub use metadata::{
 pub use mp3::mp3_duration_ms;
 pub use patch::{
     check_metadata_undoable, number_value, tags_match, text_value, METADATA_SKILL_NAME,
-    METADATA_SKILL_NAMES, PATCH_COLUMNS, RATING_SKILL_NAME,
+    METADATA_SKILL_NAMES, PATCH_COLUMNS, RATING_SKILL_NAME, TAG_REWRITE_SKILL_NAME,
 };
 pub use providers::{
     store_links_for_track, store_search_url, ProviderCapabilities, StoreLink, StoreProvider,

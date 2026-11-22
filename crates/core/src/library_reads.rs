@@ -217,6 +217,31 @@ pub fn tag_vocabulary_rows(ids: Option<&[String]>) -> Result<Statement, ReadErro
     })
 }
 
+/// `(id, title, artist, tag)` rows for the Tag Surgeon's preview samples
+/// (T2.2.3): each sample track with every one of its tags, so the dialog can
+/// show what a rewrite would change. A track with no tags yields one row with a
+/// NULL tag. The `removed_at IS NULL` rule is kept here too.
+pub fn tag_preview_rows(ids: &[String]) -> Result<Statement, ReadError> {
+    if ids.is_empty() {
+        return Err(ReadError::EmptySelection);
+    }
+    let placeholders = ids
+        .iter()
+        .enumerate()
+        .map(|(index, _)| format!("?{}", index + 1))
+        .collect::<Vec<_>>()
+        .join(", ");
+    Ok(Statement {
+        sql: format!(
+            "SELECT t.id, t.title, t.artist, tt.tag FROM tracks t \
+             LEFT JOIN track_tags tt ON tt.track_id = t.id \
+             WHERE t.removed_at IS NULL AND t.id IN ({placeholders}) \
+             ORDER BY t.id, tt.tag"
+        ),
+        params: ids.to_vec(),
+    })
+}
+
 /// The tracks an enrichment preview may propose fields for.
 pub fn enrichment_targets(ids: Option<&[String]>) -> Result<Statement, ReadError> {
     present_rows(ENRICHMENT_TARGET_COLUMNS, ids)
@@ -249,9 +274,10 @@ pub fn analysis_candidates(
 mod tests {
     use super::{
         analysis_candidates, enrichment_targets, folder_counts_from_paths, folder_of_path,
-        missing_file_paths_sql, present_rows, tag_health_rows, tag_vocabulary_rows, ReadError,
-        ENRICHMENT_TARGET_COLUMNS, GENRE_COUNTS_SQL, OWNED_ISRC_SQL, PRESENT_FILE_PATHS_SQL,
-        REMOVED_TRACKS_COLUMNS, REMOVED_TRACKS_SQL, SIMILAR_CANDIDATES_SQL, TAG_HEALTH_COLUMNS,
+        missing_file_paths_sql, present_rows, tag_health_rows, tag_preview_rows,
+        tag_vocabulary_rows, ReadError, ENRICHMENT_TARGET_COLUMNS, GENRE_COUNTS_SQL,
+        OWNED_ISRC_SQL, PRESENT_FILE_PATHS_SQL, REMOVED_TRACKS_COLUMNS, REMOVED_TRACKS_SQL,
+        SIMILAR_CANDIDATES_SQL, TAG_HEALTH_COLUMNS,
     };
     use crate::library_remove::Statement;
     use crate::library_schema::LibrarySchema;
@@ -275,6 +301,7 @@ mod tests {
             analysis_candidates(Some(&ids(&["a", "b"])), true, "v1"),
             tag_vocabulary_rows(None),
             tag_vocabulary_rows(Some(&ids(&["a", "b"]))),
+            tag_preview_rows(&ids(&["a", "b"])),
         ];
         let mut out: Vec<String> = built
             .into_iter()

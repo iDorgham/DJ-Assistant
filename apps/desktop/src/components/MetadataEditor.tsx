@@ -157,6 +157,170 @@ export function MetadataEditor({ targets, trackIds, onSave, onClose }: MetadataE
     commit();
   };
 
+  // The render pieces are separate JSX values, so no single tree nests past the
+  // depth the lint rule allows (JS-0415). Each returns to the same markup.
+  const closeButton = (
+    <button
+      type="button"
+      onClick={onClose}
+      className="p-1.5 rounded-md hover:bg-dj-hover text-dj-text-secondary transition"
+      title="Close (Esc)"
+    >
+      <X className="w-4 h-4" />
+    </button>
+  );
+
+  const headerRow = (title: string, subtitle: string) => (
+    <div className="flex items-center justify-between border-b border-dj-border px-4 py-3">
+      <div className="min-w-0">
+        <p className="text-sm font-semibold text-dj-text">{title}</p>
+        <p className="text-[11px] text-dj-text-muted">{subtitle}</p>
+      </div>
+      {closeButton}
+    </div>
+  );
+
+  const previewRow = (row: BulkDiffRow) => (
+    <li key={row.field} className="flex items-baseline gap-3 py-2">
+      <span className="w-16 shrink-0 text-[11px] font-semibold uppercase tracking-wider text-dj-text-muted">
+        {row.label}
+      </span>
+      <span className="min-w-0 flex-1 text-xs text-dj-text-secondary">
+        <span className="break-words">{row.before}</span>
+        <span className="mx-1.5 text-dj-text-muted">→</span>
+        <span className="break-words text-dj-text">{row.after}</span>
+      </span>
+    </li>
+  );
+
+  const renderTagChip = (tag: string) => (
+    <span
+      key={tag}
+      className="inline-flex items-center gap-1 rounded-sm border border-dj-border bg-dj-panel px-1.5 py-0.5 text-[11px] text-dj-text-secondary"
+    >
+      {tag}
+      <button
+        type="button"
+        onClick={() => removeTag(tag)}
+        className="rounded-sm p-px text-dj-text-muted transition hover:text-dj-danger"
+        title={`Remove the tag ${tag}`}
+        aria-label={`Remove the tag ${tag}`}
+      >
+        <X className="h-2.5 w-2.5" />
+      </button>
+    </span>
+  );
+
+  const fieldGrid = (
+    <div className="grid grid-cols-2 gap-3">
+      {FIELDS.map((field) => (
+        <label key={field.key} className="block">
+          <span className="mb-1 block text-[11px] font-semibold uppercase tracking-wider text-dj-text-muted">
+            {field.label}
+          </span>
+          <input
+            type="text"
+            inputMode={field.key === "year" ? "numeric" : undefined}
+            value={values[field.key]}
+            placeholder={fieldHint(survey[field.key], bulk) ?? field.placeholder}
+            onChange={(event) =>
+              setValues((current) => ({
+                ...current,
+                [field.key]: event.target.value,
+              }))
+            }
+            className={INPUT_CLASS}
+          />
+        </label>
+      ))}
+    </div>
+  );
+
+  const tagsField = (
+    <div>
+      <span className="mb-1 block text-[11px] font-semibold uppercase tracking-wider text-dj-text-muted">
+        Custom tags
+      </span>
+      <div className="flex flex-wrap items-center gap-1 rounded-md border border-dj-border bg-dj-elevated px-2 py-1.5">
+        {values.tags.map((tag) => renderTagChip(tag))}
+        <input
+          ref={tagInputRef}
+          type="text"
+          value={tagDraft}
+          onChange={(event) => setTagDraft(event.target.value)}
+          onKeyDown={onTagKeyDown}
+          onBlur={() => addTag(tagDraft)}
+          placeholder={
+            values.tags.length > 0 ? "Add a tag" : (fieldHint(survey.tags, bulk) ?? "peak, warmup…")
+          }
+          aria-label="Add a custom tag"
+          className="min-w-[6rem] flex-1 bg-transparent text-[11px] text-dj-text placeholder:text-dj-text-muted focus:outline-hidden"
+        />
+      </div>
+      <p className="mt-1 text-[11px] text-dj-text-muted">
+        Enter adds a tag. Tags are folded to lower case, so “Peak” and “peak” are one tag.
+      </p>
+    </div>
+  );
+
+  const notesGrid = (
+    <div className="grid grid-cols-2 gap-3">
+      <label className="block">
+        <span className="mb-1 block text-[11px] font-semibold uppercase tracking-wider text-dj-text-muted">
+          Comment
+        </span>
+        <textarea
+          rows={3}
+          value={values.comments}
+          placeholder={fieldHint(survey.comments, bulk) ?? "Your note about this track"}
+          onChange={(event) =>
+            setValues((current) => ({ ...current, comments: event.target.value }))
+          }
+          className={`${INPUT_CLASS} resize-y`}
+        />
+      </label>
+      <label className="block">
+        <span className="mb-1 block text-[11px] font-semibold uppercase tracking-wider text-dj-text-muted">
+          Comment 2
+        </span>
+        <textarea
+          rows={3}
+          value={values.comment2}
+          placeholder={
+            fieldHint(survey.comment2, bulk) ?? "Second comment, as Traktor and Serato store it"
+          }
+          onChange={(event) =>
+            setValues((current) => ({ ...current, comment2: event.target.value }))
+          }
+          className={`${INPUT_CLASS} resize-y`}
+        />
+      </label>
+    </div>
+  );
+
+  const footer = (
+    <div className="flex items-center justify-end gap-2 border-t border-dj-border px-4 py-3">
+      <button
+        type="button"
+        onClick={onClose}
+        className="rounded-md border border-dj-border bg-dj-elevated px-3 py-1.5 text-xs text-dj-text-secondary transition hover:bg-dj-hover"
+      >
+        Cancel
+      </button>
+      <button
+        type="submit"
+        className="rounded-md bg-dj-accent px-3 py-1.5 text-xs font-medium text-dj-on-accent shadow-sm shadow-dj-accent/25 transition hover:bg-dj-accent-strong"
+        title={
+          bulk
+            ? "Review the changes before they are applied"
+            : "Save the metadata (Undo is offered afterwards)"
+        }
+      >
+        {bulk ? "Review changes" : "Save"}
+      </button>
+    </div>
+  );
+
   if (preview) {
     return (
       <ModalShell
@@ -165,37 +329,12 @@ export function MetadataEditor({ targets, trackIds, onSave, onClose }: MetadataE
         ariaLabel="Confirm metadata changes"
         panelClassName="w-[460px] max-w-full max-h-full overflow-y-auto bg-dj-panel border border-dj-border rounded-lg shadow-2xl"
       >
-        <div className="flex items-center justify-between border-b border-dj-border px-4 py-3">
-          <div>
-            <p className="text-sm font-semibold text-dj-text">Apply to {trackIds.length} tracks</p>
-            <p className="text-[11px] text-dj-text-muted">
-              Only these fields change. Everything else is left as each track has it.
-            </p>
-          </div>
-          <button
-            type="button"
-            onClick={onClose}
-            className="p-1.5 rounded-md hover:bg-dj-hover text-dj-text-secondary transition"
-            title="Close (Esc)"
-          >
-            <X className="w-4 h-4" />
-          </button>
-        </div>
+        {headerRow(
+          `Apply to ${trackIds.length} tracks`,
+          "Only these fields change. Everything else is left as each track has it."
+        )}
 
-        <ul className="divide-y divide-dj-border px-4">
-          {preview.map((row) => (
-            <li key={row.field} className="flex items-baseline gap-3 py-2">
-              <span className="w-16 shrink-0 text-[11px] font-semibold uppercase tracking-wider text-dj-text-muted">
-                {row.label}
-              </span>
-              <span className="min-w-0 flex-1 text-xs text-dj-text-secondary">
-                <span className="break-words">{row.before}</span>
-                <span className="mx-1.5 text-dj-text-muted">→</span>
-                <span className="break-words text-dj-text">{row.after}</span>
-              </span>
-            </li>
-          ))}
-        </ul>
+        <ul className="divide-y divide-dj-border px-4">{preview.map((row) => previewRow(row))}</ul>
 
         <div className="mt-3 flex items-center justify-end gap-2 border-t border-dj-border px-4 py-3">
           <button
@@ -224,24 +363,10 @@ export function MetadataEditor({ targets, trackIds, onSave, onClose }: MetadataE
       panelClassName="w-[520px] max-w-full max-h-full overflow-y-auto bg-dj-panel border border-dj-border rounded-lg shadow-2xl"
     >
       <form onSubmit={submit} className="flex flex-col">
-        <div className="flex items-center justify-between border-b border-dj-border px-4 py-3">
-          <div className="min-w-0">
-            <p className="text-sm font-semibold text-dj-text">Edit metadata</p>
-            <p className="text-[11px] text-dj-text-muted">
-              {bulk
-                ? `Applies to ${trackIds.length} selected tracks`
-                : targets[0]?.title || "Untitled"}
-            </p>
-          </div>
-          <button
-            type="button"
-            onClick={onClose}
-            className="p-1.5 rounded-md hover:bg-dj-hover text-dj-text-secondary transition"
-            title="Close (Esc)"
-          >
-            <X className="w-4 h-4" />
-          </button>
-        </div>
+        {headerRow(
+          "Edit metadata",
+          bulk ? `Applies to ${trackIds.length} selected tracks` : targets[0]?.title || "Untitled"
+        )}
 
         <div className="space-y-3 px-4 py-3">
           {bulk && (
@@ -251,86 +376,11 @@ export function MetadataEditor({ targets, trackIds, onSave, onClose }: MetadataE
             </p>
           )}
 
-          <div className="grid grid-cols-2 gap-3">
-            {FIELDS.map((field) => (
-              <label key={field.key} className="block">
-                <span className="mb-1 block text-[11px] font-semibold uppercase tracking-wider text-dj-text-muted">
-                  {field.label}
-                </span>
-                <input
-                  type="text"
-                  inputMode={field.key === "year" ? "numeric" : undefined}
-                  value={values[field.key]}
-                  placeholder={fieldHint(survey[field.key], bulk) ?? field.placeholder}
-                  onChange={(event) =>
-                    setValues((current) => ({
-                      ...current,
-                      [field.key]: event.target.value,
-                    }))
-                  }
-                  className={INPUT_CLASS}
-                />
-              </label>
-            ))}
-          </div>
+          {fieldGrid}
 
-          <div>
-            <span className="mb-1 block text-[11px] font-semibold uppercase tracking-wider text-dj-text-muted">
-              Custom tags
-            </span>
-            <div className="flex flex-wrap items-center gap-1 rounded-md border border-dj-border bg-dj-elevated px-2 py-1.5">
-              {values.tags.map((tag) => (
-                <span
-                  key={tag}
-                  className="inline-flex items-center gap-1 rounded-sm border border-dj-border bg-dj-panel px-1.5 py-0.5 text-[11px] text-dj-text-secondary"
-                >
-                  {tag}
-                  <button
-                    type="button"
-                    onClick={() => removeTag(tag)}
-                    className="rounded-sm p-px text-dj-text-muted transition hover:text-dj-danger"
-                    title={`Remove the tag ${tag}`}
-                    aria-label={`Remove the tag ${tag}`}
-                  >
-                    <X className="h-2.5 w-2.5" />
-                  </button>
-                </span>
-              ))}
-              <input
-                ref={tagInputRef}
-                type="text"
-                value={tagDraft}
-                onChange={(event) => setTagDraft(event.target.value)}
-                onKeyDown={onTagKeyDown}
-                onBlur={() => addTag(tagDraft)}
-                placeholder={
-                  values.tags.length > 0
-                    ? "Add a tag"
-                    : (fieldHint(survey.tags, bulk) ?? "peak, warmup…")
-                }
-                aria-label="Add a custom tag"
-                className="min-w-[6rem] flex-1 bg-transparent text-[11px] text-dj-text placeholder:text-dj-text-muted focus:outline-hidden"
-              />
-            </div>
-            <p className="mt-1 text-[11px] text-dj-text-muted">
-              Enter adds a tag. Tags are folded to lower case, so “Peak” and “peak” are one tag.
-            </p>
-          </div>
+          {tagsField}
 
-          <label className="block">
-            <span className="mb-1 block text-[11px] font-semibold uppercase tracking-wider text-dj-text-muted">
-              Comment
-            </span>
-            <textarea
-              rows={4}
-              value={values.comments}
-              placeholder={fieldHint(survey.comments, bulk) ?? "Your note about this track"}
-              onChange={(event) =>
-                setValues((current) => ({ ...current, comments: event.target.value }))
-              }
-              className={`${INPUT_CLASS} resize-y`}
-            />
-          </label>
+          {notesGrid}
 
           {error && (
             <p className="rounded-sm border border-dj-danger/30 bg-dj-danger/10 px-2 py-1.5 text-[11px] text-dj-danger">
@@ -339,26 +389,7 @@ export function MetadataEditor({ targets, trackIds, onSave, onClose }: MetadataE
           )}
         </div>
 
-        <div className="flex items-center justify-end gap-2 border-t border-dj-border px-4 py-3">
-          <button
-            type="button"
-            onClick={onClose}
-            className="rounded-md border border-dj-border bg-dj-elevated px-3 py-1.5 text-xs text-dj-text-secondary transition hover:bg-dj-hover"
-          >
-            Cancel
-          </button>
-          <button
-            type="submit"
-            className="rounded-md bg-dj-accent px-3 py-1.5 text-xs font-medium text-dj-on-accent shadow-sm shadow-dj-accent/25 transition hover:bg-dj-accent-strong"
-            title={
-              bulk
-                ? "Review the changes before they are applied"
-                : "Save the metadata (Undo is offered afterwards)"
-            }
-          >
-            {bulk ? "Review changes" : "Save"}
-          </button>
-        </div>
+        {footer}
       </form>
     </ModalShell>
   );

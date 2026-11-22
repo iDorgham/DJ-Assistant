@@ -2,6 +2,7 @@
 
 **Version:** 1.4 · **Date:** 2026-10-19  
 **Full wireframes:** [12-WIREFRAMES-AND-FLEXIBILITY.md](12-WIREFRAMES-AND-FLEXIBILITY.md)
+**Proposed amendments (not approved):** [14-LIBRARY-TABLE-UPGRADES.md](14-LIBRARY-TABLE-UPGRADES.md).
 
 Primary job: **music library management** — browse, search, filter, tag, analyze, organize.
 
@@ -65,6 +66,7 @@ Left panel is organized as **tabs / sections** (not a flat list only):
 | Column | Default | Notes |
 |--------|---------|--------|
 | # | On | |
+| Status | On | **Icon only**, placed immediately after `#`; the header keeps the word, and the cell keeps the label in its tooltip and `aria-label` |
 | **Artwork** | Off | Hover → play overlay (see §3.7) |
 | Title | On | Cannot hide last identity column |
 | Artist | On | |
@@ -80,9 +82,23 @@ Left panel is organized as **tabs / sections** (not a flat list only):
 | **Year** | Off | |
 | LUFS | Off | |
 | Color | Off | |
-| Status | On | Analyzed / cues / error |
 | Cues | Off | Count or indicator |
 | Comment, Path, Size, format, custom tags | Off | |
+| **File metadata** | Off | Comment 2, Composer, Album Artist, Remixer, Producer, Grouping, Track #, Disc #, ISRC, Catalog #, Release Date, Copyright, Mood, Mix Name, Lyrics, Bitrate, File Name, Import Date |
+
+Every file-metadata column has a real tag source (`TPUB`, `TCOM`, `TPE2`, `TPE4`,
+`TIT1`, `TRCK`, `TPOS`, `TSRC`, `TDRL`/`TDRC`, `TCOP`, `TMOO`, the Vorbis
+equivalents, and `USLT` lyrics). Where an ID3 file has no standard frame, the
+import falls back to a `TXXX` user-text frame with one of these descriptions
+(case-insensitive): Comment 2 (`comment2`, `comment 2`), Producer (`producer`),
+Catalog # (`catalognumber`, `catalog number`, `catalog`, `catno`), Mix Name
+(`mixname`, `mix name`, `mix`, `version`), and the same pattern for the other
+text fields. Track and disc numbers (`TRCK`, `TPOS`) and lyrics (`USLT`) have
+no `TXXX` fallback: they import only from their standard frame. MP4/M4A files have no reader for these fields in this build, so they
+import blank and show the table dash. A tag the file does not carry renders the
+table dash, never a fake value. Bitrate, File Name and Import Date are derived
+from fields the summary already carries, so no column invents data. Comment 2
+is editable in the metadata editor and the Tags tab, not just readable.
 
 Visibility, order, **and widths** persisted **per view**.
 

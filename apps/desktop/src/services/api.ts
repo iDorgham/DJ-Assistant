@@ -9,6 +9,7 @@ import type {
   GetTrackResponse,
   GetArtworkRequest,
   GetArtworkResponse,
+  RefreshArtworkResponse,
   UpdateTrackMetadataRequest,
   UpdateTrackMetadataResponse,
   SetTrackRatingRequest,
@@ -33,6 +34,13 @@ import type {
   FindSimilarTracksResponse,
   TagClusterRequest,
   TagClusterReport,
+  TagApplyRequest,
+  TagApplyResponse,
+  TagAlias,
+  AddTagAliasRequest,
+  RemoveTagAliasRequest,
+  TagPreviewRequest,
+  TagPreviewTrack,
   TagHealthRequest,
   TagHealthResponse,
   StoreLinksRequest,
@@ -118,6 +126,19 @@ export async function getArtwork(req: GetArtworkRequest): Promise<GetArtworkResp
   }
   const { invoke } = await import("@tauri-apps/api/core");
   return invoke<GetArtworkResponse>("get_artwork", { request: req });
+}
+
+/**
+ * One-time repair for libraries imported before embedded artwork was cached.
+ * Reads the audio files and fills the app's own artwork pointers — no audio is
+ * modified. Safe to call on every launch; it is a no-op once rows are filled.
+ */
+export async function refreshArtwork(): Promise<RefreshArtworkResponse> {
+  if (!isTauri) {
+    return { scanned: 0, updated: 0, missing: 0, failed: 0, errors: [] };
+  }
+  const { invoke } = await import("@tauri-apps/api/core");
+  return invoke<RefreshArtworkResponse>("refresh_artwork");
 }
 
 export interface GetWaveformPeaksRequest {
@@ -343,6 +364,51 @@ export async function tagCluster(req: TagClusterRequest = {}): Promise<TagCluste
   }
   const { invoke } = await import("@tauri-apps/api/core");
   return invoke<TagClusterReport>("tag_cluster", { request: req });
+}
+
+/**
+ * The Tag Surgeon preview's sample tracks (T2.2.3): title, artist and every
+ * tag each track carries. Read-only. A browser tab is a mock, so it returns
+ * no samples rather than invented ones.
+ */
+export async function tagPreviewTracks(req: TagPreviewRequest): Promise<TagPreviewTrack[]> {
+  // Only the browser mock short-circuits. An empty selection reaches the
+  // backend, whose validator rejects it.
+  if (!isTauri) return [];
+  const { invoke } = await import("@tauri-apps/api/core");
+  return invoke<TagPreviewTrack[]>("tag_preview_tracks", { request: req });
+}
+
+/**
+ * Applies the Tag Surgeon's confirmed spelling rewrites (T2.2.4). Reverted with
+ * `undoTrackMetadata` using the returned `undoId`. Unlike the read-only calls,
+ * a browser tab cannot apply a write, so it refuses rather than pretending.
+ */
+export async function tagApplyRenames(req: TagApplyRequest): Promise<TagApplyResponse> {
+  if (!isTauri) throw new Error("Applying tag changes needs the desktop app.");
+  const { invoke } = await import("@tauri-apps/api/core");
+  return invoke<TagApplyResponse>("tag_apply_renames", { request: req });
+}
+
+/** The stored tag aliases (T2.2.5). A browser tab has none to show. */
+export async function listTagAliases(): Promise<TagAlias[]> {
+  if (!isTauri) return [];
+  const { invoke } = await import("@tauri-apps/api/core");
+  return invoke<TagAlias[]>("list_tag_aliases_command");
+}
+
+/** Adds or re-points a tag alias (T2.2.5). Returns the full list. */
+export async function addTagAlias(req: AddTagAliasRequest): Promise<TagAlias[]> {
+  if (!isTauri) throw new Error("Saving a tag alias needs the desktop app.");
+  const { invoke } = await import("@tauri-apps/api/core");
+  return invoke<TagAlias[]>("add_tag_alias", { request: req });
+}
+
+/** Removes a tag alias (T2.2.5). Returns the full list. */
+export async function removeTagAlias(req: RemoveTagAliasRequest): Promise<TagAlias[]> {
+  if (!isTauri) throw new Error("Removing a tag alias needs the desktop app.");
+  const { invoke } = await import("@tauri-apps/api/core");
+  return invoke<TagAlias[]>("remove_tag_alias", { request: req });
 }
 
 /**
