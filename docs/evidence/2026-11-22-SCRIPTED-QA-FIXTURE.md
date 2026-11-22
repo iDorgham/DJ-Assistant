@@ -38,7 +38,7 @@ Mouse and keyboard were simulated through DOM events and `Input.insertText`.
 | TS5 | Tag Surgeon | Undo restores every tag row | PASS | "Restored 3 tracks."; all 207 `track_tags` rows match the baseline row by row (track id and tag, ordered compare) |
 | M1 | Mix dock | Mix button opens the dock with ranked candidates and reason chips | PASS | candidates listed with "same key", "energy-boost", BPM deltas |
 | M2 | Mix dock | Preview loads the candidate in the player | PASS | player shows `Synthetic Track 00121`, 3:30 = 210 s (DB) |
-| M3 | Mix dock | Add adds the candidate to the selection | PASS | selection 1 → "2 tracks selected". Only `track_tags` was read back after this step (row-by-row, unchanged); no other write is claimed |
+| M3 | Mix dock | Add adds the candidate to the selection | PASS | selection 1 → "2 tracks selected". The readbacks taken after the dock checks are listed under Net-zero; no other write is claimed |
 | M4 | Mix dock | Resize handle exposes its width | PASS (read only) | `aria-valuenow` = 320 |
 | M5 | Mix dock | Close removes the dock | PASS | dock gone after click |
 
