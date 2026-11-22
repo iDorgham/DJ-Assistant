@@ -10,9 +10,10 @@
 // RULES table below is the authoritative old -> new path map.
 //
 // Known quirks of the 2026-11-22 run, both corrected by hand afterwards:
-// - rewriteRootPaths stops at a space, so `docs/ui/library (1).png`-style names
-//   were not rewritten by the exact-match rule (those PNGs were untracked and
-//   moved and renamed by hand);
+// - rewriteRootPaths stops at a space, so a reference to `docs/ui/library (1).png`
+//   missed its exact-match rule and the `docs/ui/` directory rule rewrote it to
+//   the wrong path `docs/ui-ux/library (1).png` (those PNGs were untracked and
+//   were moved and renamed by hand);
 // - root-level Markdown links were rewritten twice (rewriteLinks, then
 //   rewriteRootPaths), sending docs/ui-ux/... to the archive; AGENTS.md,
 //   CLAUDE.md and README.md were fixed afterwards.
@@ -27,7 +28,7 @@ const APPLY = process.argv.includes("--apply");
 // One-shot: the RULES describe the pre-2026-11-22 layout. Once docs/ui/ is gone
 // the move has happened, and applying again would re-move the new folders.
 if (APPLY && !fs.existsSync(path.join(ROOT, "docs", "ui"))) {
-  console.error("docs/ui/ no longer exists: the reorganisation was already applied.");
+  process.stderr.write("docs/ui/ no longer exists: the reorganisation was already applied.\n");
   process.exit(1);
 }
 
@@ -117,6 +118,14 @@ const scan = [...new Set([...tracked, ...untracked, ...local])].filter(
 );
 
 const posix = (p) => p.split(path.sep).join("/");
+const out = (line) => process.stdout.write(`${line}\n`);
+function safeDecode(p) {
+  try {
+    return decodeURI(p);
+  } catch {
+    return p;
+  }
+}
 const exists = (rel) => tracked.has(rel) || untracked.includes(rel) || fs.existsSync(path.join(ROOT, rel));
 
 // 1) Relative markdown links: ](target) resolved against the file's OLD folder.
@@ -130,8 +139,7 @@ function rewriteLinks(file, text) {
     const rawPath = cut === -1 ? target : target.slice(0, cut);
     const hash = cut === -1 ? "" : target.slice(cut);
     if (!rawPath) return m;
-    let decoded;
-    try { decoded = decodeURI(rawPath); } catch { decoded = rawPath; }
+    const decoded = safeDecode(rawPath);
     const oldAbs = path.posix.normalize(path.posix.join(oldDir, decoded));
     if (oldAbs.startsWith("..")) return m;
     const trailing = decoded.endsWith("/") ? "/" : "";
@@ -169,7 +177,7 @@ for (const f of scan) {
   if (after !== before) {
     changed++;
     if (APPLY) fs.writeFileSync(abs, after);
-    else console.log("rewrite", f);
+    else out(`rewrite ${f}`);
   }
 }
 
@@ -178,7 +186,7 @@ for (const f of scan) {
 const order = [...moves].sort(([a], [b]) => Number(!a.startsWith("docs/ui-ux/")) - Number(!b.startsWith("docs/ui-ux/")));
 const tmp = (p) => p.replace(/^docs\/ui-ux\//, "docs/_ui-ux-old/").replace(/^docs\/ADR\//, "docs/_adr-tmp/");
 for (const [from, to] of order) {
-  if (!APPLY) { console.log("move", from, "->", to); continue; }
+  if (!APPLY) { out(`move ${from} -> ${to}`); continue; }
   const via = tmp(from);
   const step = (a, b) => {
     fs.mkdirSync(path.dirname(path.join(ROOT, b)), { recursive: true });
@@ -206,7 +214,6 @@ function removeEmptyDirs(dir) {
     if (e.isDirectory()) removeEmptyDirs(path.join(dir, e.name));
   }
   if (fs.readdirSync(dir).length === 0) fs.rmdirSync(dir);
-  else console.log("left in place (not empty):", posix(path.relative(ROOT, dir)));
+  else out(`left in place (not empty): ${posix(path.relative(ROOT, dir))}`);
 }
-console.log(`${APPLY ? "applied" : "dry run"}: ${moves.size} moves, ${changed} files with rewritten references`);
-void posix;
+out(`${APPLY ? "applied" : "dry run"}: ${moves.size} moves, ${changed} files with rewritten references`);
