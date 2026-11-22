@@ -474,15 +474,19 @@ fn text_frame(tag: &id3::Tag, id: &str) -> Option<String> {
         .map(str::to_string)
 }
 
+/// The first non-blank value among the frames whose description matches. A
+/// blank frame is skipped, so a later alias (`publisher` after an empty
+/// `label`) still supplies the value.
 fn extended_text_frame(tag: &id3::Tag, descriptions: &[&str]) -> Option<String> {
     tag.extended_texts()
-        .find(|ext| {
+        .filter(|ext| {
             descriptions
                 .iter()
                 .any(|want| ext.description.eq_ignore_ascii_case(want))
         })
-        .map(|ext| ext.value.trim().to_string())
-        .filter(|v| !v.is_empty())
+        .map(|ext| ext.value.trim())
+        .find(|value| !value.is_empty())
+        .map(str::to_string)
 }
 
 /// Extracts extras from a FLAC file's Vorbis comments and picture blocks.
@@ -824,6 +828,23 @@ mod tests {
         assert_eq!(art.mime_type, "image/png");
         assert_eq!(art.data, vec![0x89, 0x50, 0x4E, 0x47]);
         let _ = std::fs::remove_file(path);
+    }
+
+    #[test]
+    fn a_blank_alias_frame_does_not_hide_a_later_one() {
+        let mut tag = id3::Tag::new();
+        tag.add_frame(id3::frame::ExtendedText {
+            description: "label".into(),
+            value: "  ".into(),
+        });
+        tag.add_frame(id3::frame::ExtendedText {
+            description: "publisher".into(),
+            value: "Warp".into(),
+        });
+        assert_eq!(
+            extended_text_frame(&tag, &["label", "publisher"]),
+            Some("Warp".to_string())
+        );
     }
 
     #[test]

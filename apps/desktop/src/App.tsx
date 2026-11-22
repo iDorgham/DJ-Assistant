@@ -2053,6 +2053,9 @@ export default function App() {
       ) {
         return;
       }
+      // Like the view shortcuts, stay out of the way while a dialog is open:
+      // the search box is behind it and focusing it would break containment.
+      if (dialogsOpenRef.current) return;
       const find = (event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "f";
       if (!find && event.key !== "/") return;
       // Only the Library mounts the search input. Elsewhere the key is left to
