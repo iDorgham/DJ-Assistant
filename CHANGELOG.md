@@ -9,6 +9,13 @@ project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- **Arrow keys in the star rating cell (issue #74)** — `←` / `→` move the roving
+  tab stop between stars (no wrap) and `Home` / `End` jump to star 1 / 5, the
+  radio-group pattern for users who do not know the `1`–`5` / `0` shortcuts. The
+  cell stays one Tab stop; moving writes nothing, `↑` / `↓` and modified keys keep
+  bubbling. Pure `ratingArrowTarget` in `lib/rating-keys.ts` with tests; spec notes
+  in `docs/ui-ux/03-LIBRARY-VIEW.md` §3.4 and `10-ACCESSIBILITY-AND-KEYBOARD.md`.
+  Running-window QA pending.
 - **Tag Surgeon history (T2.2.6)** — the Tag Surgeon dialog gains a History section:
   the latest 50 spelling applies, newest first, with their renames, time and changed-track
   count, and an Undo on each one not yet undone. Backed by the read-only `tag_history`

@@ -2,7 +2,12 @@ import { useEffect, useId, useState } from "react";
 import type { KeyboardEvent } from "react";
 import { Star } from "lucide-react";
 
-import { RATING_WIDGET_ATTRIBUTE, handleRatingKey, ratingTabStop } from "../lib/rating-keys";
+import {
+  RATING_WIDGET_ATTRIBUTE,
+  handleRatingKey,
+  ratingArrowTarget,
+  ratingTabStop,
+} from "../lib/rating-keys";
 
 /**
  * Editable 5-star rating (T2.1.4, `docs/ui-ux/03-LIBRARY-VIEW.md` §3.4).
@@ -14,7 +19,9 @@ import { RATING_WIDGET_ATTRIBUTE, handleRatingKey, ratingTabStop } from "../lib/
  * Interaction contract (from the spec):
  * - click a star → set that rating (1–5);
  * - click the star that is already set → clear it;
- * - `1`–`5` set a rating, `0` clears it, when the cell has focus.
+ * - `1`–`5` set a rating, `0` clears it, when the cell has focus;
+ * - `←` / `→` move between stars and `Home` / `End` jump to the ends, without
+ *   writing anything (issue #74).
  */
 interface StarRatingProps {
   /** Current rating, or `null`/`undefined` when the track is unrated. */
@@ -98,6 +105,16 @@ export function StarRating({
       }
       return;
     }
+    // Arrows and Home/End move the single tab stop between stars (the
+    // radio-group pattern) for users who do not know the digit shortcuts.
+    // They only move focus, and the cell stays one Tab stop in the table.
+    const target = ratingArrowTarget(event.key, tabStop, event);
+    if (target !== undefined) {
+      event.preventDefault();
+      event.stopPropagation();
+      event.currentTarget.querySelectorAll("button")[target - 1]?.focus();
+      return;
+    }
     // Enter and Space are the row keys: the widget handles them on the
     // button, so they must not reach the row handler behind it. The default
     // action is deliberately NOT cancelled — the focused button's native
@@ -122,7 +139,8 @@ export function StarRating({
     >
       {describesRatingKeys ? (
         <span id={descriptionId} className="sr-only">
-          Press 1 through 5 to set the rating, 0 to clear it.
+          Press 1 through 5 to set the rating, 0 to clear it. Left and right arrows move between
+          stars; Home moves to the first star and End to the last.
         </span>
       ) : null}
       {Array.from({ length: STAR_COUNT }, (_, index) => {

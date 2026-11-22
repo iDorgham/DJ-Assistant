@@ -104,3 +104,40 @@ export function ratingTabStop(focusedStar: number | null, current: number): numb
   if (focusedStar !== null) return focusedStar;
   return current > 0 ? current : 1;
 }
+
+/** Stars in the widget; the arrow keys never leave this range. */
+const RATING_STAR_COUNT = 5;
+
+/**
+ * Where an arrow-style key moves the roving tab stop (issue #74), or
+ * `undefined` when the key does not move it.
+ *
+ * `ArrowLeft` / `ArrowRight` step one star and stop at the ends rather than
+ * wrapping; `Home` / `End` jump to the first or last star. Moving only moves
+ * focus: nothing is written until the user presses Enter or Space on the star
+ * (a toggle, like a click) or a digit, so stepping across the cell never fills
+ * the undo history. `ArrowUp` / `ArrowDown` are left for the table's own row
+ * navigation, and modified keys stay with the app.
+ */
+export function ratingArrowTarget(
+  key: string,
+  from: number,
+  modifiers: KeyModifiers & { shiftKey?: boolean } = {}
+): number | undefined {
+  if (modifiers.ctrlKey || modifiers.metaKey || modifiers.altKey || modifiers.shiftKey) {
+    return undefined;
+  }
+  const start = Math.min(RATING_STAR_COUNT, Math.max(1, Math.round(from) || 1));
+  switch (key) {
+    case "ArrowRight":
+      return Math.min(RATING_STAR_COUNT, start + 1);
+    case "ArrowLeft":
+      return Math.max(1, start - 1);
+    case "Home":
+      return 1;
+    case "End":
+      return RATING_STAR_COUNT;
+    default:
+      return undefined;
+  }
+}
