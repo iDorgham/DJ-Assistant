@@ -4,6 +4,17 @@ Ephemeral. Newest first. **Rotate aggressively** — if a line would still be tr
 in two weeks, it belongs in [`decisions.md`](./decisions.md); if it is just a
 fact, it belongs in [`facts.md`](./facts.md). Delete anything stale.
 
+## 2026-11-22 · Audit correction (supersedes the 11-19 snapshot below where they differ)
+
+- **Update (same day):** the branch was merged as **PR #91** (`8f5d2253`, 2026-11-22 10:23 UTC, squash-merge of all 13 commits). `origin/main` = `8f5d2253`. The local `main` checkout (`0eb86bf2`) is behind and needs a fast-forward. No PR is needed.
+- (Superseded) `main` was `0eb86bf2`; branch was 13 commits ahead.
+- The library table pass is **committed** (`e44fa716`, on that branch), not uncommitted on main. It also adds `refresh_artwork` (wired in `App.tsx`).
+- Ledger counts: 66 ticked / 131 open (the 11-19 "67" was off by one).
+- **Do not split the branch by commit.** `e44fa716` depends on the tag-preview types from `2ccbd279` (test cherry-pick onto main conflicts in `commands.rs`). Ship it as one PR, or as a stack in commit order.
+- Artwork backfill (NULL `artwork_path` rows) has a committed `refresh_artwork` path on this branch. Issue #89 is a **different** backfill: `beatgrid_confidence` (see its body).
+- `dj-artwork-backfill` worktree holds **someone's uncommitted 296-line WIP** (`artwork.rs`, `commands.rs`, `App.tsx`, `SettingsView.tsx`). Leave it alone.
+- Stash `stash@{2}` holds a rekordbox reader from another session. Phase 3 export should start from it after review.
+
 ## 2026-11-19 · Progress snapshot (scan of `docs/sdd/04-TASKS.md`, git, worktrees)
 
 - `main` = `6e0869cd`, level with `origin/main`. Task ledger: **67 ticked / 131 open**.
