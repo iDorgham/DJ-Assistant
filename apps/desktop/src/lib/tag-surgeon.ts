@@ -157,7 +157,16 @@ export function parseSqliteUtc(createdAt: string): Date | null {
   if (!match) return null;
   const [, y, mo, d, h, mi, s] = match.map(Number);
   const date = new Date(Date.UTC(y, mo - 1, d, h, mi, s));
-  return Number.isNaN(date.getTime()) ? null : date;
+  // Date.UTC rolls out-of-range fields over (month 13 → next January), so a
+  // value is only accepted when every field reads back as it was written.
+  const exact =
+    date.getUTCFullYear() === y &&
+    date.getUTCMonth() === mo - 1 &&
+    date.getUTCDate() === d &&
+    date.getUTCHours() === h &&
+    date.getUTCMinutes() === mi &&
+    date.getUTCSeconds() === s;
+  return exact ? date : null;
 }
 
 /** When a history row ran, in the viewer's own time zone. */

@@ -1346,7 +1346,8 @@ pub async fn tag_history(
                     row.get::<_, String>(1)?,
                     row.get::<_, Option<String>>(2)?,
                     row.get::<_, Option<String>>(3)?,
-                    row.get::<_, String>(4)?,
+                    row.get::<_, Option<String>>(4)?,
+                    row.get::<_, String>(5)?,
                 ))
             },
         )
@@ -1354,11 +1355,12 @@ pub async fn tag_history(
         .collect::<Result<Vec<_>, _>>()
         .map_err(|e| e.to_string())?;
     rows.iter()
-        .map(|(id, status, input, after, created_at)| {
+        .map(|(id, status, input, before, after, created_at)| {
             let entry = parse_tag_history_entry(
                 id,
                 status,
                 input.as_deref(),
+                before.as_deref(),
                 after.as_deref(),
                 created_at,
             )?;

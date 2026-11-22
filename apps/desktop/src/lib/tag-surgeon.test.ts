@@ -183,6 +183,12 @@ test("a history time is read as UTC, and anything else is shown raw", () => {
   assert.equal(parseSqliteUtc("2026-11-22 10:15:30")?.toISOString(), "2026-11-22T10:15:30.000Z");
   assert.equal(parseSqliteUtc("2026-11-22T10:15:30Z"), null);
   assert.equal(parseSqliteUtc(""), null);
+  // Out-of-range fields must not roll over into a plausible date.
+  assert.equal(parseSqliteUtc("2026-13-01 10:00:00"), null);
+  assert.equal(parseSqliteUtc("2026-02-30 10:00:00"), null);
+  assert.equal(parseSqliteUtc("2026-11-22 25:00:00"), null);
+  assert.equal(parseSqliteUtc("2026-11-22 10:60:00"), null);
+  assert.equal(historyTimeLabel("2026-13-01 10:00:00"), "2026-13-01 10:00:00");
   assert.equal(historyTimeLabel("not a time"), "not a time");
 });
 

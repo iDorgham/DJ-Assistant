@@ -4,14 +4,12 @@ Ephemeral. Newest first. **Rotate aggressively** — if a line would still be tr
 in two weeks, it belongs in [`decisions.md`](./decisions.md); if it is just a
 fact, it belongs in [`facts.md`](./facts.md). Delete anything stale.
 
-## 2026-11-22 · Tag Surgeon history (T2.2.6) on `feat/t2.2.6-tag-surgeon-history`
+## 2026-11-22 · Tag Surgeon history (T2.2.6)
 
 - Tag Surgeon T2.2.1–T2.2.6 are now all code-shipped (supersedes the 11-19 "unbuilt"
-  line below); every box waits on running-window QA (F-012).
-- T2.2.6 adds `tag_history` (read-only, latest 50 `tag_surgeon_apply` runs) and a History
-  section with per-entry Undo via `undo_track_metadata`. Checks: lint, typecheck,
-  303 desktop tests, `rust:test:portable`, clippy (core + desktop), `cargo fmt --check`.
-  The desktop command itself has no test here (STATUS_ENTRYPOINT_NOT_FOUND harness).
+  line below). T2.2.1 has its running-window QA recorded and waits only on the human
+  tick; T2.2.2–T2.2.6 still need running-window QA (F-012).
+- T2.2.6 details: `04-TASKS.md` and `CHANGELOG.md`.
 
 ## 2026-11-22 · Audit correction (supersedes the 11-19 snapshot below where they differ)
 
@@ -274,4 +272,4 @@ fact, it belongs in [`facts.md`](./facts.md). Delete anything stale.
 - PR #53/#54 review nits (2026-10-24, unverified since): logging redactor misses bare
   `token` / JSON-quoted keys; waveform cache unbounded; `effectiveBpm` not clamped to
   40–240; `OverviewMap` offset unclamped; shortcut test skips Meta.
-- Full-window Player view, cue/waveform editor and Tag Surgeon apply (T2.2.2+) unbuilt.
+- Full-window Player view and cue/waveform editor unbuilt.

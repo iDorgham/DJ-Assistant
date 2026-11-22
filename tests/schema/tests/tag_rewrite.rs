@@ -16,9 +16,12 @@ use dj_assistant_core::library_remove::{MARK_UNDONE_SQL, UNDO_READ_SQL};
 use dj_assistant_core::library_writes::{
     plan_metadata_undo, WriteStatement, WriteValue, CURRENT_TAGS_SQL,
 };
-use dj_assistant_core::patch::check_metadata_undoable;
+use dj_assistant_core::patch::{
+    check_metadata_undoable, METADATA_SKILL_NAME, TAG_REWRITE_SKILL_NAME,
+};
 use dj_assistant_core::tag_rewrite::{
-    plan_tag_rewrite, tag_rewrite_skill_run, validate_renames, TagRename,
+    parse_tag_history_entry, plan_tag_rewrite, tag_rewrite_skill_run, validate_renames,
+    TagHistoryEntry, TagRename, TAG_HISTORY_LIMIT, TAG_HISTORY_SQL,
 };
 use dj_assistant_schema_tests::open_migrated;
 use rusqlite::Connection;
@@ -105,6 +108,16 @@ fn vocabulary(conn: &Connection, ids: &[String]) -> Vec<(String, Vec<String>)> {
 
 /// Runs the apply the way the desktop command does and returns the undo id.
 fn apply(conn: &Connection, ids: &[String], renames: &[TagRename]) -> (String, usize) {
+    apply_as(conn, "tag-apply-1", ids, renames)
+}
+
+/// [`apply`] with a chosen snapshot id, for tests that need several applies.
+fn apply_as(
+    conn: &Connection,
+    undo_id: &str,
+    ids: &[String],
+    renames: &[TagRename],
+) -> (String, usize) {
     let map = validate_renames(renames).expect("the renames must validate");
     let planned = plan_tag_rewrite(&vocabulary(conn, ids), &map);
     if planned.is_empty() {
@@ -125,7 +138,7 @@ fn apply(conn: &Connection, ids: &[String], renames: &[TagRename]) -> (String, u
             serde_json::Value::Object(entry.after.clone()),
         );
     }
-    let undo_id = "tag-apply-1".to_string();
+    let undo_id = undo_id.to_string();
     let run = tag_rewrite_skill_run(&undo_id, ids, renames, before, after);
     let params: Vec<rusqlite::types::Value> = run
         .params
@@ -252,4 +265,100 @@ fn a_second_undo_of_the_same_apply_is_refused() {
         .unwrap();
     assert_eq!(status, "undone");
     assert!(check_metadata_undoable("tag_surgeon_apply", &status).is_err());
+}
+
+/// Runs the history read the way the `tag_history` command does.
+fn history(conn: &Connection, limit: i64) -> Vec<TagHistoryEntry> {
+    let mut stmt = conn
+        .prepare(TAG_HISTORY_SQL)
+        .expect("the history query must prepare against the migrated schema");
+    let rows = stmt
+        .query_map(rusqlite::params![TAG_REWRITE_SKILL_NAME, limit], |row| {
+            Ok((
+                row.get::<_, String>(0)?,
+                row.get::<_, String>(1)?,
+                row.get::<_, Option<String>>(2)?,
+                row.get::<_, Option<String>>(3)?,
+                row.get::<_, Option<String>>(4)?,
+                row.get::<_, String>(5)?,
+            ))
+        })
+        .expect("the history query must run")
+        .collect::<Result<Vec<_>, _>>()
+        .expect("every history row must read");
+    rows.iter()
+        .map(|(id, status, input, before, after, created_at)| {
+            parse_tag_history_entry(
+                id,
+                status,
+                input.as_deref(),
+                before.as_deref(),
+                after.as_deref(),
+                created_at,
+            )
+            .expect("a row the apply wrote must parse")
+        })
+        .collect()
+}
+
+/// A `skill_runs` row the history must not list.
+fn foreign_run(conn: &Connection, id: &str, skill_name: &str, status: &str) {
+    conn.execute(
+        "INSERT INTO skill_runs (id, workspace_id, skill_name, status, input_summary, \
+         before_state, after_state) VALUES (?1, 'default', ?2, ?3, '{}', '{}', '{}')",
+        rusqlite::params![id, skill_name, status],
+    )
+    .expect("the foreign run must insert");
+}
+
+/// A library with three separate misspellings, one apply's worth each. The
+/// canonical side of every rename is lowercase, as the apply requires.
+fn history_library() -> Connection {
+    let conn = open_migrated();
+    seed(&conn, "t1", false, &["House", "PEAK"]);
+    seed(&conn, "t2", false, &["Peak"]);
+    seed(&conn, "t3", false, &["TECHNO"]);
+    conn
+}
+
+#[test]
+fn history_lists_this_paths_applies_newest_first_with_their_undo_state() {
+    let conn = history_library();
+    let scope = ids(&["t1", "t2", "t3"]);
+    apply_as(&conn, "a1", &scope, &[rename("House", "house")]);
+    apply_as(&conn, "a2", &scope, &[rename("TECHNO", "techno")]);
+    apply_as(
+        &conn,
+        "a3",
+        &scope,
+        &[rename("PEAK", "peak"), rename("Peak", "peak")],
+    );
+    undo(&conn, "a2");
+    // Rows the history must leave out: another write path, and a tag row in a
+    // status the apply never leaves behind.
+    foreign_run(&conn, "meta-1", METADATA_SKILL_NAME, "success");
+    foreign_run(&conn, "tag-failed", TAG_REWRITE_SKILL_NAME, "failed");
+
+    let entries = history(&conn, TAG_HISTORY_LIMIT);
+    let order: Vec<(&str, bool, usize)> = entries
+        .iter()
+        .map(|e| (e.undo_id.as_str(), e.undone, e.track_count))
+        .collect();
+    // All three share a created_at second, so rowid decides: newest first.
+    assert_eq!(order, [("a3", false, 2), ("a2", true, 1), ("a1", false, 1)]);
+    assert_eq!(
+        entries[0].renames,
+        [rename("PEAK", "peak"), rename("Peak", "peak")]
+    );
+}
+
+#[test]
+fn history_stops_at_its_limit() {
+    let conn = history_library();
+    let scope = ids(&["t1", "t2", "t3"]);
+    apply_as(&conn, "a1", &scope, &[rename("House", "house")]);
+    apply_as(&conn, "a2", &scope, &[rename("TECHNO", "techno")]);
+    let entries = history(&conn, 1);
+    assert_eq!(entries.len(), 1);
+    assert_eq!(entries[0].undo_id, "a2");
 }
