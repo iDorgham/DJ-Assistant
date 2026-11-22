@@ -9,7 +9,7 @@ const { writeFileSync } = require("node:fs");
 const dbPath = process.argv[2];
 const baselinePath = process.argv[3];
 if (!dbPath || !baselinePath) {
-  console.error("usage: seed.cjs <fixture.db> <baseline.json>");
+  process.stderr.write("usage: seed.cjs <fixture.db> <baseline.json>\n");
   process.exit(2);
 }
 
@@ -33,4 +33,4 @@ const baseline = {
   tag_rows: db.prepare("SELECT track_id, tag FROM track_tags ORDER BY 1, 2").all(),
 };
 writeFileSync(baselinePath, JSON.stringify(baseline, null, 1));
-console.log(`seeded; tracks=${baseline.tracks} track_tags=${baseline.track_tags}`);
+process.stdout.write(`seeded; tracks=${baseline.tracks} track_tags=${baseline.track_tags}\n`);

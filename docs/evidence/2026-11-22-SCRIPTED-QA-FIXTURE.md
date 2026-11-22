@@ -8,9 +8,15 @@ seeded with tag spelling variants, read through `DJ_ASSISTANT_DB_PATH`. The live
 library (`%APPDATA%\com.djassistant.desktop\dj_assistant.db`, mtime 2026-11-19)
 was not opened or written.
 **Driver:** Node scripts talking Chrome DevTools Protocol to WebView2 on port 9222
-(`scripts/qa/fixture-run/`; `seed.cjs` builds the fixture seeds and baseline, and
-`cdp.cjs` is the client). Run it with `DJ_ASSISTANT_DB_PATH` pointing at a copy of
-the fixture. Not a desktop computer-use session: no native-window clicks.
+(`scripts/qa/fixture-run/`: `seed.cjs` builds the fixture seeds and baseline,
+`cdp.cjs` is the client, `lib.cjs` holds the page-side helpers, and
+`run-checks.cjs <step>` runs each step in the order the table lists). Run it with
+`DJ_ASSISTANT_DB_PATH` pointing at a copy of the fixture. Not a desktop
+computer-use session: no native-window clicks.
+
+**Caveat:** the driver was rewritten after this run (for DeepSource). The step
+functions were not re-run against the app; only syntax, lint and the seed script
+were checked.
 Mouse and keyboard were simulated through DOM events and `Input.insertText`.
 
 ## Fixture setup

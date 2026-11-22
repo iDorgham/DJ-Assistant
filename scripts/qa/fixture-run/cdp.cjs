@@ -1,8 +1,13 @@
 // Minimal Chrome DevTools Protocol client for the WebView2 test window.
 // Connects to the page target on the remote-debugging port and evaluates JS.
+
+/**
+ * Waits for the app's page target on the DevTools port and opens a socket to it.
+ * Returns `evaluate(expression)`, a raw `call(method, params)`, and `close()`.
+ */
 async function connect(port = 9222, { timeoutMs = 240000 } = {}) {
   const deadline = Date.now() + timeoutMs;
-  let target;
+  let target = null;
   while (Date.now() < deadline) {
     try {
       const list = await (await fetch(`http://127.0.0.1:${port}/json/list`)).json();
@@ -11,7 +16,7 @@ async function connect(port = 9222, { timeoutMs = 240000 } = {}) {
     } catch {
       /* not up yet */
     }
-    await new Promise((r) => setTimeout(r, 2000));
+    await new Promise((resolve) => setTimeout(resolve, 2000));
   }
   if (!target) throw new Error("DevTools page target not found");
 
@@ -22,11 +27,11 @@ async function connect(port = 9222, { timeoutMs = 240000 } = {}) {
   });
   let nextId = 1;
   const pending = new Map();
-  ws.onmessage = (ev) => {
-    const msg = JSON.parse(ev.data);
-    if (msg.id && pending.has(msg.id)) {
-      pending.get(msg.id)(msg);
-      pending.delete(msg.id);
+  ws.onmessage = (event) => {
+    const message = JSON.parse(event.data);
+    if (message.id && pending.has(message.id)) {
+      pending.get(message.id)(message);
+      pending.delete(message.id);
     }
   };
   const send = (method, params = {}) =>
@@ -37,16 +42,16 @@ async function connect(port = 9222, { timeoutMs = 240000 } = {}) {
     });
 
   async function evaluate(expression) {
-    const res = await send("Runtime.evaluate", {
+    const response = await send("Runtime.evaluate", {
       expression,
       awaitPromise: true,
       returnByValue: true,
     });
-    if (res.result?.exceptionDetails) {
-      const d = res.result.exceptionDetails;
-      throw new Error(d.exception?.description || d.text);
+    if (response.result?.exceptionDetails) {
+      const details = response.result.exceptionDetails;
+      throw new Error(details.exception?.description || details.text);
     }
-    return res.result?.result?.value;
+    return response.result?.result?.value;
   }
 
   return { evaluate, call: send, close: () => ws.close(), url: target.url };
