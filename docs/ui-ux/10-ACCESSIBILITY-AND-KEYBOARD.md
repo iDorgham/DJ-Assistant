@@ -51,6 +51,8 @@
 | `Ctrl/Cmd+A` | Select all (in table) |
 | `Delete` / `Backspace` | Remove from playlist/set (not delete file) per context |
 | `Enter` | Load selected into player |
+| `1`–`5` / `0` | Set / clear rating (rating cell focused) |
+| `←` `→` / `Home` `End` | Move between stars, writing nothing (rating cell focused) |
 
 Exact bindings editable in Settings → Keyboard; conflicts detected.
 

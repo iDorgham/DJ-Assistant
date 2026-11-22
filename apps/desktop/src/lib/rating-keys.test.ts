@@ -6,6 +6,7 @@ import {
   handleRatingKey,
   isRatingKey,
   playerHotCueSlot,
+  ratingArrowTarget,
   ratingKeyAction,
   ratingTabStop,
 } from "./rating-keys.ts";
@@ -174,4 +175,31 @@ test("ratingTabStop follows the focused star, then the committed rating", () => 
   // revisits star 1 instead of leaving the control.
   assert.equal(ratingTabStop(4, 0), 4);
   assert.equal(ratingTabStop(1, 3), 1);
+});
+
+test("arrow keys step one star and stop at the ends", () => {
+  assert.equal(ratingArrowTarget("ArrowRight", 2), 3);
+  assert.equal(ratingArrowTarget("ArrowLeft", 2), 1);
+  assert.equal(ratingArrowTarget("ArrowRight", 5), 5);
+  assert.equal(ratingArrowTarget("ArrowLeft", 1), 1);
+});
+
+test("Home and End jump to the first and last star", () => {
+  assert.equal(ratingArrowTarget("Home", 4), 1);
+  assert.equal(ratingArrowTarget("End", 1), 5);
+});
+
+test("vertical arrows, other keys and modified keys do not move the stop", () => {
+  for (const key of ["ArrowUp", "ArrowDown", "Tab", "Enter", " ", "3"]) {
+    assert.equal(ratingArrowTarget(key, 3), undefined, key);
+  }
+  for (const modifier of ["ctrlKey", "metaKey", "altKey", "shiftKey"]) {
+    assert.equal(ratingArrowTarget("ArrowRight", 3, { [modifier]: true }), undefined, modifier);
+  }
+});
+
+test("an out-of-range starting star is clamped before stepping", () => {
+  assert.equal(ratingArrowTarget("ArrowRight", 0), 2);
+  assert.equal(ratingArrowTarget("ArrowLeft", 9), 4);
+  assert.equal(ratingArrowTarget("ArrowRight", Number.NaN), 2);
 });

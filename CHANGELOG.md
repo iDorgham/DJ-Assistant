@@ -9,6 +9,13 @@ project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- **Arrow keys in the star rating cell (issue #74)** — `←` / `→` move the roving
+  tab stop between stars (no wrap) and `Home` / `End` jump to star 1 / 5, the
+  radio-group pattern for users who do not know the `1`–`5` / `0` shortcuts. The
+  cell stays one Tab stop; moving writes nothing, `↑` / `↓` and modified keys keep
+  bubbling. Pure `ratingArrowTarget` in `lib/rating-keys.ts` with tests; spec notes
+  in `docs/ui-ux/03-LIBRARY-VIEW.md` §3.4 and `10-ACCESSIBILITY-AND-KEYBOARD.md`.
+  Running-window QA pending.
 - **Slices 4–8: artwork hover-play, mix suggestions dock, library source tabs,
   peaks cache and native audio (T2.1.9 / T2.1.11 / T2.1.12 / T2.4, PR #80)** — merged
   2026-11-16 (`65ca59ad`): hover-play overlay on the artwork column; a resizable

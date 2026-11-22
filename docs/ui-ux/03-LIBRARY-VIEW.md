@@ -123,6 +123,7 @@ Supported notations (user preference; can show both):
 - Column shows **5 star icons** (outline / filled)  
 - Click a star sets rating 1–5; click same star again can clear (0) if preferred  
 - Keyboard: focus cell → `1`–`5` or `0` to clear  
+- Keyboard: the cell is **one Tab stop** (roving tabindex). `←` / `→` move between stars (no wrap) and `Home` / `End` jump to star 1 / 5. Moving writes nothing; `Enter` / `Space` on a star toggles it like a click. `↑` / `↓` stay with the table (issue #74)  
 - Multi-select: set same rating on all selected (with Undo)  
 - Sortable; filterable by rating  
 
