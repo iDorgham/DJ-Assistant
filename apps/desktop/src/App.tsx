@@ -1573,12 +1573,28 @@ export default function App() {
   }, []);
 
   // Older libraries were imported before embedded artwork was cached, leaving
-  // every artwork column empty. Fill them from the files once on startup so the
-  // thumbnails appear without asking the user to re-import their whole library.
+  // every artwork column empty. Fill them from the files once so the thumbnails
+  // appear without asking the user to re-import their whole library. The flag
+  // makes it run once per install: tracks whose files have no artwork stay
+  // eligible, so without it every launch would re-scan them.
   useEffect(() => {
     if (artworkRepairStarted.current) return;
     artworkRepairStarted.current = true;
+    const repairKey = "dj-assistant.artwork-repair.v1";
+    try {
+      if (window.localStorage.getItem(repairKey) === "1") return;
+    } catch {
+      // Storage blocked: the repair simply runs again next launch.
+    }
+    const markRepaired = () => {
+      try {
+        window.localStorage.setItem(repairKey, "1");
+      } catch {
+        // Storage blocked: nothing to record.
+      }
+    };
     refreshArtwork()
+      .finally(markRepaired)
       .then((result) => {
         if (result.failed > 0) {
           console.warn("Artwork repair reported failures:", result.errors);
@@ -2039,9 +2055,13 @@ export default function App() {
       }
       const find = (event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "f";
       if (!find && event.key !== "/") return;
+      // Only the Library mounts the search input. Elsewhere the key is left to
+      // the browser rather than swallowed with nothing focused.
+      const input = searchInputRef.current;
+      if (!input) return;
       event.preventDefault();
-      searchInputRef.current?.focus();
-      searchInputRef.current?.select();
+      input.focus();
+      input.select();
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);

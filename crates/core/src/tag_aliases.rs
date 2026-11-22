@@ -43,12 +43,15 @@ pub fn validate_alias(alias: &str, canonical: &str, existing: &AliasMap) -> Resu
         return Err(format!("\"{alias}\" has no letters or digits to match on"));
     }
     let collapsed = canonical.split_whitespace().collect::<Vec<_>>().join(" ");
-    if canonical != collapsed || canonical != canonical.to_lowercase() {
+    if canonical != collapsed || canonical != canonical.to_ascii_lowercase() {
         return Err(format!(
             "\"{canonical}\" must be lowercase, trimmed and single-spaced, as the tag editor saves it"
         ));
     }
-    if normalize_tag(canonical) == key {
+    // Compare the spelling the editor would store, not the fold key: `Café`
+    // saved as `cafe` changes the spelling, so it is a real alias.
+    let saved_as = alias.split_whitespace().collect::<Vec<_>>().join(" ");
+    if saved_as.to_ascii_lowercase() == canonical {
         return Err(format!("\"{alias}\" already saves as \"{canonical}\""));
     }
     if existing.contains_key(&normalize_tag(canonical)) {
@@ -94,6 +97,15 @@ mod tests {
     fn a_valid_alias_is_keyed_by_its_fold_key() {
         let key = validate_alias("Melodic H.", "melodic house", &AliasMap::new()).unwrap();
         assert_eq!(key, "melodic h");
+    }
+
+    #[test]
+    fn an_alias_that_differs_only_by_accents_is_accepted() {
+        let none = AliasMap::new();
+        assert_eq!(
+            validate_alias("Café", "cafe", &none),
+            Ok("cafe".to_string())
+        );
     }
 
     #[test]

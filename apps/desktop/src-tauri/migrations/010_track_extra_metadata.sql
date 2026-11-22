@@ -35,3 +35,8 @@ ALTER TABLE tracks ADD COLUMN mix_name TEXT;
 ALTER TABLE tracks ADD COLUMN lyrics TEXT;
 ALTER TABLE tracks ADD COLUMN bitrate_kbps INTEGER;
 ALTER TABLE tracks ADD COLUMN label_user_set INTEGER NOT NULL DEFAULT 0;
+
+-- Every label stored before this migration was typed by the user (migration 007
+-- added the column for that), so mark them as user-set. A future file refresh
+-- must not overwrite them.
+UPDATE tracks SET label_user_set = 1 WHERE label IS NOT NULL;

@@ -31,6 +31,11 @@ pub struct CachedArtwork {
 }
 
 /// Metadata pulled from an audio file. Every field is best-effort.
+///
+/// The imported-field set (label, comment 2, composer, and the rest of the
+/// file-metadata columns) is read from ID3 (MP3, WAV, AIFF) and Vorbis/FLAC
+/// tags only. MP4/M4A files have no reader for these fields yet, so they import
+/// as `None` and show the table dash; that gap is deliberate for this build.
 #[derive(Debug, Clone, PartialEq, Default)]
 pub struct ExtractedMetadata {
     /// Tag title, falling back to the filename stem.

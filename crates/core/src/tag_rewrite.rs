@@ -64,6 +64,12 @@ pub fn validate_renames(renames: &[TagRename]) -> Result<BTreeMap<String, String
                 rename.to
             ));
         }
+        if rename.to != rename.to.to_ascii_lowercase() {
+            return Err(format!(
+                "\"{}\" must be lowercase, as the tag editor saves it",
+                rename.to
+            ));
+        }
         if normalize_tag(&rename.from) != normalize_tag(&rename.to) {
             return Err(format!(
                 "\"{}\" is not another spelling of \"{}\"",
@@ -219,10 +225,10 @@ mod tests {
 
     #[test]
     fn a_valid_rename_becomes_a_map_entry() {
-        let out = validate_renames(&[rename("melodic house ", "Melodic House")]).unwrap();
+        let out = validate_renames(&[rename("Melodic House ", "melodic house")]).unwrap();
         assert_eq!(
-            out.get("melodic house "),
-            Some(&"Melodic House".to_string())
+            out.get("Melodic House "),
+            Some(&"melodic house".to_string())
         );
     }
 
@@ -240,11 +246,16 @@ mod tests {
 
     #[test]
     fn one_source_cannot_go_to_two_targets_and_no_chains() {
-        assert!(validate_renames(&[rename("house", "House"), rename("house", "HOUSE")]).is_err());
-        // "house" → "House" while "House" → "house" would apply only half.
-        assert!(validate_renames(&[rename("house", "House"), rename("House", "house")]).is_err());
+        // Two different lowercase targets for one source ("hôuse" folds alike).
+        assert!(
+            validate_renames(&[rename("House", "house"), rename("House", "h\u{f4}use")]).is_err()
+        );
+        // "House" → "house" while "house" → "hôuse" would apply only half.
+        assert!(
+            validate_renames(&[rename("House", "house"), rename("house", "h\u{f4}use")]).is_err()
+        );
         // The same pair twice is harmless.
-        assert!(validate_renames(&[rename("house", "House"), rename("house", "House")]).is_ok());
+        assert!(validate_renames(&[rename("House", "house"), rename("House", "house")]).is_ok());
     }
 
     #[test]
@@ -307,7 +318,7 @@ mod tests {
         let renames = renames_from_report(&report);
         assert_eq!(
             renames,
-            vec![rename("HOUSE", "House"), rename("house", "House")]
+            vec![rename("House", "house"), rename("HOUSE", "house")]
         );
         assert!(validate_renames(&renames).is_ok());
     }
@@ -316,9 +327,9 @@ mod tests {
     fn the_snapshot_is_restored_by_the_metadata_undo_with_its_guard() {
         // Apply, then check the undo the shared metadata path plans from the
         // very snapshot the apply records.
-        let renames = [rename("house", "House")];
+        let renames = [rename("House", "house")];
         let map = validate_renames(&renames).unwrap();
-        let planned = plan_tag_rewrite(&[("t1".to_string(), tags(&["house", "peak"]))], &map);
+        let planned = plan_tag_rewrite(&[("t1".to_string(), tags(&["House", "peak"]))], &map);
         let before: serde_json::Map<String, serde_json::Value> = planned
             .iter()
             .map(|p| {
@@ -352,7 +363,7 @@ mod tests {
         )
         .unwrap();
         assert_eq!(restores.len(), 1);
-        assert_eq!(restores[0].expected_tags, Some(tags(&["House", "peak"])));
+        assert_eq!(restores[0].expected_tags, Some(tags(&["house", "peak"])));
         assert!(restores[0].restore.is_none());
         assert_eq!(
             restores[0].tag_statements[0].params[0],

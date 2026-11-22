@@ -88,7 +88,13 @@ Left panel is organized as **tabs / sections** (not a flat list only):
 
 Every file-metadata column has a real tag source (`TPUB`, `TCOM`, `TPE2`, `TPE4`,
 `TIT1`, `TRCK`, `TPOS`, `TSRC`, `TDRL`/`TDRC`, `TCOP`, `TMOO`, the Vorbis
-equivalents, and `USLT` lyrics); a tag the file does not carry renders the
+equivalents, and `USLT` lyrics). Where an ID3 file has no standard frame, the
+import falls back to a `TXXX` user-text frame with one of these descriptions
+(case-insensitive): Comment 2 (`comment2`, `comment 2`), Producer (`producer`),
+Catalog # (`catalognumber`, `catalog number`, `catalog`, `catno`), Mix Name
+(`mixname`, `mix name`, `mix`, `version`), and the same pattern for the other
+fields. MP4/M4A files have no reader for these fields in this build, so they
+import blank and show the table dash. A tag the file does not carry renders the
 table dash, never a fake value. Bitrate, File Name and Import Date are derived
 from fields the summary already carries, so no column invents data. Comment 2
 is editable in the metadata editor and the Tags tab, not just readable.

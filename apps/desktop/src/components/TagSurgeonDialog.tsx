@@ -272,7 +272,11 @@ export function TagSurgeonDialog({ trackIds, onClose, onChanged }: TagSurgeonDia
                         <li key={trackId} className="text-[11px] text-dj-text-muted break-words">
                           <span className="text-dj-text-secondary">{sampleTitle(track)}</span>
                           <span className="block">
-                            {sampleSpellings(track, cluster.canonical).join(" · ")}
+                            {sampleSpellings(
+                              track,
+                              cluster.canonical,
+                              cluster.members.map((member) => member.raw)
+                            ).join(" · ")}
                             {" → "}
                             <span className="text-dj-text-secondary">{cluster.canonical}</span>
                           </span>

@@ -5,21 +5,35 @@
 
 use unicode_normalization::UnicodeNormalization;
 
+/// Diacritic blocks used with Latin/Greek/Cyrillic bases. Marks outside them
+/// (kana voicing, Indic/Thai vowel signs and viramas) are part of the word, so
+/// they stay in the key instead of being stripped or spaced out.
+fn is_strippable_diacritic(c: char) -> bool {
+    matches!(c as u32,
+        0x0300..=0x036F
+        | 0x1AB0..=0x1AFF
+        | 0x1DC0..=0x1DFF
+        | 0xFE20..=0xFE2F)
+}
+
+/// Like `normalize_tag` but keeps punctuation, so `C#` and `C` stay distinct.
+/// A cluster is only offered when all its spellings share this key; otherwise
+/// the fold merged meaningfully different tags and the bucket stays advisory.
+fn strict_key(input: &str) -> String {
+    let mut out = String::with_capacity(input.len());
+    for c in input.to_lowercase().nfd() {
+        if !is_strippable_diacritic(c) {
+            out.push(c);
+        }
+    }
+    let composed: String = out.nfc().collect();
+    composed.split_whitespace().collect::<Vec<_>>().join(" ")
+}
+
 /// The fold key of a tag spelling: lowercase, diacritics stripped (orthographic
 /// marks of other scripts kept), punctuation turned into separators, whitespace
 /// collapsed. Idempotent by contract.
 pub fn normalize_tag(input: &str) -> String {
-    // Diacritic blocks used with Latin/Greek/Cyrillic bases. Marks outside
-    // them (kana voicing, Indic/Thai vowel signs and viramas) are part of the
-    // word, so they stay in the key instead of being stripped or spaced out.
-    fn is_strippable_diacritic(c: char) -> bool {
-        matches!(c as u32,
-            0x0300..=0x036F
-            | 0x1AB0..=0x1AFF
-            | 0x1DC0..=0x1DFF
-            | 0xFE20..=0xFE2F)
-    }
-
     let mut out = String::with_capacity(input.len());
     for c in input.to_lowercase().nfd() {
         if is_strippable_diacritic(c) {
@@ -74,11 +88,14 @@ pub struct SpellingCluster {
 /// How many affected tracks a cluster carries as preview samples (T2.2.3).
 pub const SAMPLE_TRACK_LIMIT: usize = 5;
 
-/// Trims and collapses whitespace, the only change a canonical suggestion
-/// makes to the representative. Folding is unchanged by this, so the result
-/// keeps the cluster's key.
+/// The canonical suggestion for a representative: trimmed, whitespace collapsed,
+/// and lowercased the way the tag editor stores tags (ASCII only). Folding is
+/// unchanged by this, so the result keeps the cluster's key.
 fn canonical_spelling(raw: &str) -> String {
-    raw.split_whitespace().collect::<Vec<_>>().join(" ")
+    raw.split_whitespace()
+        .collect::<Vec<_>>()
+        .join(" ")
+        .to_ascii_lowercase()
 }
 
 /// An advisory whole-word prefix relation between two different keys. Never
@@ -140,6 +157,15 @@ pub fn cluster_tags(values: &[TagValue]) -> ClusterReport {
     let mut clusters: Vec<SpellingCluster> = Vec::new();
     for (key, spellings) in &buckets {
         if spellings.len() < 2 {
+            continue;
+        }
+        // Spellings that fold alike but differ in punctuation (`C#` and `C`)
+        // are different tags: keep such a bucket advisory, never a rewrite.
+        let strict: std::collections::BTreeSet<String> = spellings
+            .iter()
+            .map(|value| strict_key(&value.raw))
+            .collect();
+        if strict.len() > 1 {
             continue;
         }
         let mut members: Vec<ClusterMember> = spellings
@@ -333,6 +359,22 @@ mod tests {
     }
 
     #[test]
+    fn punctuation_collisions_stay_advisory_not_rewrites() {
+        // `C#` and `C` fold to the same key, but they are different tags.
+        let out = report(&[value("C#", &["a"]), value("C", &["b"])]);
+        assert!(out.clusters.is_empty());
+    }
+
+    #[test]
+    fn the_canonical_suggestion_is_lowercase_as_the_editor_stores_it() {
+        let out = report(&[
+            value("Melodic House", &["a", "b"]),
+            value("melodic house ", &["c"]),
+        ]);
+        assert_eq!(out.clusters[0].canonical, "melodic house");
+    }
+
+    #[test]
     fn a_track_carrying_two_spellings_counts_once() {
         let out = report(&[value("House", &["t1"]), value("house", &["t1", "t2"])]);
         assert_eq!(out.clusters.len(), 1);
@@ -491,15 +533,16 @@ mod tests {
 
     #[test]
     fn rewrite_counts_tracks_off_the_canonical_spelling_as_a_union() {
-        // Canonical is "House" (2 tracks). t1 carries both spellings and
-        // counts once; t2 carries only the canonical and is not rewritten.
+        // Canonical is "house" (2 tracks, lowercased). t1 carries both other
+        // spellings and counts once; t2 carries only the canonical and is not
+        // rewritten.
         let out = report(&[
-            value("House", &["t1", "t2"]),
-            value("house", &["t1", "t3"]),
+            value("house", &["t1", "t2"]),
+            value("house ", &["t1", "t3"]),
             value("HOUSE", &["t4"]),
         ]);
         let cluster = &out.clusters[0];
-        assert_eq!(cluster.canonical, "House");
+        assert_eq!(cluster.canonical, "house");
         assert_eq!(cluster.distinct_track_count, 4);
         assert_eq!(cluster.rewrite_track_count, 3);
     }
@@ -519,22 +562,22 @@ mod tests {
         // Seven affected tracks, one of them carrying the canonical spelling
         // already: the sample is the first five of the rewrite set, sorted.
         let out = report(&[
-            value("House", &["t9", "t3", "t1", "t7", "t5", "t2", "t8"]),
-            value("house", &["t4"]),
+            value("house", &["t9", "t3", "t1", "t7", "t5", "t2", "t8"]),
+            value("HOUSE", &["t4"]),
         ]);
         let cluster = &out.clusters[0];
-        assert_eq!(cluster.canonical, "House");
+        assert_eq!(cluster.canonical, "house");
         assert_eq!(cluster.rewrite_track_count, 1);
         assert_eq!(cluster.sample_track_ids, vec!["t4"]);
 
         // Canonical "House" (8 tracks) against "house" on 7 tracks: the rewrite
         // set is the 7 "house" tracks; the sample is its first five, ascending.
         let out = report(&[
-            value("House", &["t9", "t3", "t1", "t7", "t5", "t2", "t8", "t6"]),
-            value("house", &["t14", "t12", "t10", "t16", "t18", "t11", "t13"]),
+            value("house", &["t9", "t3", "t1", "t7", "t5", "t2", "t8", "t6"]),
+            value("HOUSE", &["t14", "t12", "t10", "t16", "t18", "t11", "t13"]),
         ]);
         let cluster = &out.clusters[0];
-        assert_eq!(cluster.canonical, "House");
+        assert_eq!(cluster.canonical, "house");
         assert_eq!(cluster.rewrite_track_count, 7);
         assert_eq!(
             cluster.sample_track_ids,

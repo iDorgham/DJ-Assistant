@@ -443,6 +443,12 @@ pub fn plan_metadata_write(
             after_values.insert(column.to_string(), stored.to_json());
         }
 
+        // A label the user writes is theirs from now on: a later file refresh
+        // must not overwrite it. Migration 010 records this as label_user_set.
+        if before_values.contains_key("label") {
+            assignments.push("label_user_set = 1".to_string());
+        }
+
         // The tag set is compared as a whole: a track whose tags already match
         // is left alone, exactly like a column whose value already matches.
         let mut tags_changed = false;

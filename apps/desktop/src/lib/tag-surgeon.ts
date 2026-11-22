@@ -89,11 +89,17 @@ export function sampleTitle(track: TagPreviewTrack): string {
 }
 
 /**
- * The spellings on a sample track that a rewrite would change: its tags other
- * than the canonical one, each once, in the order the track stores them.
+ * The spellings on a sample track that a rewrite would change: its tags that
+ * are members of this cluster, other than the canonical one, each once, in the
+ * order the track stores them. A track's unrelated tags are not changes.
  */
-export function sampleSpellings(track: TagPreviewTrack, canonical: string): string[] {
-  return [...new Set(track.tags)].filter((tag) => tag !== canonical);
+export function sampleSpellings(
+  track: TagPreviewTrack,
+  canonical: string,
+  memberSpellings: readonly string[]
+): string[] {
+  const members = new Set(memberSpellings);
+  return [...new Set(track.tags)].filter((tag) => tag !== canonical && members.has(tag));
 }
 
 /**

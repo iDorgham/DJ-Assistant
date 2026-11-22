@@ -178,11 +178,12 @@ design tokens. An id survives a palette revision.
 
 ### 5.1 Proposed default order
 
-`# - Color - Art - Waveform - Title - Artist - Album - Genre - BPM - Key - Energy -
-Rating - Time - Label - Year - LUFS - Status - Cues - Tags - Comment - Path - Size -
+`# - Status - Color - Art - Waveform - Title - Artist - Album - Genre - BPM - Key -
+Energy - Rating - Time - Label - Year - LUFS - Cues - Tags - Comment - Path - Size -
 Format - Fingerprint`
 
-Changes: Color after `#`; Waveform after Art; Tags immediately before Comment.
+Changes: Status stays second, right after `#`, as shipped on 2026-11-19; Color
+after Status; Waveform after Art; Tags immediately before Comment.
 
 ### 5.2 Proposed default visibility changes
 
@@ -211,9 +212,13 @@ change (D-4).
 
 ## 6. Label is a defect, not a feature
 
-### 6.1 Root cause
+### 6.1 Root cause (before the table-upgrades pass)
 
-`crates/core/src/metadata.rs` extracts title, artist, album, genre, year, BPM, key,
+This is the pre-pass root cause, kept for the record. Extraction and storage of
+label have shipped (see section 0.1). The remaining work is backfilling rows
+imported before the change, and search.
+
+`crates/core/src/metadata.rs` extracted title, artist, album, genre, year, BPM, key,
 rating, comment, and artwork - **never label**. `scanner.rs` therefore writes
 `label: None`, and `models.rs` documents the consequence honestly: "the file tag
 extractor has no label source". The column exists, the editor can type into it,

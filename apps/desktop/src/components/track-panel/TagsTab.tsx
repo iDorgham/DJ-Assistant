@@ -53,7 +53,7 @@ export function TagsTab({
     <div className="space-y-5">
       <section>
         <h3 className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-dj-text-muted">
-          Tags
+          My tags
         </h3>
         <TagChips tags={track.tags} maxVisible={24} onSelect={onSelectTag} />
         <p className="mt-2 text-[11px] text-dj-text-muted">
@@ -61,12 +61,17 @@ export function TagsTab({
         </p>
       </section>
 
-      <section className="space-y-2 text-xs">
-        <Row label="Genre" value={track.genre} />
-        <Row label="Label" value={track.label} />
-        <Row label="Year" value={track.year != null ? String(track.year) : null} />
-        <Row label="Comment" value={track.comments} multiline />
-        <Row label="Comment 2" value={track.comment2} multiline />
+      <section>
+        <h3 className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-dj-text-muted">
+          File tags
+        </h3>
+        <div className="space-y-2 text-xs">
+          <Row label="Genre" value={track.genre} />
+          <Row label="Label" value={track.label} />
+          <Row label="Year" value={track.year != null ? String(track.year) : null} />
+          <Row label="Comment" value={track.comments} multiline />
+          <Row label="Comment 2" value={track.comment2} multiline />
+        </div>
       </section>
 
       {imported.length > 0 && (

@@ -372,7 +372,9 @@ export async function tagCluster(req: TagClusterRequest = {}): Promise<TagCluste
  * no samples rather than invented ones.
  */
 export async function tagPreviewTracks(req: TagPreviewRequest): Promise<TagPreviewTrack[]> {
-  if (!isTauri || req.trackIds.length === 0) return [];
+  // Only the browser mock short-circuits. An empty selection reaches the
+  // backend, whose validator rejects it.
+  if (!isTauri) return [];
   const { invoke } = await import("@tauri-apps/api/core");
   return invoke<TagPreviewTrack[]>("tag_preview_tracks", { request: req });
 }

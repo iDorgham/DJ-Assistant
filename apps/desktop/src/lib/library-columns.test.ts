@@ -238,11 +238,13 @@ test("auto-fit counts header controls and cell decorations", () => {
     "the header sort icon was not counted"
   );
 
-  // Status is an icon-only cell, so its width is the header label alone: no
-  // sort icon (it is not sortable) and no chip chrome around the text.
+  // Status is an icon-only cell: its body is the icon, so the body text is
+  // empty and the width is the header label alone (no sort icon, since it is
+  // not sortable, and no chip chrome around the text).
+  const status = columnDefinition("status");
   assert.equal(
-    autoFitWidth("Needs review", columnDefinition("status")),
-    "Needs review".length * 7 + 32,
+    autoFitWidth("", status),
+    status.label.length * 7 + 32,
     "the icon-only status cell must not reserve chip chrome"
   );
 

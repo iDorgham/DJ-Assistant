@@ -136,7 +136,12 @@ test("a sample lists its title, artist and only the spellings a rewrite would ch
   assert.equal(sampleTitle(track), "Night Drive — Someone");
   // The canonical spelling stays off the list; a whitespace-only variant is
   // a real change, so it stays on, and a repeated tag is shown once.
-  assert.deepEqual(sampleSpellings(track, "Melodic House"), ["melodic house "]);
+  const members = ["Melodic House", "melodic house "];
+  assert.deepEqual(sampleSpellings(track, "Melodic House", members), ["melodic house "]);
+  // A tag that is not a member of this cluster is not a change, even on a track
+  // that also carries cluster members.
+  const withUnrelated: TagPreviewTrack = { ...track, tags: ["Melodic House", "Peak Time"] };
+  assert.deepEqual(sampleSpellings(withUnrelated, "Melodic House", members), []);
 });
 
 test("a scan's renames map every non-canonical spelling onto the canonical one", () => {

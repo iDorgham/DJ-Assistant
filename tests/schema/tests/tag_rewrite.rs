@@ -94,14 +94,13 @@ fn vocabulary(conn: &Connection, ids: &[String]) -> Vec<(String, Vec<String>)> {
         .expect("the vocabulary read must run")
         .collect::<Result<_, _>>()
         .expect("every row must read");
-    let mut grouped: Vec<(String, Vec<String>)> = Vec::new();
+    // The vocabulary query is unordered, so one track's rows need not be adjacent.
+    let mut grouped: std::collections::BTreeMap<String, Vec<String>> =
+        std::collections::BTreeMap::new();
     for (track_id, tag) in rows {
-        match grouped.last_mut() {
-            Some((id, list)) if *id == track_id => list.push(tag),
-            _ => grouped.push((track_id, vec![tag])),
-        }
+        grouped.entry(track_id).or_default().push(tag);
     }
-    grouped
+    grouped.into_iter().collect()
 }
 
 /// Runs the apply the way the desktop command does and returns the undo id.
@@ -191,13 +190,13 @@ fn only_the_confirmed_spelling_changes_and_the_canonical_form_is_stored_exactly(
     let (undo_id, updated) = apply(
         &conn,
         &ids(&["t1", "t2", "t3"]),
-        &[rename("house", "House")],
+        &[rename("House", "house")],
     );
     assert_eq!(updated, 1);
     assert!(!undo_id.is_empty());
-    assert_eq!(tags(&conn, "t1"), ["House", "peak"]);
-    // t2 is rewritten; its "peak" and the track itself are unchanged.
-    assert_eq!(tags(&conn, "t2"), ["House", "peak"]);
+    assert_eq!(tags(&conn, "t1"), ["house", "peak"]);
+    // t2 already carries the canonical spelling, so it is not rewritten.
+    assert_eq!(tags(&conn, "t2"), ["house", "peak"]);
     // A track with no matching spelling is never touched.
     assert_eq!(tags(&conn, "t3"), ["techno"]);
 }
@@ -205,7 +204,7 @@ fn only_the_confirmed_spelling_changes_and_the_canonical_form_is_stored_exactly(
 #[test]
 fn a_removed_track_is_neither_scanned_nor_rewritten() {
     let conn = library();
-    let (_, updated) = apply(&conn, &ids(&["t4"]), &[rename("house", "House")]);
+    let (_, updated) = apply(&conn, &ids(&["t4"]), &[rename("House", "house")]);
     assert_eq!(
         updated, 0,
         "the soft-removed track must be invisible to the apply"
@@ -216,7 +215,7 @@ fn a_removed_track_is_neither_scanned_nor_rewritten() {
 #[test]
 fn undo_restores_every_track_the_apply_rewrote() {
     let conn = library();
-    let (undo_id, _) = apply(&conn, &ids(&["t1", "t2"]), &[rename("house", "House")]);
+    let (undo_id, _) = apply(&conn, &ids(&["t1", "t2"]), &[rename("House", "house")]);
     let (restored, skipped) = undo(&conn, &undo_id);
     assert_eq!((restored, skipped), (1, 0));
     assert_eq!(tags(&conn, "t1"), ["House", "peak"]);
@@ -226,19 +225,19 @@ fn undo_restores_every_track_the_apply_rewrote() {
 #[test]
 fn undo_refuses_a_track_whose_tags_changed_after_the_apply() {
     let conn = library();
-    let (undo_id, _) = apply(&conn, &ids(&["t1", "t2"]), &[rename("house", "House")]);
-    // Someone edits t2 after the apply: the undo must leave that edit alone.
+    let (undo_id, _) = apply(&conn, &ids(&["t1", "t2"]), &[rename("House", "house")]);
+    // Someone edits t1 after the apply: the undo must leave that edit alone.
     conn.execute(
-        "DELETE FROM track_tags WHERE track_id = 't2' AND tag = 'peak'",
+        "DELETE FROM track_tags WHERE track_id = 't1' AND tag = 'peak'",
         [],
     )
     .unwrap();
-    // Only t2 was rewritten, so t2 is the one track the snapshot describes.
+    // Only t1 was rewritten, so t1 is the one track the snapshot describes.
     let (restored, skipped) = undo(&conn, &undo_id);
     assert_eq!((restored, skipped), (0, 1));
     assert_eq!(
-        tags(&conn, "t2"),
-        ["House"],
+        tags(&conn, "t1"),
+        ["house"],
         "the newer edit survives the undo"
     );
 }
@@ -246,7 +245,7 @@ fn undo_refuses_a_track_whose_tags_changed_after_the_apply() {
 #[test]
 fn a_second_undo_of_the_same_apply_is_refused() {
     let conn = library();
-    let (undo_id, _) = apply(&conn, &ids(&["t2"]), &[rename("house", "House")]);
+    let (undo_id, _) = apply(&conn, &ids(&["t1"]), &[rename("House", "house")]);
     undo(&conn, &undo_id);
     let status: String = conn
         .query_row(UNDO_READ_SQL, [undo_id.as_str()], |row| row.get(1))
