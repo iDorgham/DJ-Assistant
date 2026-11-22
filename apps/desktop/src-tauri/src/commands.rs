@@ -284,49 +284,104 @@ pub async fn list_folders(
     Ok(ListFoldersResponse { folders })
 }
 
+/// Reads one track summary starting at column `base`. The reads are grouped
+/// into small helpers so each stays under the complexity threshold (RS-R1000).
 fn map_track_summary_at(row: &rusqlite::Row, base: usize) -> rusqlite::Result<TrackSummary> {
-    Ok(TrackSummary {
-        id: row.get(base)?,
-        file_path: row.get(base + 1)?,
-        file_hash: row.get(base + 2)?,
-        title: row.get(base + 3)?,
-        artist: row.get(base + 4)?,
-        album: row.get(base + 5)?,
-        genre: row.get(base + 6)?,
-        label: row.get(base + 7)?,
-        year: row.get(base + 8)?,
-        bpm: row.get(base + 9)?,
-        key_camelot: row.get(base + 10)?,
-        key_classical: row.get(base + 11)?,
-        duration_ms: row.get(base + 12)?,
-        format: row.get(base + 13)?,
-        analysis_status: row.get(base + 14)?,
-        user_rating: row.get(base + 15)?,
-        energy: row.get(base + 16)?,
-        comments: row.get(base + 17)?,
-        artwork_hash: row.get(base + 18)?,
-        created_at: row.get(base + 19)?,
-        updated_at: row.get(base + 20)?,
-        comment_2: row.get(base + 21)?,
-        composer: row.get(base + 22)?,
-        album_artist: row.get(base + 23)?,
-        remixer: row.get(base + 24)?,
-        producer: row.get(base + 25)?,
-        grouping: row.get(base + 26)?,
-        track_number: row.get(base + 27)?,
-        disc_number: row.get(base + 28)?,
-        isrc: row.get(base + 29)?,
-        catalog_number: row.get(base + 30)?,
-        release_date: row.get(base + 31)?,
-        copyright: row.get(base + 32)?,
-        mood: row.get(base + 33)?,
-        mix_name: row.get(base + 34)?,
-        lyrics: row.get(base + 35)?,
-        bitrate_kbps: row.get(base + 36)?,
-        // The custom tags are read by a second, grouped query (see
-        // load_tags): a join would duplicate a track per tag.
-        tags: Vec::new(),
-    })
+    let mut track = TrackSummary::default();
+    read_track_identity(row, base, &mut track)?;
+    read_track_audio(row, base, &mut track)?;
+    read_track_status(row, base, &mut track)?;
+    read_track_notes(row, base, &mut track)?;
+    read_track_credits(row, base, &mut track)?;
+    read_track_release(row, base, &mut track)?;
+    // The custom tags are read by a second, grouped query (see load_tags): a
+    // join would duplicate a track per tag. `tags` keeps its default, empty.
+    Ok(track)
+}
+
+fn read_track_identity(
+    row: &rusqlite::Row,
+    base: usize,
+    track: &mut TrackSummary,
+) -> rusqlite::Result<()> {
+    track.id = row.get(base)?;
+    track.file_path = row.get(base + 1)?;
+    track.file_hash = row.get(base + 2)?;
+    track.title = row.get(base + 3)?;
+    track.artist = row.get(base + 4)?;
+    track.album = row.get(base + 5)?;
+    Ok(())
+}
+
+fn read_track_audio(
+    row: &rusqlite::Row,
+    base: usize,
+    track: &mut TrackSummary,
+) -> rusqlite::Result<()> {
+    track.genre = row.get(base + 6)?;
+    track.label = row.get(base + 7)?;
+    track.year = row.get(base + 8)?;
+    track.bpm = row.get(base + 9)?;
+    track.key_camelot = row.get(base + 10)?;
+    track.key_classical = row.get(base + 11)?;
+    track.duration_ms = row.get(base + 12)?;
+    Ok(())
+}
+
+fn read_track_status(
+    row: &rusqlite::Row,
+    base: usize,
+    track: &mut TrackSummary,
+) -> rusqlite::Result<()> {
+    track.format = row.get(base + 13)?;
+    track.analysis_status = row.get(base + 14)?;
+    track.user_rating = row.get(base + 15)?;
+    track.energy = row.get(base + 16)?;
+    Ok(())
+}
+
+fn read_track_notes(
+    row: &rusqlite::Row,
+    base: usize,
+    track: &mut TrackSummary,
+) -> rusqlite::Result<()> {
+    track.comments = row.get(base + 17)?;
+    track.artwork_hash = row.get(base + 18)?;
+    track.created_at = row.get(base + 19)?;
+    track.updated_at = row.get(base + 20)?;
+    track.comment_2 = row.get(base + 21)?;
+    Ok(())
+}
+
+fn read_track_credits(
+    row: &rusqlite::Row,
+    base: usize,
+    track: &mut TrackSummary,
+) -> rusqlite::Result<()> {
+    track.composer = row.get(base + 22)?;
+    track.album_artist = row.get(base + 23)?;
+    track.remixer = row.get(base + 24)?;
+    track.producer = row.get(base + 25)?;
+    track.grouping = row.get(base + 26)?;
+    track.track_number = row.get(base + 27)?;
+    track.disc_number = row.get(base + 28)?;
+    Ok(())
+}
+
+fn read_track_release(
+    row: &rusqlite::Row,
+    base: usize,
+    track: &mut TrackSummary,
+) -> rusqlite::Result<()> {
+    track.isrc = row.get(base + 29)?;
+    track.catalog_number = row.get(base + 30)?;
+    track.release_date = row.get(base + 31)?;
+    track.copyright = row.get(base + 32)?;
+    track.mood = row.get(base + 33)?;
+    track.mix_name = row.get(base + 34)?;
+    track.lyrics = row.get(base + 35)?;
+    track.bitrate_kbps = row.get(base + 36)?;
+    Ok(())
 }
 
 fn map_track_summary(row: &rusqlite::Row) -> rusqlite::Result<TrackSummary> {

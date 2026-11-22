@@ -108,7 +108,7 @@ fn apply(conn: &Connection, ids: &[String], renames: &[TagRename]) -> (String, u
     let map = validate_renames(renames).expect("the renames must validate");
     let planned = plan_tag_rewrite(&vocabulary(conn, ids), &map);
     if planned.is_empty() {
-        return (String::new(), 0);
+        return (String::default(), 0);
     }
     let mut before = serde_json::Map::new();
     let mut after = serde_json::Map::new();

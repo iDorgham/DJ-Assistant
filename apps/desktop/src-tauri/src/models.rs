@@ -2,7 +2,7 @@ use serde::{Deserialize, Serialize};
 
 use dj_assistant_core::library_query::TrackFilters;
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct TrackSummary {
     pub id: String,

@@ -936,6 +936,7 @@ export function trackColumnText(track: TrackSummary, id: ColumnId): string {
     case "color":
     case "cues":
     case "size":
+    default:
       return PLACEHOLDER;
   }
 }
