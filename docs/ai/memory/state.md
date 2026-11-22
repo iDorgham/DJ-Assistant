@@ -4,6 +4,13 @@ Ephemeral. Newest first. **Rotate aggressively** — if a line would still be tr
 in two weeks, it belongs in [`decisions.md`](./decisions.md); if it is just a
 fact, it belongs in [`facts.md`](./facts.md). Delete anything stale.
 
+## 2026-11-22 · Audit correction (supersedes the 11-19 snapshot below where they differ)
+
+- **Update (same day):** the branch was merged as **PR #91** (merge commit `8f5d2253`, 2026-11-22 10:23 UTC, merging all 13 branch commits). `origin/main` = `8f5d2253`. No PR is needed for that branch.
+- The library table pass is **committed** on that branch (`e44fa716`), not uncommitted on main. It also adds `refresh_artwork` (wired in `App.tsx`).
+- **Do not split the branch by commit.** `e44fa716` depends on the tag-preview types from `2ccbd279` (test cherry-pick onto main conflicts in `commands.rs`). Ship it as one PR, or as a stack in commit order.
+- Artwork backfill (NULL `artwork_path` rows) has a committed `refresh_artwork` path on that branch. Issue #89 is a **different** backfill: `beatgrid_confidence` (see its body).
+
 ## 2026-11-19 · Progress snapshot (scan of `docs/sdd/04-TASKS.md`, git, worktrees)
 
 - `main` = `6e0869cd`, level with `origin/main`. Task ledger: **67 ticked / 131 open**.
