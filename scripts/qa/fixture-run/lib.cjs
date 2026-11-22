@@ -1,0 +1,87 @@
+// Page-side helpers for the DevTools driver. Each function is serialised with
+// toString() and run inside the WebView, so the browser executes exactly this
+// source. Only its own body and its arguments are available there, so every
+// page function is self-contained: no helper calls, no closures. Arguments are
+// passed as JSON.
+
+/** Builds the expression that calls `fn` in the page with JSON arguments. */
+function expr(fn, ...args) {
+  return `(${fn.toString()})(${args.map((arg) => JSON.stringify(arg)).join(", ")})`;
+}
+
+function setInput(selector, value) {
+  const el = globalThis.document.querySelector(selector);
+  if (!el) throw new Error(`no input ${selector}`);
+  const setter = Object.getOwnPropertyDescriptor(Object.getPrototypeOf(el), "value").set;
+  setter.call(el, value);
+  el.dispatchEvent(new globalThis.Event("input", { bubbles: true }));
+  return "ok";
+}
+
+function clickByText(selector, text) {
+  const el = [...globalThis.document.querySelectorAll(selector)].find(
+    (element) => element.textContent.trim() === text
+  );
+  if (!el) return `missing:${text}`;
+  el.click();
+  return "clicked";
+}
+
+function rightClickTitle(title) {
+  const cell = [...globalThis.document.querySelectorAll('[aria-label^="Play "]')].find(
+    (element) => element.getAttribute("aria-label") === `Play ${title}`
+  );
+  if (!cell) return "no-play-button";
+  const row = cell.closest("tr") || cell;
+  const target = row.querySelector("[role=gridcell], td, div") || row;
+  target.dispatchEvent(
+    new globalThis.MouseEvent("contextmenu", {
+      bubbles: true,
+      cancelable: true,
+      clientX: 300,
+      clientY: 300,
+      button: 2,
+    })
+  );
+  return `ctx:${row.tagName}:${(row.className || "").toString().slice(0, 60)}`;
+}
+
+function clickRow(title, options) {
+  const { shift = false, ctrl = false } = options || {};
+  const cell = [...globalThis.document.querySelectorAll('[aria-label^="Play "]')].find(
+    (element) => element.getAttribute("aria-label") === `Play ${title}`
+  );
+  if (!cell) return `no-row:${title}`;
+  const row = cell.closest("tr") || cell;
+  const target =
+    [...row.querySelectorAll("td,[role=gridcell],div")].find(
+      (node) => node.textContent.trim() === title
+    ) || row;
+  const opts = {
+    bubbles: true,
+    cancelable: true,
+    button: 0,
+    shiftKey: shift,
+    ctrlKey: ctrl,
+    metaKey: false,
+  };
+  target.dispatchEvent(new globalThis.MouseEvent("mousedown", opts));
+  target.dispatchEvent(new globalThis.MouseEvent("mouseup", opts));
+  target.dispatchEvent(new globalThis.MouseEvent("click", opts));
+  return `clicked:${row.tagName}`;
+}
+
+async function loadAll() {
+  for (let i = 0; i < 40; i++) {
+    const match = globalThis.document.body.innerText.match(/([0-9]+) of ([0-9]+) tracks/);
+    const btn = [...globalThis.document.querySelectorAll("button")].find(
+      (item) => item.textContent.trim() === "Load more"
+    );
+    if (!btn) return `loaded:${match ? match[0] : "no-count"}`;
+    btn.click();
+    await new Promise((resolve) => setTimeout(resolve, 900));
+  }
+  return "gave-up";
+}
+
+module.exports = { expr, setInput, clickByText, rightClickTitle, clickRow, loadAll };
