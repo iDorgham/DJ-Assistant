@@ -15,7 +15,6 @@
 // WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS=--remote-debugging-port=9222.
 // A step stops with an error when an action does not succeed, so a missing
 // control cannot produce a passing record.
-const { DatabaseSync } = require("node:sqlite");
 const { readFileSync } = require("node:fs");
 const { connect } = require("./cdp.cjs");
 const { expr, setInput, clickByText, rightClickTitle, clickRow, loadAll } = require("./lib.cjs");
@@ -276,6 +275,8 @@ const steps = {
 
 /** Compares the fixture database with the baseline the seed script wrote. No app needed. */
 function readback(baselinePath) {
+  // Loaded here, not at the top, so the app steps do not need node:sqlite.
+  const { DatabaseSync } = require("node:sqlite");
   const dbPath = process.env.DJ_ASSISTANT_DB_PATH;
   if (!dbPath || !baselinePath) {
     throw new Error("readback needs DJ_ASSISTANT_DB_PATH and a baseline.json path");
