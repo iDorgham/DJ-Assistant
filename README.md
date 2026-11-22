@@ -322,18 +322,18 @@ fixtures/audio      Curated audio fixtures with recorded hashes (never modified)
 
 Task-level detail and QA records live in [Tasks](./docs/sdd/04-TASKS.md) and
 [Acceptance](./docs/sdd/05-ACCEPTANCE.md); captured running-window evidence is in
-[`docs/evidence/`](./docs/evidence/).
+[`docs/qa/evidence/`](docs/qa/evidence/).
 
 ## Documentation
 
 | Document | What it covers |
 | --- | --- |
 | [Canonical Documentation](./docs/product/CANONICAL_DOCUMENTATION.md) | Product and technical source of truth |
-| [Approved v1 plan](./docs/plan/README.md) | Locked product shape, UI rules, delivery stages |
+| [Approved v1 plan](docs/plans/v1/README.md) | Locked product shape, UI rules, delivery stages |
 | [Architecture](./docs/architecture/ARCHITECTURE.md) | Components, data flows, boundaries |
-| [UI specification](./docs/ui/README.md) | Design system, shell, views, player |
+| [UI specification](docs/ui-ux/README.md) | Design system, shell, views, player |
 | [Development guide](./docs/engineering/DEVELOPMENT.md) | Local setup, tooling, workflows |
-| [Project context](./docs/context/PROJECT_CONTEXT.md) | One-file orientation for humans and agents |
+| [Project context](docs/product/PROJECT_CONTEXT.md) | One-file orientation for humans and agents |
 
 Everything else — audits, ADRs, diagrams, DevOps, evidence — is indexed in [`docs/`](./docs/README.md).
 

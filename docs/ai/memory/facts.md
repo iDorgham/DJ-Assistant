@@ -14,15 +14,15 @@ not inferable by reading the code.
 - Dev machine is **Windows**; the Rust toolchain may lack the ONNX runtime, so
   use `pnpm rust:test:portable` when `pnpm rust:test` cannot run.
 - The repo contains **no** Docker, Kubernetes, or AWS/terraform artefacts.
-- `docs/ui/01-DESIGN-SYSTEM.md` is the **authoritative** UI spec — it outranks
+- `docs/ui-ux/01-DESIGN-SYSTEM.md` is the **authoritative** UI spec — it outranks
   every generic design skill and every design opinion.
 <!-- coderabbit-ai-generated:v1 -->
 
 <!-- coderabbit-ai-generated-section:v1:8028628489e602af99dc6d4696a43966dc5a720d1eac1a0b12a67ffe5e832261 -->
 
-- The approved v1 product plan is mirrored at `docs/plan/` with 52 locked
+- The approved v1 product plan is mirrored at `docs/plans/v1/` with 52 locked
   decisions (`D-001–D-052`, scoped to that tree) and a discussion log at
-  `docs/plan/06-delivery/discussions.md`. This is separate from the repository
+  `docs/plans/v1/discussions.md`. This is separate from the repository
   memory ledger's `D-001–D-014`.
 
 <!-- /coderabbit-ai-generated:v1 -->

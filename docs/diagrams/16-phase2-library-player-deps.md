@@ -1,7 +1,7 @@
 # Phase 2 — Library UX & Player Implementation Dependencies
 
 **Scope:** T2.1.5 → T2.4 (Slices 0–9)  
-**Plan:** [`docs/PHASE2_LIBRARY_PLAYER_IMPLEMENTATION_PLAN.md`](../PHASE2_LIBRARY_PLAYER_IMPLEMENTATION_PLAN.md)  
+**Plan:** [`docs/plans/phase2-library-player.md`](../plans/phase2-library-player.md)  
 **Tasks:** [`docs/sdd/04-TASKS.md`](../sdd/04-TASKS.md) · **Acceptance:** P2.1 + P2.1a–d
 
 Render in any Mermaid-compatible viewer (GitHub, VS Code, mermaid.live).
@@ -365,10 +365,10 @@ flowchart LR
 
 ## References
 
-- Implementation plan: [`../PHASE2_LIBRARY_PLAYER_IMPLEMENTATION_PLAN.md`](../PHASE2_LIBRARY_PLAYER_IMPLEMENTATION_PLAN.md)
-- UI checklist: [`../ui/11-IMPLEMENTATION-CHECKLIST.md`](../ui/11-IMPLEMENTATION-CHECKLIST.md)
-- Player spec: [`../ui/06-PLAYER.md`](../ui/06-PLAYER.md)
-- Library spec: [`../ui/03-LIBRARY-VIEW.md`](../ui/03-LIBRARY-VIEW.md)
+- Implementation plan: [`../PHASE2_LIBRARY_PLAYER_IMPLEMENTATION_PLAN.md`](../plans/phase2-library-player.md)
+- UI checklist: [`../ui/11-IMPLEMENTATION-CHECKLIST.md`](../ui-ux/11-IMPLEMENTATION-CHECKLIST.md)
+- Player spec: [`../ui/06-PLAYER.md`](../ui-ux/06-PLAYER.md)
+- Library spec: [`../ui/03-LIBRARY-VIEW.md`](../ui-ux/03-LIBRARY-VIEW.md)
 - Acceptance: [`../sdd/05-ACCEPTANCE.md`](../sdd/05-ACCEPTANCE.md)
 
 ---

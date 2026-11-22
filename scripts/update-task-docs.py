@@ -79,7 +79,7 @@ def flip(path: str, needle: str) -> bool:
 
 def main() -> int:
     sdd = os.path.join(ROOT, "docs", "sdd", "04-TASKS.md")
-    dev = os.path.join(ROOT, "docs", "engineering", "DEVELOPMENT_TASK_LIST.md")
+    dev = os.path.join(ROOT, "docs", "tasks", "archive", "DEVELOPMENT_TASK_LIST.md")
 
     missing: list[str] = []
     done = 0

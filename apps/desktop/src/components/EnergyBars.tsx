@@ -1,7 +1,7 @@
 import { useState } from "react";
 
 /**
- * Energy meter (T2.1.6, `docs/ui/03-LIBRARY-VIEW.md` §3.6).
+ * Energy meter (T2.1.6, `docs/ui-ux/03-LIBRARY-VIEW.md` §3.6).
  *
  * Ten segments stand for the 1–10 energy scale; the filled ones carry the
  * accent colour. A track without an energy value renders as a depleted meter

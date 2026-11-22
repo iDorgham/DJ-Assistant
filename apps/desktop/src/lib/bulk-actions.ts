@@ -1,5 +1,5 @@
 /**
- * Bulk action bar model (T2.1.3, `docs/ui/03-LIBRARY-VIEW.md` §6).
+ * Bulk action bar model (T2.1.3, `docs/ui-ux/03-LIBRARY-VIEW.md` §6).
  *
  * Kept free of React so the bar's contract is testable with `node --test` — the
  * desktop harness runs `.test.ts` only, so anything decided here is decided

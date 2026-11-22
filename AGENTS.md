@@ -5,9 +5,9 @@ workspace. The deeper docs under `docs/` stay authoritative — this file is a
 map, not a replacement.
 
 Canonical spec: [`docs/product/CANONICAL_DOCUMENTATION.md`](docs/product/CANONICAL_DOCUMENTATION.md).
-Approved v1 plan: [`docs/plan/README.md`](docs/plan/README.md) (plan decisions
+Approved v1 plan: [`docs/plans/v1/README.md`](docs/plans/v1/README.md) (plan decisions
 `D-001–D-052` are scoped to that tree; the repository memory ledger is separate).
-UI source of truth: [`docs/ui/01-DESIGN-SYSTEM.md`](docs/ui/01-DESIGN-SYSTEM.md).
+UI source of truth: [`docs/ui-ux/01-DESIGN-SYSTEM.md`](docs/ui-ux/01-DESIGN-SYSTEM.md).
 
 ## What this is
 
@@ -41,7 +41,7 @@ optional.
 
 - Prettier: 100 columns, double quotes, semicolons, `trailingComma: es5`.
   Run `pnpm format` before committing; `pnpm lint` must pass.
-- Keep UI tokens and components aligned with `docs/ui/` — never invent a second
+- Keep UI tokens and components aligned with `docs/ui-ux/` — never invent a second
   palette or spacing scale.
 - Rust: prefer the workspace crates; `clippy -D warnings` is enforced.
 - Never modify source audio files, including when tagging writable music files;
@@ -51,7 +51,7 @@ optional.
   propagate errors instead of hiding them behind success-shaped results.
 - Do not add or move primary navigation tabs. Set Score belongs inside a
   playlist under Playlists; follow the locked hierarchy in
-  `docs/plan/01-product/information-architecture.md`.
+  `docs/product/information-architecture.md`.
 - For changes to import, analysis, or export pipelines, run the repository
   `scripts/hash-audit.py` check, which covers only `fixtures/audio/`. For
   external audio used in pipeline tests, record and compare its hash before
@@ -130,7 +130,7 @@ Then:
 - The `skill-router` subagent maps a task to skills and returns the IDs to load;
   the `skill-maintainer` subagent runs the inventory/audit and reports.
 - Skills are **advisory technique, not project authority** — for anything
-  UI-facing, `docs/ui/` wins over any generic design skill.
+  UI-facing, `docs/ui-ux/` wins over any generic design skill.
 - After editing `skills.policy.json`, run `pnpm skills:inventory` to regenerate
   the manifest and routing doc. After editing an agent or command file, run
   `pnpm agent:sync --write` to update every tool's copy, and `pnpm agent:doctor`

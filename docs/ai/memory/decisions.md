@@ -37,7 +37,7 @@ ID after hiding).
 so there is exactly one home for AI documentation.
 **Reverses if:** the team prefers AI docs spread by consumer.
 
-## D-005 · Skills are advisory; `docs/ui/` is authoritative (2026-10-19)
+## D-005 · Skills are advisory; `docs/ui-ux/` is authoritative (2026-10-19)
 
 Generic design skills inform technique but never override the project's own
 tokens, components, or layout spec.
@@ -79,7 +79,7 @@ OpenCode's `tools` map. No project plugin is ever added (D-002), no MCP owns
 analysis or library truth, and the agent reads the app's database through a
 read-only Rust binary rather than a server that could write to it. Template,
 safety envelope and rollback:
-[`docs/enhancements/mcb-plugin-enhancement-plan.md`](../../enhancements/mcb-plugin-enhancement-plan.md).
+[`docs/ai/mcp/mcb-plugin-enhancement-plan.md`](../mcp/mcb-plugin-enhancement-plan.md).
 **Reverses if:** OpenCode gains a first-class bundle primitive, or the
 tool-disable guarantee proves unenforceable in a shipped build.
 
@@ -199,12 +199,12 @@ forces the restore to be transactional.
 own note — that is a second column and a second editor field, not a change of
 this decision.
 
-## D-014 · The approved v1 plan is mirrored under `docs/plan/` (2026-10-23)
+## D-014 · The approved v1 plan is mirrored under `docs/plans/v1/` (2026-10-23)
 
-The product plan approved on 2026-10-23 is mirrored at `docs/plan/`; it is the
+The product plan approved on 2026-10-23 is mirrored at `docs/plans/v1/`; it is the
 implementation reference for v1. Its **D-001–D-052** IDs are scoped to that
 tree and are not the same namespace as this repository's agent-memory ledger
-(this entry is the repo's D-014). `docs/product` and `docs/ui/` remain
+(this entry is the repo's D-014). `docs/product` and `docs/ui-ux/` remain
 authoritative for the canonical product spec and shipped UI tokens; the plan
 is the approved v1 scope and delivery order. A conflict between them is a
 decision to record, not something to resolve by silently mixing both.
@@ -298,3 +298,15 @@ clause ("the user picks a new mark direction") was invoked.
 **Reverses if:** the user picks a new mark direction. Geometry is shared between
 `assets/*.svg` and `scripts/make_icon.py` — change both or neither; the geometry
 tables live in `assets/README.md`.
+
+## D-021 · One folder per docs question; `docs/ui-ux/` is the single UI home (2026-11-22)
+`docs/` is organised by the question a document answers (product, specs, ui-ux,
+architecture, adr, sdd, plans, tasks, audits, qa, diagrams, engineering, devops, ai,
+prompts) — map in [`docs/README.md`](../../README.md). The old `docs/ui/` spec is now
+`docs/ui-ux/` (D-005 applies to it); the Phase 0 set is `docs/ui-ux/archive/phase0/`.
+The v1 plan was split by kind: delivery stays together in `docs/plans/v1/`.
+`sdd/04-TASKS.md` is the only task tracker.
+**Why:** two UI folders, plans in four places and two task trackers had drifted apart
+(audit `docs/audits/2026-11-22-docs-and-plans-audit.md`).
+**Reverses if:** the team adopts a docs tool that imposes its own layout. Old → new
+paths: `scripts/docs-reorg-2026-11.mjs`.

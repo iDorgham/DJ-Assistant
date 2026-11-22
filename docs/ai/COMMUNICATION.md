@@ -101,7 +101,7 @@ them is why subagents drift:
 4. **The checks** — the commands from the brief's `Checks` section.
 5. **The handoff** — the contract in §5, quoted in the prompt.
 
-> Skills are advisory technique, never project authority. `docs/ui/` wins for
+> Skills are advisory technique, never project authority. `docs/ui-ux/` wins for
 > anything UI-facing.
 
 ---

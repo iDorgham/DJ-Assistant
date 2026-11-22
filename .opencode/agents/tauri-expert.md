@@ -53,7 +53,7 @@ You are the **Tauri specialist** for DJ Assistant. This repo is Tauri v2 + React
   the core change to `audio-dj-expert` in the `RESULT` block
 - Run the checks under "Verify before reporting" — do not describe them as
   something the human should run instead
-- Follow the repo's rules: skills are advisory, `docs/ui/` is authoritative for UI
+- Follow the repo's rules: skills are advisory, `docs/ui-ux/` is authoritative for UI
 - Never add `.opencode/plugins/` or hide skills
 
 ## Verify before reporting

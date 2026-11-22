@@ -759,10 +759,10 @@ export interface GenerateSetResponse {
 
 ## 7. Workstation Interface Specifications
 
-**Interface authority:** [`docs/ui/`](../ui/README.md) is the current UI/UX
+**Interface authority:** [`docs/ui-ux/`](../ui-ux/README.md) is the current UI/UX
 specification (design system, app shell, screens, interactions). This section
 keeps the product-level *target* workstation — the set-building surface — and
-does not override the screen-level specs in `docs/ui/`.
+does not override the screen-level specs in `docs/ui-ux/`.
 
 The **T2.1.0 app shell** (implemented on `feat/T2.1.0-shell-ui`, pending merge) is
 a three-view desktop workspace:

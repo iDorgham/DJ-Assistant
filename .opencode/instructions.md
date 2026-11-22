@@ -15,16 +15,16 @@
 
 All links below are repository-relative to `AGENTS.md`; from this file the same
 targets are `../docs/product/CANONICAL_DOCUMENTATION.md`,
-`../docs/plan/README.md`, `../docs/ui/01-DESIGN-SYSTEM.md`,
-`../docs/sdd/04-TASKS.md`, `../docs/context/PROJECT_CONTEXT.md`, and
+`../docs/plans/v1/README.md`, `../docs/ui-ux/01-DESIGN-SYSTEM.md`,
+`../docs/sdd/04-TASKS.md`, `../docs/product/PROJECT_CONTEXT.md`, and
 `../README.md`.
 
 - Product/tech truth: `docs/product/CANONICAL_DOCUMENTATION.md`
-- Approved v1 plan (locked decisions): `docs/plan/README.md` — `D-001–D-052` scoped to that tree
-- UI source of truth: `docs/ui/01-DESIGN-SYSTEM.md`
-- Information architecture (locked): `docs/plan/01-product/information-architecture.md`
+- Approved v1 plan (locked decisions): `docs/plans/v1/README.md` — `D-001–D-052` scoped to that tree
+- UI source of truth: `docs/ui-ux/01-DESIGN-SYSTEM.md`
+- Information architecture (locked): `docs/product/information-architecture.md`
 - Tasks/acceptance: `docs/sdd/04-TASKS.md`, `docs/sdd/05-ACCEPTANCE.md`
-- Project context: `docs/context/PROJECT_CONTEXT.md`, `README.md`
+- Project context: `docs/product/PROJECT_CONTEXT.md`, `README.md`
 
 ## See also
 

@@ -19,7 +19,7 @@ import { normalizeTags, type MetadataEditorValues, type MetadataSource } from ".
 
 /**
  * The metadata editor (T2.1.3 bulk edit; T2.1.7 / T2.1.13,
- * `docs/ui/03-LIBRARY-VIEW.md` §3.5).
+ * `docs/ui-ux/03-LIBRARY-VIEW.md` §3.5).
  *
  * One dialog covers the fields the spec lists for "Edit tags…": title, artist,
  * album, genre, label, year, the custom tags and the free-text comment — and it

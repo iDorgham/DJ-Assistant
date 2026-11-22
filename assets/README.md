@@ -5,7 +5,7 @@ inline them as needed; do not hand-edit exported PNGs. The one exception is
 [`screenshots/`](./screenshots/), which holds raster captures of the running app
 for the README — see below.
 
-The visual language is defined in [`docs/ui/01-DESIGN-SYSTEM.md`](../docs/ui/01-DESIGN-SYSTEM.md).
+The visual language is defined in [`docs/ui-ux/01-DESIGN-SYSTEM.md`](../docs/ui-ux/01-DESIGN-SYSTEM.md).
 When you change a colour or shape here, check that document so the code, docs,
 and artwork do not drift. The values below are the fixed colours baked into these
 SVG sources; the app's semantic UI tokens (and their light-theme variants) live in
@@ -96,7 +96,7 @@ left over from a QA pass).
 | `screenshots/track-analysis.png` | Track panel Analysis tab: status, pipeline version, BPM, key, loudness, vocal presence, phrase confidence |
 | `screenshots/track-tags.png` | Track panel Tags tab over the library: metadata fields and the rating/energy editor with its undo note |
 
-Historical acceptance captures stay in [`docs/evidence/`](../docs/evidence/) — the
+Historical acceptance captures stay in [`docs/qa/evidence/`](../docs/qa/evidence/) — the
 README points here, not at the phase archives.
 
 ## Usage notes
@@ -109,8 +109,8 @@ README points here, not at the phase archives.
   resolves to black — set an explicit `fill` on the root `<svg>` if you need another
   colour.
 - **Iconography inside the product** comes from
-  [`lucide-react`](../docs/ui/01-DESIGN-SYSTEM.md) (design system §7, with the
-  per-component assignments in [`docs/ui/09-COMPONENTS.md`](../docs/ui/09-COMPONENTS.md)),
+  [`lucide-react`](../docs/ui-ux/01-DESIGN-SYSTEM.md) (design system §7, with the
+  per-component assignments in [`docs/ui-ux/09-COMPONENTS.md`](../docs/ui-ux/09-COMPONENTS.md)),
   not from this folder. Only brand artwork lives here.
 - **Rasterising:** `scripts/make_icon.py` generates `app-icon.png` **and the four
   tray PNGs** (`icons/tray-on-{dark,light}{,@2x}.png`); `tauri icon` expands
@@ -140,7 +140,7 @@ favicon changes.
 
 ## Previews
 
-Open any file directly in a browser, or open [`docs/ui/`](../docs/ui/) for the
+Open any file directly in a browser, or open [`docs/ui-ux/`](../docs/ui-ux/) for the
 current screen specs these assets sit alongside. The wireframes live in
-[`docs/ui/wireframes/`](../docs/ui/wireframes/), with the current wireframe spec in
-[`docs/ui/12-WIREFRAMES-AND-FLEXIBILITY.md`](../docs/ui/12-WIREFRAMES-AND-FLEXIBILITY.md).
+[`docs/ui-ux/wireframes/`](../docs/ui-ux/wireframes/), with the current wireframe spec in
+[`docs/ui-ux/12-WIREFRAMES-AND-FLEXIBILITY.md`](../docs/ui-ux/12-WIREFRAMES-AND-FLEXIBILITY.md).

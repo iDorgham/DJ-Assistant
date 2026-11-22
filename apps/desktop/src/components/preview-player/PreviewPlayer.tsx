@@ -90,7 +90,7 @@ export function PreviewPlayer({
   const [hotCues, setHotCues] = useState<HotCueData[]>([]);
   const [tempCueMs, setTempCueMs] = useState<number | null>(0);
   const [cueActive, setCueActive] = useState(false);
-  // Undo affordance for destructive cue clearing (docs/ui/08: every destructive
+  // Undo affordance for destructive cue clearing (docs/ui-ux/08: every destructive
   // action gets a visible, keyboard-reachable Undo — not a hidden modifier).
   const [clearedCue, setClearedCue] = useState<HotCueData | null>(null);
   const undoTimerRef = useRef<number | null>(null);
@@ -460,7 +460,7 @@ export function PreviewPlayer({
         <div className="w-12 h-[2px] rounded-full bg-dj-border-strong group-hover:bg-dj-accent transition-colors" />
       </div>
 
-      {/* ── Cue-clear undo toast (docs/ui/08: visible, keyboard-reachable Undo) ── */}
+      {/* ── Cue-clear undo toast (docs/ui-ux/08: visible, keyboard-reachable Undo) ── */}
       {clearedCue && (
         <div
           role="status"

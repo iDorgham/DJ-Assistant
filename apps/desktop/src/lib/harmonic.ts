@@ -2,7 +2,7 @@ import { parseCamelot } from "./camelot.ts";
 
 /**
  * Harmonic mixing rules on the Camelot wheel (T2.1.8,
- * `docs/ui/01-DESIGN-SYSTEM.md` §4 and `docs/ui/03-LIBRARY-VIEW.md` §3.3).
+ * `docs/ui-ux/01-DESIGN-SYSTEM.md` §4 and `docs/ui-ux/03-LIBRARY-VIEW.md` §3.3).
  *
  * Strict mode is the classic compatible set: the same key, its relative
  * major/minor (same number, other letter), and the two neighbours on the same

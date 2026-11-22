@@ -13,14 +13,14 @@ Standing rules. Every session, in every tool, follows these.
 ## Plan and spec hierarchy
 
 - `docs/product/CANONICAL_DOCUMENTATION.md` is the canonical product and
-  technical spec; `docs/ui/01-DESIGN-SYSTEM.md` is authoritative for shipped UI
+  technical spec; `docs/ui-ux/01-DESIGN-SYSTEM.md` is authoritative for shipped UI
   tokens and components.
-- `docs/plan/` is the **approved v1 plan** and delivery order. Its decision IDs
+- `docs/plans/v1/` is the **approved v1 plan** and delivery order. Its decision IDs
   (`D-001–D-052`) are scoped to that tree and are separate from the repository
   memory ledger. Do not silently mix the two namespaces.
 - When the plan and the canonical spec/UI disagree, record the conflict and
   decide it explicitly; do not let one silently override the other.
-- `docs/plan/06-delivery/discussions.md` records rationale, rejected
+- `docs/plans/v1/discussions.md` records rationale, rejected
   alternatives and open items. Add an entry when a decision changes.
 
 ## Boundaries
@@ -32,13 +32,13 @@ Standing rules. Every session, in every tool, follows these.
   the write rules, the query builder, the normalisation — belongs in
   `crates/core` (Tauri-free, as its own crate docstring says); the desktop
   crate stays the thin IPC adapter over it.
-- Keep UI tokens and components aligned with `docs/ui/` — never invent a second
+- Keep UI tokens and components aligned with `docs/ui-ux/` — never invent a second
   palette or spacing scale.
 - Do not commit generated artefacts (`target/`, `dist/`, model binaries) or the
   local database.
 - Treat other agents' in-progress work as off-limits: never reformat, move, or
   revert changes you did not make.
-- Skills are **advisory technique, not project authority**; `docs/ui/` wins for
+- Skills are **advisory technique, not project authority**; `docs/ui-ux/` wins for
   anything UI-facing.
 
 ## AI memory

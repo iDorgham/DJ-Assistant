@@ -28,7 +28,7 @@ Analyze locally → Clean tags → Generate cues → Build harmonic/energy-aware
 
 ## 3. In-Scope Capabilities (Must / Should)
 
-### P0 — Must Have for MVP (slimmed per `docs/audit/AUDIT-SUMMARY.md`)
+### P0 — Must Have for MVP (slimmed per `docs/audits/2026-10-14-spec-audit/AUDIT-SUMMARY.md`)
 
 > MVP gates on **Import → Analyze → Cue → Build Set → Export** only. USB-format, B2B collab, and 4/8 Skills move to P1 (see §3 P1). This keeps the 90-day gate achievable.
 
@@ -53,8 +53,8 @@ Analyze locally → Clean tags → Generate cues → Build harmonic/energy-aware
 - Transition explanations
 - Waveform visualization with cue markers
 - Professional Preview Player (prep-only, single-deck — see §3A; not a performance mixer)
-- Settings specs S-1–S-7 (`docs/audit/05-proposed-specs-functions.md`): Profiles, Preview gain/keymap, Library locations+ignore+relink, Model manager, Privacy center, USB policy, Telemetry off-default
-- Functions F-1–F-10 (`docs/audit/05-proposed-specs-functions.md`): smart playlists/history, relink, beatgrid editor, cue templates, harmonic traffic-light + mix-out + vocal warning, set versioning/diff, USB pack verify + set sheet, Prep Auditor queue, waveform, bulk tag preview+undo
+- Settings specs S-1–S-7 (`docs/audits/2026-10-14-spec-audit/05-proposed-specs-functions.md`): Profiles, Preview gain/keymap, Library locations+ignore+relink, Model manager, Privacy center, USB policy, Telemetry off-default
+- Functions F-1–F-10 (`docs/audits/2026-10-14-spec-audit/05-proposed-specs-functions.md`): smart playlists/history, relink, beatgrid editor, cue templates, harmonic traffic-light + mix-out + vocal warning, set versioning/diff, USB pack verify + set sheet, Prep Auditor queue, waveform, bulk tag preview+undo
 
 ### 3A. Professional Preview Player (prep-only)
 
@@ -163,6 +163,6 @@ Spotify (above) is the reference implementation of a generic provider contract (
 ## 8. References
 
 - Full detail: `docs/product/CANONICAL_DOCUMENTATION.md`
-- Audit: `docs/audit/AUDIT-SUMMARY.md`, `01-specs-audit.md`, `02-functions-audit.md`, `03-settings-audit.md`, `04-improvements.md`, `05-proposed-specs-functions.md`
+- Audit: `docs/audits/2026-10-14-spec-audit/AUDIT-SUMMARY.md`, `01-specs-audit.md`, `02-functions-audit.md`, `03-settings-audit.md`, `04-improvements.md`, `05-proposed-specs-functions.md`
 - Product Requirements: `DJ-Assistant-PRD.docx` *(external, not committed)*
 - AI principles: `DJ-Assistant-AI-Native-Build-Plan.docx` *(external, not committed)*

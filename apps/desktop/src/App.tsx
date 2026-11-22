@@ -250,7 +250,7 @@ const ANALYSIS_STATUS_CHIP: Record<
  * resizing does not write a preference to storage on every pointer move.
  *
  * Row height stays constant. Turning Artwork on makes every row 48px — the
- * 36px thumb plus its padding exceeds the 28–32px density rule in docs/ui/01,
+ * 36px thumb plus its padding exceeds the 28–32px density rule in docs/ui-ux/01,
  * which is exactly the spec's "taller when Artwork column is on".
  */
 function TrackTableHeader({
@@ -329,7 +329,7 @@ function TrackTableHeader({
       </colgroup>
       <thead
         onContextMenu={(event) => {
-          // docs/ui/03 §3.2: the column checklist opens from the header too.
+          // docs/ui-ux/03 §3.2: the column checklist opens from the header too.
           event.preventDefault();
           onManageColumns();
         }}
@@ -431,7 +431,7 @@ function TrackTableHeader({
 
 /**
  * Columns whose cells are numbers or fixed-width codes: tabular figures, per
- * docs/ui/01. Everything else uses the UI font.
+ * docs/ui-ux/01. Everything else uses the UI font.
  */
 const MONO_COLUMNS: readonly ColumnId[] = [
   "index",
@@ -1085,7 +1085,7 @@ export default function App() {
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
       // Never steal shortcuts while the user is typing in a field
-      // (docs/ui/10: view shortcuts are suppressed inside inputs/dialogs).
+      // (docs/ui-ux/10: view shortcuts are suppressed inside inputs/dialogs).
       if (dialogsOpenRef.current) return;
       const target = event.target instanceof HTMLElement ? event.target : null;
       if (
@@ -1184,7 +1184,7 @@ export default function App() {
   const [progress, setProgress] = useState<ScanProgressEvent | null>(null);
   const [statusMessage, setStatusMessage] = useState<string>("Ready");
   // Tone drives the header status dot — never show a green dot during a
-  // failure or a scan in progress (docs/ui/08: status reflects real state).
+  // failure or a scan in progress (docs/ui-ux/08: status reflects real state).
   const [statusTone, setStatusTone] = useState<"ok" | "busy" | "error">("ok");
   const pushStatus = useCallback((message: string, tone: "ok" | "busy" | "error" = "ok") => {
     setStatusMessage(message);
@@ -2036,7 +2036,7 @@ export default function App() {
   }, [closeTrackPanel]);
 
   /**
-   * docs/ui/03 section 5: the search box is reachable from the keyboard
+   * docs/ui-ux/03 section 5: the search box is reachable from the keyboard
    * (`Ctrl/Cmd+F` or `/`). The shell's view shortcuts already ignore keystrokes
    * made inside a field, so this listener only fires where typing would
    * otherwise do nothing.
@@ -2167,7 +2167,7 @@ export default function App() {
   const handleSetRating = async (track: TrackSummary, rating: number | null) => {
     const trackIds = editTargets(track);
     try {
-      // `0` is the backend's "clear the rating" value (docs/ui/03 §3.4).
+      // `0` is the backend's "clear the rating" value (docs/ui-ux/03 §3.4).
       const res = await setTrackRating({ trackIds, rating: rating ?? 0 });
       refreshLibrary();
       // The backend skips tracks that already hold the requested value, so
@@ -2895,7 +2895,7 @@ export default function App() {
                     ))}
                   </div>
                 )}
-                {/* Options bar — view-context actions (docs/ui/02) */}
+                {/* Options bar — view-context actions (docs/ui-ux/02) */}
                 <div className="flex h-8 shrink-0 items-center gap-1.5 border-b border-dj-border bg-dj-panel px-3">
                   {/*
                     The library search is the app's only search field. The header
@@ -3164,7 +3164,7 @@ export default function App() {
                   </div>
                 )}
 
-                {/* Bulk action bar (T2.1.3, docs/ui/03 §6). It shows the scope
+                {/* Bulk action bar (T2.1.3, docs/ui-ux/03 §6). It shows the scope
                     first and wires the bulk writes that exist; the rest are
                     blocked with their reason. */}
                 {selection.length > 1 && (

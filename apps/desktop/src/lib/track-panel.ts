@@ -3,7 +3,7 @@
  *
  * Kept free of React and Tauri so the tab rules and the file/cue formatting can
  * be unit tested with `node --test`. The tab list is the locked model from
- * `docs/plan/02-experience/track-panel-and-player.md` §2.
+ * `docs/specs/experience/track-panel-and-player.md` §2.
  */
 
 import type { CuePoint } from "@dj-assistant/shared";

@@ -2,7 +2,7 @@
  * Pure keyboard-ownership rules for the rating widget (T2.1.4).
  *
  * The widget is a single focusable cell: `1`–`5` set a rating and `0` clears it
- * (`docs/ui/03-LIBRARY-VIEW.md` §3.4). The preview player also listens on
+ * (`docs/ui-ux/03-LIBRARY-VIEW.md` §3.4). The preview player also listens on
  * `window` for digits 1–8 (hot cues), so two things must be provable:
  *
  * 1. the rating widget claims its digits while it has focus, and

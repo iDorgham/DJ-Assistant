@@ -335,7 +335,7 @@ export function SettingsView({
                 </p>
                 <p>
                   The approved v1 plan is mirrored at{" "}
-                  <code className="font-mono text-dj-text">docs/plan/README.md</code> with decisions
+                  <code className="font-mono text-dj-text">docs/plans/v1/README.md</code> with decisions
                   D-001–D-052. Playlists, Discover, Statistics and Publish open with honest
                   placeholders until their stages land.
                 </p>

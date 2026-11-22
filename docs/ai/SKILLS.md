@@ -27,8 +27,8 @@ loads. For the agents, commands, and scripts that drive routing, see
 - Skills are advertised to the model by ID + description; the agent loads one
   with the `skill` tool, or you can force one from a prompt with `@skill-id`.
 - Skills are **advisory technique, not project authority**. For anything UI-facing,
-  [`docs/ui/01-DESIGN-SYSTEM.md`](../ui/01-DESIGN-SYSTEM.md) and the rest of
-  [`docs/ui/`](../ui/README.md) remain the source of truth for DJ Assistant's
+  [`docs/ui-ux/01-DESIGN-SYSTEM.md`](../ui-ux/01-DESIGN-SYSTEM.md) and the rest of
+  [`docs/ui-ux/`](../ui-ux/README.md) remain the source of truth for DJ Assistant's
   tokens, components, and layout — a generic design skill never overrides them.
 - Skills are additive: load the one that matches the task, ignore the rest.
 - With 240 skills registered, prefer the **router skills** (`design`, `tauri`,
@@ -298,7 +298,7 @@ ownership across Rust/C++/C) · `go-concurrency-patterns`
 | `material-3` | [hamen/material-3-skill](https://github.com/hamen/material-3-skill) | Material Design 3 in depth: Jetpack Compose primary, Flutter and `@material/web` secondary |
 
 Neither system is used by DJ Assistant (it has its own token set in
-`docs/ui/01-DESIGN-SYSTEM.md`); these are for reference, comparison, or
+`docs/ui-ux/01-DESIGN-SYSTEM.md`); these are for reference, comparison, or
 non-project tasks. `design-system-frameworks` (§4) covers the survey level.
 
 ---

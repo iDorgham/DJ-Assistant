@@ -11,7 +11,7 @@ interface TransportCoreProps {
 /**
  * CUE + Play/Pause. Leads the transport row, immediately right of the artwork
  * and left of the volume group. There is no Stop button — pause is the
- * stop-like action (docs/plan/03-player/player-model-and-layouts.md §7).
+ * stop-like action (docs/specs/player/player-model-and-layouts.md §7).
  */
 export function TransportCore({
   isPlaying,

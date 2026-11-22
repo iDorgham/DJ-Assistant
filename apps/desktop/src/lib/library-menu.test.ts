@@ -117,7 +117,7 @@ test("no blocked action is missing from the menu", () => {
 });
 
 // --- The blocked stubs (T2.1.10 Batch B/C) ---------------------------------
-// `docs/ui/03-LIBRARY-VIEW.md` §3.5 lists menu items whose features do not
+// `docs/ui-ux/03-LIBRARY-VIEW.md` §3.5 lists menu items whose features do not
 // exist yet. The spec for this batch is that they are *visible but disabled,
 // with a tooltip that says when they land* — so a user can see the shape of
 // the feature and is not left guessing whether the app forgot the item.
