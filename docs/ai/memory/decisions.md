@@ -309,4 +309,4 @@ The v1 plan was split by kind: delivery stays together in `docs/plans/v1/`.
 **Why:** two UI folders, plans in four places and two task trackers had drifted apart
 (audit `docs/audits/2026-11-22-docs-and-plans-audit.md`).
 **Reverses if:** the team adopts a docs tool that imposes its own layout. Old → new
-paths: `scripts/docs-reorg-2026-11.mjs`.
+paths: `scripts/docs-reorg-2026-11.cjs`.

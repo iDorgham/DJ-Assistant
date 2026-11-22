@@ -1,19 +1,26 @@
 #!/usr/bin/env node
+/* eslint-disable @typescript-eslint/no-require-imports -- CommonJS, so the DeepSource JS analyzer does not reject imports. */
 // One-shot docs reorganisation (2026-11-22): rewrites every reference to a moved
 // doc across the repository, then moves the files (git mv for tracked files).
 //
-//   node scripts/docs-reorg-2026-11.mjs            # dry run: prints the plan
-//   node scripts/docs-reorg-2026-11.mjs --apply    # rewrite references + move
+//   node scripts/docs-reorg-2026-11.cjs            # dry run: prints the plan
+//   node scripts/docs-reorg-2026-11.cjs --apply    # rewrite references + move
 //
 // Kept in the repo as the record of how old paths map to new ones; the
 // RULES table below is the authoritative old -> new path map.
-import { execFileSync } from "node:child_process";
-import fs from "node:fs";
-import path from "node:path";
-import { fileURLToPath } from "node:url";
+const { execFileSync } = require("node:child_process");
+const fs = require("node:fs");
+const path = require("node:path");
 
-const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
+const ROOT = path.resolve(__dirname, "..");
 const APPLY = process.argv.includes("--apply");
+
+// One-shot: the RULES describe the pre-2026-11-22 layout. Once docs/ui/ is gone
+// the move has happened, and applying again would re-move the new folders.
+if (APPLY && !fs.existsSync(path.join(ROOT, "docs", "ui"))) {
+  console.error("docs/ui/ no longer exists: the reorganisation was already applied.");
+  process.exit(1);
+}
 
 // Ordered: the first matching rule wins. Keys ending in "/" are directory prefixes.
 const RULES = [
@@ -93,7 +100,7 @@ for (const to of moves.values()) {
 // Files whose references get rewritten.
 const SKIP_DIR = /(^|\/)(node_modules|target|dist|\.git|skills|\.impeccable)(\/|$)/;
 const TEXT = /\.(md|mdx|json|jsonc|ts|tsx|js|mjs|cjs|rs|py|sh|ps1|ya?ml|toml|txt|html|css)$/i;
-const SELF = "scripts/docs-reorg-2026-11.mjs";
+const SELF = "scripts/docs-reorg-2026-11.cjs";
 const local = ["AGENTS.local.md", "CLAUDE.local.md"].filter((f) => fs.existsSync(path.join(ROOT, f)));
 const scan = [...new Set([...tracked, ...untracked, ...local])].filter(
   (f) => TEXT.test(f) && !SKIP_DIR.test(f) && f !== SELF && !/CHANGELOG|lock/i.test(path.basename(f)) &&

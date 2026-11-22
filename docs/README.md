@@ -141,4 +141,4 @@ update this README when a folder is added.
 
 *The 2026-11-22 reorganisation is recorded in the
 [docs and plans audit](audits/2026-11-22-docs-and-plans-audit.md); the old → new path
-map is in [`scripts/docs-reorg-2026-11.mjs`](../scripts/docs-reorg-2026-11.mjs).*
+map is in [`scripts/docs-reorg-2026-11.cjs`](../scripts/docs-reorg-2026-11.cjs).*

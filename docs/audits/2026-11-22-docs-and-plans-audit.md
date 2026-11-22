@@ -6,7 +6,7 @@ images), the root-level docs, and every plan or task file in the repository.
 references were rewritten (114 files, including agent definitions, policy files
 and source comments), and the plans were consolidated under
 [`docs/plans/`](../plans/README.md) with one task tracker.
-**Tooling:** [`scripts/docs-reorg-2026-11.mjs`](../../scripts/docs-reorg-2026-11.mjs)
+**Tooling:** [`scripts/docs-reorg-2026-11.cjs`](../../scripts/docs-reorg-2026-11.cjs)
 holds the old → new path map and did the rewrite + `git mv`. A link check before
 and after found the same single broken link (see §5), so the move broke nothing.
 
@@ -91,7 +91,7 @@ Decisions made (and why):
    files before.
 
 The full old → new map is the `RULES` table in
-[`scripts/docs-reorg-2026-11.mjs`](../../scripts/docs-reorg-2026-11.mjs).
+[`scripts/docs-reorg-2026-11.cjs`](../../scripts/docs-reorg-2026-11.cjs).
 
 ---
 
