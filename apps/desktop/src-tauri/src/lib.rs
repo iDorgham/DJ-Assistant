@@ -79,6 +79,7 @@ pub fn run() {
             commands::get_track,
             commands::get_artwork,
             commands::refresh_artwork,
+            commands::backfill_grid_confidence,
             commands::audio_load,
             commands::audio_play,
             commands::audio_pause,

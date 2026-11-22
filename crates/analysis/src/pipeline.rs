@@ -167,10 +167,38 @@ pub fn run_full_analysis<P: AsRef<Path>>(path: P) -> Result<AnalysisResults, Ana
     Ok(results)
 }
 
+/// Decodes a file and runs only the beat-grid detector — no key, vocal,
+/// phrase or loudness work, and no ONNX model.
+///
+/// Used to backfill `beatgrid_confidence` for rows analysed before that
+/// column existed (issue #89). It is the same decode and the same
+/// [`detect_beat_grid`] call [`run_full_analysis`] makes, so for an unchanged
+/// file the grid matches what the full analysis stored.
+pub fn run_beat_grid_only<P: AsRef<Path>>(path: P) -> Result<BeatGrid, AnalysisError> {
+    let audio = decode_audio_file(path)?;
+    if audio.samples.is_empty() {
+        return Err(AnalysisError::EmptyAudio);
+    }
+    detect_beat_grid(&audio, None)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
     use std::path::PathBuf;
+
+    #[test]
+    fn the_grid_only_pass_matches_the_full_analysis_grid() {
+        let full = run_full_analysis(fixture_path()).expect("full analysis must succeed");
+        let grid = run_beat_grid_only(fixture_path()).expect("grid-only pass must succeed");
+        assert_eq!(full.bpm, Some(grid.bpm));
+        assert_eq!(full.beatgrid_confidence, Some(grid.confidence));
+    }
+
+    #[test]
+    fn the_grid_only_pass_reports_a_missing_file() {
+        assert!(run_beat_grid_only("definitely/not/here.flac").is_err());
+    }
 
     /// Path to the real FLAC fixture, matching the convention used across the
     /// `bpm`/`key`/`phrase`/`vocal`/`loudness` modules.

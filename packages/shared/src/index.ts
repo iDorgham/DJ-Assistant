@@ -203,6 +203,22 @@ export interface GetArtworkRequest {
 export type GetArtworkResponse = string | null;
 
 /** Result of filling artwork pointers for tracks imported without them. */
+/** Outcome of the one-time beat-grid confidence backfill (issue #89). */
+export interface BackfillGridConfidenceResponse {
+  /** Rows owed a confidence: complete at the current version, still empty. */
+  scanned: number;
+  /** Rows that now carry one. */
+  updated: number;
+  /** Rows where no tempo could be established now. */
+  noTempo: number;
+  /** Rows whose recomputed BPM is not the stored one, left for a forced re-analysis. */
+  mismatched: number;
+  /** Rows whose file could not be decoded, or whose write failed. */
+  failed: number;
+  /** The first few per-track failures. */
+  errors: string[];
+}
+
 export interface RefreshArtworkResponse {
   /** Rows whose embedded artwork was missing from the cache. */
   scanned: number;

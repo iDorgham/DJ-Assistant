@@ -110,6 +110,25 @@ pub struct RefreshArtworkResponse {
     pub errors: Vec<String>,
 }
 
+/// Outcome of the one-time beat-grid confidence backfill (issue #89).
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct BackfillGridConfidenceResponse {
+    /// Rows owed a confidence: complete at the current version, still NULL.
+    pub scanned: usize,
+    /// Rows that now carry one.
+    pub updated: usize,
+    /// Rows where no tempo could be established now.
+    pub no_tempo: usize,
+    /// Rows whose recomputed BPM is not the stored one, left for a forced
+    /// re-analysis.
+    pub mismatched: usize,
+    /// Rows whose file could not be decoded, or whose write failed.
+    pub failed: usize,
+    /// The first few per-track failures.
+    pub errors: Vec<String>,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ScanProgressEvent {

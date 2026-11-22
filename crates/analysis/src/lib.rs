@@ -40,7 +40,7 @@ pub use phrase::{
     PHRASE_PIPELINE_VERSION,
 };
 pub use pipeline::{
-    classify_analysis_status, run_full_analysis, AnalysisResults,
+    classify_analysis_status, run_beat_grid_only, run_full_analysis, AnalysisResults,
     PHRASE_CONFIDENCE_REVIEW_THRESHOLD, VOCAL_PRESENCE_THRESHOLD,
 };
 pub use registry::{

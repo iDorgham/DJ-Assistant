@@ -3,6 +3,7 @@ import { test } from "node:test";
 
 import {
   formatGridConfidence,
+  gridBackfillStatus,
   gridConfidenceTier,
   GRID_CONFIDENCE_HIGH_THRESHOLD,
   GRID_CONFIDENCE_LOW_THRESHOLD,
@@ -43,4 +44,20 @@ test("confidence formats as a whole percentage", () => {
   assert.equal(formatGridConfidence(0.87), "87%");
   assert.equal(formatGridConfidence(1), "100%");
   assert.equal(formatGridConfidence(0), "0%");
+});
+
+test("the launch backfill stays quiet when it filled nothing", () => {
+  assert.equal(gridBackfillStatus({ updated: 0, failed: 0 }), null);
+  assert.equal(gridBackfillStatus({ updated: 0, failed: 3 }), null);
+});
+
+test("the launch backfill reports what it filled", () => {
+  assert.deepEqual(gridBackfillStatus({ updated: 1, failed: 0 }), {
+    message: "Measured beat-grid confidence for 1 track.",
+    tone: "ok",
+  });
+  assert.deepEqual(gridBackfillStatus({ updated: 12, failed: 2 }), {
+    message: "Measured beat-grid confidence for 12 tracks — 2 couldn't be read.",
+    tone: "error",
+  });
 });
