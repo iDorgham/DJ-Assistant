@@ -1230,7 +1230,7 @@ pub async fn tag_apply_renames(
     if planned.is_empty() {
         tx.commit().map_err(|e| e.to_string())?;
         return Ok(TagApplyResponse {
-            undo_id: String::new(),
+            undo_id: String::default(),
             updated: 0,
         });
     }

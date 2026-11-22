@@ -117,18 +117,18 @@ export function TagSurgeonDialog({ trackIds, onClose, onChanged }: TagSurgeonDia
     let cancelled = false;
     setSamples(new Map());
     setSampleError(null);
-    if (!report) return;
-    const ids = previewSampleIds(report);
-    if (ids.length === 0) return;
-    tagPreviewTracks({ trackIds: ids })
-      .then((tracks) => {
-        if (!cancelled) setSamples(new Map(tracks.map((track) => [track.trackId, track])));
-      })
-      .catch((cause: unknown) => {
-        if (!cancelled) {
-          setSampleError(cause instanceof Error ? cause.message : String(cause));
-        }
-      });
+    const ids = report ? previewSampleIds(report) : [];
+    if (ids.length > 0) {
+      tagPreviewTracks({ trackIds: ids })
+        .then((tracks) => {
+          if (!cancelled) setSamples(new Map(tracks.map((track) => [track.trackId, track])));
+        })
+        .catch((cause: unknown) => {
+          if (!cancelled) {
+            setSampleError(cause instanceof Error ? cause.message : String(cause));
+          }
+        });
+    }
     return () => {
       cancelled = true;
     };

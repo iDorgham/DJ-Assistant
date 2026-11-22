@@ -48,7 +48,7 @@ export function TagsTab({
       ["Bitrate", track.bitrateKbps != null ? `${track.bitrateKbps} kbps` : null],
       ["Lyrics", track.lyrics],
     ] as const
-  ).filter(([, value]) => Boolean(value && value.trim()));
+  ).filter(([, value]) => Boolean(value?.trim()));
   return (
     <div className="space-y-5">
       <section>
