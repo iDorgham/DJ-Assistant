@@ -98,6 +98,7 @@ import {
   Compass,
   Inbox,
   Settings,
+  HeartPulse,
   type LucideIcon,
 } from "lucide-react";
 import {
@@ -186,6 +187,7 @@ import { TagChips } from "./components/TagChips";
 import { RowContextMenu } from "./components/RowContextMenu";
 import { MetadataEditor } from "./components/MetadataEditor";
 import { TagSurgeonDialog } from "./components/TagSurgeonDialog";
+import { MaintainDialog, type MaintainRemoval } from "./components/MaintainDialog";
 import { SettingsView } from "./components/SettingsView";
 import { previewEngine } from "./lib/audio-engine";
 
@@ -1321,6 +1323,8 @@ export default function App() {
   // asks for the rows every other library read filters out, and its length is
   // the toolbar count.
   const [removedOpen, setRemovedOpen] = useState(false);
+  // Library › Maintain: health score, duplicate review and versions (T2.3.1–T2.3.3).
+  const [maintainOpen, setMaintainOpen] = useState(false);
   const [removed, setRemoved] = useState<RemovedTrack[]>([]);
   const [removedLoading, setRemovedLoading] = useState(false);
   const [removedError, setRemovedError] = useState<string | null>(null);
@@ -1345,6 +1349,7 @@ export default function App() {
     healthOpen ||
     chartsOpen ||
     removedOpen ||
+    maintainOpen ||
     editorTrack !== null ||
     removeConfirm !== null ||
     surgeonTrack !== null;
@@ -2401,6 +2406,69 @@ export default function App() {
     }
   };
 
+  // Maintain's "keep this one": the same undoable soft remove as the row menu,
+  // so the copies leave the library, stay on disk and come back with Undo.
+  const removeFromMaintain = async (trackIds: string[]): Promise<MaintainRemoval | null> => {
+    if (trackIds.length === 0) return null;
+    try {
+      const res = await removeTracks({ trackIds });
+      setSelection((current) => current.filter((id) => !trackIds.includes(id)));
+      setInspectedTrack((current) => (current && trackIds.includes(current.id) ? null : current));
+      refreshLibrary();
+      const message = describeRemove(res.removed);
+      pushStatus(message);
+      if (res.undoId) offerUndo(res.undoId, message, "remove");
+      return { message, undoId: res.undoId ?? null };
+    } catch (err) {
+      console.error("Failed to remove duplicate copies from the library:", err);
+      pushStatus("Couldn't remove the copies from the library", "error");
+      return null;
+    }
+  };
+
+  // Undo from inside Maintain, whose dialog covers the app's Undo toast. The
+  // toast for the same removal is dismissed so it cannot be used twice.
+  const undoRemoveFromMaintain = async (undoId: string): Promise<boolean> => {
+    if (pendingUndo?.undoId === undoId) dismissUndo();
+    try {
+      const res = await undoRemoveTracks({ undoId });
+      refreshLibrary();
+      pushStatus(describeUndoRemove(res.restored, res.skipped));
+      return true;
+    } catch (err) {
+      console.error("Failed to undo the Maintain removal:", err);
+      pushStatus("Couldn't undo that removal", "error");
+      return false;
+    }
+  };
+
+  // Bumped whenever Maintain closes or opens a track, so a slow track fetch
+  // from an earlier click or a closed dialog cannot open the panel later.
+  const maintainOpenRequest = useRef(0);
+  const closeMaintain = () => {
+    maintainOpenRequest.current += 1;
+    setMaintainOpen(false);
+  };
+
+  // Maintain lists carry ids only; the panel needs the full row, which may not
+  // be on the current page, so it is fetched.
+  const openTrackFromMaintain = async (trackId: string) => {
+    maintainOpenRequest.current += 1;
+    const request = maintainOpenRequest.current;
+    const loaded = tracks.find((t) => t.id === trackId);
+    try {
+      const track = loaded ?? (await getTrack({ trackId })).track;
+      if (request !== maintainOpenRequest.current) return;
+      closeMaintain();
+      openTrackPanel(track);
+    } catch (err) {
+      // A newer click or a closed dialog already superseded this fetch.
+      if (request !== maintainOpenRequest.current) return;
+      console.error("Failed to open the track from Maintain:", err);
+      pushStatus("Couldn't open that track", "error");
+    }
+  };
+
   // The way back once the Undo toast is gone (issue #62). The ids and stamps
   // come from the removed view's own rows, so nothing here depends on the
   // removal's snapshot: the backend clears the stamp and writes a new
@@ -3055,6 +3123,16 @@ export default function App() {
                   >
                     <ArchiveRestore className="h-3.5 w-3.5 text-dj-text-muted" />
                     <span>{describeRemovedCount(removed.length)}</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setMaintainOpen(true)}
+                    className="flex h-6 items-center gap-1 rounded-sm border border-dj-border bg-dj-elevated px-2 text-[11px] text-dj-text-secondary transition hover:bg-dj-hover"
+                    title="Library health score, duplicate review and version families"
+                    aria-haspopup="dialog"
+                  >
+                    <HeartPulse className="h-3.5 w-3.5 text-dj-success" aria-hidden="true" />
+                    <span>Maintain</span>
                   </button>
                   <button
                     type="button"
@@ -4171,6 +4249,15 @@ export default function App() {
           trackIds={editorScope.trackIds}
           onSave={handleSaveMetadata}
           onClose={() => setEditorTrack(null)}
+        />
+      )}
+
+      {maintainOpen && (
+        <MaintainDialog
+          onClose={closeMaintain}
+          onOpenTrack={openTrackFromMaintain}
+          onRemoveTracks={removeFromMaintain}
+          onUndoRemove={undoRemoveFromMaintain}
         />
       )}
 

@@ -948,3 +948,113 @@ pub struct UndoTrackMetadataResponse {
     /// snapshot was taken, so restoring would overwrite the newer edit.
     pub skipped: usize,
 }
+
+// --- Library › Maintain: duplicates (T2.3.1), versions (T2.3.2), health (T2.3.3) ---
+
+/// The track fields every Maintain list renders.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct MaintainTrack {
+    pub id: String,
+    pub title: String,
+    pub artist: String,
+    pub album: Option<String>,
+    pub duration_ms: i64,
+    pub format: Option<String>,
+    pub bitrate_kbps: Option<i64>,
+    pub file_path: String,
+    pub isrc: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct DuplicateGroupView {
+    pub key: String,
+    /// "same_isrc" | "near_match".
+    pub reason: String,
+    pub tracks: Vec<MaintainTrack>,
+}
+
+/// A byte-identical file the scanner skipped because `track` already owns it.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct DuplicateCopyView {
+    pub copy_path: String,
+    pub detected_at: String,
+    pub track: MaintainTrack,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct LibraryDuplicatesResponse {
+    pub groups: Vec<DuplicateGroupView>,
+    pub copies: Vec<DuplicateCopyView>,
+    /// Groups hidden by an earlier "Keep both".
+    pub dismissed_count: usize,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct DismissDuplicateGroupRequest {
+    pub key: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ForgetDuplicateCopyRequest {
+    pub path: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct VersionMemberView {
+    pub track: MaintainTrack,
+    /// A `VersionKind` id: "original", "radio", "extended", "club", ...
+    pub kind: String,
+    pub label: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct VersionGroupView {
+    pub key: String,
+    pub artist: String,
+    pub base_title: String,
+    pub members: Vec<VersionMemberView>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct LibraryVersionsResponse {
+    pub groups: Vec<VersionGroupView>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct HealthCountView {
+    pub label: String,
+    pub count: u64,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct HealthCategoryView {
+    pub id: String,
+    pub label: String,
+    pub weight: u32,
+    /// False for a category the app cannot measure yet; it is neutral (D-050).
+    pub configured: bool,
+    pub score: Option<f64>,
+    pub counts: Vec<HealthCountView>,
+    /// Up to 500 failing tracks, for drill-down.
+    pub affected: Vec<MaintainTrack>,
+    pub affected_total: u64,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct LibraryHealthResponse {
+    pub score: Option<f64>,
+    pub track_count: u64,
+    pub categories: Vec<HealthCategoryView>,
+}

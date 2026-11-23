@@ -9,6 +9,26 @@ project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- **Library › Maintain: health score, duplicates and versions (T2.3.1–T2.3.3)** — a new
+  Maintain dialog on the Library toolbar with three tabs. **Health** scores the library
+  0–100 with the locked D-050 weights (metadata 20, tags 15, analysis 15, files 15,
+  duplicates 10, playlists 10, sync 10, backup 5); categories the app cannot measure yet
+  are neutral and drop out of the mean (Analysis counts a stored beat grid; Files counts
+  missing and unreadable or empty files, not corrupt audio inside a readable one), and
+  every category lists its failing counts and tracks, each opening in the Track panel.
+  **Duplicates** groups present tracks by same ISRC or by artist + title (version marker
+  included) + length within 2 s, and lists byte-identical files the scanner skipped at
+  another path — now recorded in migration 012 `duplicate_files` instead of only
+  counted, after a full byte comparison with the library file. Only scans run on this
+  build record copies: copies skipped by earlier scans appear in Duplicates after a
+  rescan, and a rescan re-points a track whose file was moved or renamed. Keep this
+  soft-removes the others through the existing undoable remove, with its own Undo inside
+  the dialog; Keep both hides the group until its membership changes; Forget drops a
+  copy record, never the file. **Versions** groups Radio / Extended / Club /
+  Instrumental / Remix and other markers of one record. Rules in `crates/core`
+  (`duplicates`, `versions`, `library_health`, `library_hygiene`) with unit tests and
+  schema contract tests; commands in `apps/desktop/src-tauri/src/maintain.rs`.
+  Running-window QA pending.
 - **Arrow keys in the star rating cell (issue #74)** — `←` / `→` move the roving
   tab stop between stars (no wrap) and `Home` / `End` jump to star 1 / 5, the
   radio-group pattern for users who do not know the `1`–`5` / `0` shortcuts. The

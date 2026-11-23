@@ -63,6 +63,11 @@ import type {
   ChartImportResponse,
   ChartListRequest,
   ChartListResponse,
+  LibraryDuplicatesResponse,
+  DismissDuplicateGroupRequest,
+  ForgetDuplicateCopyRequest,
+  LibraryVersionsResponse,
+  LibraryHealthResponse,
 } from "@dj-assistant/shared";
 
 // Safe Tauri invocation wrapper with mock fallback for web development
@@ -413,6 +418,48 @@ export async function tagHistory(): Promise<TagHistoryEntry[]> {
   if (!isTauri) return [];
   const { invoke } = await import("@tauri-apps/api/core");
   return invoke<TagHistoryEntry[]>("tag_history");
+}
+
+/**
+ * Duplicate review (T2.3.1): same-ISRC and near-match groups over the present
+ * library, plus byte-identical files the scanner skipped. Read-only. A browser
+ * tab is a mock and reports nothing rather than invented duplicates.
+ */
+export async function libraryDuplicates(): Promise<LibraryDuplicatesResponse> {
+  if (!isTauri) return { groups: [], copies: [], dismissedCount: 0 };
+  const { invoke } = await import("@tauri-apps/api/core");
+  return invoke<LibraryDuplicatesResponse>("library_duplicates");
+}
+
+/** "Keep both": hides a duplicate group until its membership changes. */
+export async function dismissDuplicateGroup(req: DismissDuplicateGroupRequest): Promise<void> {
+  if (!isTauri) throw new Error("Keeping both copies needs the desktop app.");
+  const { invoke } = await import("@tauri-apps/api/core");
+  await invoke("dismiss_duplicate_group", { request: req });
+}
+
+/** Forgets a recorded file copy. Deletes the record, never the file. */
+export async function forgetDuplicateCopy(req: ForgetDuplicateCopyRequest): Promise<boolean> {
+  if (!isTauri) throw new Error("Forgetting a copy needs the desktop app.");
+  const { invoke } = await import("@tauri-apps/api/core");
+  return invoke<boolean>("forget_duplicate_copy", { request: req });
+}
+
+/** Version families (T2.3.2): Radio / Extended / Club / Instrumental and the rest. */
+export async function libraryVersions(): Promise<LibraryVersionsResponse> {
+  if (!isTauri) return { groups: [] };
+  const { invoke } = await import("@tauri-apps/api/core");
+  return invoke<LibraryVersionsResponse>("library_versions");
+}
+
+/**
+ * The Library Health Score (T2.3.3) with every category's counts and failing
+ * tracks. A browser tab has no library to score, so it reports an empty one.
+ */
+export async function libraryHealth(): Promise<LibraryHealthResponse> {
+  if (!isTauri) return { score: null, trackCount: 0, categories: [] };
+  const { invoke } = await import("@tauri-apps/api/core");
+  return invoke<LibraryHealthResponse>("library_health");
 }
 
 /** The stored tag aliases (T2.2.5). A browser tab has none to show. */

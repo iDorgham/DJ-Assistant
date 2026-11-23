@@ -27,12 +27,15 @@ const MIGRATION_010: &str =
     include_str!("../../../apps/desktop/src-tauri/migrations/010_track_extra_metadata.sql");
 const MIGRATION_011: &str =
     include_str!("../../../apps/desktop/src-tauri/migrations/011_tag_aliases.sql");
+const MIGRATION_012: &str =
+    include_str!("../../../apps/desktop/src-tauri/migrations/012_duplicates.sql");
 
 /// The migrations this crate's contract tests need, in the order `db.rs`
 /// applies them: the base schema, the tag columns, the enrichment columns, the
 /// energy column, the custom-tag table and the soft-removal column.
 /// Migration 009 adds the beat-grid confidence; 010 adds the import-time
-/// metadata fields (Comment 2, composer, ISRC and the rest).
+/// metadata fields (Comment 2, composer, ISRC and the rest); 012 adds the
+/// duplicate-review tables.
 /// Migrations 004-005 (enrichment candidates, chart snapshots) are deliberately
 /// left out — no contract here reads those tables.
 const MIGRATIONS: &[(i64, &str)] = &[
@@ -45,6 +48,7 @@ const MIGRATIONS: &[(i64, &str)] = &[
     (9, MIGRATION_009),
     (10, MIGRATION_010),
     (11, MIGRATION_011),
+    (12, MIGRATION_012),
 ];
 
 /// Opens (or creates) a **file-backed** database at `path`, applies the pragmas and

@@ -10,9 +10,12 @@
 pub mod aiff;
 pub mod audio;
 pub mod dedup;
+pub mod duplicates;
 pub mod enrichment;
 pub mod fingerprint;
 pub mod grid_backfill;
+pub mod library_health;
+pub mod library_hygiene;
 pub mod library_query;
 pub mod library_reads;
 pub mod library_remove;
@@ -30,6 +33,7 @@ pub mod tag_aliases;
 pub mod tag_clustering;
 pub mod tag_rewrite;
 pub mod tags;
+pub mod versions;
 
 pub use aiff::aiff_duration_ms;
 pub use audio::{discover_audio_files, is_supported_audio, SUPPORTED_EXTENSIONS};
@@ -42,7 +46,7 @@ pub use enrichment::{
     parse_lastfm_response, parse_musicbrainz_response, propose_fields, split_discogs_title,
     tag_health_score, EnrichmentProvider, FieldProposal, LocalTrack, ProviderCandidate,
 };
-pub use fingerprint::{compute_file_fingerprint, FINGERPRINT_WINDOW};
+pub use fingerprint::{compute_file_fingerprint, files_have_same_content, FINGERPRINT_WINDOW};
 pub use library_query::{
     sort_column, BuiltQuery, QueryError, QueryParam, TrackFilters, TrackQuery, SORT_KEYS,
 };

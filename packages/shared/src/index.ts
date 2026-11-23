@@ -847,3 +847,109 @@ export interface ChartListResponse {
   entries: ChartEntry[];
   total: number;
 }
+
+// --- Library › Maintain: duplicates (T2.3.1), versions (T2.3.2), health (T2.3.3) ---
+
+/** The track fields every Maintain list renders. */
+export interface MaintainTrack {
+  id: string;
+  title: string;
+  artist: string;
+  album?: string | null;
+  durationMs: number;
+  format?: string | null;
+  bitrateKbps?: number | null;
+  filePath: string;
+  isrc?: string | null;
+}
+
+/** Why a group's tracks are believed to be one recording. */
+export type DuplicateReason = "same_isrc" | "near_match";
+
+export interface DuplicateGroupView {
+  /** Hash of the membership; a "Keep both" lapses when a track joins or leaves. */
+  key: string;
+  reason: DuplicateReason;
+  tracks: MaintainTrack[];
+}
+
+/** A byte-identical file the scanner skipped because `track` already owns it. */
+export interface DuplicateCopyView {
+  copyPath: string;
+  detectedAt: string;
+  track: MaintainTrack;
+}
+
+export interface LibraryDuplicatesResponse {
+  groups: DuplicateGroupView[];
+  copies: DuplicateCopyView[];
+  /** Groups hidden by an earlier "Keep both". */
+  dismissedCount: number;
+}
+
+export interface DismissDuplicateGroupRequest {
+  key: string;
+}
+
+export interface ForgetDuplicateCopyRequest {
+  path: string;
+}
+
+export type VersionKind =
+  | "original"
+  | "radio"
+  | "extended"
+  | "club"
+  | "instrumental"
+  | "acapella"
+  | "dub"
+  | "vip"
+  | "remix"
+  | "edit"
+  | "live"
+  | "other";
+
+export interface VersionMemberView {
+  track: MaintainTrack;
+  kind: VersionKind;
+  /** The marker as written ("Extended Mix"); absent for an unmarked title. */
+  label?: string | null;
+}
+
+export interface VersionGroupView {
+  key: string;
+  artist: string;
+  baseTitle: string;
+  members: VersionMemberView[];
+}
+
+export interface LibraryVersionsResponse {
+  groups: VersionGroupView[];
+}
+
+export interface HealthCountView {
+  label: string;
+  count: number;
+}
+
+export interface HealthCategoryView {
+  id: string;
+  label: string;
+  /** Locked v1 weight in percent (D-050). */
+  weight: number;
+  /** False while the app cannot measure the category; it is neutral. */
+  configured: boolean;
+  /** 0–100; null when not configured. */
+  score: number | null;
+  counts: HealthCountView[];
+  /** Up to 500 failing tracks, for drill-down. */
+  affected: MaintainTrack[];
+  affectedTotal: number;
+}
+
+export interface LibraryHealthResponse {
+  /** 0–100 over the configured categories; null for an empty library. */
+  score: number | null;
+  trackCount: number;
+  categories: HealthCategoryView[];
+}

@@ -26,6 +26,7 @@ const MIGRATIONS: &[(i64, &str)] = &[
         include_str!("../migrations/010_track_extra_metadata.sql"),
     ),
     (11, include_str!("../migrations/011_tag_aliases.sql")),
+    (12, include_str!("../migrations/012_duplicates.sql")),
 ];
 
 impl Database {
@@ -212,6 +213,8 @@ mod tests {
             "streaming_exports",
             "streaming_matches",
             "track_tags",
+            "duplicate_files",
+            "duplicate_dismissals",
         ] {
             assert!(
                 present.contains(&table.to_string()),

@@ -6,7 +6,12 @@ use uuid::Uuid;
 
 use dj_assistant_core::{
     cache_artwork, compute_file_fingerprint, discover_audio_files, extract_metadata,
-    ScanDeduplicator,
+    files_have_same_content, ScanDeduplicator,
+};
+
+use dj_assistant_core::library_hygiene::{
+    is_distinct_copy, COPY_IS_RECORDED_SQL, FORGET_COPY_SQL, HASH_IN_WORKSPACE_SQL,
+    RECORD_COPY_SQL, RELOCATE_TRACK_SQL, SCAN_WORKSPACE, TRACK_BY_HASH_SQL,
 };
 
 use crate::db::Database;
@@ -69,20 +74,29 @@ pub fn run_scan(
                     Ok(g) => g,
                     Err(_) => break,
                 };
+                // Scoped to the workspace the scan imports into: a fingerprint
+                // held only by another workspace must not stop this import.
                 dedup.classify(&hash, |candidate| {
                     db_guard
                         .conn()
-                        .prepare("SELECT COUNT(*) FROM tracks WHERE file_hash = ?")
-                        .and_then(|mut stmt| {
-                            stmt.query_row([candidate], |row| row.get::<_, i64>(0))
-                        })
-                        .map(|count| count > 0)
+                        .query_row(
+                            HASH_IN_WORKSPACE_SQL,
+                            rusqlite::params![SCAN_WORKSPACE, candidate],
+                            |row| row.get::<_, bool>(0),
+                        )
                         .unwrap_or(false)
                 })
             };
 
             if duplicate_kind.is_duplicate() {
                 total_duplicates += 1;
+                // A byte-identical file at another path can never become a row of
+                // its own (UNIQUE file_hash): re-point a row whose file moved, or
+                // record the copy for the Duplicates review — otherwise it is
+                // invisible. A rescan of the same file changes nothing.
+                if let Err(err) = record_duplicate_copy(&db, &hash, &path_str) {
+                    log::warn!("Failed to record duplicate copy {}: {}", path_str, err);
+                }
                 let _ = app.emit(
                     "scan:progress",
                     ScanProgressEvent {
@@ -208,9 +222,10 @@ pub fn run_scan(
                         composer, album_artist, remixer, producer, grouping,
                         track_number, disc_number, isrc, catalog_number, release_date,
                         copyright, mood, mix_name, lyrics, bitrate_kbps, label_user_set
-                    ) VALUES (?, 'default', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0)",
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0)",
                     rusqlite::params![
                         track_id,
+                        SCAN_WORKSPACE,
                         path_str,
                         hash,
                         meta.file_size,
@@ -268,6 +283,12 @@ pub fn run_scan(
                     );
                     continue;
                 }
+
+                // This path is a track now, so any copy record left from an
+                // earlier scan (when its bytes matched another track) is stale.
+                if let Err(err) = db_guard.conn().execute(FORGET_COPY_SQL, [&path_str]) {
+                    log::warn!("Failed to clear the copy record for {}: {}", path_str, err);
+                }
             }
 
             total_imported += 1;
@@ -299,4 +320,76 @@ pub fn run_scan(
             },
         );
     });
+}
+
+/// Handles a scanned file whose fingerprint already belongs to a library row.
+///
+/// * The row's own file (a rescan): nothing to do.
+/// * The row's file is gone: the file was moved or renamed, so the row is
+///   re-pointed to `path` — a rescan is how a relocated library recovers.
+/// * Both files exist: `path` is recorded as a copy for the Duplicates review,
+///   but only after the bytes match in full, since the fingerprint covers the
+///   length and first MiB only. A path already recorded against the same
+///   track and fingerprint is not compared again, so rescans stay cheap.
+///
+/// The full comparison runs with the database lock released.
+fn record_duplicate_copy(db: &Mutex<Database>, hash: &str, path: &str) -> Result<(), String> {
+    use rusqlite::OptionalExtension;
+    let lock = || db.lock().map_err(|_| "database lock poisoned".to_string());
+    let owner: Option<(String, String)> = lock()?
+        .conn()
+        .query_row(
+            TRACK_BY_HASH_SQL,
+            rusqlite::params![SCAN_WORKSPACE, hash],
+            |row| Ok((row.get(0)?, row.get(1)?)),
+        )
+        .optional()
+        .map_err(|e| e.to_string())?;
+    let Some((track_id, owner_path)) = owner else {
+        return Ok(());
+    };
+    if !is_distinct_copy(&owner_path, path) {
+        return Ok(());
+    }
+    if !std::path::Path::new(&owner_path).exists() {
+        let now = chrono::Utc::now().to_rfc3339();
+        // The new path may carry a copy record from when both files existed;
+        // it is the track's own file now, so the record goes with the move.
+        let guard = lock()?;
+        let tx = guard
+            .conn()
+            .unchecked_transaction()
+            .map_err(|e| e.to_string())?;
+        tx.execute(RELOCATE_TRACK_SQL, rusqlite::params![path, now, track_id])
+            .map_err(|e| e.to_string())?;
+        tx.execute(FORGET_COPY_SQL, [path])
+            .map_err(|e| e.to_string())?;
+        tx.commit().map_err(|e| e.to_string())?;
+        log::info!("Track {} moved: {} -> {}", track_id, owner_path, path);
+        return Ok(());
+    }
+    let already_recorded: bool = lock()?
+        .conn()
+        .query_row(
+            COPY_IS_RECORDED_SQL,
+            rusqlite::params![path, track_id, hash],
+            |row| row.get(0),
+        )
+        .map_err(|e| e.to_string())?;
+    if already_recorded {
+        return Ok(());
+    }
+    if !files_have_same_content(&owner_path, path).map_err(|e| e.to_string())? {
+        log::info!(
+            "{} shares a fingerprint with {} but not its bytes; not recorded as a copy",
+            path,
+            owner_path
+        );
+        return Ok(());
+    }
+    lock()?
+        .conn()
+        .execute(RECORD_COPY_SQL, rusqlite::params![path, track_id, hash])
+        .map_err(|e| e.to_string())?;
+    Ok(())
 }
