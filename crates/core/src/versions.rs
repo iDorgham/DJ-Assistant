@@ -153,12 +153,20 @@ pub fn classify_marker(text: &str) -> Option<VersionKind> {
 
 /// A bracket group that is a credit or a release note rather than part of the
 /// title: `(feat. X)`, `[Remastered 2019]`. Only these are dropped from the
-/// base title; any other group (`(Part 2)`) stays, so it keeps tracks apart.
+/// base title; any other group (`(Part 2)`, `(Part 2 Remastered)`) stays, so
+/// it keeps tracks apart.
 fn is_credit_or_note(text: &str) -> bool {
     let normalized = normalize_name(text);
     let words: Vec<&str> = normalized.split_whitespace().collect();
-    matches!(words.first(), Some(&("feat" | "ft" | "featuring" | "with")))
-        || words.iter().any(|w| *w == "remaster" || *w == "remastered")
+    let is_remaster_word = |w: &&str| matches!(*w, "remaster" | "remastered");
+    // A remaster note is only the remaster word, a year and the usual filler.
+    let remaster_note = words.iter().any(is_remaster_word)
+        && words.iter().all(|w| {
+            is_remaster_word(w)
+                || matches!(*w, "digital" | "digitally" | "version" | "edition")
+                || (w.len() == 4 && w.chars().all(|c| c.is_ascii_digit()))
+        });
+    matches!(words.first(), Some(&("feat" | "ft" | "featuring" | "with"))) || remaster_note
 }
 
 /// `(kind, normalised label)` with "Original Mix" folded into the unmarked
@@ -226,6 +234,14 @@ pub fn parse_version(title: &str, mix_name: Option<&str>) -> ParsedVersion {
             if let Some(kind) = classify_marker(&suffix) {
                 found = Some((kind, suffix));
                 rest = rest[..index].trim_end().to_string();
+                // `Song (feat. Kim) - Extended Mix`: the credit before the
+                // suffix drops too, as it does before a bracketed marker.
+                while let Some((head, inner)) = split_trailing_group(&rest) {
+                    if !is_credit_or_note(inner.trim()) {
+                        break;
+                    }
+                    rest = head.trim_end().to_string();
+                }
             }
         }
     }
@@ -340,6 +356,27 @@ pub fn group_versions(tracks: &[VersionInput]) -> Vec<VersionGroup> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn a_credit_before_a_dashed_suffix_leaves_the_base_title() {
+        let dashed = parse_version("Song (feat. Kim) - Extended Mix", None);
+        let bracketed = parse_version("Song (Extended Mix)", None);
+        assert_eq!(dashed.base_title, bracketed.base_title);
+        assert_eq!(dashed.kind, bracketed.kind);
+    }
+
+    #[test]
+    fn only_a_plain_remaster_note_is_dropped() {
+        assert_eq!(
+            parse_version("Song [2019 Remaster]", None).base_title,
+            "Song"
+        );
+        assert_eq!(parse_version("Song (Remastered)", None).base_title, "Song");
+        assert_eq!(
+            parse_version("Song (Part 2 Remastered)", None).base_title,
+            "Song (Part 2 Remastered)"
+        );
+    }
 
     fn input(id: &str, artist: &str, title: &str, mix: Option<&str>) -> VersionInput {
         VersionInput {

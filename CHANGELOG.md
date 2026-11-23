@@ -38,7 +38,7 @@ project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   copy record, never the file. **Versions** groups Radio / Extended / Club /
   Instrumental / Remix and other markers of one record. Rules in `crates/core`
   (`duplicates`, `versions`, `library_health`, `library_hygiene`) with unit tests and
-  schema contract tests; commands in `src-tauri/src/maintain.rs`.
+  schema contract tests; commands in `apps/desktop/src-tauri/src/maintain.rs`.
   Running-window QA pending.
 - **Arrow keys in the star rating cell (issue #74)** — `←` / `→` move the roving
   tab stop between stars (no wrap) and `Home` / `End` jump to star 1 / 5, the

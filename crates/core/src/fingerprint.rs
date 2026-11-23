@@ -54,8 +54,10 @@ pub fn files_have_same_content<P: AsRef<Path>, Q: AsRef<Path>>(a: P, b: Q) -> Re
     loop {
         let n = left.read(&mut lbuf)?;
         if n == 0 {
-            // Same length, so the right side is exhausted too.
-            return Ok(true);
+            // The lengths matched when the files were opened, but either file
+            // may have changed since: only a right side that ends here too is
+            // the same content.
+            return Ok(right.read(&mut rbuf[..1])? == 0);
         }
         right.read_exact(&mut rbuf[..n])?;
         if lbuf[..n] != rbuf[..n] {

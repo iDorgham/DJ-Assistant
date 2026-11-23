@@ -213,14 +213,27 @@ fn a_copy_path_imported_as_its_own_track_leaves_the_list() {
     // The query hides the record at once; the scanner then forgets it.
     insert(&conn, "b", "/backup/a.mp3", "h9", "Song", None);
     assert_eq!(count(&conn), 0, "an imported path is a track, not a copy");
+    let set_removed = |conn: &Connection, removed: bool| {
+        let sql = if removed {
+            "UPDATE tracks SET removed_at = datetime('now') WHERE id = 'b'"
+        } else {
+            "UPDATE tracks SET removed_at = NULL WHERE id = 'b'"
+        };
+        conn.execute(sql, []).unwrap();
+    };
+    // The query alone is not enough: soft-removing that track would bring the
+    // stale record back, though its bytes no longer match track a.
+    set_removed(&conn, true);
+    assert_eq!(
+        count(&conn),
+        1,
+        "without the forget, the stale record returns"
+    );
+    set_removed(&conn, false);
+    // So the scanner forgets the record after the import; then a soft remove
+    // leaves the list empty.
     conn.execute(FORGET_COPY_SQL, ["/backup/a.mp3"]).unwrap();
-    // Soft-removing that track must not bring the stale record back: its
-    // bytes no longer match track a.
-    conn.execute(
-        "UPDATE tracks SET removed_at = datetime('now') WHERE id = 'b'",
-        [],
-    )
-    .unwrap();
+    set_removed(&conn, true);
     assert_eq!(count(&conn), 0);
 }
 

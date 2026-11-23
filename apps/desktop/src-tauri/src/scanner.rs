@@ -353,10 +353,18 @@ fn record_duplicate_copy(db: &Mutex<Database>, hash: &str, path: &str) -> Result
     }
     if !std::path::Path::new(&owner_path).exists() {
         let now = chrono::Utc::now().to_rfc3339();
-        lock()?
+        // The new path may carry a copy record from when both files existed;
+        // it is the track's own file now, so the record goes with the move.
+        let guard = lock()?;
+        let tx = guard
             .conn()
-            .execute(RELOCATE_TRACK_SQL, rusqlite::params![path, now, track_id])
+            .unchecked_transaction()
             .map_err(|e| e.to_string())?;
+        tx.execute(RELOCATE_TRACK_SQL, rusqlite::params![path, now, track_id])
+            .map_err(|e| e.to_string())?;
+        tx.execute(FORGET_COPY_SQL, [path])
+            .map_err(|e| e.to_string())?;
+        tx.commit().map_err(|e| e.to_string())?;
         log::info!("Track {} moved: {} -> {}", track_id, owner_path, path);
         return Ok(());
     }

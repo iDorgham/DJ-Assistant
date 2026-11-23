@@ -199,14 +199,12 @@ impl Coverage {
     }
 }
 
+/// A ratio category's score; `None` when it is not configured or has nothing
+/// to measure, so it drops out of the weighted mean like an empty library.
 fn ratio_score(input: Option<&RatioInput>) -> Option<f64> {
-    input.map(|r| {
-        if r.total == 0 {
-            100.0
-        } else {
-            100.0 * r.good.min(r.total) as f64 / r.total as f64
-        }
-    })
+    input
+        .filter(|r| r.total > 0)
+        .map(|r| 100.0 * r.good.min(r.total) as f64 / r.total as f64)
 }
 
 /// Builds the report.
