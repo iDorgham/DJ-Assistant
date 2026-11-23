@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState, type KeyboardEvent } from "react";
+import { useCallback, useEffect, useRef, useState, type KeyboardEvent } from "react";
 import { X } from "lucide-react";
 
 import type {
@@ -82,6 +82,18 @@ const errorClass =
   "rounded-sm border border-dj-danger/30 bg-dj-danger/10 px-2 py-1.5 text-[11px] text-dj-danger";
 const sectionHeading = "text-[11px] font-semibold uppercase tracking-wider text-dj-text-muted";
 
+/** A failed load with a way to try again without reopening the dialog. */
+function LoadError({ message, onRetry }: { message: string; onRetry: () => void }) {
+  return (
+    <div className="flex items-start gap-2">
+      <p className={`${errorClass} flex-1`}>{message}</p>
+      <button type="button" onClick={onRetry} className={buttonClass}>
+        Retry
+      </button>
+    </div>
+  );
+}
+
 function errorText(err: unknown): string {
   return err instanceof Error ? err.message : String(err);
 }
@@ -108,50 +120,61 @@ export function MaintainDialog({
   const [versions, setVersions] = useState<LibraryVersionsResponse | null>(null);
   const [versionsError, setVersionsError] = useState<string | null>(null);
 
+  // One request per tab at a time: switching tabs while a scan is still
+  // running must not start a second one.
+  const inFlight = useRef<Record<MaintainTab, boolean>>({
+    health: false,
+    duplicates: false,
+    versions: false,
+  });
+
   const loadHealth = useCallback(async () => {
+    if (inFlight.current.health) return;
+    inFlight.current.health = true;
     setHealthError(null);
     try {
       setHealth(await libraryHealth());
     } catch (err) {
       setHealthError(errorText(err));
+    } finally {
+      inFlight.current.health = false;
     }
   }, []);
 
   const loadDuplicates = useCallback(async () => {
+    if (inFlight.current.duplicates) return;
+    inFlight.current.duplicates = true;
     setDuplicatesError(null);
     try {
       setDuplicates(await libraryDuplicates());
     } catch (err) {
       setDuplicatesError(errorText(err));
+    } finally {
+      inFlight.current.duplicates = false;
     }
   }, []);
 
   const loadVersions = useCallback(async () => {
+    if (inFlight.current.versions) return;
+    inFlight.current.versions = true;
     setVersionsError(null);
     try {
       setVersions(await libraryVersions());
     } catch (err) {
       setVersionsError(errorText(err));
+    } finally {
+      inFlight.current.versions = false;
     }
   }, []);
 
-  // Each tab loads the first time it is shown.
+  // Each tab reloads every time it is shown: the health score checks files on
+  // disk, so a result from an earlier visit can already be wrong. The previous
+  // result stays on screen until the new one arrives.
   useEffect(() => {
-    if (tab === "health" && !health && !healthError) void loadHealth();
-    if (tab === "duplicates" && !duplicates && !duplicatesError) void loadDuplicates();
-    if (tab === "versions" && !versions && !versionsError) void loadVersions();
-  }, [
-    tab,
-    health,
-    healthError,
-    duplicates,
-    duplicatesError,
-    versions,
-    versionsError,
-    loadHealth,
-    loadDuplicates,
-    loadVersions,
-  ]);
+    if (tab === "health") void loadHealth();
+    if (tab === "duplicates") void loadDuplicates();
+    if (tab === "versions") void loadVersions();
+  }, [tab, loadHealth, loadDuplicates, loadVersions]);
 
   /** After a write every tab is stale; refetch the visible one, drop the rest. */
   const afterWrite = async () => {
@@ -308,7 +331,9 @@ export function MaintainDialog({
 
   const healthPanel = (
     <div className="space-y-3">
-      {healthError && <p className={errorClass}>Could not score the library: {healthError}</p>}
+      {healthError && (
+        <LoadError message={`Could not score the library: ${healthError}`} onRetry={loadHealth} />
+      )}
       {!health && !healthError && <p className="text-xs text-dj-text-muted">Scoring library…</p>}
       {health && (
         <>
@@ -416,7 +441,10 @@ export function MaintainDialog({
   const duplicatesPanel = (
     <div className="space-y-3">
       {duplicatesError && (
-        <p className={errorClass}>Could not find duplicates: {duplicatesError}</p>
+        <LoadError
+          message={`Could not find duplicates: ${duplicatesError}`}
+          onRetry={loadDuplicates}
+        />
       )}
       {!duplicates && !duplicatesError && (
         <p className="text-xs text-dj-text-muted">Looking for duplicates…</p>
@@ -496,7 +524,9 @@ export function MaintainDialog({
 
   const versionsPanel = (
     <div className="space-y-3">
-      {versionsError && <p className={errorClass}>Could not group versions: {versionsError}</p>}
+      {versionsError && (
+        <LoadError message={`Could not group versions: ${versionsError}`} onRetry={loadVersions} />
+      )}
       {!versions && !versionsError && (
         <p className="text-xs text-dj-text-muted">Grouping versions…</p>
       )}

@@ -6,7 +6,7 @@ use uuid::Uuid;
 
 use dj_assistant_core::{
     cache_artwork, compute_file_fingerprint, discover_audio_files, extract_metadata,
-    ScanDeduplicator,
+    files_have_same_content, ScanDeduplicator,
 };
 
 use dj_assistant_core::library_hygiene::{is_distinct_copy, RECORD_COPY_SQL, TRACK_BY_HASH_SQL};
@@ -89,10 +89,8 @@ pub fn run_scan(
                 // its own (UNIQUE file_hash), so record it for the Duplicates review
                 // — otherwise the copy is invisible. A rescan of the same file is
                 // not a copy and records nothing.
-                if let Ok(db_guard) = db.lock() {
-                    if let Err(err) = record_duplicate_copy(db_guard.conn(), &hash, &path_str) {
-                        log::warn!("Failed to record duplicate copy {}: {}", path_str, err);
-                    }
+                if let Err(err) = record_duplicate_copy(&db, &hash, &path_str) {
+                    log::warn!("Failed to record duplicate copy {}: {}", path_str, err);
                 }
                 let _ = app.emit(
                     "scan:progress",
@@ -313,24 +311,48 @@ pub fn run_scan(
 }
 
 /// Records `path` as a byte-identical copy of the library row that owns
-/// `hash`, unless it *is* that row's file (a rescan). Returns whether a copy
-/// was recorded.
-fn record_duplicate_copy(
-    conn: &rusqlite::Connection,
-    hash: &str,
-    path: &str,
-) -> rusqlite::Result<bool> {
+/// `hash`. Returns whether a copy was recorded.
+///
+/// Nothing is recorded when `path` *is* that row's file (a rescan), when the
+/// row's own file is gone (the file was moved or renamed, so `path` is the
+/// track, not a second copy of it), or when the two files only share a
+/// fingerprint — it covers the length and first MiB, so the bytes are compared
+/// in full before anything is called identical. The comparison runs with the
+/// database lock released.
+fn record_duplicate_copy(db: &Mutex<Database>, hash: &str, path: &str) -> Result<bool, String> {
     use rusqlite::OptionalExtension;
-    let owner: Option<(String, String)> = conn
-        .query_row(TRACK_BY_HASH_SQL, [hash], |row| {
-            Ok((row.get(0)?, row.get(1)?))
-        })
-        .optional()?;
-    match owner {
-        Some((track_id, owner_path)) if is_distinct_copy(&owner_path, path) => {
-            conn.execute(RECORD_COPY_SQL, rusqlite::params![path, track_id, hash])?;
-            Ok(true)
-        }
-        _ => Ok(false),
+    let owner: Option<(String, String)> = {
+        let guard = db
+            .lock()
+            .map_err(|_| "database lock poisoned".to_string())?;
+        guard
+            .conn()
+            .query_row(TRACK_BY_HASH_SQL, [hash], |row| {
+                Ok((row.get(0)?, row.get(1)?))
+            })
+            .optional()
+            .map_err(|e| e.to_string())?
+    };
+    let Some((track_id, owner_path)) = owner else {
+        return Ok(false);
+    };
+    if !is_distinct_copy(&owner_path, path) || !std::path::Path::new(&owner_path).exists() {
+        return Ok(false);
     }
+    if !files_have_same_content(&owner_path, path).map_err(|e| e.to_string())? {
+        log::info!(
+            "{} shares a fingerprint with {} but not its bytes; not recorded as a copy",
+            path,
+            owner_path
+        );
+        return Ok(false);
+    }
+    let guard = db
+        .lock()
+        .map_err(|_| "database lock poisoned".to_string())?;
+    guard
+        .conn()
+        .execute(RECORD_COPY_SQL, rusqlite::params![path, track_id, hash])
+        .map_err(|e| e.to_string())?;
+    Ok(true)
 }

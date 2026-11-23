@@ -86,6 +86,9 @@ test("score tone bands and text", () => {
   assert.equal(scoreTone(70), "fair");
   assert.equal(scoreTone(10), "poor");
   assert.equal(scoreTone(null), "neutral");
+  // The colour follows the number shown, which is rounded.
+  assert.equal(scoreTone(84.6), "good");
+  assert.equal(scoreTone(59.4), "poor");
   assert.equal(scoreText(84.6), "85");
   assert.equal(scoreText(null), "–");
 });
@@ -105,11 +108,11 @@ test("category detail explains neutral, clear and failing categories", () => {
         counts: [
           { label: "Missing BPM", count: 3 },
           { label: "Missing key", count: 0 },
-          { label: "Not analysed", count: 5 },
+          { label: "Analysis incomplete", count: 5 },
         ],
       })
     ),
-    "Missing BPM: 3 · Not analysed: 5"
+    "Missing BPM: 3 · Analysis incomplete: 5"
   );
 });
 

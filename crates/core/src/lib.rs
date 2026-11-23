@@ -46,7 +46,7 @@ pub use enrichment::{
     parse_lastfm_response, parse_musicbrainz_response, propose_fields, split_discogs_title,
     tag_health_score, EnrichmentProvider, FieldProposal, LocalTrack, ProviderCandidate,
 };
-pub use fingerprint::{compute_file_fingerprint, FINGERPRINT_WINDOW};
+pub use fingerprint::{compute_file_fingerprint, files_have_same_content, FINGERPRINT_WINDOW};
 pub use library_query::{
     sort_column, BuiltQuery, QueryError, QueryParam, TrackFilters, TrackQuery, SORT_KEYS,
 };

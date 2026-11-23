@@ -69,6 +69,7 @@ pub struct ParsedVersion {
 }
 
 /// Lowercases, folds `&` to `and`, drops punctuation and collapses whitespace.
+/// `#` is kept as part of a word, because `C#` and `C` are different titles.
 ///
 /// Shared with duplicate matching so both features agree on when two strings
 /// are "the same name".
@@ -82,7 +83,7 @@ pub fn normalize_name(value: &str) -> String {
             }
             out.push_str("and ");
             last_space = true;
-        } else if ch.is_alphanumeric() {
+        } else if ch.is_alphanumeric() || ch == '#' {
             out.push(ch);
             last_space = false;
         } else if !last_space {
@@ -150,6 +151,26 @@ pub fn classify_marker(text: &str) -> Option<VersionKind> {
     Some(kind)
 }
 
+/// A bracket group that is a credit or a release note rather than part of the
+/// title: `(feat. X)`, `[Remastered 2019]`. Only these are dropped from the
+/// base title; any other group (`(Part 2)`) stays, so it keeps tracks apart.
+fn is_credit_or_note(text: &str) -> bool {
+    let normalized = normalize_name(text);
+    let words: Vec<&str> = normalized.split_whitespace().collect();
+    matches!(words.first(), Some(&("feat" | "ft" | "featuring" | "with")))
+        || words.iter().any(|w| *w == "remaster" || *w == "remastered")
+}
+
+/// `(kind, normalised label)` with "Original Mix" folded into the unmarked
+/// title — the same version, written two ways. Version families and duplicate
+/// matching both compare versions through this.
+pub fn version_identity(kind: VersionKind, label: Option<&str>) -> (VersionKind, String) {
+    match kind {
+        VersionKind::Original => (kind, String::default()),
+        _ => (kind, label.map(normalize_name).unwrap_or_default()),
+    }
+}
+
 /// Splits a trailing `(…)` or `[…]` group off `title`: `(rest, inner)`.
 fn split_trailing_group(title: &str) -> Option<(&str, &str)> {
     let trimmed = title.trim_end();
@@ -168,8 +189,9 @@ fn split_trailing_group(title: &str) -> Option<(&str, &str)> {
 ///
 /// Trailing groups are peeled right to left, so `Song (feat. X) (Extended
 /// Mix)` and `Song (Extended Mix) [Remastered]` both resolve. Only the first
-/// recognised marker counts; non-version groups such as a `feat.` credit are
-/// dropped from the base title so they do not split a family.
+/// recognised marker counts. Credits and release notes (`feat.`, `Remastered`)
+/// are dropped from the base title so they do not split a family; peeling stops
+/// at any other group, which stays in the base (`Song (Part 2)`).
 pub fn parse_version(title: &str, mix_name: Option<&str>) -> ParsedVersion {
     let mut rest = title.trim().to_string();
     let mut found: Option<(VersionKind, String)> = None;
@@ -185,8 +207,9 @@ pub fn parse_version(title: &str, mix_name: Option<&str>) -> ParsedVersion {
                 continue;
             }
         }
-        // A non-version group (feat., remaster note) or one after the marker:
-        // drop it from the base so it does not split the family.
+        if !is_credit_or_note(&inner) {
+            break;
+        }
         rest = head;
     }
 
@@ -290,12 +313,7 @@ pub fn group_versions(tracks: &[VersionInput]) -> Vec<VersionGroup> {
             let mut distinct: Vec<(VersionKind, String)> = group
                 .members
                 .iter()
-                .map(|m| {
-                    (
-                        m.kind,
-                        m.label.as_deref().map(normalize_name).unwrap_or_default(),
-                    )
-                })
+                .map(|m| version_identity(m.kind, m.label.as_deref()))
                 .collect();
             distinct.sort();
             distinct.dedup();
@@ -429,6 +447,35 @@ mod tests {
             input("b", "", "Song (Extended Mix)", None),
         ])
         .is_empty());
+    }
+
+    #[test]
+    fn other_bracket_groups_stay_in_the_base_title() {
+        let p = parse_version("Song (Part 2) (Extended Mix)", None);
+        assert_eq!(
+            (p.base_title.as_str(), p.kind),
+            ("Song (Part 2)", VersionKind::Extended)
+        );
+        let groups = group_versions(&[
+            input("a", "X", "Song (Part 1) (Radio Edit)", None),
+            input("b", "X", "Song (Part 2) (Extended Mix)", None),
+        ]);
+        assert!(groups.is_empty(), "Part 1 and Part 2 are different records");
+    }
+
+    #[test]
+    fn original_mix_and_an_unmarked_title_are_one_version() {
+        let groups = group_versions(&[
+            input("a", "X", "Song (Original Mix)", None),
+            input("b", "X", "Song", None),
+        ]);
+        assert!(groups.is_empty());
+    }
+
+    #[test]
+    fn sharp_is_part_of_a_name() {
+        assert_ne!(normalize_name("C#"), normalize_name("C"));
+        assert_eq!(normalize_name("C# Minor"), "c# minor");
     }
 
     #[test]

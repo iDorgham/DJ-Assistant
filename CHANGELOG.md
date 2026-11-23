@@ -17,7 +17,9 @@ project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   tracks, each opening in the Track panel. **Duplicates** groups present tracks by same
   ISRC or by artist + title (version marker included) + length within 2 s, and lists
   byte-identical files the scanner skipped at another path — now recorded in migration
-  012 `duplicate_files` instead of only counted. Keep this soft-removes the others
+  012 `duplicate_files` instead of only counted, after a full byte comparison with the
+  library file. Only scans run on this build record copies: copies skipped by earlier
+  scans appear in Duplicates after a rescan. Keep this soft-removes the others
   through the existing undoable remove; Keep both hides the group until its membership
   changes; Forget drops a copy record, never the file. **Versions** groups Radio /
   Extended / Club / Instrumental / Remix and other markers of one record. Rules in

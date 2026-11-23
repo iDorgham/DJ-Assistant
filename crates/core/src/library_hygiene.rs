@@ -117,18 +117,17 @@ impl HygieneRow {
 /// Whether a scan hit on an existing fingerprint is a *copy* worth recording,
 /// rather than the same file seen again by a rescan.
 ///
-/// Separators are folded and, on Windows, case is ignored — the same file
-/// reached as `D:\Music\a.mp3` and `d:/music/a.mp3` is not a copy.
+/// On Windows separators and case are folded — the same file reached as
+/// `D:\Music\a.mp3` and `d:/music/a.mp3` is not a copy. Elsewhere paths compare
+/// exactly: a backslash, a leading space or a capital is a legitimate part of a
+/// Unix file name.
 pub fn is_distinct_copy(existing_path: &str, candidate_path: &str) -> bool {
-    fn fold(path: &str) -> String {
-        let unified = path.trim().replace('\\', "/");
-        if cfg!(windows) {
-            unified.to_lowercase()
-        } else {
-            unified
-        }
+    if cfg!(windows) {
+        let fold = |path: &str| path.replace('\\', "/").to_lowercase();
+        fold(existing_path) != fold(candidate_path)
+    } else {
+        existing_path != candidate_path
     }
-    fold(existing_path) != fold(candidate_path)
 }
 
 #[cfg(test)]
@@ -138,8 +137,20 @@ mod tests {
     #[test]
     fn rescanning_the_same_file_is_not_a_copy() {
         assert!(!is_distinct_copy("/music/a.mp3", "/music/a.mp3"));
-        assert!(!is_distinct_copy("C:\\Music\\a.mp3", "C:/Music/a.mp3"));
         assert!(is_distinct_copy("/music/a.mp3", "/backup/a.mp3"));
+    }
+
+    #[cfg(windows)]
+    #[test]
+    fn windows_folds_separators_and_case() {
+        assert!(!is_distinct_copy("C:\\Music\\a.mp3", "c:/music/A.mp3"));
+    }
+
+    #[cfg(not(windows))]
+    #[test]
+    fn unix_paths_compare_exactly() {
+        assert!(is_distinct_copy("/music/a.mp3", "/music/A.mp3"));
+        assert!(is_distinct_copy("/music/a\\b.mp3", "/music/a/b.mp3"));
     }
 
     #[test]

@@ -37,10 +37,59 @@ pub fn compute_file_fingerprint<P: AsRef<Path>>(path: P) -> Result<String, Error
     Ok(hasher.finalize().to_hex().to_string())
 }
 
+/// Whether the files at `a` and `b` hold exactly the same bytes.
+///
+/// The fingerprint only covers the length and the first [`FINGERPRINT_WINDOW`]
+/// bytes, so a fingerprint match is a *candidate*; this full comparison is what
+/// earns the word "identical". It streams both files and stops at the first
+/// difference.
+pub fn files_have_same_content<P: AsRef<Path>, Q: AsRef<Path>>(a: P, b: Q) -> Result<bool, Error> {
+    let mut left = File::open(a)?;
+    let mut right = File::open(b)?;
+    if left.metadata()?.len() != right.metadata()?.len() {
+        return Ok(false);
+    }
+    let mut lbuf = vec![0u8; 64 * 1024];
+    let mut rbuf = vec![0u8; 64 * 1024];
+    loop {
+        let n = left.read(&mut lbuf)?;
+        if n == 0 {
+            // Same length, so the right side is exhausted too.
+            return Ok(true);
+        }
+        right.read_exact(&mut rbuf[..n])?;
+        if lbuf[..n] != rbuf[..n] {
+            return Ok(false);
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
     use std::io::Write;
+
+    #[test]
+    fn full_comparison_catches_a_difference_past_the_window() {
+        let mut one = vec![7u8; FINGERPRINT_WINDOW + 10];
+        let a = temp_file("cmp-a.bin", &one);
+        let b = temp_file("cmp-b.bin", &one);
+        assert!(files_have_same_content(&a, &b).unwrap());
+
+        // Same length, same first MiB, different tail: the fingerprint agrees,
+        // the full comparison does not.
+        *one.last_mut().unwrap() = 8;
+        let c = temp_file("cmp-c.bin", &one);
+        assert_eq!(
+            compute_file_fingerprint(&a).unwrap(),
+            compute_file_fingerprint(&c).unwrap()
+        );
+        assert!(!files_have_same_content(&a, &c).unwrap());
+
+        for path in [a, b, c] {
+            let _ = std::fs::remove_file(path);
+        }
+    }
 
     fn temp_file(name: &str, contents: &[u8]) -> std::path::PathBuf {
         let dir = std::env::temp_dir().join("dj-assistant-fingerprint-tests");

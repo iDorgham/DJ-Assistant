@@ -4,7 +4,7 @@ Ephemeral. Newest first. **Rotate aggressively** — if a line would still be tr
 in two weeks, it belongs in [`decisions.md`](./decisions.md); if it is just a
 fact, it belongs in [`facts.md`](./facts.md). Delete anything stale.
 
-## 2026-11-23 · T2.3.1–T2.3.3 Maintain dialog (branch `feat/t2.3-library-hygiene`, uncommitted)
+## 2026-11-23 · T2.3.1–T2.3.3 Maintain dialog
 
 - Duplicates, versions and Library Health Score code-shipped; migration 012. Details in
   `04-TASKS.md` and `CHANGELOG.md`. Checks passed: lint, typecheck, 319 desktop tests,

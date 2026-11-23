@@ -167,6 +167,24 @@ fn copies_are_recorded_listed_repointed_and_forgotten() {
     conn.execute("UPDATE tracks SET removed_at = NULL WHERE id = 'a'", [])
         .unwrap();
 
+    // Recording the same path against another track repoints it: the upsert
+    // must replace track_id and file_hash, not keep the stale owner.
+    insert(&conn, "b", "/m/b.mp3", "h2", "Other", None);
+    conn.execute(RECORD_COPY_SQL, params!["/backup/a.mp3", "b", "h2"])
+        .unwrap();
+    assert_eq!(
+        list(&conn),
+        [("/backup/a.mp3".to_string(), "b".to_string())]
+    );
+    let hash: String = conn
+        .query_row(
+            "SELECT file_hash FROM duplicate_files WHERE file_path = '/backup/a.mp3'",
+            [],
+            |r| r.get(0),
+        )
+        .unwrap();
+    assert_eq!(hash, "h2");
+
     assert_eq!(conn.execute(FORGET_COPY_SQL, ["/backup/a.mp3"]).unwrap(), 1);
     assert!(list(&conn).is_empty());
 }
@@ -188,8 +206,8 @@ fn a_copy_is_dropped_when_its_track_row_is_deleted() {
 #[test]
 fn dismissals_are_idempotent() {
     let conn = open_migrated();
-    conn.execute(DISMISS_GROUP_SQL, ["near_match:abc"]).unwrap();
-    conn.execute(DISMISS_GROUP_SQL, ["near_match:abc"]).unwrap();
+    conn.execute(DISMISS_GROUP_SQL, ["dup:abc"]).unwrap();
+    conn.execute(DISMISS_GROUP_SQL, ["dup:abc"]).unwrap();
     let keys: Vec<String> = conn
         .prepare(DISMISSED_KEYS_SQL)
         .unwrap()
@@ -197,5 +215,5 @@ fn dismissals_are_idempotent() {
         .unwrap()
         .map(|r| r.unwrap())
         .collect();
-    assert_eq!(keys, ["near_match:abc"]);
+    assert_eq!(keys, ["dup:abc"]);
 }

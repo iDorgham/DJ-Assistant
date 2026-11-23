@@ -189,7 +189,7 @@ pub fn compute_health(tracks: &[HealthTrack], context: &HealthContext) -> Health
         "Missing energy",
         "No custom tags",
     ]);
-    let mut analysis = Coverage::new(&["Missing BPM", "Missing key", "Not analysed"]);
+    let mut analysis = Coverage::new(&["Missing BPM", "Missing key", "Analysis incomplete"]);
     let mut files = Coverage::new(&["Missing on disk"]);
 
     for track in tracks {
@@ -218,7 +218,10 @@ pub fn compute_health(tracks: &[HealthTrack], context: &HealthContext) -> Health
             &[
                 track.bpm.is_none_or(|b| b <= 0.0),
                 blank(&track.key),
-                track.analysis_status != "complete",
+                !track
+                    .analysis_status
+                    .trim()
+                    .eq_ignore_ascii_case("complete"),
             ],
         );
         files.record(&track.id, &[track.file_missing]);

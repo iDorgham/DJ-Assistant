@@ -111,11 +111,15 @@ export function versionsSummary(groups: number): string {
 
 export type ScoreTone = "good" | "fair" | "poor" | "neutral";
 
-/** Colour band for a 0–100 score. */
+/**
+ * Colour band for a 0–100 score. The rounded value is banded — the one
+ * `scoreText` shows — so 84.6 reads "85" in the "good" colour, not "fair".
+ */
 export function scoreTone(score: number | null): ScoreTone {
   if (score === null || !Number.isFinite(score)) return "neutral";
-  if (score >= 85) return "good";
-  if (score >= 60) return "fair";
+  const shown = Math.round(score);
+  if (shown >= 85) return "good";
+  if (shown >= 60) return "fair";
   return "poor";
 }
 

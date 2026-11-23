@@ -22,7 +22,7 @@
 
 use std::collections::{BTreeMap, HashSet};
 
-use crate::versions::{normalize_artist, normalize_name, parse_version};
+use crate::versions::{normalize_artist, normalize_name, parse_version, version_identity};
 
 /// Durations closer than this are treated as the same recording.
 pub const DEFAULT_DURATION_TOLERANCE_MS: i64 = 2_000;
@@ -66,31 +66,40 @@ pub struct DuplicateGroup {
 }
 
 /// An ISRC with separators removed and upper-cased; `None` unless it has the
-/// 12-character shape of a real code.
+/// structure of a real code: a 2-letter country code, a 3-character registrant,
+/// a 2-digit year and a 5-digit designation (`USRC17607839`).
 pub fn normalize_isrc(isrc: &str) -> Option<String> {
     let cleaned = isrc
         .matches(|c: char| c.is_ascii_alphanumeric())
         .collect::<String>()
         .to_ascii_uppercase();
-    (cleaned.len() == 12).then_some(cleaned)
+    let bytes = cleaned.as_bytes();
+    let well_formed = bytes.len() == 12
+        && bytes[..2].iter().all(u8::is_ascii_alphabetic)
+        && bytes[5..].iter().all(u8::is_ascii_digit);
+    well_formed.then_some(cleaned)
 }
 
-/// The group key: reason plus a hash of the sorted member ids.
-pub fn group_key(reason: DuplicateReason, sorted_ids: &[String]) -> String {
+/// The group key: a hash of the sorted member ids, and nothing else.
+///
+/// The reason is deliberately left out — a dismissal is about *which tracks*
+/// the user said to keep together, so it must survive the same tracks being
+/// matched by different evidence (an ISRC tag added or removed later).
+pub fn group_key(sorted_ids: &[String]) -> String {
     let mut hasher = blake3::Hasher::new();
     for id in sorted_ids {
         hasher.update(id.as_bytes());
         hasher.update(&[0]);
     }
     let hex = hasher.finalize().to_hex();
-    format!("{}:{}", reason.as_str(), &hex[..16])
+    format!("dup:{}", &hex[..16])
 }
 
 fn make_group(reason: DuplicateReason, mut ids: Vec<String>) -> DuplicateGroup {
     ids.sort();
     ids.dedup();
     DuplicateGroup {
-        key: group_key(reason, &ids),
+        key: group_key(&ids),
         reason,
         track_ids: ids,
     }
@@ -129,17 +138,8 @@ pub fn find_duplicate_groups(tracks: &[DuplicateInput], tolerance_ms: i64) -> Ve
         if artist.is_empty() || base.is_empty() {
             continue;
         }
-        let marker = parsed
-            .label
-            .as_deref()
-            .map(normalize_name)
-            .unwrap_or_default();
         // "Original Mix" and no marker are the same version.
-        let marker = if marker == "original mix" || marker == "original" {
-            String::default()
-        } else {
-            marker
-        };
+        let (_, marker) = version_identity(parsed.kind, parsed.label.as_deref());
         by_name
             .entry(format!("{artist}|{base}|{marker}"))
             .or_default()
@@ -152,18 +152,21 @@ pub fn find_duplicate_groups(tracks: &[DuplicateInput], tolerance_ms: i64) -> Ve
             continue;
         }
         members.sort();
+        // Every member of a run stays within the tolerance of the run's
+        // shortest track, so 300.0 s, 301.5 s and 303.0 s do not chain into
+        // one group although the ends are 3 s apart.
         let mut run: Vec<String> = vec![members[0].1.clone()];
-        let mut last = members[0].0;
+        let mut anchor = members[0].0;
         for (duration, id) in members.into_iter().skip(1) {
-            if duration - last <= tolerance_ms {
+            if duration - anchor <= tolerance_ms {
                 run.push(id);
             } else {
                 if run.len() > 1 {
                     near_groups.push(make_group(DuplicateReason::NearMatch, run));
                 }
                 run = vec![id];
+                anchor = duration;
             }
-            last = duration;
         }
         if run.len() > 1 {
             near_groups.push(make_group(DuplicateReason::NearMatch, run));
@@ -282,32 +285,54 @@ mod tests {
     }
 
     #[test]
-    fn group_key_is_stable_and_membership_sensitive() {
-        let ab = group_key(DuplicateReason::NearMatch, &["a".into(), "b".into()]);
-        assert_eq!(
-            ab,
-            group_key(DuplicateReason::NearMatch, &["a".into(), "b".into()])
+    fn near_match_tolerance_does_not_chain() {
+        let groups = find_duplicate_groups(
+            &[
+                t("a", "X", "Song", None, 300_000),
+                t("b", "X", "Song", None, 301_500),
+                t("c", "X", "Song", None, 303_000),
+            ],
+            DEFAULT_DURATION_TOLERANCE_MS,
         );
-        assert_ne!(
-            ab,
-            group_key(
-                DuplicateReason::NearMatch,
-                &["a".into(), "b".into(), "c".into()]
-            )
-        );
-        assert_ne!(
-            ab,
-            group_key(DuplicateReason::SameIsrc, &["a".into(), "b".into()])
-        );
-        assert!(ab.starts_with("near_match:"));
+        assert_eq!(groups.len(), 1);
+        assert_eq!(groups[0].track_ids, ["a", "b"]);
     }
 
     #[test]
-    fn isrc_must_have_the_real_shape() {
+    fn group_key_is_stable_and_depends_on_membership_only() {
+        let ab = group_key(&["a".into(), "b".into()]);
+        assert_eq!(ab, group_key(&["a".into(), "b".into()]));
+        assert_ne!(ab, group_key(&["a".into(), "b".into(), "c".into()]));
+        assert!(ab.starts_with("dup:"));
+
+        // The same two tracks keep one key whichever evidence groups them.
+        let by_isrc = find_duplicate_groups(
+            &[
+                t("a", "X", "Song", Some("GBAAA2400001"), 300_000),
+                t("b", "X", "Song", Some("GBAAA2400001"), 300_000),
+            ],
+            DEFAULT_DURATION_TOLERANCE_MS,
+        );
+        let by_name = find_duplicate_groups(
+            &[
+                t("a", "X", "Song", None, 300_000),
+                t("b", "X", "Song", None, 300_000),
+            ],
+            DEFAULT_DURATION_TOLERANCE_MS,
+        );
+        assert_ne!(by_isrc[0].reason, by_name[0].reason);
+        assert_eq!(by_isrc[0].key, by_name[0].key);
+    }
+
+    #[test]
+    fn isrc_must_have_the_real_structure() {
         assert_eq!(
             normalize_isrc("us-rc1-76-07839"),
             Some("USRC17607839".into())
         );
         assert_eq!(normalize_isrc("123"), None);
+        // Twelve characters, but no country code or numeric designation.
+        assert_eq!(normalize_isrc("123456789012"), None);
+        assert_eq!(normalize_isrc("USRC176ABCDE"), None);
     }
 }
