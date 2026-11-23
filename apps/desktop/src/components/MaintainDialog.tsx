@@ -44,6 +44,7 @@ import {
   type MaintainTab,
   type ScoreTone,
 } from "../lib/maintain";
+import { ReadGate, tabsToRefreshAfterWrite } from "../lib/read-gate";
 
 /**
  * Library › Maintain: the Library Health Score (T2.3.3), duplicate review
@@ -156,44 +157,39 @@ export interface MaintainRemoval {
 }
 
 /**
- * One tab's read. Every request takes a token and only the newest one may
- * publish, so a scan that finishes after a write (or after a newer request)
- * cannot put stale data back on screen. `load` joins a pending request — a
- * tab switch mid-scan does not start a second one; `reload` always starts a
- * fresh request and orphans any pending one.
+ * One tab's read, ordered by a `ReadGate` (`lib/read-gate.ts`, where the
+ * ordering rules are tested): only the newest request publishes. `load` joins
+ * a pending request — a tab switch mid-scan does not start a second one;
+ * `reload` always starts a fresh request and orphans any pending one.
  */
 function useTabRead<T>(fetch: () => Promise<T>) {
   const [data, setData] = useState<T | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const latest = useRef(0);
-  const pending = useRef(false);
+  const [gate] = useState(() => new ReadGate());
 
   const run = useCallback(
-    async (force: boolean) => {
-      if (pending.current && !force) return;
-      latest.current += 1;
-      const request = latest.current;
-      pending.current = true;
+    async (join: boolean) => {
+      const request = gate.begin(join);
+      if (request === null) return;
       setError(null);
       try {
         const result = await fetch();
-        if (request === latest.current) setData(result);
+        if (gate.isCurrent(request)) setData(result);
       } catch (err) {
-        if (request === latest.current) setError(errorText(err));
+        if (gate.isCurrent(request)) setError(errorText(err));
       } finally {
-        if (request === latest.current) pending.current = false;
+        gate.settle(request);
       }
     },
-    [fetch]
+    [fetch, gate]
   );
-  const load = useCallback(() => run(false), [run]);
-  const reload = useCallback(() => run(true), [run]);
+  const load = useCallback(() => run(true), [run]);
+  const reload = useCallback(() => run(false), [run]);
   /** Drops the cached result and orphans any pending request. */
   const reset = useCallback(() => {
-    latest.current += 1;
-    pending.current = false;
+    gate.invalidate();
     setData(null);
-  }, []);
+  }, [gate]);
   return { data, error, load, reload, reset };
 }
 
@@ -256,10 +252,8 @@ export function MaintainDialog({
   const afterWrite = async () => {
     healthRead.reset();
     versionsRead.reset();
-    const refreshes = [duplicatesRead.reload()];
-    if (tabRef.current === "health") refreshes.push(healthRead.reload());
-    if (tabRef.current === "versions") refreshes.push(versionsRead.reload());
-    await Promise.all(refreshes);
+    const reads = { health: healthRead, duplicates: duplicatesRead, versions: versionsRead };
+    await Promise.all(tabsToRefreshAfterWrite(tabRef.current).map((t) => reads[t].reload()));
   };
 
   const undoRemoval = async (removal: MaintainRemoval) => {

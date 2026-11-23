@@ -3,6 +3,7 @@
 //! where it executes, so a column the migrations do not have fails here
 //! instead of in the running app.
 
+use dj_assistant_core::dedup::ScanDeduplicator;
 use dj_assistant_core::duplicates::{find_duplicate_groups, DEFAULT_DURATION_TOLERANCE_MS};
 use dj_assistant_core::library_health::{compute_health, FileState, HealthContext};
 use dj_assistant_core::library_hygiene::{
@@ -246,6 +247,55 @@ fn the_hash_lookup_is_scoped_to_the_workspace() {
     };
     assert!(held("default"));
     assert!(!held("elsewhere"));
+}
+
+/// The scanner's import decision, run the way `scanner.rs` runs it: the
+/// core `ScanDeduplicator` asks the workspace-scoped `HASH_IN_WORKSPACE_SQL`
+/// whether the fingerprint is already imported, then the import inserts into
+/// `default`. (`run_scan` itself needs a Tauri `AppHandle`, so this is the
+/// closest a test can drive it.)
+#[test]
+fn a_scan_imports_a_file_whose_hash_only_another_workspace_holds() {
+    let conn = open_migrated();
+    conn.execute(
+        "INSERT INTO workspaces (id, name, created_at) VALUES ('elsewhere', 'Other', datetime('now'))",
+        [],
+    )
+    .unwrap();
+    conn.execute(
+        "INSERT INTO tracks (id, workspace_id, file_path, file_hash, file_size, duration_ms,
+            format, title, artist, analysis_status)
+         VALUES ('x', 'elsewhere', '/other/a.mp3', 'h1', 1, 300000, 'mp3', 'Song', 'Artist', 'complete')",
+        [],
+    )
+    .unwrap();
+
+    let already_imported = |conn: &Connection, hash: &str| -> bool {
+        conn.query_row(HASH_IN_WORKSPACE_SQL, ["default", hash], |r| r.get(0))
+            .expect("check must run")
+    };
+    let mut dedup = ScanDeduplicator::new();
+    let kind = dedup.classify("h1", |candidate| already_imported(&conn, candidate));
+    assert!(
+        !kind.is_duplicate(),
+        "another workspace's row must not block the import"
+    );
+
+    // The import then succeeds: UNIQUE(workspace_id, file_hash) allows it.
+    insert(&conn, "a", "/m/a.mp3", "h1", "Song", None);
+    let rows: i64 = conn
+        .query_row(
+            "SELECT COUNT(*) FROM tracks WHERE file_hash = 'h1'",
+            [],
+            |r| r.get(0),
+        )
+        .unwrap();
+    assert_eq!(rows, 2);
+
+    // And a second copy in `default` is now a duplicate.
+    let mut next_scan = ScanDeduplicator::new();
+    let kind = next_scan.classify("h1", |candidate| already_imported(&conn, candidate));
+    assert!(kind.is_duplicate());
 }
 
 #[test]
