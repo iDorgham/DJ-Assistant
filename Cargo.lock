@@ -896,6 +896,7 @@ dependencies = [
  "dj-assistant-analysis",
  "dj-assistant-core",
  "env_logger",
+ "libc",
  "log",
  "reqwest",
  "rusqlite",

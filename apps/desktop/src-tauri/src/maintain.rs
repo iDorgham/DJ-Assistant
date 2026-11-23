@@ -251,18 +251,34 @@ pub async fn library_health(
         .map_err(|e| format!("health check failed: {e}"))?
 }
 
-/// What a track's file looks like on disk, without decoding any audio.
-///
-/// The type is checked before anything is opened: opening a named pipe with
-/// no writer blocks, which would hang the whole report.
+/// Opens a path for the file check without ever blocking: on Unix, opening a
+/// named pipe with no writer blocks unless `O_NONBLOCK` is set, and the path
+/// can turn into a pipe between any earlier check and the open.
+fn open_for_check(path: &str) -> std::io::Result<std::fs::File> {
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::OpenOptionsExt;
+        std::fs::OpenOptions::new()
+            .read(true)
+            .custom_flags(libc::O_NONBLOCK)
+            .open(path)
+    }
+    #[cfg(not(unix))]
+    {
+        std::fs::File::open(path)
+    }
+}
+
+/// What a track's file looks like on disk, without decoding any audio. The
+/// type is read from the opened descriptor, so what is checked is what was
+/// opened.
 fn file_state(path: &str) -> FileState {
-    match std::fs::metadata(path) {
-        // A directory or pipe at a track path is not an audio file.
-        Ok(meta) if meta.is_file() && meta.len() > 0 => match std::fs::File::open(path) {
-            Ok(_) => FileState::Present,
-            Err(_) => FileState::Unreadable,
+    match open_for_check(path) {
+        Ok(file) => match file.metadata() {
+            // A directory or pipe at a track path is not an audio file.
+            Ok(meta) if meta.is_file() && meta.len() > 0 => FileState::Present,
+            _ => FileState::Unreadable,
         },
-        Ok(_) => FileState::Unreadable,
         Err(err) if err.kind() == std::io::ErrorKind::NotFound => FileState::Missing,
         Err(_) => FileState::Unreadable,
     }
