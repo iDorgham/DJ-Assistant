@@ -247,7 +247,8 @@ pub async fn library_health(
 fn file_state(path: &str) -> FileState {
     match std::fs::File::open(path) {
         Ok(file) => match file.metadata() {
-            Ok(meta) if meta.len() > 0 => FileState::Present,
+            // A directory at a track path is not an audio file, however full.
+            Ok(meta) if meta.is_file() && meta.len() > 0 => FileState::Present,
             _ => FileState::Unreadable,
         },
         Err(err) if err.kind() == std::io::ErrorKind::NotFound => FileState::Missing,
