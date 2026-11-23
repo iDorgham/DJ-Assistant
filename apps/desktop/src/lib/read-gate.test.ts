@@ -60,7 +60,7 @@ test("joining a pending read does not start a second one", async () => {
   assert.notEqual(gate.begin(true), null);
 });
 
-test("an orphaned read settling late does not clear the newer read's pending state", async () => {
+test("an orphaned read settling late does not clear the newer read's pending state", () => {
   const gate = new ReadGate();
   const old = gate.begin(false);
   gate.invalidate();
