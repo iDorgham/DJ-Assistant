@@ -15,12 +15,12 @@ fact, it belongs in [`facts.md`](./facts.md). Delete anything stale.
 - **Unbuilt in Phase 2:** T2.3.5–T2.3.6 Cue Master, T2.4.4 gain/limiter + temp loop, T2.4.5
   high-res art path, T2.4.6 remap/beat-jump/output settings, T2.4.7 guardrails, T2.5
   visualizer. **Phase 3** (set builder, export, USB) not started.
-- **`chore/phase2-qa-closeout-rebased`** (local, unpushed; supersedes the stale
+- **PR #101** (`chore/phase2-qa-closeout-rebased`, replaces the deleted
   `chore/phase2-qa-closeout`): Phase 2 QA close-out evidence
   `docs/qa/evidence/2026-11-19-PHASE2-QA-CLOSEOUT.md` — B4, Stage 1 C3, T2.1.10 View columns
   re-run PASS; Slice 4–8 risk rows PASS; artwork rows BLOCKED (all 94 rows NULL
   `artwork_path`). Ported onto `main`'s docs layout on 11-23 with its feedback entries
-  renumbered to F-022–F-024; still needs a PR.
+  renumbered to F-022–F-024; open for review.
 - Library table pass leftovers (proposal `docs/ui-ux/14-LIBRARY-TABLE-UPGRADES.md`, v0.2 not
   approved): label backfill + label search; density, waveform column, track colour, column
   filters, Table/List/Grid views, Tag Manager.
