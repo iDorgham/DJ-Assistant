@@ -11,6 +11,7 @@ use dj_assistant_core::library_hygiene::{
     FORGET_COPY_SQL, HASH_IN_WORKSPACE_SQL, HYGIENE_TRACKS_SQL, RECORD_COPY_SQL,
     RELOCATE_TRACK_SQL, SCAN_WORKSPACE, TRACK_BY_HASH_SQL,
 };
+use dj_assistant_core::prep_audit::CUE_COUNTS_SQL;
 use dj_assistant_core::versions::group_versions;
 use dj_assistant_schema_tests::open_migrated;
 use rusqlite::{params, Connection, OptionalExtension};
@@ -366,4 +367,37 @@ fn dismissals_are_idempotent() {
         .map(|r| r.unwrap())
         .collect();
     assert_eq!(keys, ["dup:abc"]);
+}
+
+/// The Prep Auditor's cue counts run against the migrated `cue_points` table
+/// and leave out soft-removed tracks.
+#[test]
+fn cue_counts_cover_present_tracks_only() {
+    let conn = open_migrated();
+    insert(&conn, "a", "/m/a.mp3", "h1", "A", None);
+    insert(&conn, "b", "/m/b.mp3", "h2", "B", None);
+    insert(&conn, "c", "/m/c.mp3", "h3", "C", None);
+    for (id, track, pos) in [("q1", "a", 0), ("q2", "a", 1000), ("q3", "b", 0)] {
+        conn.execute(
+            "INSERT INTO cue_points (id, track_id, position_ms, cue_type, label, source)
+             VALUES (?1, ?2, ?3, 'hot_cue', 'Cue', 'user_custom')",
+            params![id, track, pos],
+        )
+        .expect("cue insert");
+    }
+    conn.execute(
+        "UPDATE tracks SET removed_at = datetime('now') WHERE id = 'b'",
+        [],
+    )
+    .unwrap();
+
+    let mut stmt = conn
+        .prepare(CUE_COUNTS_SQL)
+        .expect("cue counts must prepare");
+    let counts: Vec<(String, i64)> = stmt
+        .query_map([], |r| Ok((r.get(0)?, r.get(1)?)))
+        .unwrap()
+        .collect::<rusqlite::Result<_>>()
+        .unwrap();
+    assert_eq!(counts, vec![("a".to_string(), 2)]);
 }

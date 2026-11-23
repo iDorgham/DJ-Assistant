@@ -11,6 +11,10 @@ import {
   formatQuality,
   healthSummary,
   keepConfirmLabel,
+  prepCheckDetail,
+  prepScopeText,
+  prepVerdictText,
+  prepVerdictTone,
   reasonLabel,
   scoreText,
   scoreTone,
@@ -125,4 +129,56 @@ test("health summary covers empty, healthy and needs-care libraries", () => {
   assert.match(healthSummary(null, 0), /No tracks yet/);
   assert.match(healthSummary(97, 10), /looks healthy/);
   assert.match(healthSummary(70, 1), /over 1 track\./);
+});
+
+const prepCheck = (severity: "blocker" | "warning", failingTotal: number) => ({
+  id: severity,
+  label: severity,
+  severity,
+  fix: "Fix it",
+  failing: [],
+  failingTotal,
+});
+
+test("the prep verdict counts the failing blockers and warnings", () => {
+  const checks = [prepCheck("blocker", 2), prepCheck("warning", 1), prepCheck("warning", 0)];
+  assert.equal(
+    prepVerdictText({ verdict: "not_ready", scope: "selection", checks }),
+    "Not ready — 1 blocker · 1 warning."
+  );
+  assert.equal(
+    prepVerdictText({
+      verdict: "almost_ready",
+      scope: "library",
+      checks: [prepCheck("warning", 3)],
+    }),
+    "Almost ready — 1 warning."
+  );
+  assert.equal(
+    prepVerdictText({ verdict: "ready", scope: "library", checks: [] }),
+    "Ready to play — every check passes."
+  );
+  assert.match(prepVerdictText({ verdict: "empty", scope: "selection", checks: [] }), /selected/);
+  assert.equal(prepVerdictTone("not_ready"), "poor");
+  assert.equal(prepVerdictTone("empty"), "neutral");
+});
+
+test("the prep scope names the selection or the library, and removed picks", () => {
+  assert.equal(
+    prepScopeText({ scope: "selection", trackCount: 1, skippedCount: 0 }),
+    "1 selected track"
+  );
+  assert.equal(
+    prepScopeText({ scope: "library", trackCount: 94, skippedCount: 0 }),
+    "the whole library (94 tracks)"
+  );
+  assert.equal(
+    prepScopeText({ scope: "selection", trackCount: 10, skippedCount: 2 }),
+    "10 selected tracks; 2 selected tracks are no longer in the library"
+  );
+});
+
+test("a prep check reads all clear or its failing count and fix", () => {
+  assert.equal(prepCheckDetail({ failingTotal: 0, fix: "Analyze" }), "All clear");
+  assert.equal(prepCheckDetail({ failingTotal: 3, fix: "Analyze" }), "3 tracks — Analyze");
 });

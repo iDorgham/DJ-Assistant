@@ -68,6 +68,8 @@ import type {
   ForgetDuplicateCopyRequest,
   LibraryVersionsResponse,
   LibraryHealthResponse,
+  PrepAuditRequest,
+  PrepAuditResponse,
 } from "@dj-assistant/shared";
 
 // Safe Tauri invocation wrapper with mock fallback for web development
@@ -460,6 +462,24 @@ export async function libraryHealth(): Promise<LibraryHealthResponse> {
   if (!isTauri) return { score: null, trackCount: 0, categories: [] };
   const { invoke } = await import("@tauri-apps/api/core");
   return invoke<LibraryHealthResponse>("library_health");
+}
+
+/**
+ * The Prep Auditor checklist (T2.3.4) over the selected tracks, or the whole
+ * library. A browser tab has no library to audit, so it reports an empty one.
+ */
+export async function prepAudit(req: PrepAuditRequest): Promise<PrepAuditResponse> {
+  if (!isTauri) {
+    return {
+      verdict: "empty",
+      scope: req.trackIds ? "selection" : "library",
+      trackCount: 0,
+      skippedCount: 0,
+      checks: [],
+    };
+  }
+  const { invoke } = await import("@tauri-apps/api/core");
+  return invoke<PrepAuditResponse>("prep_audit", { request: req });
 }
 
 /** The stored tag aliases (T2.2.5). A browser tab has none to show. */

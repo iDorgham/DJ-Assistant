@@ -1058,3 +1058,37 @@ pub struct LibraryHealthResponse {
     pub track_count: u64,
     pub categories: Vec<HealthCategoryView>,
 }
+
+/// The Prep Auditor's scope (T2.3.4): the selected tracks, or the whole
+/// library when omitted. An empty list is refused, never read as the library.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PrepAuditRequest {
+    pub track_ids: Option<Vec<String>>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PrepCheckView {
+    pub id: String,
+    pub label: String,
+    /// "blocker" | "warning".
+    pub severity: String,
+    pub fix: String,
+    /// Up to 500 failing tracks, for drill-down.
+    pub failing: Vec<MaintainTrack>,
+    pub failing_total: u64,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PrepAuditResponse {
+    /// "ready" | "almost_ready" | "not_ready" | "empty".
+    pub verdict: String,
+    /// "selection" | "library".
+    pub scope: String,
+    pub track_count: u64,
+    /// Selected ids that are no longer in the library (removed meanwhile).
+    pub skipped_count: u64,
+    pub checks: Vec<PrepCheckView>,
+}

@@ -3128,7 +3128,7 @@ export default function App() {
                     type="button"
                     onClick={() => setMaintainOpen(true)}
                     className="flex h-6 items-center gap-1 rounded-sm border border-dj-border bg-dj-elevated px-2 text-[11px] text-dj-text-secondary transition hover:bg-dj-hover"
-                    title="Library health score, duplicate review and version families"
+                    title="Library health score, prep audit of the selection, duplicate review and version families"
                     aria-haspopup="dialog"
                   >
                     <HeartPulse className="h-3.5 w-3.5 text-dj-success" aria-hidden="true" />
@@ -4258,6 +4258,7 @@ export default function App() {
           onOpenTrack={openTrackFromMaintain}
           onRemoveTracks={removeFromMaintain}
           onUndoRemove={undoRemoveFromMaintain}
+          auditTrackIds={selection.length > 0 ? selection : null}
         />
       )}
 

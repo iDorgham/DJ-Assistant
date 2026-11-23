@@ -9,6 +9,7 @@
 
 use crate::duplicates::DuplicateInput;
 use crate::library_health::{FileState, HealthTrack};
+use crate::prep_audit::PrepTrack;
 use crate::versions::VersionInput;
 
 /// One present track with every field the three Maintain reads need, in
@@ -137,6 +138,20 @@ impl HygieneRow {
             key: self.key.clone(),
             analysis_status: self.analysis_status.clone(),
             has_beatgrid: self.beatgrid_confidence.is_some(),
+            file,
+        }
+    }
+
+    /// `file` is the caller's disk check; `cue_count` comes from
+    /// [`crate::prep_audit::CUE_COUNTS_SQL`].
+    pub fn prep_track(&self, file: FileState, cue_count: u32) -> PrepTrack {
+        PrepTrack {
+            id: self.id.clone(),
+            bpm: self.bpm,
+            key: self.key.clone(),
+            analysis_status: self.analysis_status.clone(),
+            beatgrid_confidence: self.beatgrid_confidence,
+            cue_count,
             file,
         }
     }
