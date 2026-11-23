@@ -9,7 +9,7 @@ use dj_assistant_core::library_health::{compute_health, FileState, HealthContext
 use dj_assistant_core::library_hygiene::{
     HygieneRow, COPY_IS_RECORDED_SQL, DISMISSED_KEYS_SQL, DISMISS_GROUP_SQL, DUPLICATE_COPIES_SQL,
     FORGET_COPY_SQL, HASH_IN_WORKSPACE_SQL, HYGIENE_TRACKS_SQL, RECORD_COPY_SQL,
-    RELOCATE_TRACK_SQL, TRACK_BY_HASH_SQL,
+    RELOCATE_TRACK_SQL, SCAN_WORKSPACE, TRACK_BY_HASH_SQL,
 };
 use dj_assistant_core::versions::group_versions;
 use dj_assistant_schema_tests::open_migrated;
@@ -252,8 +252,8 @@ fn the_hash_lookup_is_scoped_to_the_workspace() {
 /// The scanner's import decision, run the way `scanner.rs` runs it: the
 /// core `ScanDeduplicator` asks the workspace-scoped `HASH_IN_WORKSPACE_SQL`
 /// whether the fingerprint is already imported, then the import inserts into
-/// `default`. (`run_scan` itself needs a Tauri `AppHandle`, so this is the
-/// closest a test can drive it.)
+/// the same `SCAN_WORKSPACE` the scanner binds. (`run_scan` itself needs a
+/// Tauri `AppHandle`, so this is the closest a test can drive it.)
 #[test]
 fn a_scan_imports_a_file_whose_hash_only_another_workspace_holds() {
     let conn = open_migrated();
@@ -271,7 +271,7 @@ fn a_scan_imports_a_file_whose_hash_only_another_workspace_holds() {
     .unwrap();
 
     let already_imported = |conn: &Connection, hash: &str| -> bool {
-        conn.query_row(HASH_IN_WORKSPACE_SQL, ["default", hash], |r| r.get(0))
+        conn.query_row(HASH_IN_WORKSPACE_SQL, [SCAN_WORKSPACE, hash], |r| r.get(0))
             .expect("check must run")
     };
     let mut dedup = ScanDeduplicator::new();
@@ -281,8 +281,15 @@ fn a_scan_imports_a_file_whose_hash_only_another_workspace_holds() {
         "another workspace's row must not block the import"
     );
 
-    // The import then succeeds: UNIQUE(workspace_id, file_hash) allows it.
-    insert(&conn, "a", "/m/a.mp3", "h1", "Song", None);
+    // The import then succeeds in the scan workspace: UNIQUE(workspace_id,
+    // file_hash) allows it.
+    conn.execute(
+        "INSERT INTO tracks (id, workspace_id, file_path, file_hash, file_size, duration_ms,
+            format, title, artist, analysis_status)
+         VALUES ('a', ?1, '/m/a.mp3', 'h1', 1, 300000, 'mp3', 'Song', 'Artist', 'pending')",
+        [SCAN_WORKSPACE],
+    )
+    .expect("the scan's insert must succeed");
     let rows: i64 = conn
         .query_row(
             "SELECT COUNT(*) FROM tracks WHERE file_hash = 'h1'",

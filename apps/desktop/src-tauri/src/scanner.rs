@@ -11,7 +11,7 @@ use dj_assistant_core::{
 
 use dj_assistant_core::library_hygiene::{
     is_distinct_copy, COPY_IS_RECORDED_SQL, FORGET_COPY_SQL, HASH_IN_WORKSPACE_SQL,
-    RECORD_COPY_SQL, RELOCATE_TRACK_SQL, TRACK_BY_HASH_SQL,
+    RECORD_COPY_SQL, RELOCATE_TRACK_SQL, SCAN_WORKSPACE, TRACK_BY_HASH_SQL,
 };
 
 use crate::db::Database;
@@ -222,9 +222,10 @@ pub fn run_scan(
                         composer, album_artist, remixer, producer, grouping,
                         track_number, disc_number, isrc, catalog_number, release_date,
                         copyright, mood, mix_name, lyrics, bitrate_kbps, label_user_set
-                    ) VALUES (?, 'default', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0)",
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0)",
                     rusqlite::params![
                         track_id,
+                        SCAN_WORKSPACE,
                         path_str,
                         hash,
                         meta.file_size,
@@ -320,9 +321,6 @@ pub fn run_scan(
         );
     });
 }
-
-/// The workspace a scan imports into (the scanner's INSERT uses the same id).
-const SCAN_WORKSPACE: &str = "default";
 
 /// Handles a scanned file whose fingerprint already belongs to a library row.
 ///

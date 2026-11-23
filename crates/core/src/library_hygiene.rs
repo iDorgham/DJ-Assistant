@@ -19,6 +19,11 @@ pub const HYGIENE_TRACKS_SQL: &str = "SELECT id, title, artist, album, genre, ye
      EXISTS(SELECT 1 FROM track_tags tt WHERE tt.track_id = tracks.id), beatgrid_confidence \
      FROM tracks WHERE removed_at IS NULL ORDER BY id";
 
+/// The workspace a library scan imports into. The scanner binds this one value
+/// in its "already imported" check, its owner lookup and its INSERT, so the
+/// three cannot disagree about which workspace a file belongs to.
+pub const SCAN_WORKSPACE: &str = "default";
+
 /// The row a fingerprint already belongs to in one workspace (`?1`):
 /// `(id, file_path)`. `UNIQUE(workspace_id, file_hash)` makes it at most one
 /// row; the `ORDER BY` only keeps the choice deterministic.
