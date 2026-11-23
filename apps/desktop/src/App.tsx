@@ -2462,6 +2462,8 @@ export default function App() {
       closeMaintain();
       openTrackPanel(track);
     } catch (err) {
+      // A newer click or a closed dialog already superseded this fetch.
+      if (request !== maintainOpenRequest.current) return;
       console.error("Failed to open the track from Maintain:", err);
       pushStatus("Couldn't open that track", "error");
     }
