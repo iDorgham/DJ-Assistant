@@ -16,7 +16,7 @@ use tauri::State;
 use dj_assistant_core::duplicates::{
     find_duplicate_groups, DuplicateGroup, DEFAULT_DURATION_TOLERANCE_MS,
 };
-use dj_assistant_core::library_health::{compute_health, HealthContext};
+use dj_assistant_core::library_health::{compute_health, FileState, HealthContext};
 use dj_assistant_core::library_hygiene::{
     HygieneRow, DISMISSED_KEYS_SQL, DISMISS_GROUP_SQL, DUPLICATE_COPIES_SQL, FORGET_COPY_SQL,
     HYGIENE_TRACKS_SQL,
@@ -61,6 +61,7 @@ fn hygiene_row(row: &rusqlite::Row<'_>) -> rusqlite::Result<HygieneRow> {
         bitrate_kbps: row.get(16)?,
         file_path: row.get(17)?,
         has_tags: row.get(18)?,
+        beatgrid_confidence: row.get(19)?,
     })
 }
 
@@ -87,7 +88,7 @@ fn read_snapshot(conn: &rusqlite::Connection) -> Result<Snapshot, String> {
     })
 }
 
-fn snapshot(db: &State<'_, Arc<Mutex<Database>>>) -> Result<Snapshot, String> {
+fn snapshot(db: &Mutex<Database>) -> Result<Snapshot, String> {
     let guard = db.lock().map_err(|e| e.to_string())?;
     read_snapshot(guard.conn())
 }
@@ -233,9 +234,29 @@ pub async fn library_versions(
 pub async fn library_health(
     db: State<'_, Arc<Mutex<Database>>>,
 ) -> Result<LibraryHealthResponse, String> {
-    // The lock is released before the disk walk: checking 30,000 paths must
-    // not hold every other command up.
-    let snapshot = snapshot(&db)?;
+    // The snapshot and the disk walk run on a blocking thread, so checking
+    // 30,000 paths ties up neither an async runtime worker nor — the lock is
+    // released after the snapshot — every other command.
+    let db = Arc::clone(&db);
+    tauri::async_runtime::spawn_blocking(move || health_report(&db))
+        .await
+        .map_err(|e| format!("health check failed: {e}"))?
+}
+
+/// What opening a track's file says about it, without decoding any audio.
+fn file_state(path: &str) -> FileState {
+    match std::fs::File::open(path) {
+        Ok(file) => match file.metadata() {
+            Ok(meta) if meta.len() > 0 => FileState::Present,
+            _ => FileState::Unreadable,
+        },
+        Err(err) if err.kind() == std::io::ErrorKind::NotFound => FileState::Missing,
+        Err(_) => FileState::Unreadable,
+    }
+}
+
+fn health_report(db: &Mutex<Database>) -> Result<LibraryHealthResponse, String> {
+    let snapshot = snapshot(db)?;
     let (groups, _) = open_groups(&snapshot);
 
     let mut duplicate_ids: Vec<String> = Vec::new();
@@ -259,7 +280,7 @@ pub async fn library_health(
     let tracks: Vec<_> = snapshot
         .rows
         .iter()
-        .map(|row| row.health_track(!std::path::Path::new(&row.file_path).exists()))
+        .map(|row| row.health_track(file_state(&row.file_path)))
         .collect();
 
     // Playlists, sync and backup are not built yet, so they stay neutral
@@ -282,7 +303,7 @@ pub async fn library_health(
             id: category.id.to_string(),
             label: category.label.to_string(),
             weight: category.weight,
-            configured: category.score.is_some(),
+            configured: category.configured,
             score: category.score,
             counts: category
                 .counts

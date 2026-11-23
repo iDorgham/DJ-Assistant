@@ -9,6 +9,19 @@
 //! drops out of the weighted mean; it neither props the total up nor drags it
 //! down. A configured category that is failing counts in full.
 //!
+//! What is measured today, against the spec table in
+//! `docs/specs/experience/maintain-and-tags.md`:
+//!
+//! * **Tags** — Style is not a separate field: D-026 keeps Style among the
+//!   flat user tags, so custom-tag presence is the Style signal.
+//! * **Analysis** — BPM, key, beat grid (a stored grid confidence) and the
+//!   analysis status. Waveform peaks are not persisted per track, so waveform
+//!   coverage is not part of the score yet.
+//! * **Files** — missing, and unreadable or empty (the file cannot be opened
+//!   or has zero bytes). Decoding every file to find corrupt audio is too slow
+//!   for a report that runs on open, so a file that opens but is corrupt
+//!   inside still counts as healthy.
+//!
 //! Every category carries the counts behind its score and the tracks it is
 //! failing on, because a bare number is not actionable — the Maintain view
 //! shows both.
@@ -30,8 +43,20 @@ pub struct HealthTrack {
     pub bpm: Option<f64>,
     pub key: Option<String>,
     pub analysis_status: String,
+    /// Whether analysis stored a beat grid for the track.
+    pub has_beatgrid: bool,
     /// Set by the caller after checking the disk.
-    pub file_missing: bool,
+    pub file: FileState,
+}
+
+/// What the caller's disk check found for a track's file.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+pub enum FileState {
+    #[default]
+    Present,
+    Missing,
+    /// Exists but cannot be opened, or has zero bytes.
+    Unreadable,
 }
 
 /// Everything besides the track rows the report needs.
@@ -51,10 +76,13 @@ pub struct HealthContext {
 }
 
 /// A category measured outside the track rows: `good` of `total`.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct RatioInput {
     pub good: u64,
     pub total: u64,
+    /// Tracks behind the failures, for drill-down; capped at [`AFFECTED_CAP`]
+    /// in the report.
+    pub affected_ids: Vec<String>,
 }
 
 /// A labelled count shown under a category ("Missing BPM: 12").
@@ -71,7 +99,11 @@ pub struct HealthCategory {
     pub label: &'static str,
     /// The locked weight, in percent.
     pub weight: u32,
-    /// 0–100, or `None` when the category is not configured (neutral).
+    /// Whether the app can measure this category at all. A configured
+    /// category over an empty library still has no score.
+    pub configured: bool,
+    /// 0–100, or `None` when there is nothing to score: the category is not
+    /// configured (neutral), or the library is empty.
     pub score: Option<f64>,
     pub counts: Vec<HealthCount>,
     /// The tracks this category is failing on, capped at [`AFFECTED_CAP`].
@@ -150,6 +182,12 @@ impl Coverage {
         Some(100.0 * (cells - failed) as f64 / cells as f64)
     }
 
+    /// The share of tracks failing no check — for categories whose checks are
+    /// alternatives (a file is missing *or* unreadable), not independent fields.
+    fn track_score(&self, tracks: u64) -> Option<f64> {
+        (tracks > 0).then(|| 100.0 * (tracks - self.affected_total) as f64 / tracks as f64)
+    }
+
     fn counts(&self) -> Vec<HealthCount> {
         self.checks
             .iter()
@@ -161,7 +199,7 @@ impl Coverage {
     }
 }
 
-fn ratio_score(input: Option<RatioInput>) -> Option<f64> {
+fn ratio_score(input: Option<&RatioInput>) -> Option<f64> {
     input.map(|r| {
         if r.total == 0 {
             100.0
@@ -189,8 +227,13 @@ pub fn compute_health(tracks: &[HealthTrack], context: &HealthContext) -> Health
         "Missing energy",
         "No custom tags",
     ]);
-    let mut analysis = Coverage::new(&["Missing BPM", "Missing key", "Analysis incomplete"]);
-    let mut files = Coverage::new(&["Missing on disk"]);
+    let mut analysis = Coverage::new(&[
+        "Missing BPM",
+        "Missing key",
+        "No beat grid",
+        "Analysis incomplete",
+    ]);
+    let mut files = Coverage::new(&["Missing on disk", "Unreadable or empty"]);
 
     for track in tracks {
         metadata.record(
@@ -218,13 +261,20 @@ pub fn compute_health(tracks: &[HealthTrack], context: &HealthContext) -> Health
             &[
                 track.bpm.is_none_or(|b| b <= 0.0),
                 blank(&track.key),
+                !track.has_beatgrid,
                 !track
                     .analysis_status
                     .trim()
                     .eq_ignore_ascii_case("complete"),
             ],
         );
-        files.record(&track.id, &[track.file_missing]);
+        files.record(
+            &track.id,
+            &[
+                track.file == FileState::Missing,
+                track.file == FileState::Unreadable,
+            ],
+        );
     }
 
     let duplicate_score = (total > 0).then(|| {
@@ -234,19 +284,20 @@ pub fn compute_health(tracks: &[HealthTrack], context: &HealthContext) -> Health
     let mut duplicate_ids = context.duplicate_track_ids.clone();
     duplicate_ids.truncate(AFFECTED_CAP);
 
-    let coverage_category = |index: usize, coverage: &Coverage| {
+    let coverage_category = |index: usize, coverage: &Coverage, score: Option<f64>| {
         let (id, label, weight) = WEIGHTS[index];
         HealthCategory {
             id,
             label,
             weight,
-            score: coverage.score(total),
+            configured: true,
+            score,
             counts: coverage.counts(),
             affected_ids: coverage.affected.clone(),
             affected_total: coverage.affected_total,
         }
     };
-    let ratio_category = |index: usize, input: Option<RatioInput>, label: &str| {
+    let ratio_category = |index: usize, input: Option<&RatioInput>, label: &str| {
         let (id, name, weight) = WEIGHTS[index];
         let counts = input
             .map(|r| {
@@ -260,22 +311,26 @@ pub fn compute_health(tracks: &[HealthTrack], context: &HealthContext) -> Health
             id,
             label: name,
             weight,
+            configured: input.is_some(),
             score: ratio_score(input),
             counts,
-            affected_ids: Vec::new(),
+            affected_ids: input.map_or_else(Vec::new, |r| {
+                r.affected_ids.iter().take(AFFECTED_CAP).cloned().collect()
+            }),
             affected_total: input.map_or(0, |r| r.total.saturating_sub(r.good)),
         }
     };
 
     let categories = vec![
-        coverage_category(0, &metadata),
-        coverage_category(1, &tags),
-        coverage_category(2, &analysis),
-        coverage_category(3, &files),
+        coverage_category(0, &metadata, metadata.score(total)),
+        coverage_category(1, &tags, tags.score(total)),
+        coverage_category(2, &analysis, analysis.score(total)),
+        coverage_category(3, &files, files.track_score(total)),
         HealthCategory {
             id: WEIGHTS[4].0,
             label: WEIGHTS[4].1,
             weight: WEIGHTS[4].2,
+            configured: true,
             score: duplicate_score,
             counts: vec![HealthCount {
                 label: "Extra copies".to_string(),
@@ -284,9 +339,9 @@ pub fn compute_health(tracks: &[HealthTrack], context: &HealthContext) -> Health
             affected_ids: duplicate_ids,
             affected_total: context.duplicate_track_ids.len() as u64,
         },
-        ratio_category(5, context.playlists, "Broken entries"),
-        ratio_category(6, context.sync, "Unresolved conflicts"),
-        ratio_category(7, context.backup, "Stale backups"),
+        ratio_category(5, context.playlists.as_ref(), "Broken entries"),
+        ratio_category(6, context.sync.as_ref(), "Unresolved conflicts"),
+        ratio_category(7, context.backup.as_ref(), "Stale backups"),
     ];
 
     let (weighted, weights) = categories
@@ -321,7 +376,8 @@ mod tests {
             bpm: Some(124.0),
             key: Some("8A".into()),
             analysis_status: "complete".into(),
-            file_missing: false,
+            has_beatgrid: true,
+            file: FileState::Present,
         }
     }
 
@@ -350,12 +406,53 @@ mod tests {
         let report = compute_health(&[], &HealthContext::default());
         assert_eq!(report.score, None);
         assert_eq!(report.track_count, 0);
+        // Still configured: an empty library is not an unbuilt feature.
+        let configured: Vec<&str> = report
+            .categories
+            .iter()
+            .filter(|c| c.configured)
+            .map(|c| c.id)
+            .collect();
+        assert_eq!(
+            configured,
+            ["metadata", "tags", "analysis", "files", "duplicates"]
+        );
+    }
+
+    #[test]
+    fn a_missing_or_unreadable_file_fails_the_track_once() {
+        let mut missing = complete("b");
+        missing.file = FileState::Missing;
+        let mut unreadable = complete("c");
+        unreadable.file = FileState::Unreadable;
+        let report = compute_health(
+            &[complete("a"), missing, unreadable, complete("d")],
+            &HealthContext::default(),
+        );
+        let files = report.categories.iter().find(|c| c.id == "files").unwrap();
+        assert_eq!(files.score, Some(50.0));
+        assert_eq!(files.affected_ids, ["b", "c"]);
+        let counts: Vec<u64> = files.counts.iter().map(|c| c.count).collect();
+        assert_eq!(counts, [1, 1]);
+    }
+
+    #[test]
+    fn a_track_without_a_beat_grid_lowers_analysis() {
+        let mut gridless = complete("a");
+        gridless.has_beatgrid = false;
+        let report = compute_health(&[gridless], &HealthContext::default());
+        let analysis = report
+            .categories
+            .iter()
+            .find(|c| c.id == "analysis")
+            .unwrap();
+        assert_eq!(analysis.score, Some(75.0));
     }
 
     #[test]
     fn failing_categories_count_with_their_weight() {
         let mut missing = complete("b");
-        missing.file_missing = true;
+        missing.file = FileState::Missing;
         let report = compute_health(&[complete("a"), missing], &HealthContext::default());
         let files = report.categories.iter().find(|c| c.id == "files").unwrap();
         assert_eq!(files.score, Some(50.0));
@@ -404,10 +501,17 @@ mod tests {
     #[test]
     fn a_configured_ratio_category_counts() {
         let context = HealthContext {
-            backup: Some(RatioInput { good: 0, total: 1 }),
+            backup: Some(RatioInput {
+                good: 0,
+                total: 1,
+                affected_ids: vec!["a".into()],
+            }),
             ..HealthContext::default()
         };
         let report = compute_health(&[complete("a")], &context);
+        let backup = report.categories.iter().find(|c| c.id == "backup").unwrap();
+        assert!(backup.configured);
+        assert_eq!(backup.affected_ids, ["a"]);
         // Backup joins the 75 measured: (75*100 + 5*0) / 80 = 93.75.
         assert!((report.score.unwrap() - 93.75).abs() < 1e-9);
     }

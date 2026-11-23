@@ -13,8 +13,9 @@ project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   Maintain dialog on the Library toolbar with three tabs. **Health** scores the library
   0–100 with the locked D-050 weights (metadata 20, tags 15, analysis 15, files 15,
   duplicates 10, playlists 10, sync 10, backup 5); categories the app cannot measure yet
-  are neutral and drop out of the mean, and every category lists its failing counts and
-  tracks, each opening in the Track panel. **Duplicates** groups present tracks by same
+  are neutral and drop out of the mean (Analysis counts a stored beat grid; Files counts
+  missing and unreadable or empty files, not corrupt audio inside a readable one), and
+  every category lists its failing counts and tracks, each opening in the Track panel. **Duplicates** groups present tracks by same
   ISRC or by artist + title (version marker included) + length within 2 s, and lists
   byte-identical files the scanner skipped at another path — now recorded in migration
   012 `duplicate_files` instead of only counted, after a full byte comparison with the

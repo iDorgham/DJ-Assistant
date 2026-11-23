@@ -82,6 +82,19 @@ const errorClass =
   "rounded-sm border border-dj-danger/30 bg-dj-danger/10 px-2 py-1.5 text-[11px] text-dj-danger";
 const sectionHeading = "text-[11px] font-semibold uppercase tracking-wider text-dj-text-muted";
 
+function logUnexpected(err: unknown) {
+  console.error("Maintain load failed unexpectedly:", err);
+}
+
+/** A category's score as a thin bar; empty when it is not configured. */
+function ScoreBar({ tone, width }: { tone: ScoreTone; width: number }) {
+  return (
+    <div className="mt-1 h-1 w-full rounded-full bg-dj-border/60">
+      <div className={`h-1 rounded-full ${TONE_BAR[tone]}`} style={{ width: `${width}%` }} />
+    </div>
+  );
+}
+
 /** A failed load with a way to try again without reopening the dialog. */
 function LoadError({ message, onRetry }: { message: string; onRetry: () => void }) {
   return (
@@ -171,9 +184,11 @@ export function MaintainDialog({
   // disk, so a result from an earlier visit can already be wrong. The previous
   // result stays on screen until the new one arrives.
   useEffect(() => {
-    if (tab === "health") void loadHealth();
-    if (tab === "duplicates") void loadDuplicates();
-    if (tab === "versions") void loadVersions();
+    // The loaders report their own errors in the tab, so nothing reaches
+    // these handlers; they only keep a stray rejection out of the console.
+    if (tab === "health") loadHealth().catch(logUnexpected);
+    if (tab === "duplicates") loadDuplicates().catch(logUnexpected);
+    if (tab === "versions") loadVersions().catch(logUnexpected);
   }, [tab, loadHealth, loadDuplicates, loadVersions]);
 
   /** After a write every tab is stale; refetch the visible one, drop the rest. */
@@ -286,12 +301,10 @@ export function MaintainDialog({
               </span>
             </p>
             <p className="truncate text-[11px] text-dj-text-muted">{categoryDetail(category)}</p>
-            <div className="mt-1 h-1 w-full rounded-full bg-dj-border/60">
-              <div
-                className={`h-1 rounded-full ${TONE_BAR[tone]}`}
-                style={{ width: `${category.configured ? Math.round(category.score ?? 0) : 0}%` }}
-              />
-            </div>
+            <ScoreBar
+              tone={tone}
+              width={category.configured ? Math.round(category.score ?? 0) : 0}
+            />
           </div>
           <span className={`w-10 text-right text-sm font-semibold tabular-nums ${TONE_TEXT[tone]}`}>
             {category.configured ? scoreText(category.score) : "–"}

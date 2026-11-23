@@ -435,7 +435,7 @@ export async function libraryDuplicates(): Promise<LibraryDuplicatesResponse> {
 export async function dismissDuplicateGroup(req: DismissDuplicateGroupRequest): Promise<void> {
   if (!isTauri) throw new Error("Keeping both copies needs the desktop app.");
   const { invoke } = await import("@tauri-apps/api/core");
-  await invoke<void>("dismiss_duplicate_group", { request: req });
+  await invoke("dismiss_duplicate_group", { request: req });
 }
 
 /** Forgets a recorded file copy. Deletes the record, never the file. */

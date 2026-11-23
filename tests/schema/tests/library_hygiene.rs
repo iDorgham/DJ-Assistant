@@ -4,7 +4,7 @@
 //! instead of in the running app.
 
 use dj_assistant_core::duplicates::{find_duplicate_groups, DEFAULT_DURATION_TOLERANCE_MS};
-use dj_assistant_core::library_health::{compute_health, HealthContext};
+use dj_assistant_core::library_health::{compute_health, FileState, HealthContext};
 use dj_assistant_core::library_hygiene::{
     HygieneRow, DISMISSED_KEYS_SQL, DISMISS_GROUP_SQL, DUPLICATE_COPIES_SQL, FORGET_COPY_SQL,
     HYGIENE_TRACKS_SQL, RECORD_COPY_SQL, TRACK_BY_HASH_SQL,
@@ -48,6 +48,7 @@ fn read_rows(conn: &Connection) -> Vec<HygieneRow> {
             bitrate_kbps: row.get(16)?,
             file_path: row.get(17)?,
             has_tags: row.get(18)?,
+            beatgrid_confidence: row.get(19)?,
         })
     })
     .expect("hygiene read must run")
@@ -121,7 +122,7 @@ fn duplicate_and_version_groups_come_out_of_real_rows() {
     let health = compute_health(
         &rows
             .iter()
-            .map(|r| r.health_track(false))
+            .map(|r| r.health_track(FileState::Present))
             .collect::<Vec<_>>(),
         &HealthContext::default(),
     );
@@ -187,6 +188,32 @@ fn copies_are_recorded_listed_repointed_and_forgotten() {
 
     assert_eq!(conn.execute(FORGET_COPY_SQL, ["/backup/a.mp3"]).unwrap(), 1);
     assert!(list(&conn).is_empty());
+}
+
+#[test]
+fn a_copy_path_imported_as_its_own_track_leaves_the_list() {
+    let conn = open_migrated();
+    insert(&conn, "a", "/m/a.mp3", "h1", "Song", None);
+    conn.execute(RECORD_COPY_SQL, params!["/backup/a.mp3", "a", "h1"])
+        .unwrap();
+    let count = |conn: &Connection| -> i64 {
+        conn.prepare(DUPLICATE_COPIES_SQL)
+            .unwrap()
+            .query_map([], |_| Ok(()))
+            .unwrap()
+            .count() as i64
+    };
+    assert_eq!(count(&conn), 1);
+    // The skipped file later changed and was imported as a track of its own.
+    insert(&conn, "b", "/backup/a.mp3", "h9", "Song", None);
+    assert_eq!(count(&conn), 0, "an imported path is a track, not a copy");
+    // Soft-removing that track makes the record visible again.
+    conn.execute(
+        "UPDATE tracks SET removed_at = datetime('now') WHERE id = 'b'",
+        [],
+    )
+    .unwrap();
+    assert_eq!(count(&conn), 1);
 }
 
 #[test]

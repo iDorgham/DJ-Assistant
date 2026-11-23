@@ -4226,7 +4226,7 @@ export default function App() {
       {maintainOpen && (
         <MaintainDialog
           onClose={() => setMaintainOpen(false)}
-          onOpenTrack={(trackId) => void openTrackFromMaintain(trackId)}
+          onOpenTrack={openTrackFromMaintain}
           onRemoveTracks={removeFromMaintain}
         />
       )}

@@ -8,7 +8,7 @@
 //! user is asking about.
 
 use crate::duplicates::DuplicateInput;
-use crate::library_health::HealthTrack;
+use crate::library_health::{FileState, HealthTrack};
 use crate::versions::VersionInput;
 
 /// One present track with every field the three Maintain reads need, in
@@ -16,7 +16,7 @@ use crate::versions::VersionInput;
 pub const HYGIENE_TRACKS_SQL: &str = "SELECT id, title, artist, album, genre, year, label, \
      mood, energy, bpm, key_camelot, analysis_status, isrc, mix_name, duration_ms, format, \
      bitrate_kbps, file_path, \
-     EXISTS(SELECT 1 FROM track_tags tt WHERE tt.track_id = tracks.id) \
+     EXISTS(SELECT 1 FROM track_tags tt WHERE tt.track_id = tracks.id), beatgrid_confidence \
      FROM tracks WHERE removed_at IS NULL ORDER BY id";
 
 /// The library row a fingerprint already belongs to: `(id, file_path)`.
@@ -31,11 +31,14 @@ pub const RECORD_COPY_SQL: &str = "INSERT INTO duplicate_files (file_path, track
 
 /// Recorded copies of present tracks: `(copy_path, track_id, detected_at)`.
 ///
-/// A copy whose path is now the track's own path (the original was moved and
-/// the copy re-imported in its place) is not a copy any more and is hidden.
+/// A recorded path that is now a library track of its own is hidden: the
+/// track's own path (the original was moved and the copy re-imported in its
+/// place), or any other present track imported from that path later.
 pub const DUPLICATE_COPIES_SQL: &str = "SELECT d.file_path, d.track_id, d.detected_at \
      FROM duplicate_files d JOIN tracks t ON t.id = d.track_id \
      WHERE t.removed_at IS NULL AND d.file_path <> t.file_path \
+     AND NOT EXISTS (SELECT 1 FROM tracks o \
+         WHERE o.file_path = d.file_path AND o.removed_at IS NULL) \
      ORDER BY d.detected_at DESC, d.file_path ASC";
 
 /// Forgets one recorded copy (`?1` path). Deletes the record, never the file.
@@ -70,6 +73,7 @@ pub struct HygieneRow {
     pub bitrate_kbps: Option<i64>,
     pub file_path: String,
     pub has_tags: bool,
+    pub beatgrid_confidence: Option<f64>,
 }
 
 impl HygieneRow {
@@ -93,8 +97,8 @@ impl HygieneRow {
         }
     }
 
-    /// `file_missing` is the caller's disk check.
-    pub fn health_track(&self, file_missing: bool) -> HealthTrack {
+    /// `file` is the caller's disk check.
+    pub fn health_track(&self, file: FileState) -> HealthTrack {
         HealthTrack {
             id: self.id.clone(),
             title: self.title.clone(),
@@ -109,7 +113,8 @@ impl HygieneRow {
             bpm: self.bpm,
             key: self.key.clone(),
             analysis_status: self.analysis_status.clone(),
-            file_missing,
+            has_beatgrid: self.beatgrid_confidence.is_some(),
+            file,
         }
     }
 }
@@ -173,7 +178,8 @@ mod tests {
         };
         assert_eq!(row.duplicate_input().isrc.as_deref(), Some("GBAAA2400001"));
         assert_eq!(row.version_input().title, "Song (Radio Edit)");
-        let health = row.health_track(true);
-        assert!(health.file_missing && health.has_tags);
+        let health = row.health_track(FileState::Missing);
+        assert!(health.file == FileState::Missing && health.has_tags);
+        assert!(!health.has_beatgrid);
     }
 }

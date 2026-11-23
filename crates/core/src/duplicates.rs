@@ -20,7 +20,7 @@
 //! the only resolutions are "keep both" (a dismissal) or a soft remove of the
 //! copy they do not want, which is undoable.
 
-use std::collections::{BTreeMap, HashSet};
+use std::collections::{BTreeMap, HashMap};
 
 use crate::versions::{normalize_artist, normalize_name, parse_version, version_identity};
 
@@ -173,14 +173,21 @@ pub fn find_duplicate_groups(tracks: &[DuplicateInput], tolerance_ms: i64) -> Ve
         }
     }
 
-    let isrc_sets: Vec<HashSet<&String>> = isrc_groups
+    // A track has one ISRC, so it sits in at most one ISRC group: index each
+    // track to its group, and a near group is redundant when every member maps
+    // to the same one. Linear in the tracks, not groups × groups.
+    let isrc_group_of: HashMap<&str, usize> = isrc_groups
         .iter()
-        .map(|g| g.track_ids.iter().collect())
+        .enumerate()
+        .flat_map(|(index, g)| g.track_ids.iter().map(move |id| (id.as_str(), index)))
         .collect();
     near_groups.retain(|group| {
-        !isrc_sets
+        let mut owners = group
+            .track_ids
             .iter()
-            .any(|set| group.track_ids.iter().all(|id| set.contains(id)))
+            .map(|id| isrc_group_of.get(id.as_str()));
+        let first = owners.next().flatten();
+        !(first.is_some() && owners.all(|o| o == first))
     });
 
     groups.extend(isrc_groups);
@@ -282,6 +289,24 @@ mod tests {
         );
         assert_eq!(groups.len(), 1);
         assert_eq!(groups[0].reason, DuplicateReason::SameIsrc);
+    }
+
+    #[test]
+    fn a_near_match_reaching_outside_its_isrc_group_is_kept() {
+        let groups = find_duplicate_groups(
+            &[
+                t("a", "X", "Song", Some("GBAAA2400001"), 300_000),
+                t("b", "X", "Song", Some("GBAAA2400001"), 300_000),
+                t("c", "X", "Song", None, 300_500),
+            ],
+            DEFAULT_DURATION_TOLERANCE_MS,
+        );
+        let reasons: Vec<DuplicateReason> = groups.iter().map(|g| g.reason).collect();
+        assert_eq!(
+            reasons,
+            [DuplicateReason::SameIsrc, DuplicateReason::NearMatch]
+        );
+        assert_eq!(groups[1].track_ids, ["a", "b", "c"]);
     }
 
     #[test]
