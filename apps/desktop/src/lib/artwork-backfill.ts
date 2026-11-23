@@ -89,11 +89,11 @@ export function backfillSummary(state: BackfillState): string | null {
   const parts = [
     state.filled > 0 ? plural(state.filled, "cover added", "covers added") : null,
     state.withoutArt > 0
-      ? plural(state.withoutArt, "file has", "files have") + " no embedded artwork"
+      ? `${plural(state.withoutArt, "file has", "files have")} no embedded artwork`
       : null,
-    state.missingFile > 0 ? plural(state.missingFile, "file is", "files are") + " missing" : null,
+    state.missingFile > 0 ? `${plural(state.missingFile, "file is", "files are")} missing` : null,
     state.unreadable > 0
-      ? plural(state.unreadable, "file could", "files could") + " not be read"
+      ? `${plural(state.unreadable, "file could", "files could")} not be read`
       : null,
     state.writeErrors > 0 ? `${state.writeErrors} could not be saved` : null,
   ].filter((part): part is string => part !== null);

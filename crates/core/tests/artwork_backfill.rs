@@ -47,7 +47,7 @@ fn mp3_with_cover(dir: &Path, name: &str, picture: &[u8]) -> PathBuf {
     tag.add_frame(Picture {
         mime_type: "image/jpeg".to_string(),
         picture_type: PictureType::CoverFront,
-        description: String::new(),
+        description: String::default(),
         data: picture.to_vec(),
     });
     tag.write_to_path(&path, Version::Id3v24)
@@ -149,7 +149,7 @@ fn a_file_without_a_picture_reports_no_art_and_caches_nothing() {
         ),
         "a tagless file is expected, not a failure"
     );
-    let entries = std::fs::read_dir(&cache).map(|d| d.count()).unwrap_or(0);
+    let entries = std::fs::read_dir(&cache).map_or(0, |d| d.count());
     assert_eq!(entries, 0, "nothing may be written for a file with no art");
 
     let _ = std::fs::remove_dir_all(&dir);
