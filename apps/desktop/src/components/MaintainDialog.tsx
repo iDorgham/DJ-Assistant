@@ -170,11 +170,18 @@ export function MaintainDialog({
   initialTab = "health",
 }: MaintainDialogProps) {
   const [tab, setTab] = useState<MaintainTab>(initialTab);
+  // Read by afterWrite, which runs after an await and so sees the tab the
+  // user is on now, not the one it was created on.
+  const tabRef = useRef(tab);
+  useEffect(() => {
+    tabRef.current = tab;
+  }, [tab]);
 
   const healthRead = useTabRead<LibraryHealthResponse>(libraryHealth);
   const health = healthRead.data;
   const healthError = healthRead.error;
   const loadHealth = healthRead.load;
+  const reloadHealth = healthRead.reload;
   const [openCategory, setOpenCategory] = useState<string | null>(null);
   const [drillLimit, setDrillLimit] = useState(DRILL_PAGE);
 
@@ -198,18 +205,26 @@ export function MaintainDialog({
   useEffect(() => {
     // The loaders report their own errors in the tab, so nothing reaches
     // these handlers; they only keep a stray rejection out of the console.
-    if (tab === "health") loadHealth().catch(logUnexpected);
+    // Health always starts a fresh scan: one already running may have checked
+    // the disk before a drive went away.
+    if (tab === "health") reloadHealth().catch(logUnexpected);
     if (tab === "duplicates") loadDuplicates().catch(logUnexpected);
     if (tab === "versions") loadVersions().catch(logUnexpected);
-  }, [tab, loadHealth, loadDuplicates, loadVersions]);
+  }, [tab, reloadHealth, loadDuplicates, loadVersions]);
 
-  /** After a write every tab is stale; refetch the visible one, drop the rest. */
+  /**
+   * After a write every tab is stale. Cached results and pending reads are
+   * dropped, and Duplicates plus whichever tab is open now start fresh reads —
+   * a pending read would publish pre-write data, and a tab the user switched
+   * to mid-write would otherwise wait on a read that was just orphaned.
+   */
   const afterWrite = async () => {
     healthRead.reset();
     versionsRead.reset();
-    // A scan that started before the write would publish pre-write data, so
-    // the refresh starts a new request rather than joining that one.
-    await duplicatesRead.reload();
+    const refreshes = [duplicatesRead.reload()];
+    if (tabRef.current === "health") refreshes.push(healthRead.reload());
+    if (tabRef.current === "versions") refreshes.push(versionsRead.reload());
+    await Promise.all(refreshes);
   };
 
   const undoRemoval = async (removal: MaintainRemoval) => {

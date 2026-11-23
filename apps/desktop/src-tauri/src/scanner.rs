@@ -10,7 +10,8 @@ use dj_assistant_core::{
 };
 
 use dj_assistant_core::library_hygiene::{
-    is_distinct_copy, COPY_IS_RECORDED_SQL, RECORD_COPY_SQL, RELOCATE_TRACK_SQL, TRACK_BY_HASH_SQL,
+    is_distinct_copy, COPY_IS_RECORDED_SQL, FORGET_COPY_SQL, HASH_IN_WORKSPACE_SQL,
+    RECORD_COPY_SQL, RELOCATE_TRACK_SQL, TRACK_BY_HASH_SQL,
 };
 
 use crate::db::Database;
@@ -73,14 +74,16 @@ pub fn run_scan(
                     Ok(g) => g,
                     Err(_) => break,
                 };
+                // Scoped to the workspace the scan imports into: a fingerprint
+                // held only by another workspace must not stop this import.
                 dedup.classify(&hash, |candidate| {
                     db_guard
                         .conn()
-                        .prepare("SELECT COUNT(*) FROM tracks WHERE file_hash = ?")
-                        .and_then(|mut stmt| {
-                            stmt.query_row([candidate], |row| row.get::<_, i64>(0))
-                        })
-                        .map(|count| count > 0)
+                        .query_row(
+                            HASH_IN_WORKSPACE_SQL,
+                            rusqlite::params![SCAN_WORKSPACE, candidate],
+                            |row| row.get::<_, bool>(0),
+                        )
                         .unwrap_or(false)
                 })
             };
@@ -278,6 +281,12 @@ pub fn run_scan(
                         },
                     );
                     continue;
+                }
+
+                // This path is a track now, so any copy record left from an
+                // earlier scan (when its bytes matched another track) is stale.
+                if let Err(err) = db_guard.conn().execute(FORGET_COPY_SQL, [&path_str]) {
+                    log::warn!("Failed to clear the copy record for {}: {}", path_str, err);
                 }
             }
 

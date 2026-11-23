@@ -25,6 +25,11 @@ pub const HYGIENE_TRACKS_SQL: &str = "SELECT id, title, artist, album, genre, ye
 pub const TRACK_BY_HASH_SQL: &str = "SELECT id, file_path FROM tracks \
      WHERE workspace_id = ?1 AND file_hash = ?2 ORDER BY id LIMIT 1";
 
+/// Whether workspace `?1` already holds fingerprint `?2` — the scanner's
+/// "already imported" check. Another workspace's rows do not count.
+pub const HASH_IN_WORKSPACE_SQL: &str =
+    "SELECT EXISTS(SELECT 1 FROM tracks WHERE workspace_id = ?1 AND file_hash = ?2)";
+
 /// Re-points a track whose file moved: `?1` new path, `?2` timestamp, `?3` id.
 pub const RELOCATE_TRACK_SQL: &str =
     "UPDATE tracks SET file_path = ?1, updated_at = ?2 WHERE id = ?3";
@@ -54,6 +59,7 @@ pub const DUPLICATE_COPIES_SQL: &str = "SELECT d.file_path, d.track_id, d.detect
      ORDER BY d.detected_at DESC, d.file_path ASC";
 
 /// Forgets one recorded copy (`?1` path). Deletes the record, never the file.
+/// The scanner also runs it after importing a path as a track of its own.
 pub const FORGET_COPY_SQL: &str = "DELETE FROM duplicate_files WHERE file_path = ?1";
 
 /// Every dismissed ("keep both") duplicate group key.

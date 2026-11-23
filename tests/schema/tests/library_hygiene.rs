@@ -7,11 +7,12 @@ use dj_assistant_core::duplicates::{find_duplicate_groups, DEFAULT_DURATION_TOLE
 use dj_assistant_core::library_health::{compute_health, FileState, HealthContext};
 use dj_assistant_core::library_hygiene::{
     HygieneRow, COPY_IS_RECORDED_SQL, DISMISSED_KEYS_SQL, DISMISS_GROUP_SQL, DUPLICATE_COPIES_SQL,
-    FORGET_COPY_SQL, HYGIENE_TRACKS_SQL, RECORD_COPY_SQL, RELOCATE_TRACK_SQL, TRACK_BY_HASH_SQL,
+    FORGET_COPY_SQL, HASH_IN_WORKSPACE_SQL, HYGIENE_TRACKS_SQL, RECORD_COPY_SQL,
+    RELOCATE_TRACK_SQL, TRACK_BY_HASH_SQL,
 };
 use dj_assistant_core::versions::group_versions;
 use dj_assistant_schema_tests::open_migrated;
-use rusqlite::{params, Connection};
+use rusqlite::{params, Connection, OptionalExtension};
 
 fn insert(conn: &Connection, id: &str, path: &str, hash: &str, title: &str, isrc: Option<&str>) {
     conn.execute(
@@ -207,25 +208,44 @@ fn a_copy_path_imported_as_its_own_track_leaves_the_list() {
     };
     assert_eq!(count(&conn), 1);
     // The skipped file later changed and was imported as a track of its own.
+    // The query hides the record at once; the scanner then forgets it.
     insert(&conn, "b", "/backup/a.mp3", "h9", "Song", None);
     assert_eq!(count(&conn), 0, "an imported path is a track, not a copy");
-    // Soft-removing that track makes the record visible again.
+    conn.execute(FORGET_COPY_SQL, ["/backup/a.mp3"]).unwrap();
+    // Soft-removing that track must not bring the stale record back: its
+    // bytes no longer match track a.
     conn.execute(
         "UPDATE tracks SET removed_at = datetime('now') WHERE id = 'b'",
         [],
     )
     .unwrap();
-    assert_eq!(count(&conn), 1);
+    assert_eq!(count(&conn), 0);
 }
 
 #[test]
 fn the_hash_lookup_is_scoped_to_the_workspace() {
     let conn = open_migrated();
     insert(&conn, "a", "/m/a.mp3", "h1", "Song", None);
+    // `optional()` keeps a query error an error; only "no row" is None.
     let other: Option<String> = conn
         .query_row(TRACK_BY_HASH_SQL, ["elsewhere", "h1"], |r| r.get(0))
-        .ok();
+        .optional()
+        .expect("lookup must run");
     assert_eq!(other, None);
+    let own: Option<String> = conn
+        .query_row(TRACK_BY_HASH_SQL, ["default", "h1"], |r| r.get(0))
+        .optional()
+        .expect("lookup must run");
+    assert_eq!(own.as_deref(), Some("a"));
+
+    // The scanner's "already imported" check is scoped the same way, so a
+    // fingerprint held only by another workspace does not block an import.
+    let held = |workspace: &str| -> bool {
+        conn.query_row(HASH_IN_WORKSPACE_SQL, [workspace, "h1"], |r| r.get(0))
+            .expect("check must run")
+    };
+    assert!(held("default"));
+    assert!(!held("elsewhere"));
 }
 
 #[test]
