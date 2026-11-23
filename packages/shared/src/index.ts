@@ -965,7 +965,7 @@ export type PrepSeverity = "blocker" | "warning";
 export type PrepVerdict = "ready" | "almost_ready" | "not_ready" | "empty";
 
 export interface PrepCheckView {
-  /** "files" | "analysis" | "beatgrid" | "cues" | "tags" | "duplicates". */
+  /** "files" | "analysis" | "stale_analysis" | "beatgrid" | "cues" | "tags" | "duplicates". */
   id: string;
   label: string;
   severity: PrepSeverity;

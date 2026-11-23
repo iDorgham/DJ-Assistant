@@ -65,6 +65,7 @@ fn hygiene_row(row: &rusqlite::Row<'_>) -> rusqlite::Result<HygieneRow> {
         file_path: row.get(17)?,
         has_tags: row.get(18)?,
         beatgrid_confidence: row.get(19)?,
+        analysis_version: row.get(20)?,
     })
 }
 
@@ -401,6 +402,7 @@ fn prep_report(
     let context = PrepContext {
         duplicate_ids,
         tag_clash_ids: tag_clash_ids(&values),
+        current_analysis_version: Some(dj_assistant_analysis::analysis_version()),
     };
 
     let tracks: Vec<_> = rows

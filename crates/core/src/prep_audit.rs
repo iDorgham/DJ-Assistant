@@ -3,8 +3,9 @@
 //! Sets arrive in Phase 3, so today the auditor runs over the tracks the user
 //! selected in the library (the crate they plan to play) or, with nothing
 //! selected, the whole library. Each check is either a **blocker** — the track
-//! cannot be played as prepared (its file is gone, it was never analysed) — or
-//! a **warning** that is worth fixing before the gig but does not stop it.
+//! cannot be played as prepared (its file is gone, its analysis is missing or
+//! unfinished) — or a **warning** that is worth fixing before the gig but does
+//! not stop it (an analysis from an older pipeline still plays).
 //!
 //! The checks the spec lists that need a set *order* (energy-curve gaps, a
 //! vocal clash at position 7) are not part of this checklist yet: a selection
@@ -38,6 +39,8 @@ pub struct PrepTrack {
     pub analysis_status: String,
     /// The analysed grid's alignment ratio, `0..=1`; `None` before analysis.
     pub beatgrid_confidence: Option<f64>,
+    /// The pipeline version that produced the analysis; `None` when unknown.
+    pub analysis_version: Option<String>,
     pub cue_count: u32,
     /// Set by the caller after checking the disk.
     pub file: FileState,
@@ -119,6 +122,9 @@ pub struct PrepContext {
     /// Ids of tracks carrying a tag spelling that another track in scope
     /// spells differently ([`tag_clash_ids`]).
     pub tag_clash_ids: BTreeSet<String>,
+    /// The running analysis pipeline's version. `None` skips the stale-analysis
+    /// check rather than flagging every track.
+    pub current_analysis_version: Option<String>,
 }
 
 fn blank(value: &Option<String>) -> bool {
@@ -199,9 +205,18 @@ pub fn audit(tracks: &[PrepTrack], context: &PrepContext) -> PrepAudit {
     );
     let mut analysis = Check::new(
         "analysis",
-        "Not analyzed (BPM, key or analysis incomplete)",
+        "Analysis incomplete (no BPM, no key, or not finished)",
         Severity::Blocker,
         "Analyze these tracks",
+    );
+    // A finished analysis from an older pipeline still plays; it is a warning,
+    // and only for tracks the analysis check passes, so one track is not
+    // flagged twice for the same fix.
+    let mut stale = Check::new(
+        "stale_analysis",
+        "Analyzed by an older version",
+        Severity::Warning,
+        "Re-analyze these tracks",
     );
     let mut beatgrid = Check::new(
         "beatgrid",
@@ -226,14 +241,20 @@ pub fn audit(tracks: &[PrepTrack], context: &PrepContext) -> PrepAudit {
     for track in tracks {
         let id = track.id.as_str();
         files.record(id, track.file != FileState::Present);
-        analysis.record(
+        let incomplete = track.bpm.is_none_or(|b| b <= 0.0)
+            || blank(&track.key)
+            || !track
+                .analysis_status
+                .trim()
+                .eq_ignore_ascii_case("complete");
+        analysis.record(id, incomplete);
+        stale.record(
             id,
-            track.bpm.is_none_or(|b| b <= 0.0)
-                || blank(&track.key)
-                || !track
-                    .analysis_status
-                    .trim()
-                    .eq_ignore_ascii_case("complete"),
+            !incomplete
+                && context
+                    .current_analysis_version
+                    .as_deref()
+                    .is_some_and(|current| track.analysis_version.as_deref() != Some(current)),
         );
         beatgrid.record(
             id,
@@ -246,7 +267,7 @@ pub fn audit(tracks: &[PrepTrack], context: &PrepContext) -> PrepAudit {
         duplicates.record(id, context.duplicate_ids.contains(id));
     }
 
-    let checks: Vec<PrepCheck> = [files, analysis, beatgrid, cues, tags, duplicates]
+    let checks: Vec<PrepCheck> = [files, analysis, stale, beatgrid, cues, tags, duplicates]
         .into_iter()
         .map(Check::finish)
         .collect();
@@ -280,6 +301,7 @@ mod tests {
             key: Some("8A".into()),
             analysis_status: "complete".into(),
             beatgrid_confidence: Some(0.9),
+            analysis_version: Some("v2".into()),
             cue_count: 4,
             file: FileState::Present,
         }
@@ -304,6 +326,7 @@ mod tests {
             [
                 "files",
                 "analysis",
+                "stale_analysis",
                 "beatgrid",
                 "cues",
                 "tags",
@@ -348,6 +371,7 @@ mod tests {
         let context = PrepContext {
             duplicate_ids: ["dup".to_string()].into(),
             tag_clash_ids: ["clash".to_string()].into(),
+            ..PrepContext::default()
         };
         let report = audit(&[shaky, bare, ready("dup"), ready("clash")], &context);
         assert_eq!(report.verdict, Verdict::AlmostReady);
@@ -355,6 +379,33 @@ mod tests {
         assert_eq!(check(&report, "cues").failing_ids, ["bare"]);
         assert_eq!(check(&report, "duplicates").failing_ids, ["dup"]);
         assert_eq!(check(&report, "tags").failing_ids, ["clash"]);
+    }
+
+    #[test]
+    fn an_older_or_unknown_analysis_version_is_a_warning_once() {
+        let mut old = ready("old");
+        old.analysis_version = Some("v1".into());
+        let mut unstamped = ready("unstamped");
+        unstamped.analysis_version = None;
+        // Not analysed at all: the blocker covers it, not the stale warning.
+        let mut raw = ready("raw");
+        raw.analysis_status = "pending".into();
+        raw.analysis_version = None;
+        let context = PrepContext {
+            current_analysis_version: Some("v2".into()),
+            ..PrepContext::default()
+        };
+        let report = audit(&[old, unstamped, raw, ready("ok")], &context);
+        let stale = check(&report, "stale_analysis");
+        assert_eq!(stale.failing_ids, ["old", "unstamped"]);
+        assert_eq!(stale.severity, Severity::Warning);
+        assert_eq!(check(&report, "analysis").failing_ids, ["raw"]);
+
+        // Without a known current version nothing is called stale.
+        let mut old = ready("old");
+        old.analysis_version = Some("v1".into());
+        let report = audit(&[old], &PrepContext::default());
+        assert!(check(&report, "stale_analysis").passed());
     }
 
     #[test]

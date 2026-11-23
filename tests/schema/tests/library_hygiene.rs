@@ -52,6 +52,7 @@ fn read_rows(conn: &Connection) -> Vec<HygieneRow> {
             file_path: row.get(17)?,
             has_tags: row.get(18)?,
             beatgrid_confidence: row.get(19)?,
+            analysis_version: row.get(20)?,
         })
     })
     .expect("hygiene read must run")

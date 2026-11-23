@@ -12,14 +12,15 @@ project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - **Library › Maintain › Prep audit (T2.3.4)** — a fourth Maintain tab with the Prep
   Auditor's pre-gig checklist. It checks the tracks selected in the library, or the whole
   library when nothing is selected (sets arrive in Phase 3). Blockers: a file missing or
-  unreadable, and a track not analysed (no BPM, no key, or analysis incomplete).
-  Warnings: beat-grid confidence below 50 % (the player chip's "low" tier), no cue
+  unreadable, and an incomplete analysis (no BPM, no key, or not finished). Warnings: an
+  analysis from an older pipeline version, beat-grid confidence below 50 % (the player
+  chip's "low" tier), no cue
   points, a tag spelled differently on another track in scope (the Tag Surgeon's rewrite
   set), and a duplicate of another track in scope. The verdict reads Ready, Almost ready
   or Not ready; every check lists its failing tracks, each opening in the Track panel.
   Energy-flow and vocal-clash checks need a set order and wait for sets. Rules in
   `crates/core/src/prep_audit.rs` with unit tests and a schema test for the cue counts;
-  command `prep_audit` in `src-tauri/src/maintain.rs`.
+  command `prep_audit` in `apps/desktop/src-tauri/src/maintain.rs`.
 - **Library › Maintain: health score, duplicates and versions (T2.3.1–T2.3.3)** — a new
   Maintain dialog on the Library toolbar with three tabs. **Health** scores the library
   0–100 with the locked D-050 weights (metadata 20, tags 15, analysis 15, files 15,

@@ -17,7 +17,8 @@ use crate::versions::VersionInput;
 pub const HYGIENE_TRACKS_SQL: &str = "SELECT id, title, artist, album, genre, year, label, \
      mood, energy, bpm, key_camelot, analysis_status, isrc, mix_name, duration_ms, format, \
      bitrate_kbps, file_path, \
-     EXISTS(SELECT 1 FROM track_tags tt WHERE tt.track_id = tracks.id), beatgrid_confidence \
+     EXISTS(SELECT 1 FROM track_tags tt WHERE tt.track_id = tracks.id), beatgrid_confidence, \
+     analysis_version \
      FROM tracks WHERE removed_at IS NULL ORDER BY id";
 
 /// The workspace a library scan imports into. The scanner binds this one value
@@ -98,6 +99,8 @@ pub struct HygieneRow {
     pub file_path: String,
     pub has_tags: bool,
     pub beatgrid_confidence: Option<f64>,
+    /// The analysis pipeline's version stamp; `None` before analysis.
+    pub analysis_version: Option<String>,
 }
 
 impl HygieneRow {
@@ -151,6 +154,7 @@ impl HygieneRow {
             key: self.key.clone(),
             analysis_status: self.analysis_status.clone(),
             beatgrid_confidence: self.beatgrid_confidence,
+            analysis_version: self.analysis_version.clone(),
             cue_count,
             file,
         }
