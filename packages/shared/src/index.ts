@@ -182,6 +182,40 @@ export interface GetArtworkRequest {
  */
 export type GetArtworkResponse = string | null;
 
+// --- Embedded artwork backfill ---
+// A library imported before the scanner cached cover art has rows with no
+// artwork even though the files carry a picture, and a re-scan skips them as
+// duplicates. This run goes back to the file. `docs/plan` T2.1.9.
+
+/** There is no request body: the candidates are whatever the library lacks. */
+export interface BackfillArtworkResponse {
+  jobId: string;
+  /** Rows the run will look at; `0` means the library is already complete. */
+  totalCandidates: number;
+}
+
+export interface ArtworkBackfillProgressEvent {
+  jobId: string;
+  processed: number;
+  total: number;
+  currentPath: string;
+  /** Set when this file's artwork could not be recorded; the run continues. */
+  error?: string | null;
+}
+
+/** The five buckets are mutually exclusive and sum to the candidates read. */
+export interface ArtworkBackfillCompletedEvent {
+  jobId: string;
+  totalScanned: number;
+  totalFilled: number;
+  withoutArt: number;
+  missingFile: number;
+  unreadable: number;
+  /** Art cached on disk whose row still could not be updated. */
+  writeErrors: number;
+  durationMs: number;
+}
+
 // --- Track metadata writes (T2.1.4 rating, T2.1.6 energy) ---
 // Every write is logged as a `skill_runs` row that holds the pre-write values,
 // so the UI can offer a real Undo instead of a hopeful re-read.

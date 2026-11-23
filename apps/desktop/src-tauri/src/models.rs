@@ -102,6 +102,46 @@ pub struct ScanCompletedEvent {
     pub duration_ms: u128,
 }
 
+/// The artwork backfill's per-file progress.
+///
+/// `processed` counts files *considered*, including the ones that failed, so the
+/// bar keeps moving when a folder is partly offline. `error` is set on the file
+/// that could not be recorded; the run continues regardless.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ArtworkBackfillProgressEvent {
+    pub job_id: String,
+    pub processed: usize,
+    pub total: usize,
+    pub current_path: String,
+    pub error: Option<String>,
+}
+
+/// What an artwork backfill run ended with.
+///
+/// The five counts are the file outcomes `core` tallies, plus `write_errors` for
+/// art that was cached but whose row could not be updated. They sum to
+/// `total_candidates` from the response.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ArtworkBackfillCompletedEvent {
+    pub job_id: String,
+    pub total_scanned: usize,
+    pub total_filled: usize,
+    pub without_art: usize,
+    pub missing_file: usize,
+    pub unreadable: usize,
+    pub write_errors: usize,
+    pub duration_ms: u128,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct BackfillArtworkResponse {
+    pub job_id: String,
+    pub total_candidates: usize,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ListTracksRequest {

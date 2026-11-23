@@ -35,6 +35,9 @@ import {
   analyzeLibrary,
   listenToAnalysisProgress,
   listenToAnalysisCompleted,
+  backfillArtwork,
+  listenToArtworkProgress,
+  listenToArtworkCompleted,
   trackTagHealth,
   providerStatus,
   enrichmentPreview,
@@ -167,6 +170,14 @@ import {
 import { formatKeyForNotation, type KeyNotation } from "./lib/key-format";
 import { rowHeightForColumns, shouldLoadMore, virtualWindow } from "./lib/virtual-window";
 import { nextTheme, resolveTheme, THEME_LABELS } from "./lib/theme";
+import {
+  applyCompleted,
+  applyProgress,
+  backfillSummary,
+  idleState,
+  startRun,
+  type BackfillState,
+} from "./lib/artwork-backfill";
 import { PreviewPlayer } from "./components/preview-player";
 import { ModalShell } from "./components/ModalShell";
 import { ArtworkThumb } from "./components/ArtworkThumb";
@@ -1184,6 +1195,10 @@ export default function App() {
   const [analyzing, setAnalyzing] = useState(false);
   const [analysisProgress, setAnalysisProgress] = useState<AnalysisProgressEvent | null>(null);
 
+  // Embedded artwork backfill (T2.1.9): a Settings action over the files the
+  // library already holds, reduced from its progress events.
+  const [artworkBackfill, setArtworkBackfill] = useState<BackfillState>(idleState);
+
   // Discovery / enrichment / provider state (local-first; online lookup is planned).
   // The panel inspects a track without interrupting playback. The dock owns
   // `playingTrack`; a row click opens the panel, a double-click (or the panel
@@ -1869,6 +1884,8 @@ export default function App() {
     let unlistenEnrichment: (() => void) | undefined;
     let unlistenAnalysisProgress: (() => void) | undefined;
     let unlistenAnalysisCompleted: (() => void) | undefined;
+    let unlistenArtworkProgress: (() => void) | undefined;
+    let unlistenArtworkCompleted: (() => void) | undefined;
 
     listenToScanProgress((payload) => {
       setProgress(payload);
@@ -1922,12 +1939,26 @@ export default function App() {
       unlistenAnalysisCompleted = fn;
     });
 
+    listenToArtworkProgress((payload) => {
+      setArtworkBackfill((state) => applyProgress(state, payload));
+    }).then((fn) => {
+      unlistenArtworkProgress = fn;
+    });
+
+    listenToArtworkCompleted((payload) => {
+      setArtworkBackfill((state) => applyCompleted(state, payload));
+    }).then((fn) => {
+      unlistenArtworkCompleted = fn;
+    });
+
     return () => {
       if (unlistenProgress) unlistenProgress();
       if (unlistenCompleted) unlistenCompleted();
       if (unlistenEnrichment) unlistenEnrichment();
       if (unlistenAnalysisProgress) unlistenAnalysisProgress();
       if (unlistenAnalysisCompleted) unlistenAnalysisCompleted();
+      if (unlistenArtworkProgress) unlistenArtworkProgress();
+      if (unlistenArtworkCompleted) unlistenArtworkCompleted();
     };
     // Listeners are registered once; completion handlers bump `reloadToken`
     // through `refreshLibrary`, which reloads with the *current* view state.
@@ -1990,6 +2021,39 @@ export default function App() {
       setAnalysisProgress(null);
       const analysisReason = err instanceof Error && err.message ? err.message : "unexpected error";
       pushStatus(`Analysis failed — ${analysisReason}. Press Analyze to retry.`, "error");
+    }
+  };
+
+  // A finished run is announced once per job, and only from the reduced
+  // state: the events arrive on their own schedule, and a stale job's
+  // completion must not credit the library with artwork this run did not add.
+  const announcedBackfill = useRef<string | null>(null);
+  useEffect(() => {
+    if (artworkBackfill.phase !== "done") return;
+    if (announcedBackfill.current === artworkBackfill.jobId) return;
+    announcedBackfill.current = artworkBackfill.jobId;
+    const line = backfillSummary(artworkBackfill);
+    if (line) pushStatus(line);
+    refreshLibrary();
+  }, [artworkBackfill]);
+
+  const handleRunArtworkBackfill = async () => {
+    if (artworkBackfill.phase === "running") return;
+    try {
+      const res = await backfillArtwork();
+      setArtworkBackfill(startRun(res.jobId, res.totalCandidates));
+      if (res.totalCandidates > 0) {
+        pushStatus(
+          `Reading embedded artwork from ${res.totalCandidates} file${
+            res.totalCandidates === 1 ? "" : "s"
+          }...`,
+          "busy"
+        );
+      }
+    } catch (err) {
+      console.error("Error starting the artwork backfill:", err);
+      setArtworkBackfill(idleState());
+      pushStatus(`Artwork backfill failed — ${errorDetail(err)}.`, "error");
     }
   };
 
@@ -3844,6 +3908,8 @@ export default function App() {
               onSetCompatibilityMode={(compatibilityMode) =>
                 dispatch({ type: "setCompatibilityMode", compatibilityMode })
               }
+              artworkBackfill={artworkBackfill}
+              onRunArtworkBackfill={handleRunArtworkBackfill}
               onOpenImport={() => handleViewChange("import")}
               onOpenAnalysis={() => handleViewChange("analysis")}
               onOpenBackup={() => handleViewChange("backup")}

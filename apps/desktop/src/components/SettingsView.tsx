@@ -7,6 +7,7 @@ import {
   FolderOpen,
   Info,
   Music,
+  Image,
   PanelLeft,
   Play,
   RefreshCw,
@@ -26,6 +27,7 @@ import {
   type KeyNotation,
 } from "../lib/key-format";
 import { THEME_LABELS, nextTheme } from "../lib/theme";
+import { backfillSummary, type BackfillState } from "../lib/artwork-backfill";
 import type { ThemeMode } from "../lib/ui-state";
 
 interface SettingsViewProps {
@@ -34,11 +36,13 @@ interface SettingsViewProps {
   playerVisible: boolean;
   keyNotation: KeyNotation;
   compatibilityMode: CompatibilityMode;
+  artworkBackfill: BackfillState;
   onCycleTheme: () => void;
   onToggleNav: () => void;
   onTogglePlayer: () => void;
   onSetKeyNotation: (notation: KeyNotation) => void;
   onSetCompatibilityMode: (mode: CompatibilityMode) => void;
+  onRunArtworkBackfill: () => void;
   onOpenImport: () => void;
   onOpenAnalysis: () => void;
   onOpenBackup: () => void;
@@ -173,17 +177,36 @@ function KeyDisplaySection({
   );
 }
 
+/**
+ * The artwork row's one line of truth: what a run is doing, or what it found.
+ * Reading files is not a result, so progress is stated as progress and only a
+ * finished run shows the tally.
+ */
+function artworkDescription(state: BackfillState): string {
+  if (state.phase === "running") {
+    return state.total === 0
+      ? "Checking the library for tracks without artwork."
+      : `Reading embedded artwork — ${state.processed} of ${state.total} files. Tracks that already have artwork are left alone.`;
+  }
+  if (state.phase === "done") {
+    return `${backfillSummary(state) ?? "Backfill finished"}. Tracks that already had artwork were left alone.`;
+  }
+  return "Re-reads the cover art embedded in files imported before artwork was cached. Tracks that already have artwork are never touched.";
+}
+
 export function SettingsView({
   theme,
   navCollapsed,
   playerVisible,
   keyNotation,
   compatibilityMode,
+  artworkBackfill,
   onCycleTheme,
   onToggleNav,
   onTogglePlayer,
   onSetKeyNotation,
   onSetCompatibilityMode,
+  onRunArtworkBackfill,
   onOpenImport,
   onOpenAnalysis,
   onOpenBackup,
@@ -264,6 +287,13 @@ export function SettingsView({
               description="Pending, running and failed analysis jobs. The local-first analysis engine is wired in the existing backend."
               actionLabel="Open"
               onAction={onOpenAnalysis}
+            />
+            <SettingRow
+              icon={Image}
+              title="Embedded artwork"
+              description={artworkDescription(artworkBackfill)}
+              actionLabel={artworkBackfill.phase === "running" ? "Reading..." : "Read artwork"}
+              onAction={onRunArtworkBackfill}
             />
             <SettingRow
               icon={Play}

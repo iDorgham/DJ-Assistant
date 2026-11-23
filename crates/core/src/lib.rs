@@ -8,6 +8,7 @@
 //! top of these functions.
 
 pub mod aiff;
+pub mod artwork_backfill;
 pub mod audio;
 pub mod dedup;
 pub mod enrichment;
@@ -28,6 +29,9 @@ pub mod similarity;
 pub mod tags;
 
 pub use aiff::aiff_duration_ms;
+pub use artwork_backfill::{
+    candidates_sql, extract_and_cache, plan_artwork_write, ArtworkSource, BackfillTally,
+};
 pub use audio::{discover_audio_files, is_supported_audio, SUPPORTED_EXTENSIONS};
 pub use dedup::{DuplicateKind, ScanDeduplicator};
 pub use enrichment::{

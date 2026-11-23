@@ -1,4 +1,5 @@
 pub mod analysis;
+pub mod artwork;
 pub mod audio;
 pub mod charts;
 pub mod commands;
@@ -70,6 +71,7 @@ pub fn run() {
             commands::list_genres,
             commands::get_track,
             commands::get_artwork,
+            commands::backfill_artwork,
             commands::audio_load,
             commands::audio_play,
             commands::audio_pause,

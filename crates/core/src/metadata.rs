@@ -328,6 +328,30 @@ fn read_id3_extras(path: &Path) -> ExtraTags {
     id3_extras(&tag)
 }
 
+/// Reads only the embedded cover art, propagating a failure to open `path`.
+///
+/// [`extract_metadata`] swallows a bad tag read on purpose: an import must not
+/// die over an unreadable BPM frame. A backfill cannot afford the same blank
+/// `None`, because "this file carries no picture" and "this file could not be
+/// opened" are different answers that lead to different writes.
+pub(crate) fn read_embedded_artwork(path: &Path) -> Result<Option<EmbeddedArtwork>, String> {
+    let extension = path
+        .extension()
+        .and_then(|ext| ext.to_str())
+        .unwrap_or_default()
+        .to_lowercase();
+
+    match extension.as_str() {
+        "mp3" | "wav" | "aif" | "aiff" | "aifc" => id3::Tag::read_from_path(path)
+            .map(|tag| id3_extras(&tag).artwork)
+            .map_err(|e| e.to_string()),
+        "flac" => metaflac::Tag::read_from_path(path)
+            .map(|tag| flac_extras(&tag).artwork)
+            .map_err(|e| e.to_string()),
+        other => Err(format!("no embedded-artwork reader for {other} files")),
+    }
+}
+
 fn id3_extras(tag: &id3::Tag) -> ExtraTags {
     // Artwork: prefer the front cover, otherwise the first embedded picture.
     let mut front: Option<EmbeddedArtwork> = None;
@@ -406,7 +430,10 @@ fn read_flac_extras(path: &Path) -> ExtraTags {
     let Ok(tag) = metaflac::Tag::read_from_path(path) else {
         return ExtraTags::default();
     };
+    flac_extras(&tag)
+}
 
+fn flac_extras(tag: &metaflac::Tag) -> ExtraTags {
     let mut extra = ExtraTags::default();
 
     let first = |keys: &[&str]| -> Option<String> {

@@ -25,17 +25,18 @@ use dj_assistant_core::reveal::reveal_command;
 use crate::audio;
 use crate::db::Database;
 use crate::models::{
-    AnalyzeLibraryRequest, AnalyzeLibraryResponse, CuePoint, FindSimilarTracksRequest,
-    FindSimilarTracksResponse, FolderCount, GenreCount, GetArtworkRequest, GetTrackRequest,
-    GetTrackResponse, GetWaveformPeaksRequest, GetWaveformPeaksResponse, ListFoldersResponse,
-    ListGenresResponse, ListRemovedTracksResponse, ListTracksRequest, ListTracksResponse,
-    ProviderAccount, ProviderCapability, ProviderStatusResponse, RemoveTracksRequest,
-    RemoveTracksResponse, RemovedTrack, RestoreTracksRequest, RestoreTracksResponse,
-    RevealInFileManagerRequest, ScanFolderRequest, ScanFolderResponse, SetTrackRatingRequest,
-    SetTrackRatingResponse, SimilarTrackResult, StoreLink, StoreLinksRequest, StoreLinksResponse,
-    TagHealthRequest, TagHealthResponse, TagHealthTotals, TrackDetail, TrackGaps, TrackSummary,
-    UndoRemoveTracksRequest, UndoRemoveTracksResponse, UndoTrackMetadataRequest,
-    UndoTrackMetadataResponse, UpdateTrackMetadataRequest, UpdateTrackMetadataResponse,
+    AnalyzeLibraryRequest, AnalyzeLibraryResponse, BackfillArtworkResponse, CuePoint,
+    FindSimilarTracksRequest, FindSimilarTracksResponse, FolderCount, GenreCount,
+    GetArtworkRequest, GetTrackRequest, GetTrackResponse, GetWaveformPeaksRequest,
+    GetWaveformPeaksResponse, ListFoldersResponse, ListGenresResponse, ListRemovedTracksResponse,
+    ListTracksRequest, ListTracksResponse, ProviderAccount, ProviderCapability,
+    ProviderStatusResponse, RemoveTracksRequest, RemoveTracksResponse, RemovedTrack,
+    RestoreTracksRequest, RestoreTracksResponse, RevealInFileManagerRequest, ScanFolderRequest,
+    ScanFolderResponse, SetTrackRatingRequest, SetTrackRatingResponse, SimilarTrackResult,
+    StoreLink, StoreLinksRequest, StoreLinksResponse, TagHealthRequest, TagHealthResponse,
+    TagHealthTotals, TrackDetail, TrackGaps, TrackSummary, UndoRemoveTracksRequest,
+    UndoRemoveTracksResponse, UndoTrackMetadataRequest, UndoTrackMetadataResponse,
+    UpdateTrackMetadataRequest, UpdateTrackMetadataResponse,
 };
 use crate::scanner::run_scan;
 use crate::security::validate_and_canonicalize_dir;
@@ -86,6 +87,43 @@ pub async fn scan_folder(
     Ok(ScanFolderResponse {
         job_id,
         estimated_files: None,
+    })
+}
+
+/// Re-reads the embedded cover art of every track whose artwork slot is empty.
+///
+/// Import caches artwork, but a library imported before that shipped has none —
+/// and a re-scan skips those files as duplicates, so the only way to fill them is
+/// to go back to the file. The run is background: `artwork:progress` and
+/// `artwork:completed` carry it to the UI, and `jobId` tells the listener which
+/// run an event belongs to.
+#[tauri::command]
+pub async fn backfill_artwork(
+    app: AppHandle,
+    db: State<'_, Arc<Mutex<Database>>>,
+) -> Result<BackfillArtworkResponse, String> {
+    let candidates = {
+        let db_guard = db.lock().map_err(|e| e.to_string())?;
+        crate::artwork::read_candidates(db_guard.conn())?
+    };
+
+    let job_id = Uuid::new_v4().to_string();
+    let total_candidates = candidates.len();
+
+    // Same directory the importer caches into, so a backfilled row is served by
+    // `get_artwork` exactly like an imported one.
+    let artwork_dir = app
+        .path()
+        .app_data_dir()
+        .map(|dir| dir.join("artwork"))
+        .unwrap_or_else(|_| std::path::PathBuf::from("artwork"));
+
+    let db_clone = Arc::clone(&db);
+    crate::artwork::start(app, db_clone, artwork_dir, job_id.clone(), candidates)?;
+
+    Ok(BackfillArtworkResponse {
+        job_id,
+        total_candidates,
     })
 }
 

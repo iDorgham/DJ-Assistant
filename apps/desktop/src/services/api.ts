@@ -51,6 +51,9 @@ import type {
   ChartImportResponse,
   ChartListRequest,
   ChartListResponse,
+  BackfillArtworkResponse,
+  ArtworkBackfillProgressEvent,
+  ArtworkBackfillCompletedEvent,
 } from "@dj-assistant/shared";
 
 // Safe Tauri invocation wrapper with mock fallback for web development
@@ -643,6 +646,47 @@ export async function listenToAnalysisCompleted(
   }
   const { listen } = await import("@tauri-apps/api/event");
   const unlisten = await listen<AnalysisCompletedEvent>("analysis:completed", (e) => {
+    callback(e.payload);
+  });
+  return unlisten;
+}
+
+/**
+ * Re-reads the embedded cover art of every track whose artwork slot is empty
+ * (T2.1.9). No request body: the candidates are whatever the library lacks.
+ * Progress arrives per file on `artwork:progress` and once more on
+ * `artwork:completed`.
+ */
+export async function backfillArtwork(): Promise<BackfillArtworkResponse> {
+  if (!isTauri) {
+    console.warn("[Mock API] Tauri not detected, returning empty artwork job");
+    return { jobId: `mock-artwork-${Date.now()}`, totalCandidates: 0 };
+  }
+  const { invoke } = await import("@tauri-apps/api/core");
+  return invoke<BackfillArtworkResponse>("backfill_artwork");
+}
+
+export async function listenToArtworkProgress(
+  callback: (event: ArtworkBackfillProgressEvent) => void
+): Promise<() => void> {
+  if (!isTauri) {
+    return () => undefined;
+  }
+  const { listen } = await import("@tauri-apps/api/event");
+  const unlisten = await listen<ArtworkBackfillProgressEvent>("artwork:progress", (e) => {
+    callback(e.payload);
+  });
+  return unlisten;
+}
+
+export async function listenToArtworkCompleted(
+  callback: (event: ArtworkBackfillCompletedEvent) => void
+): Promise<() => void> {
+  if (!isTauri) {
+    return () => undefined;
+  }
+  const { listen } = await import("@tauri-apps/api/event");
+  const unlisten = await listen<ArtworkBackfillCompletedEvent>("artwork:completed", (e) => {
     callback(e.payload);
   });
   return unlisten;
