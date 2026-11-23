@@ -68,11 +68,10 @@ pub struct DuplicateGroup {
 /// An ISRC with separators removed and upper-cased; `None` unless it has the
 /// 12-character shape of a real code.
 pub fn normalize_isrc(isrc: &str) -> Option<String> {
-    let cleaned: String = isrc
-        .chars()
-        .filter(|c| c.is_ascii_alphanumeric())
-        .map(|c| c.to_ascii_uppercase())
-        .collect();
+    let cleaned = isrc
+        .matches(|c: char| c.is_ascii_alphanumeric())
+        .collect::<String>()
+        .to_ascii_uppercase();
     (cleaned.len() == 12).then_some(cleaned)
 }
 
@@ -137,7 +136,7 @@ pub fn find_duplicate_groups(tracks: &[DuplicateInput], tolerance_ms: i64) -> Ve
             .unwrap_or_default();
         // "Original Mix" and no marker are the same version.
         let marker = if marker == "original mix" || marker == "original" {
-            String::new()
+            String::default()
         } else {
             marker
         };

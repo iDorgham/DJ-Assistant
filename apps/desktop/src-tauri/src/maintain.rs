@@ -39,60 +39,51 @@ struct Snapshot {
     dismissed: HashSet<String>,
 }
 
+/// Maps one [`HYGIENE_TRACKS_SQL`] row, in its column order.
+fn hygiene_row(row: &rusqlite::Row<'_>) -> rusqlite::Result<HygieneRow> {
+    Ok(HygieneRow {
+        id: row.get(0)?,
+        title: row.get(1)?,
+        artist: row.get(2)?,
+        album: row.get(3)?,
+        genre: row.get(4)?,
+        year: row.get(5)?,
+        label: row.get(6)?,
+        mood: row.get(7)?,
+        energy: row.get(8)?,
+        bpm: row.get(9)?,
+        key: row.get(10)?,
+        analysis_status: row.get(11)?,
+        isrc: row.get(12)?,
+        mix_name: row.get(13)?,
+        duration_ms: row.get(14)?,
+        format: row.get(15)?,
+        bitrate_kbps: row.get(16)?,
+        file_path: row.get(17)?,
+        has_tags: row.get(18)?,
+    })
+}
+
+/// Runs a parameterless read and collects every mapped row, failing on the
+/// first row that does not map instead of dropping it.
+fn read_all<T, C: FromIterator<T>>(
+    conn: &rusqlite::Connection,
+    sql: &str,
+    map: impl FnMut(&rusqlite::Row<'_>) -> rusqlite::Result<T>,
+) -> Result<C, String> {
+    let mut stmt = conn.prepare(sql).map_err(|e| e.to_string())?;
+    let rows = stmt.query_map([], map).map_err(|e| e.to_string())?;
+    rows.collect::<rusqlite::Result<C>>()
+        .map_err(|e| e.to_string())
+}
+
 fn read_snapshot(conn: &rusqlite::Connection) -> Result<Snapshot, String> {
-    let mut stmt = conn
-        .prepare(HYGIENE_TRACKS_SQL)
-        .map_err(|e| e.to_string())?;
-    let rows = stmt
-        .query_map([], |row| {
-            Ok(HygieneRow {
-                id: row.get(0)?,
-                title: row.get(1)?,
-                artist: row.get(2)?,
-                album: row.get(3)?,
-                genre: row.get(4)?,
-                year: row.get(5)?,
-                label: row.get(6)?,
-                mood: row.get(7)?,
-                energy: row.get(8)?,
-                bpm: row.get(9)?,
-                key: row.get(10)?,
-                analysis_status: row.get(11)?,
-                isrc: row.get(12)?,
-                mix_name: row.get(13)?,
-                duration_ms: row.get(14)?,
-                format: row.get(15)?,
-                bitrate_kbps: row.get(16)?,
-                file_path: row.get(17)?,
-                has_tags: row.get(18)?,
-            })
-        })
-        .map_err(|e| e.to_string())?
-        .collect::<Result<Vec<_>, _>>()
-        .map_err(|e| e.to_string())?;
-
-    let mut stmt = conn
-        .prepare(DUPLICATE_COPIES_SQL)
-        .map_err(|e| e.to_string())?;
-    let copies = stmt
-        .query_map([], |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?)))
-        .map_err(|e| e.to_string())?
-        .collect::<Result<Vec<_>, _>>()
-        .map_err(|e| e.to_string())?;
-
-    let mut stmt = conn
-        .prepare(DISMISSED_KEYS_SQL)
-        .map_err(|e| e.to_string())?;
-    let dismissed = stmt
-        .query_map([], |row| row.get::<_, String>(0))
-        .map_err(|e| e.to_string())?
-        .collect::<Result<HashSet<_>, _>>()
-        .map_err(|e| e.to_string())?;
-
     Ok(Snapshot {
-        rows,
-        copies,
-        dismissed,
+        rows: read_all(conn, HYGIENE_TRACKS_SQL, hygiene_row)?,
+        copies: read_all(conn, DUPLICATE_COPIES_SQL, |row| {
+            Ok((row.get(0)?, row.get(1)?, row.get(2)?))
+        })?,
+        dismissed: read_all(conn, DISMISSED_KEYS_SQL, |row| row.get::<_, String>(0))?,
     })
 }
 
