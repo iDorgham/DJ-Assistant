@@ -482,7 +482,7 @@ export function DetailedWaveform({
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
-    // Keyboard seeking per docs/ui/10: arrows seek, Home/End jump to bounds.
+    // Keyboard seeking per docs/ui-ux/10: arrows seek, Home/End jump to bounds.
     let nextMs: number | null = null;
     if (e.key === "ArrowLeft" || e.key === "ArrowDown") {
       nextMs = applySnap(positionMs - (e.shiftKey ? 10000 : 2000));
@@ -507,7 +507,7 @@ export function DetailedWaveform({
       const panAmount = (e.deltaX || e.deltaY) * (visibleDurationMs / 1000) * 1.5;
       onViewOffsetChange(Math.max(offsetMin, Math.min(effectiveOffset + panAmount, offsetMax)));
     } else if (onWheelZoom) {
-      // Vertical wheel: zoom (docs/ui/06 interaction spec)
+      // Vertical wheel: zoom (docs/ui-ux/06 interaction spec)
       onWheelZoom(e.deltaY < 0 ? "in" : "out");
     }
   };

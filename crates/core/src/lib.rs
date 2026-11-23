@@ -11,8 +11,12 @@ pub mod aiff;
 pub mod artwork_backfill;
 pub mod audio;
 pub mod dedup;
+pub mod duplicates;
 pub mod enrichment;
 pub mod fingerprint;
+pub mod grid_backfill;
+pub mod library_health;
+pub mod library_hygiene;
 pub mod library_query;
 pub mod library_reads;
 pub mod library_remove;
@@ -22,11 +26,16 @@ pub mod library_writes;
 pub mod metadata;
 pub mod mp3;
 pub mod patch;
+pub mod prep_audit;
 pub mod providers;
 pub mod reveal;
 pub mod riff;
 pub mod similarity;
+pub mod tag_aliases;
+pub mod tag_clustering;
+pub mod tag_rewrite;
 pub mod tags;
+pub mod versions;
 
 pub use aiff::aiff_duration_ms;
 pub use artwork_backfill::{
@@ -42,15 +51,15 @@ pub use enrichment::{
     parse_lastfm_response, parse_musicbrainz_response, propose_fields, split_discogs_title,
     tag_health_score, EnrichmentProvider, FieldProposal, LocalTrack, ProviderCandidate,
 };
-pub use fingerprint::{compute_file_fingerprint, FINGERPRINT_WINDOW};
+pub use fingerprint::{compute_file_fingerprint, files_have_same_content, FINGERPRINT_WINDOW};
 pub use library_query::{
     sort_column, BuiltQuery, QueryError, QueryParam, TrackFilters, TrackQuery, SORT_KEYS,
 };
 pub use library_reads::{
     analysis_candidates, enrichment_targets, folder_counts_from_paths, folder_of_path,
-    missing_file_paths_sql, present_rows, tag_health_rows, ReadError, ENRICHMENT_TARGET_COLUMNS,
-    GENRE_COUNTS_SQL, OWNED_ISRC_SQL, PRESENT_FILE_PATHS_SQL, REMOVED_TRACKS_SQL,
-    SIMILAR_CANDIDATES_SQL, TAG_HEALTH_COLUMNS,
+    missing_file_paths_sql, present_rows, tag_health_rows, tag_vocabulary_rows, ReadError,
+    ENRICHMENT_TARGET_COLUMNS, GENRE_COUNTS_SQL, OWNED_ISRC_SQL, PRESENT_FILE_PATHS_SQL,
+    REMOVED_TRACKS_SQL, SIMILAR_CANDIDATES_SQL, TAG_HEALTH_COLUMNS,
 };
 pub use library_remove::{
     after_doc, before_doc, check_undoable, input_doc, parse_states, present_states, read_statement,
@@ -73,7 +82,7 @@ pub use metadata::{
 pub use mp3::mp3_duration_ms;
 pub use patch::{
     check_metadata_undoable, number_value, tags_match, text_value, METADATA_SKILL_NAME,
-    METADATA_SKILL_NAMES, PATCH_COLUMNS, RATING_SKILL_NAME,
+    METADATA_SKILL_NAMES, PATCH_COLUMNS, RATING_SKILL_NAME, TAG_REWRITE_SKILL_NAME,
 };
 pub use providers::{
     store_links_for_track, store_search_url, ProviderCapabilities, StoreLink, StoreProvider,
@@ -82,6 +91,10 @@ pub use providers::{
 pub use reveal::{reveal_command, RevealCommand};
 pub use riff::wav_duration_ms;
 pub use similarity::{bpm_similarity, camelot_distance, find_similar, ScoredTrack, TrackFeatures};
+pub use tag_clustering::{
+    cluster_tags, normalize_tag, ClusterMember, ClusterReport, PrefixEdge, SpellingCluster,
+    TagValue,
+};
 pub use tags::normalize_tags;
 
 use std::path::Path;

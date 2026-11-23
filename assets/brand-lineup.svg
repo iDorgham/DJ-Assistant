@@ -1,0 +1,122 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="280" viewBox="0 0 1280 280" role="img" aria-label="The Stack brand lineup: app icon, tray glyph and mark in dark and light cuts">
+  <title>DJ Assistant — The Stack lineup</title>
+  <defs>
+    <linearGradient id="luBg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#171B25"/>
+      <stop offset="1" stop-color="#0A0C11"/>
+    </linearGradient>
+    <linearGradient id="luSheen" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#FFFFFF" stop-opacity="0.08"/>
+      <stop offset="0.45" stop-color="#FFFFFF" stop-opacity="0"/>
+    </linearGradient>
+    <linearGradient id="luBorder" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#2E344A"/>
+      <stop offset="1" stop-color="#1A1F2B"/>
+    </linearGradient>
+    <linearGradient id="luFront" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#2A3145"/>
+      <stop offset="1" stop-color="#1A1F2B"/>
+    </linearGradient>
+    <linearGradient id="luPlay" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#5CE1FF"/>
+      <stop offset="1" stop-color="#0090FF"/>
+    </linearGradient>
+    <linearGradient id="luLightBg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#FFFFFF"/>
+      <stop offset="1" stop-color="#E9EEF6"/>
+    </linearGradient>
+    <linearGradient id="luLightBorder" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#DCE3EE"/>
+      <stop offset="1" stop-color="#C4CFE0"/>
+    </linearGradient>
+    <linearGradient id="luLightFront" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#FFFFFF"/>
+      <stop offset="1" stop-color="#F4F7FB"/>
+    </linearGradient>
+    <linearGradient id="luLightPlay" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#06B6D4"/>
+      <stop offset="1" stop-color="#2563EB"/>
+    </linearGradient>
+    <linearGradient id="luTrayDark" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#5CE1FF"/>
+      <stop offset="1" stop-color="#0090FF"/>
+    </linearGradient>
+    <linearGradient id="luTrayLight" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#06B6D4"/>
+      <stop offset="1" stop-color="#2563EB"/>
+    </linearGradient>
+    <clipPath id="luClip">
+      <rect x="8" y="8" width="112" height="112" rx="26"/>
+    </clipPath>
+    <clipPath id="luLightClip">
+      <rect x="8" y="8" width="112" height="112" rx="26"/>
+    </clipPath>
+  </defs>
+
+  <!-- Dark panel -->
+  <rect x="0" y="0" width="640" height="280" fill="#0B0D12"/>
+  <text x="32" y="36" font-family="ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, monospace"
+        font-size="12" letter-spacing="2" fill="#64748B">DARK</text>
+  <g transform="translate(62 56) scale(0.9)">
+    <rect x="8" y="8" width="112" height="112" rx="26" fill="url(#luBg)"/>
+    <rect x="8" y="8" width="112" height="112" fill="url(#luSheen)" clip-path="url(#luClip)"/>
+    <g clip-path="url(#luClip)">
+      <rect x="42" y="24" width="44" height="20" rx="9" fill="#232939"/>
+      <rect x="33" y="36" width="62" height="26" rx="10" fill="#2E344A"/>
+      <rect x="24" y="50" width="80" height="56" rx="12" fill="url(#luFront)" stroke="#3A4258" stroke-width="1.5"/>
+      <path d="M56 69 L56 87 Q56 91 59.55 89.16 L77.45 79.84 Q81 78 77.45 76.16 L59.55 66.84 Q56 65 56 69 Z" fill="url(#luPlay)"/>
+    </g>
+    <rect x="8" y="8" width="112" height="112" rx="26" fill="none" stroke="url(#luBorder)" stroke-width="2.5"/>
+  </g>
+  <g transform="translate(288 82) scale(2)">
+    <rect x="8" y="3" width="16" height="8" rx="3.5" fill="#0090FF"/>
+    <path fill="url(#luTrayDark)" fill-rule="evenodd" d="M9.5 8 H22.5 Q28 8 28 13.5 V23.5 Q28 29 22.5 29 H9.5 Q4 29 4 23.5 V13.5 Q4 8 9.5 8 Z
+             M13 15.3 L13 21.7 Q13 23.5 14.59 22.66 L20.91 19.34 Q22.5 18.5 20.91 17.66 L14.59 14.34 Q13 13.5 13 15.3 Z"/>
+  </g>
+  <g transform="translate(462 56) scale(0.9)">
+    <rect x="42" y="24" width="44" height="20" rx="9" fill="#2E344A"/>
+    <rect x="33" y="36" width="62" height="26" rx="10" fill="#3A4258"/>
+    <rect x="24" y="50" width="80" height="56" rx="12" fill="url(#luFront)" stroke="#3A4258" stroke-width="1.5"/>
+    <path d="M56 69 L56 87 Q56 91 59.55 89.16 L77.45 79.84 Q81 78 77.45 76.16 L59.55 66.84 Q56 65 56 69 Z" fill="url(#luPlay)"/>
+  </g>
+  <g font-family="ui-sans-serif, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif"
+     font-size="14" fill="#94A3B8" text-anchor="middle">
+    <text x="120" y="212">App icon</text>
+    <text x="320" y="212">Tray glyph</text>
+    <text x="520" y="212">Mark</text>
+  </g>
+
+  <!-- Light panel -->
+  <rect x="640" y="0" width="640" height="280" fill="#F4F7FB"/>
+  <text x="672" y="36" font-family="ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, monospace"
+        font-size="12" letter-spacing="2" fill="#64748B">LIGHT</text>
+  <g transform="translate(702 56) scale(0.9)">
+    <rect x="8" y="8" width="112" height="112" rx="26" fill="url(#luLightBg)"/>
+    <g clip-path="url(#luLightClip)">
+      <rect x="42" y="24" width="44" height="20" rx="9" fill="#DCE3EE"/>
+      <rect x="33" y="36" width="62" height="26" rx="10" fill="#C4CFE0"/>
+      <rect x="24" y="50" width="80" height="56" rx="12" fill="url(#luLightFront)" stroke="#C4CFE0" stroke-width="1.5"/>
+      <path d="M56 69 L56 87 Q56 91 59.55 89.16 L77.45 79.84 Q81 78 77.45 76.16 L59.55 66.84 Q56 65 56 69 Z" fill="url(#luLightPlay)"/>
+    </g>
+    <rect x="8" y="8" width="112" height="112" rx="26" fill="none" stroke="url(#luLightBorder)" stroke-width="2.5"/>
+  </g>
+  <g transform="translate(928 82) scale(2)">
+    <rect x="8" y="3" width="16" height="8" rx="3.5" fill="#60A5FA"/>
+    <path fill="url(#luTrayLight)" fill-rule="evenodd" d="M9.5 8 H22.5 Q28 8 28 13.5 V23.5 Q28 29 22.5 29 H9.5 Q4 29 4 23.5 V13.5 Q4 8 9.5 8 Z
+             M13 15.3 L13 21.7 Q13 23.5 14.59 22.66 L20.91 19.34 Q22.5 18.5 20.91 17.66 L14.59 14.34 Q13 13.5 13 15.3 Z"/>
+  </g>
+  <g transform="translate(1102 56) scale(0.9)" fill="#0F1117">
+    <rect x="42" y="24" width="44" height="20" rx="9" opacity="0.45"/>
+    <rect x="33" y="36" width="62" height="26" rx="10" opacity="0.7"/>
+    <path fill-rule="evenodd" d="M36 50 H92 Q104 50 104 62 V94 Q104 106 92 106 H36 Q24 106 24 94 V62 Q24 50 36 50 Z
+             M56 69 L56 87 Q56 91 59.55 89.16 L77.45 79.84 Q81 78 77.45 76.16 L59.55 66.84 Q56 65 56 69 Z"/>
+  </g>
+  <g font-family="ui-sans-serif, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif"
+     font-size="14" fill="#475569" text-anchor="middle">
+    <text x="760" y="212">App icon</text>
+    <text x="960" y="212">Tray glyph</text>
+    <text x="1160" y="212">Mono mark</text>
+  </g>
+
+  <rect x="0.5" y="0.5" width="1279" height="279" fill="none" stroke="#2E344A"/>
+</svg>

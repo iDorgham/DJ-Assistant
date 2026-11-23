@@ -1,5 +1,10 @@
 # 03 — Phases & Implementation Plan
 
+> **Ordering superseded (2026-11-22).** Delivery order now follows the approved v1
+> stages in [`plans/v1/implementation-slices.md`](../plans/v1/implementation-slices.md);
+> this file remains the source of the Phase 0–4 framing and the `T0–T4` task IDs. The
+> Stage ↔ Phase map is in [`plans/README.md`](../plans/README.md).
+
 **SDD Artifact:** Phased Delivery Plan  
 **Horizon:** 90-day MVP  
 **Status:** Approved  
@@ -13,7 +18,7 @@
 2. **Local-first** — Core value must work offline from the first usable build.
 3. **Reversibility by default** — Every mutating feature ships with preview + undo.
 4. **Hardware is a gate** — Exports are not “done” until they load on real Pioneer CDJs.
-5. **Slim MVP** — MVP gates on Import → Analyze → Cue → Export only; USB-format + B2B + extra Skills are P1 (per `docs/audit/AUDIT-SUMMARY.md`).
+5. **Slim MVP** — MVP gates on Import → Analyze → Cue → Export only; USB-format + B2B + extra Skills are P1 (per `docs/audits/2026-10-14-spec-audit/AUDIT-SUMMARY.md`).
 6. **Weekly internal builds** from Day 15 onward.
 7. **Closed beta** starts no earlier than Day 61.
 8. **Public MVP** gated on the acceptance criteria in `05-ACCEPTANCE.md`.
@@ -97,6 +102,13 @@ Phases intentionally overlap once foundations exist.
 
 ### Major Deliverables
 - App shell: three routed views (Library / Preparation / Auto Performance), collapsible left nav, per-view options bar, dark/light/system theming, player dock slot (T2.1.0)
+  > **Superseded (approved v1 plan):** the shipped shell is the six-tab Stage 1
+  > (Library / Playlists / Discover / Statistics / Publish / Settings) with the top-bar
+  > utilities — see `docs/plans/v1/README.md` and the locked hierarchy in
+  > `docs/product/information-architecture.md`. (`docs/ui-ux/02-SHELL-AND-NAVIGATION.md`
+  > still describes the pre-supersession three-view shell; do not cite it as current.)
+  > Set building belongs in Playlists → Set Score; the Preparation / Auto Performance
+  > routing above no longer applies.
 - Full library browser (search, filter, bulk actions)
 - Tag Surgeon (fuzzy clustering, canonicalization, aliases, preview, undo)
 - Duplicate + version detection
@@ -226,4 +238,4 @@ Local foundations + early slices are **shipped and non-gating** (`TF.1–TF.6`, 
 - Canonical Documentation remains the product/technical source of truth.
 - This phase plan sequences the work; it does not override the specification.
 - Any change to phase exit criteria requires explicit agreement and update to `05-ACCEPTANCE.md`.
-- Audit is advisory: `docs/audit/AUDIT-SUMMARY.md` + `04-improvements.md` feed `04-TASKS.md` TA.x; TA.x completion is tracked like any phase task.
+- Audit is advisory: `docs/audits/2026-10-14-spec-audit/AUDIT-SUMMARY.md` + `04-improvements.md` feed `04-TASKS.md` TA.x; TA.x completion is tracked like any phase task.

@@ -767,5 +767,5 @@ partnership is Tier 3. Credential-based scraping is not the default path.
 - [Architecture](./ARCHITECTURE.md)
 - [Data Model](./DATA_MODEL.md)
 - [Skills System](./SKILLS_SYSTEM.md)
-- [ADR-0005: Tauri IPC Style](../ADR/0005-tauri-ipc-style.md)
+- [ADR-0005: Tauri IPC Style](../adr/0005-tauri-ipc-style.md)
 - [Canonical Documentation §6](../product/CANONICAL_DOCUMENTATION.md)

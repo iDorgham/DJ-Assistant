@@ -2,10 +2,14 @@ use std::sync::{Arc, Mutex};
 use tauri::{AppHandle, Manager, State};
 use uuid::Uuid;
 
+use dj_assistant_core::grid_backfill::{
+    decide_grid_backfill, GridBackfill, GRID_BACKFILL_ROWS_SQL, GRID_BACKFILL_UPDATE_SQL,
+};
 use dj_assistant_core::library_query::QueryParam;
 use dj_assistant_core::library_reads::{
-    analysis_candidates, folder_counts_from_paths, tag_health_rows, GENRE_COUNTS_SQL,
-    PRESENT_FILE_PATHS_SQL, REMOVED_TRACKS_SQL, SIMILAR_CANDIDATES_SQL,
+    analysis_candidates, folder_counts_from_paths, tag_health_rows, tag_preview_rows,
+    tag_vocabulary_rows, GENRE_COUNTS_SQL, PRESENT_FILE_PATHS_SQL, REMOVED_TRACKS_SQL,
+    SIMILAR_CANDIDATES_SQL,
 };
 use dj_assistant_core::library_remove::{
     after_doc, before_doc, check_undoable, input_doc, parse_states, present_states, read_statement,
@@ -19,24 +23,37 @@ use dj_assistant_core::library_writes::{
 };
 use dj_assistant_core::patch::{
     check_metadata_undoable, tags_match, METADATA_SKILL_NAME, RATING_SKILL_NAME,
+    TAG_REWRITE_SKILL_NAME,
 };
 use dj_assistant_core::reveal::reveal_command;
+use dj_assistant_core::tag_aliases::{
+    map_tags, validate_alias, AliasMap, DELETE_TAG_ALIAS_SQL, LIST_TAG_ALIASES_SQL,
+    UPSERT_TAG_ALIAS_SQL,
+};
+use dj_assistant_core::tag_clustering::normalize_tag;
+use dj_assistant_core::tag_rewrite::{
+    parse_tag_history_entry, plan_tag_rewrite, tag_rewrite_skill_run, validate_renames, TagRename,
+    TAG_HISTORY_LIMIT, TAG_HISTORY_SQL,
+};
+use dj_assistant_core::{cache_artwork, extract_metadata, MAX_IN_CLAUSE_IDS};
 
 use crate::audio;
 use crate::db::Database;
 use crate::models::{
-    AnalyzeLibraryRequest, AnalyzeLibraryResponse, BackfillArtworkResponse, CuePoint,
-    FindSimilarTracksRequest, FindSimilarTracksResponse, FolderCount, GenreCount,
-    GetArtworkRequest, GetTrackRequest, GetTrackResponse, GetWaveformPeaksRequest,
-    GetWaveformPeaksResponse, ListFoldersResponse, ListGenresResponse, ListRemovedTracksResponse,
-    ListTracksRequest, ListTracksResponse, ProviderAccount, ProviderCapability,
-    ProviderStatusResponse, RemoveTracksRequest, RemoveTracksResponse, RemovedTrack,
-    RestoreTracksRequest, RestoreTracksResponse, RevealInFileManagerRequest, ScanFolderRequest,
-    ScanFolderResponse, SetTrackRatingRequest, SetTrackRatingResponse, SimilarTrackResult,
-    StoreLink, StoreLinksRequest, StoreLinksResponse, TagHealthRequest, TagHealthResponse,
-    TagHealthTotals, TrackDetail, TrackGaps, TrackSummary, UndoRemoveTracksRequest,
-    UndoRemoveTracksResponse, UndoTrackMetadataRequest, UndoTrackMetadataResponse,
-    UpdateTrackMetadataRequest, UpdateTrackMetadataResponse,
+    AddTagAliasRequest, AnalyzeLibraryRequest, AnalyzeLibraryResponse, BackfillArtworkResponse,
+    BackfillGridConfidenceResponse, CuePoint, FindSimilarTracksRequest, FindSimilarTracksResponse,
+    FolderCount, GenreCount, GetArtworkRequest, GetTrackRequest, GetTrackResponse,
+    GetWaveformPeaksRequest, GetWaveformPeaksResponse, ListFoldersResponse, ListGenresResponse,
+    ListRemovedTracksResponse, ListTracksRequest, ListTracksResponse, ProviderAccount,
+    ProviderCapability, ProviderStatusResponse, RefreshArtworkResponse, RemoveTagAliasRequest,
+    RemoveTracksRequest, RemoveTracksResponse, RemovedTrack, RestoreTracksRequest,
+    RestoreTracksResponse, RevealInFileManagerRequest, ScanFolderRequest, ScanFolderResponse,
+    SetTrackRatingRequest, SetTrackRatingResponse, SimilarTrackResult, StoreLink,
+    StoreLinksRequest, StoreLinksResponse, TagAlias, TagApplyRequest, TagApplyResponse,
+    TagClusterRequest, TagHealthRequest, TagHealthResponse, TagHealthTotals, TagHistoryEntry,
+    TagPreviewRequest, TagPreviewTrack, TagRenameRequest, TrackDetail, TrackGaps, TrackSummary,
+    UndoRemoveTracksRequest, UndoRemoveTracksResponse, UndoTrackMetadataRequest,
+    UndoTrackMetadataResponse, UpdateTrackMetadataRequest, UpdateTrackMetadataResponse,
 };
 use crate::scanner::run_scan;
 use crate::security::validate_and_canonicalize_dir;
@@ -50,11 +67,13 @@ const MAX_LIST_LIMIT: i64 = 1000;
 const TRACK_SUMMARY_COLUMNS: &str =
     "id, file_path, file_hash, title, artist, album, genre, label, year, bpm, \
      key_camelot, key_classical, duration_ms, format, analysis_status, user_rating, energy, \
-     comments, artwork_hash, created_at, updated_at";
+     comments, artwork_hash, created_at, updated_at, comment_2, composer, album_artist, \
+     remixer, producer, grouping, track_number, disc_number, isrc, catalog_number, \
+     release_date, copyright, mood, mix_name, lyrics, bitrate_kbps";
 
 /// Number of columns in [`TRACK_SUMMARY_COLUMNS`] — the offset the detail
 /// columns start at in `get_track`.
-const TRACK_SUMMARY_COLUMN_COUNT: usize = 21;
+const TRACK_SUMMARY_COLUMN_COUNT: usize = 37;
 
 #[tauri::command]
 pub async fn scan_folder(
@@ -308,33 +327,104 @@ pub async fn list_folders(
     Ok(ListFoldersResponse { folders })
 }
 
+/// Reads one track summary starting at column `base`. The reads are grouped
+/// into small helpers so each stays under the complexity threshold (RS-R1000).
 fn map_track_summary_at(row: &rusqlite::Row, base: usize) -> rusqlite::Result<TrackSummary> {
-    Ok(TrackSummary {
-        id: row.get(base)?,
-        file_path: row.get(base + 1)?,
-        file_hash: row.get(base + 2)?,
-        title: row.get(base + 3)?,
-        artist: row.get(base + 4)?,
-        album: row.get(base + 5)?,
-        genre: row.get(base + 6)?,
-        label: row.get(base + 7)?,
-        year: row.get(base + 8)?,
-        bpm: row.get(base + 9)?,
-        key_camelot: row.get(base + 10)?,
-        key_classical: row.get(base + 11)?,
-        duration_ms: row.get(base + 12)?,
-        format: row.get(base + 13)?,
-        analysis_status: row.get(base + 14)?,
-        user_rating: row.get(base + 15)?,
-        energy: row.get(base + 16)?,
-        comments: row.get(base + 17)?,
-        artwork_hash: row.get(base + 18)?,
-        created_at: row.get(base + 19)?,
-        updated_at: row.get(base + 20)?,
-        // The custom tags are read by a second, grouped query (see
-        // `load_tags`): a join would duplicate a track per tag.
-        tags: Vec::new(),
-    })
+    let mut track = TrackSummary::default();
+    read_track_identity(row, base, &mut track)?;
+    read_track_audio(row, base, &mut track)?;
+    read_track_status(row, base, &mut track)?;
+    read_track_notes(row, base, &mut track)?;
+    read_track_credits(row, base, &mut track)?;
+    read_track_release(row, base, &mut track)?;
+    // The custom tags are read by a second, grouped query (see load_tags): a
+    // join would duplicate a track per tag. `tags` keeps its default, empty.
+    Ok(track)
+}
+
+fn read_track_identity(
+    row: &rusqlite::Row,
+    base: usize,
+    track: &mut TrackSummary,
+) -> rusqlite::Result<()> {
+    track.id = row.get(base)?;
+    track.file_path = row.get(base + 1)?;
+    track.file_hash = row.get(base + 2)?;
+    track.title = row.get(base + 3)?;
+    track.artist = row.get(base + 4)?;
+    track.album = row.get(base + 5)?;
+    Ok(())
+}
+
+fn read_track_audio(
+    row: &rusqlite::Row,
+    base: usize,
+    track: &mut TrackSummary,
+) -> rusqlite::Result<()> {
+    track.genre = row.get(base + 6)?;
+    track.label = row.get(base + 7)?;
+    track.year = row.get(base + 8)?;
+    track.bpm = row.get(base + 9)?;
+    track.key_camelot = row.get(base + 10)?;
+    track.key_classical = row.get(base + 11)?;
+    track.duration_ms = row.get(base + 12)?;
+    Ok(())
+}
+
+fn read_track_status(
+    row: &rusqlite::Row,
+    base: usize,
+    track: &mut TrackSummary,
+) -> rusqlite::Result<()> {
+    track.format = row.get(base + 13)?;
+    track.analysis_status = row.get(base + 14)?;
+    track.user_rating = row.get(base + 15)?;
+    track.energy = row.get(base + 16)?;
+    Ok(())
+}
+
+fn read_track_notes(
+    row: &rusqlite::Row,
+    base: usize,
+    track: &mut TrackSummary,
+) -> rusqlite::Result<()> {
+    track.comments = row.get(base + 17)?;
+    track.artwork_hash = row.get(base + 18)?;
+    track.created_at = row.get(base + 19)?;
+    track.updated_at = row.get(base + 20)?;
+    track.comment_2 = row.get(base + 21)?;
+    Ok(())
+}
+
+fn read_track_credits(
+    row: &rusqlite::Row,
+    base: usize,
+    track: &mut TrackSummary,
+) -> rusqlite::Result<()> {
+    track.composer = row.get(base + 22)?;
+    track.album_artist = row.get(base + 23)?;
+    track.remixer = row.get(base + 24)?;
+    track.producer = row.get(base + 25)?;
+    track.grouping = row.get(base + 26)?;
+    track.track_number = row.get(base + 27)?;
+    track.disc_number = row.get(base + 28)?;
+    Ok(())
+}
+
+fn read_track_release(
+    row: &rusqlite::Row,
+    base: usize,
+    track: &mut TrackSummary,
+) -> rusqlite::Result<()> {
+    track.isrc = row.get(base + 29)?;
+    track.catalog_number = row.get(base + 30)?;
+    track.release_date = row.get(base + 31)?;
+    track.copyright = row.get(base + 32)?;
+    track.mood = row.get(base + 33)?;
+    track.mix_name = row.get(base + 34)?;
+    track.lyrics = row.get(base + 35)?;
+    track.bitrate_kbps = row.get(base + 36)?;
+    Ok(())
 }
 
 fn map_track_summary(row: &rusqlite::Row) -> rusqlite::Result<TrackSummary> {
@@ -352,7 +442,7 @@ pub async fn get_track(
     let sql = format!(
         "SELECT {TRACK_SUMMARY_COLUMNS},
                 file_size, sample_rate, channels, bit_depth, loudness_lufs,
-                vocal_presence, phrase_confidence, analysis_version, notes
+                vocal_presence, phrase_confidence, analysis_version, notes, beatgrid_confidence
          FROM tracks WHERE id = ?"
     );
     let mut stmt = conn.prepare(&sql).map_err(|e| e.to_string())?;
@@ -377,6 +467,7 @@ pub async fn get_track(
                 phrase_confidence: row.get(base + 6)?,
                 analysis_version: row.get(base + 7)?,
                 notes: row.get(base + 8)?,
+                beatgrid_confidence: row.get(base + 9)?,
                 cues: Vec::new(),
             })
         })
@@ -440,6 +531,202 @@ pub async fn get_artwork(
     Ok(Some(format!("data:{mime};base64,{encoded}")))
 }
 
+/// Remembers the first few per-track failures without hiding them behind a
+/// success-shaped response.
+fn record_artwork_error(
+    result: &mut RefreshArtworkResponse,
+    track_id: &str,
+    err: impl std::fmt::Display,
+) {
+    if result.errors.len() < 10 {
+        result.errors.push(format!("{track_id}: {err}"));
+    }
+}
+
+/// Fills artwork pointers for tracks imported before embedded art was cached.
+///
+/// This reads the source files only; the image is written to the app's own
+/// content-addressed cache, never back into the audio file. It is a no-op once
+/// every present track has an artwork pointer.
+#[tauri::command]
+pub async fn refresh_artwork(
+    app: AppHandle,
+    db: State<'_, Arc<Mutex<Database>>>,
+) -> Result<RefreshArtworkResponse, String> {
+    let artwork_dir = app
+        .path()
+        .app_data_dir()
+        .map(|dir| dir.join("artwork"))
+        .unwrap_or_else(|_| std::path::PathBuf::from("artwork"));
+
+    // Read the candidate rows under the lock, then release it before touching
+    // disk. Each write below re-acquires it for a single UPDATE.
+    let rows: Vec<(String, String)> = {
+        let db_guard = db.lock().map_err(|e| e.to_string())?;
+        let mut stmt = db_guard
+            .conn()
+            .prepare(
+                "SELECT id, file_path FROM tracks
+                 WHERE removed_at IS NULL
+                   AND (artwork_hash IS NULL OR artwork_path IS NULL OR artwork_mime IS NULL)
+                 ORDER BY id",
+            )
+            .map_err(|e| e.to_string())?;
+        let rows = stmt
+            .query_map([], |row| {
+                Ok((row.get::<_, String>(0)?, row.get::<_, String>(1)?))
+            })
+            .map_err(|e| e.to_string())?
+            .collect::<Result<Vec<_>, _>>()
+            .map_err(|e| e.to_string())?;
+        rows
+    };
+
+    let mut result = RefreshArtworkResponse {
+        scanned: rows.len(),
+        ..Default::default()
+    };
+
+    for (track_id, file_path) in rows {
+        let meta = match extract_metadata(&file_path) {
+            Ok(meta) => meta,
+            Err(err) => {
+                result.failed += 1;
+                record_artwork_error(&mut result, &track_id, err);
+                continue;
+            }
+        };
+        let Some(artwork) = meta.artwork else {
+            result.missing += 1;
+            continue;
+        };
+        let cached = match cache_artwork(&artwork, &artwork_dir) {
+            Ok(cached) => cached,
+            Err(err) => {
+                result.failed += 1;
+                record_artwork_error(&mut result, &track_id, err);
+                continue;
+            }
+        };
+        let cached_path = cached.path.to_string_lossy().to_string();
+        let updated = {
+            let db_guard = db.lock().map_err(|e| e.to_string())?;
+            db_guard.conn().execute(
+                "UPDATE tracks
+                    SET artwork_hash = ?1, artwork_path = ?2, artwork_mime = ?3,
+                        updated_at = datetime('now')
+                  WHERE id = ?4",
+                rusqlite::params![cached.hash, cached_path, cached.mime_type, track_id],
+            )
+        };
+        match updated {
+            Ok(1) => result.updated += 1,
+            Ok(_) => {
+                result.failed += 1;
+                record_artwork_error(&mut result, &track_id, "track no longer present");
+            }
+            Err(err) => {
+                result.failed += 1;
+                record_artwork_error(&mut result, &track_id, err);
+            }
+        }
+    }
+
+    Ok(result)
+}
+
+/// Fills `beatgrid_confidence` for rows analysed before migration 009 (issue #89).
+///
+/// `core::grid_backfill` decides which rows are owed a value and what may be
+/// written; this decodes each file once and runs the beat-grid detector only —
+/// no ONNX model, no version bump, and no column other than the confidence is
+/// written. The decode runs on a blocking thread and the database lock is held
+/// only for the selection and each single-row UPDATE. Source audio is only
+/// read. A no-op once every owed row is filled.
+#[tauri::command]
+pub async fn backfill_grid_confidence(
+    db: State<'_, Arc<Mutex<Database>>>,
+) -> Result<BackfillGridConfidenceResponse, String> {
+    let version = dj_assistant_analysis::analysis_version();
+    let rows: Vec<(String, String, Option<f64>)> = {
+        let db_guard = db.lock().map_err(|e| e.to_string())?;
+        let mut stmt = db_guard
+            .conn()
+            .prepare(GRID_BACKFILL_ROWS_SQL)
+            .map_err(|e| e.to_string())?;
+        let rows = stmt
+            .query_map([&version], |row| {
+                Ok((row.get(0)?, row.get(1)?, row.get(2)?))
+            })
+            .map_err(|e| e.to_string())?
+            .collect::<Result<Vec<_>, _>>()
+            .map_err(|e| e.to_string())?;
+        rows
+    };
+    if rows.is_empty() {
+        return Ok(BackfillGridConfidenceResponse::default());
+    }
+
+    let db = Arc::clone(&db);
+    tauri::async_runtime::spawn_blocking(move || {
+        let mut result = BackfillGridConfidenceResponse {
+            scanned: rows.len(),
+            ..Default::default()
+        };
+        let record_error = |result: &mut BackfillGridConfidenceResponse,
+                            track_id: &str,
+                            err: &dyn std::fmt::Display| {
+            result.failed += 1;
+            if result.errors.len() < 10 {
+                result.errors.push(format!("{track_id}: {err}"));
+            }
+        };
+        for (track_id, file_path, stored_bpm) in rows {
+            let grid = match dj_assistant_analysis::run_beat_grid_only(&file_path) {
+                Ok(grid) => grid,
+                Err(err) => {
+                    record_error(&mut result, &track_id, &err);
+                    continue;
+                }
+            };
+            let confidence = match decide_grid_backfill(
+                stored_bpm,
+                f64::from(grid.bpm),
+                f64::from(grid.confidence),
+            ) {
+                GridBackfill::Write(confidence) => confidence,
+                GridBackfill::NoTempo => {
+                    result.no_tempo += 1;
+                    continue;
+                }
+                GridBackfill::BpmMismatch => {
+                    result.mismatched += 1;
+                    continue;
+                }
+            };
+            let written = db.lock().map_err(|e| e.to_string()).and_then(|guard| {
+                guard
+                    .conn()
+                    .execute(
+                        GRID_BACKFILL_UPDATE_SQL,
+                        rusqlite::params![confidence, track_id, version],
+                    )
+                    .map_err(|e| e.to_string())
+            });
+            match written {
+                Ok(1) => result.updated += 1,
+                // A full analysis or a removal changed the row since it was
+                // selected; that write stands.
+                Ok(_) => {}
+                Err(err) => record_error(&mut result, &track_id, &err),
+            }
+        }
+        result
+    })
+    .await
+    .map_err(|e| e.to_string())
+}
+
 /// Decodes an audio file and returns normalized amplitude peaks, cached on
 /// disk by the track's content hash so a track is only decoded once.
 #[tauri::command]
@@ -482,7 +769,7 @@ pub async fn get_waveform_peaks(
     // Peaks are derived data, so anything written by an older generator must not be served
     // after the binning changes. Versioning the filename makes stale entries unreachable
     // while leaving the user's existing cache files on disk untouched.
-    const PEAKS_CACHE_VERSION: &str = "v2";
+    const PEAKS_CACHE_VERSION: &str = "v3";
     let cache_file = cache_dir.join(format!("{}-{}.json", PEAKS_CACHE_VERSION, cache_key));
 
     if let Ok(raw) = std::fs::read_to_string(&cache_file) {
@@ -496,6 +783,7 @@ pub async fn get_waveform_peaks(
         Err(_) => {
             return Ok(GetWaveformPeaksResponse {
                 peaks: Vec::new(),
+                overview_peaks: Vec::new(),
                 duration_ms: 0,
                 sample_rate: 0,
                 is_real: false,
@@ -507,29 +795,13 @@ pub async fn get_waveform_peaks(
     let duration_ms = (decoded.duration_seconds * 1000.0).round() as u64;
     let mono = decoded.to_mono();
 
-    const BINS: usize = 4000;
-    let mut peaks = vec![0.0f32; BINS];
-    let frames = mono.len();
-    for (i, peak) in peaks.iter_mut().enumerate() {
-        // Bin `i` owns [i * frames / BINS, (i + 1) * frames / BINS). A fixed
-        // `frames.div_ceil(BINS)` stride stops short of `frames` when the stride does not
-        // divide it evenly, which left the tail bins at zero and cut the waveform before the
-        // real duration. Proportional edges cover every frame and keep every bin non-empty
-        // while `frames >= BINS`; below that the empty bins are legitimately zero.
-        let start = (i as u128 * frames as u128 / BINS as u128) as usize;
-        let end = ((i as u128 + 1) * frames as u128 / BINS as u128) as usize;
-        let mut max_abs: f32 = 0.0;
-        for sample in &mono[start..end] {
-            let a = sample.abs();
-            if a > max_abs {
-                max_abs = a;
-            }
-        }
-        *peak = max_abs;
-    }
+    // T2.4.1: one decode, two cached resolutions — the zoomed detail view
+    // and the full-track overview rail each get their own peak buffer.
+    let layers = dj_assistant_analysis::peak_layers(&mono);
 
     let response = GetWaveformPeaksResponse {
-        peaks,
+        peaks: layers.detail,
+        overview_peaks: layers.overview,
         duration_ms,
         sample_rate,
         is_real: true,
@@ -885,6 +1157,91 @@ pub async fn track_tag_health(
     })
 }
 
+/// The Tag Surgeon's read-only scan (T2.2.1): folds the selection's tag
+/// vocabulary into duplicate-spelling clusters and advisory prefix edges.
+/// Writes nothing — no DML, no `skill_runs` row; applying a cleanup is T2.2.4.
+#[tauri::command]
+pub async fn tag_cluster(
+    db: State<'_, Arc<Mutex<Database>>>,
+    request: TagClusterRequest,
+) -> Result<dj_assistant_core::ClusterReport, String> {
+    let read = tag_vocabulary_rows(request.track_ids.as_deref()).map_err(|e| e.to_string())?;
+    // Clustering is pure CPU work: run it after the global DB lock is released.
+    let rows: Vec<(String, String)> = {
+        let db_guard = db.lock().map_err(|e| e.to_string())?;
+        let conn = db_guard.conn();
+        let mut stmt = conn.prepare(&read.sql).map_err(|e| e.to_string())?;
+        let rows = stmt
+            .query_map(rusqlite::params_from_iter(read.params.iter()), |row| {
+                Ok((row.get::<_, String>(0)?, row.get::<_, String>(1)?))
+            })
+            .map_err(|e| e.to_string())?
+            .collect::<Result<Vec<_>, _>>()
+            .map_err(|e| e.to_string())?;
+        rows
+    };
+
+    // One vocabulary entry per spelling, carrying every track id that has it:
+    // the engine's affected-track count is a union, not a sum of counts.
+    let mut by_tag: std::collections::BTreeMap<String, Vec<String>> =
+        std::collections::BTreeMap::new();
+    for (track_id, tag) in rows {
+        by_tag.entry(tag).or_default().push(track_id);
+    }
+    let values: Vec<dj_assistant_core::TagValue> = by_tag
+        .into_iter()
+        .map(|(raw, track_ids)| dj_assistant_core::TagValue { raw, track_ids })
+        .collect();
+    Ok(dj_assistant_core::cluster_tags(&values))
+}
+
+/// Describes the sample tracks a Tag Surgeon preview shows (T2.2.3): each
+/// track's title, artist and every tag it carries. Read-only, like the scan.
+#[tauri::command]
+pub async fn tag_preview_tracks(
+    db: State<'_, Arc<Mutex<Database>>>,
+    request: TagPreviewRequest,
+) -> Result<Vec<TagPreviewTrack>, String> {
+    let read = tag_preview_rows(&request.track_ids).map_err(|e| e.to_string())?;
+    let rows: Vec<(String, String, String, Option<String>)> = {
+        let db_guard = db.lock().map_err(|e| e.to_string())?;
+        let conn = db_guard.conn();
+        let mut stmt = conn.prepare(&read.sql).map_err(|e| e.to_string())?;
+        let rows = stmt
+            .query_map(rusqlite::params_from_iter(read.params.iter()), |row| {
+                Ok((
+                    row.get::<_, String>(0)?,
+                    row.get::<_, String>(1)?,
+                    row.get::<_, String>(2)?,
+                    row.get::<_, Option<String>>(3)?,
+                ))
+            })
+            .map_err(|e| e.to_string())?
+            .collect::<Result<Vec<_>, _>>()
+            .map_err(|e| e.to_string())?;
+        rows
+    };
+
+    // The query orders by track id, so one track's rows are adjacent.
+    let mut tracks: Vec<TagPreviewTrack> = Vec::new();
+    for (track_id, title, artist, tag) in rows {
+        match tracks.last_mut() {
+            Some(current) if current.track_id == track_id => {
+                if let Some(tag) = tag {
+                    current.tags.push(tag);
+                }
+            }
+            _ => tracks.push(TagPreviewTrack {
+                track_id,
+                title,
+                artist,
+                tags: tag.into_iter().collect(),
+            }),
+        }
+    }
+    Ok(tracks)
+}
+
 /// Builds per-store buy-link search URLs for a track (Beatport, Traxsource,
 /// Juno Download, Bandcamp, Discogs). Pure URL construction — no API, no
 /// network, no audio. This is Tier 0 of the store integration (ADR-0007).
@@ -1004,6 +1361,240 @@ pub async fn provider_status(
 // `stable-x86_64-pc-windows-gnu`. This layer is the executor: it binds the
 // planned statements to a transaction and runs them.
 
+/// Applies the Tag Surgeon's confirmed spelling rewrites (T2.2.4).
+///
+/// `core` plans every change: which tracks carry a renamed spelling, and the
+/// tag set each one ends with. The rewrites and the `skill_runs` snapshot share
+/// one transaction, so a failure leaves the library as it was and a success
+/// always has an undo. Undo is [`undo_track_metadata`]: the snapshot is in the
+/// shape it restores, with the same guard, so a track edited again since the
+/// apply is skipped rather than overwritten.
+#[tauri::command]
+pub async fn tag_apply_renames(
+    db: State<'_, Arc<Mutex<Database>>>,
+    request: TagApplyRequest,
+) -> Result<TagApplyResponse, String> {
+    if request.track_ids.is_empty() || request.track_ids.iter().any(|id| id.trim().is_empty()) {
+        return Err("no tracks selected".to_string());
+    }
+    let renames: Vec<TagRename> = request
+        .renames
+        .iter()
+        .map(|rename| TagRename {
+            from: rename.from.clone(),
+            to: rename.to.clone(),
+        })
+        .collect();
+    let map = validate_renames(&renames)?;
+    let mut ids = request.track_ids.clone();
+    ids.sort();
+    ids.dedup();
+
+    let mut db_guard = db.lock().map_err(|e| e.to_string())?;
+    let tx = db_guard
+        .conn_mut()
+        .transaction()
+        .map_err(|e| e.to_string())?;
+
+    // The same vocabulary the scan reads, so the apply touches exactly what the
+    // preview counted: present tracks only, grouped by track.
+    let mut tracks: std::collections::BTreeMap<String, Vec<String>> =
+        std::collections::BTreeMap::new();
+    for chunk in ids.chunks(MAX_IN_CLAUSE_IDS) {
+        let read = tag_vocabulary_rows(Some(chunk)).map_err(|e| e.to_string())?;
+        let mut stmt = tx.prepare(&read.sql).map_err(|e| e.to_string())?;
+        let rows = stmt
+            .query_map(rusqlite::params_from_iter(read.params.iter()), |row| {
+                Ok((row.get::<_, String>(0)?, row.get::<_, String>(1)?))
+            })
+            .map_err(|e| e.to_string())?
+            .collect::<Result<Vec<_>, _>>()
+            .map_err(|e| e.to_string())?;
+        for (track_id, tag) in rows {
+            tracks.entry(track_id).or_default().push(tag);
+        }
+    }
+    let tracks: Vec<(String, Vec<String>)> = tracks.into_iter().collect();
+
+    let planned = plan_tag_rewrite(&tracks, &map);
+    if planned.is_empty() {
+        tx.commit().map_err(|e| e.to_string())?;
+        return Ok(TagApplyResponse {
+            undo_id: String::default(),
+            updated: 0,
+        });
+    }
+
+    let mut before = serde_json::Map::new();
+    let mut after = serde_json::Map::new();
+    for entry in &planned {
+        for statement in &entry.tag_statements {
+            execute_write(&tx, statement)?;
+        }
+        before.insert(
+            entry.track_id.clone(),
+            serde_json::Value::Object(entry.before.clone()),
+        );
+        after.insert(
+            entry.track_id.clone(),
+            serde_json::Value::Object(entry.after.clone()),
+        );
+    }
+
+    let undo_id = Uuid::new_v4().to_string();
+    let run = tag_rewrite_skill_run(&undo_id, &ids, &renames, before, after);
+    tx.execute(&run.sql, rusqlite::params_from_iter(run.params.iter()))
+        .map_err(|e| e.to_string())?;
+
+    tx.commit().map_err(|e| e.to_string())?;
+
+    Ok(TagApplyResponse {
+        undo_id,
+        updated: planned.len(),
+    })
+}
+
+/// The Tag Surgeon's past applies, newest first (T2.2.6).
+///
+/// Read-only. Each entry's `undoId` goes to [`undo_track_metadata`], whose
+/// guard skips a track edited since the apply, so an old entry can be undone
+/// without overwriting newer work. A damaged row fails the read instead of
+/// being listed as an empty apply.
+#[tauri::command]
+pub async fn tag_history(
+    db: State<'_, Arc<Mutex<Database>>>,
+) -> Result<Vec<TagHistoryEntry>, String> {
+    let db_guard = db.lock().map_err(|e| e.to_string())?;
+    let mut stmt = db_guard
+        .conn()
+        .prepare(TAG_HISTORY_SQL)
+        .map_err(|e| e.to_string())?;
+    let rows = stmt
+        .query_map(
+            rusqlite::params![TAG_REWRITE_SKILL_NAME, TAG_HISTORY_LIMIT],
+            |row| {
+                Ok((
+                    row.get::<_, String>(0)?,
+                    row.get::<_, String>(1)?,
+                    row.get::<_, Option<String>>(2)?,
+                    row.get::<_, Option<String>>(3)?,
+                    row.get::<_, Option<String>>(4)?,
+                    row.get::<_, String>(5)?,
+                ))
+            },
+        )
+        .map_err(|e| e.to_string())?
+        .collect::<Result<Vec<_>, _>>()
+        .map_err(|e| e.to_string())?;
+    rows.iter()
+        .map(|(id, status, input, before, after, created_at)| {
+            let entry = parse_tag_history_entry(
+                id,
+                status,
+                input.as_deref(),
+                before.as_deref(),
+                after.as_deref(),
+                created_at,
+            )?;
+            Ok(TagHistoryEntry {
+                undo_id: entry.undo_id,
+                created_at: entry.created_at,
+                undone: entry.undone,
+                renames: entry
+                    .renames
+                    .into_iter()
+                    .map(|rename| TagRenameRequest {
+                        from: rename.from,
+                        to: rename.to,
+                    })
+                    .collect(),
+                track_count: entry.track_count,
+            })
+        })
+        .collect()
+}
+
+/// The stored tag aliases, keyed by alias fold key (T2.2.5).
+fn load_tag_aliases(conn: &rusqlite::Connection) -> Result<AliasMap, String> {
+    let mut stmt = conn
+        .prepare(LIST_TAG_ALIASES_SQL)
+        .map_err(|e| e.to_string())?;
+    let rows = stmt
+        .query_map([], |row| {
+            Ok((row.get::<_, String>(0)?, row.get::<_, String>(1)?))
+        })
+        .map_err(|e| e.to_string())?
+        .collect::<Result<Vec<_>, _>>()
+        .map_err(|e| e.to_string())?;
+    Ok(rows
+        .into_iter()
+        .map(|(alias, canonical)| (normalize_tag(&alias), canonical))
+        .collect())
+}
+
+/// The stored aliases in alias order, for the Tag Surgeon's alias list (T2.2.5).
+fn list_tag_aliases(conn: &rusqlite::Connection) -> Result<Vec<TagAlias>, String> {
+    let mut stmt = conn
+        .prepare(LIST_TAG_ALIASES_SQL)
+        .map_err(|e| e.to_string())?;
+    let aliases = stmt
+        .query_map([], |row| {
+            Ok(TagAlias {
+                alias: row.get(0)?,
+                canonical: row.get(1)?,
+            })
+        })
+        .map_err(|e| e.to_string())?
+        .collect::<Result<Vec<_>, _>>()
+        .map_err(|e| e.to_string())?;
+    Ok(aliases)
+}
+
+/// Lists the tag aliases (T2.2.5).
+#[tauri::command]
+pub async fn list_tag_aliases_command(
+    db: State<'_, Arc<Mutex<Database>>>,
+) -> Result<Vec<TagAlias>, String> {
+    let db_guard = db.lock().map_err(|e| e.to_string())?;
+    list_tag_aliases(db_guard.conn())
+}
+
+/// Adds a tag alias, or changes the canonical spelling of an existing one
+/// (T2.2.5). Tracks already in the library are not changed; the alias applies
+/// to tags written from now on. Returns the full list.
+#[tauri::command]
+pub async fn add_tag_alias(
+    db: State<'_, Arc<Mutex<Database>>>,
+    request: AddTagAliasRequest,
+) -> Result<Vec<TagAlias>, String> {
+    let mut db_guard = db.lock().map_err(|e| e.to_string())?;
+    let conn = db_guard.conn_mut();
+    let existing = load_tag_aliases(conn)?;
+    let key = validate_alias(&request.alias, &request.canonical, &existing)?;
+    conn.execute(
+        UPSERT_TAG_ALIAS_SQL,
+        rusqlite::params![key, request.alias.trim(), request.canonical],
+    )
+    .map_err(|e| e.to_string())?;
+    list_tag_aliases(conn)
+}
+
+/// Removes a tag alias (T2.2.5). Returns the full list.
+#[tauri::command]
+pub async fn remove_tag_alias(
+    db: State<'_, Arc<Mutex<Database>>>,
+    request: RemoveTagAliasRequest,
+) -> Result<Vec<TagAlias>, String> {
+    let mut db_guard = db.lock().map_err(|e| e.to_string())?;
+    let conn = db_guard.conn_mut();
+    conn.execute(
+        DELETE_TAG_ALIAS_SQL,
+        rusqlite::params![normalize_tag(&request.alias)],
+    )
+    .map_err(|e| e.to_string())?;
+    list_tag_aliases(conn)
+}
+
 /// Writes metadata to one or more tracks.
 ///
 /// The write is reversible: the previous values are snapshotted in a
@@ -1029,6 +1620,21 @@ pub async fn update_track_metadata(
         rating: request.rating,
         energy: request.energy,
         tags: request.tags,
+        comment_2: request.comment_2,
+        composer: request.composer,
+        album_artist: request.album_artist,
+        remixer: request.remixer,
+        producer: request.producer,
+        grouping: request.grouping,
+        track_number: request.track_number,
+        disc_number: request.disc_number,
+        isrc: request.isrc,
+        catalog_number: request.catalog_number,
+        release_date: request.release_date,
+        copyright: request.copyright,
+        mood: request.mood,
+        mix_name: request.mix_name,
+        lyrics: request.lyrics,
     };
     patch.validate()?;
 
@@ -1564,9 +2170,32 @@ fn apply_metadata_patch(
     track_ids: &[String],
     patch: &MetadataPatch,
 ) -> Result<(String, usize), String> {
+    // Tag aliases (T2.2.5) shape any tag set the write carries, so a track is
+    // saved under the canonical spelling. Tracks already in the library are not
+    // touched: only what this write saves is mapped.
+    let mapped_patch;
+    let patch = if patch.tags.is_some() {
+        let aliases = load_tag_aliases(conn)?;
+        mapped_patch = MetadataPatch {
+            tags: Some(map_tags(
+                patch.tags.as_deref().unwrap_or_default(),
+                &aliases,
+            )),
+            ..patch.clone()
+        };
+        &mapped_patch
+    } else {
+        patch
+    };
+
     // The scalar columns this patch touches. The names come from the fixed
     // allow-list in `core`, never from user input.
-    let columns = patch_columns(patch);
+    let mut columns = patch_columns(patch);
+    // The label's provenance flag is read with the label, so the snapshot can
+    // restore it on undo. It is never written from the patch itself.
+    if patch.label.is_some() {
+        columns.push("label_user_set");
+    }
     // Ids are bound, never interpolated into the SQL text. A selection larger
     // than core's conservative batch size is split into several statements, so
     // the read is a list the executor runs and concatenates.

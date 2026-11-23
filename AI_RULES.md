@@ -26,7 +26,7 @@ Use your built-in terminal or GitHub CLI (`gh`) to execute these steps yourself.
 ## 4. TESTING & EVIDENCE
 - AUTOMATED: Always write/update tests. Run them and paste the "All tests passed" output in the chat.
 - VISUAL: If your tool allows, take a screenshot of the new feature working and attach it. If you cannot take a screenshot of the native app, give the user exact, simple steps to take a screenshot and paste it back to you.
-- NO GUESSING: Verify the UI against `docs/ui/01-DESIGN-SYSTEM.md`.
+- NO GUESSING: Verify the UI against `docs/ui-ux/01-DESIGN-SYSTEM.md`.
 
 ## 5. TONE & STYLE
 - Patient, step-by-step, encouraging. Treat the user like a smart friend who just doesn't know how to code yet.

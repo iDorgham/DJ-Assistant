@@ -50,13 +50,13 @@ function fakeStorage(initial: Record<string, string> = {}): {
  */
 const SPEC_DEFAULT_VISIBLE: ColumnId[] = [
   "index",
+  "status",
   "title",
   "artist",
   "album",
   "bpm",
   "key",
   "time",
-  "status",
   "fingerprint",
 ];
 
@@ -79,7 +79,7 @@ test("every documented column id has a definition", () => {
   }
 });
 
-test("defaults match the column table in docs/ui/03 §3.2", () => {
+test("defaults match the column table in docs/ui-ux/03 §3.2", () => {
   assert.deepEqual(visibleIds(DEFAULT_LIBRARY_COLUMNS), SPEC_DEFAULT_VISIBLE);
   // The rich cells (Energy bars, tag chips, editable stars, artwork thumb) are later
   // slices, so they start switched off and the framework still has to carry their ids.
@@ -92,6 +92,26 @@ test("defaults match the column table in docs/ui/03 §3.2", () => {
     "year",
     "lufs",
     "color",
+    // Imported metadata is opt-in too: the default table stays readable, and
+    // every extra field is one toggle away in the Columns panel.
+    "comment2",
+    "composer",
+    "albumArtist",
+    "remixer",
+    "producer",
+    "grouping",
+    "trackNumber",
+    "discNumber",
+    "isrc",
+    "catalogNumber",
+    "releaseDate",
+    "copyright",
+    "mood",
+    "mixName",
+    "lyrics",
+    "bitrate",
+    "fileName",
+    "importDate",
   ];
   for (const id of deferredCells) {
     assert.equal(
@@ -218,11 +238,14 @@ test("auto-fit counts header controls and cell decorations", () => {
     "the header sort icon was not counted"
   );
 
-  // Status renders a chip: px-2 padding, a 12px icon and a 4px gap.
-  assert.ok(
-    autoFitWidth("Needs review", columnDefinition("status")) >
-      autoFitWidth("Needs review", columnDefinition("genre")),
-    "the status chip was not counted"
+  // Status is an icon-only cell: its body is the icon, so the body text is
+  // empty and the width is the header label alone (no sort icon, since it is
+  // not sortable, and no chip chrome around the text).
+  const status = columnDefinition("status");
+  assert.equal(
+    autoFitWidth("", status),
+    status.label.length * 7 + 32,
+    "the icon-only status cell must not reserve chip chrome"
   );
 
   // Format renders a bordered pill inside px-1.5.
@@ -334,7 +357,7 @@ test("visibleColumns keeps stored order and hides the rest", () => {
   );
   assert.deepEqual(
     visibleColumns(edited).map((column) => column.id),
-    ["index", "artist", "title", "bpm", "key", "time", "status", "fingerprint"]
+    ["index", "status", "artist", "title", "bpm", "key", "time", "fingerprint"]
   );
 });
 
@@ -418,7 +441,8 @@ test("every column renders the text the table shows", () => {
     path: "D:/music/sets/opener.mp3",
     format: "mp3",
     fingerprint: "a1b2c3d4...",
-    status: "Needs review",
+    // The status cell is an icon; its label is the tooltip and aria-label.
+    status: "",
   });
 });
 
@@ -429,9 +453,9 @@ test("missing tags fall back to a dash instead of an empty cell", () => {
   assert.equal(trackColumnText(BARE_TRACK, "bpm"), PLACEHOLDER);
   assert.equal(trackColumnText(BARE_TRACK, "rating"), PLACEHOLDER);
   assert.equal(trackColumnText(BARE_TRACK, "fingerprint"), PLACEHOLDER);
-  assert.equal(trackColumnText(BARE_TRACK, "status"), "Pending");
+  assert.equal(trackColumnText(BARE_TRACK, "status"), "");
   for (const id of COLUMN_IDS) {
-    if (id === "index" || id === "artwork") continue;
+    if (id === "index" || id === "artwork" || id === "status") continue;
     assert.ok(
       trackColumnText(BARE_TRACK, id).length > 0,
       `${id} rendered nothing for a bare track`
@@ -529,6 +553,103 @@ test("stored legacy key defaults grow while customized widths and layout survive
     );
     assert.equal(pick(edited, "key").width, width, "loading must not mutate saved input");
   }
+});
+
+test("imported metadata columns render the field the file carried", () => {
+  const track: TrackSummary = {
+    ...FULL_TRACK,
+    comment2: "Peak-time edit",
+    composer: "A. Rivera",
+    albumArtist: "Various Artists",
+    remixer: "Vela",
+    producer: "M. Okafor",
+    grouping: "Closing set",
+    trackNumber: 3,
+    discNumber: 1,
+    isrc: "GBAYE0601498",
+    catalogNumber: "NR-042",
+    releaseDate: "2026-03-13",
+    copyright: "(c) 2026 Night Records",
+    mood: "Driving",
+    mixName: "Extended Mix",
+    lyrics: "Instrumental",
+    bitrateKbps: 320,
+  };
+  const expected: Partial<Record<ColumnId, string>> = {
+    comment2: "Peak-time edit",
+    composer: "A. Rivera",
+    albumArtist: "Various Artists",
+    remixer: "Vela",
+    producer: "M. Okafor",
+    grouping: "Closing set",
+    trackNumber: "3",
+    discNumber: "1",
+    isrc: "GBAYE0601498",
+    catalogNumber: "NR-042",
+    releaseDate: "2026-03-13",
+    copyright: "(c) 2026 Night Records",
+    mood: "Driving",
+    mixName: "Extended Mix",
+    lyrics: "Instrumental",
+    bitrate: "320 kbps",
+  };
+  for (const [id, text] of Object.entries(expected) as [ColumnId, string][]) {
+    assert.equal(trackColumnText(track, id), text, `${id} did not render its field`);
+  }
+  // These two come from fields the summary already carried, not from a new tag.
+  assert.equal(trackColumnText(track, "fileName"), "opener.mp3");
+  assert.equal(trackColumnText(track, "importDate"), "2026-10-01");
+});
+
+test("an imported field the file did not carry stays a placeholder", () => {
+  const imported: ColumnId[] = [
+    "comment2",
+    "composer",
+    "albumArtist",
+    "remixer",
+    "producer",
+    "grouping",
+    "trackNumber",
+    "discNumber",
+    "isrc",
+    "catalogNumber",
+    "releaseDate",
+    "copyright",
+    "mood",
+    "mixName",
+    "lyrics",
+    "bitrate",
+  ];
+  for (const id of imported) {
+    assert.equal(trackColumnText(BARE_TRACK, id), PLACEHOLDER, `${id} invented a value`);
+  }
+});
+
+test("a layout saved before version 3 moves status next to the row number once", () => {
+  const storage = fakeStorage();
+  const legacy = moveColumn(DEFAULT_LIBRARY_COLUMNS, "status", "fingerprint");
+  storage.setItem(
+    "dj-assistant.columns.v1.library",
+    JSON.stringify({ version: 2, columns: legacy })
+  );
+  const loaded = loadLibraryColumns("library", storage);
+  assert.deepEqual(
+    loaded.map((column) => column.id).slice(0, 2),
+    ["index", "status"],
+    "status was not moved after #"
+  );
+  assert.equal(
+    loaded.filter((column) => column.id === "status").length,
+    1,
+    "the upgrade duplicated the status column"
+  );
+});
+
+test("a version-3 layout keeps status wherever the user dragged it", () => {
+  const storage = fakeStorage();
+  const edited = moveColumn(DEFAULT_LIBRARY_COLUMNS, "status", "fingerprint");
+  saveLibraryColumns("library", edited, storage);
+  assert.deepEqual(loadLibraryColumns("library", storage), edited);
 });
 
 test("new saves preserve a deliberate 72px key width", () => {

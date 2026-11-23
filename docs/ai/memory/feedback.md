@@ -110,7 +110,7 @@ system — here: the window is the `tauri dev` shell, the database is
 (`dj-query`) confirms the rows the UI claims to have written. A PASS needs the
 observation **and** the independent check; a mock-backed session is not
 evidence. See F-009 in [`state.md`](./state.md) and the checklist in
-[`docs/engineering/SLICE2_MANUAL_QA_CHECKLIST.md`](../../engineering/SLICE2_MANUAL_QA_CHECKLIST.md).
+[`docs/qa/checklists/SLICE2_MANUAL_QA_CHECKLIST.md`](../../qa/checklists/SLICE2_MANUAL_QA_CHECKLIST.md).
 
 ## F-010 · Never stash to "check something else" in this worktree (2026-10-27)
 
@@ -188,7 +188,7 @@ across minutes. Mechanical note: `resolveReviewThread` takes `threadId`, not
 ## F-014 · The library UI *can* be driven from here — two input paths, one of them CDP (2026-11-09)
 
 Supersedes the "multi-select has no automated route" half of F-012, proven while closing
-Pass 2 of [`../../evidence/2026-11-09-RUNNING-WINDOW-QA.md`](../../evidence/2026-11-09-RUNNING-WINDOW-QA.md).
+Pass 2 of [`../../qa/evidence/2026-11-09-RUNNING-WINDOW-QA.md`](../../qa/evidence/2026-11-09-RUNNING-WINDOW-QA.md).
 
 - **Coordinate input maps 1:1 only in the window's restored geometry.** A maximized window
   hands back a 1428×768 capture against a 1183-wide window and the first click only
@@ -219,7 +219,7 @@ index" is no longer evidence that a row needs a human.
 
 ## F-015 · Four counting and transport traps in CDP-driven QA (2026-11-10)
 
-Proven while executing Pass 3 of [`../../evidence/2026-11-09-RUNNING-WINDOW-QA.md`](../../evidence/2026-11-09-RUNNING-WINDOW-QA.md).
+Proven while executing Pass 3 of [`../../qa/evidence/2026-11-09-RUNNING-WINDOW-QA.md`](../../qa/evidence/2026-11-09-RUNNING-WINDOW-QA.md).
 
 - **Never read a filtered count from `tbody tr`.** The library table is virtualised: ~25 rows
   mount whatever the filter, and `aria-rowcount` is always full-count + 1. The status-bar label
@@ -241,7 +241,7 @@ from the DB. A single-source number is not evidence.
 ## F-016 · Contrast is computed by compositing, and per row state (2026-11-10)
 
 Proven while executing Passes 4–5 of
-[../../evidence/2026-11-09-RUNNING-WINDOW-QA.md](../../evidence/2026-11-09-RUNNING-WINDOW-QA.md).
+[../../qa/evidence/2026-11-09-RUNNING-WINDOW-QA.md](../../qa/evidence/2026-11-09-RUNNING-WINDOW-QA.md).
 
 - **A tint claim needs alpha math, not a screenshot.** `getComputedStyle` gives the pill’s
   `rgba` fill and text colour; composite the fill over the row background, up to the opaque page
@@ -284,3 +284,86 @@ code-side ignore — the right lever for adjudicated-intentional findings
 approval does not cover disabling the checker. Prettier can wrap a long line
 and orphan the marker: keep the marked line under 100 columns or pin it with
 `// prettier-ignore`.
+
+## F-018 · GitHub settings pickers race coordinate clicks; sudo is a hand-off (2026-11-19)
+
+Computer Use on the ruleset UI: the "Add checks" / "Add bypass" popups render
+their actor list asynchronously **after** the screenshot — a click aimed at the
+search field or a remembered row landed on whatever loaded in between and
+silently selected wrong entries (Codacy Production, Deploy keys). Rule: after
+opening a picker, re-observe until the list is stable, click the checkbox (not
+the row edge), and verify the resulting Actors/Checks table — a successful
+click is not proof of the right selection. Also: clicking Create on a GitHub
+settings form can raise the "Confirm access" sudo dialog (GitHub Mobile /
+authenticator / email). That is an authentication boundary — stop input and
+hand off to the user; the form survives behind the dialog.
+
+## F-019 · PR checkboxes must be verifiable in-PR; post-merge acts are notes (2026-11-19)
+
+A test-plan checkbox for a post-merge human action (ticking the `04-TASKS.md`
+ledger box on `main`) stays unchecked while the PR is open and reads as
+unfinished work. PR #90's body was edited to state it as a plain note under the
+checklist instead. Rule: every `- [ ]` in a PR body must be checkable before
+merge; anything owned by the human post-merge is prose, not a checkbox.
+
+## F-020 · Computer Use scroll/drag over the library table writes data (2026-11-19)
+
+`computer.scroll` (and `drag`) over the virtualized library table injects
+animated pointer drags that sweep the RATING/ENERGY cells: one scroll call
+produced 38 real writes (`set_track_rating` / `update_track_metadata`) that kept
+landing ~90 s after the call returned. Recovery: undo every `skill_runs`
+snapshot newest-first through the app's own `undo_track_metadata` (WebView2
+DevTools console), then prove net-zero with a read-only DB poll. Rule: never
+scroll or drag over the table body — navigate with search filters, scrollbar
+track clicks, keyboard or nav clicks. Screenshot ids and coordinates also go
+stale between cells: re-observe before every coordinate action.
+
+## F-021 · Tauri tray: image-png gate; Win11 overflow hides new icons (2026-11-19)
+
+`tauri::image::Image::from_bytes` is gated behind the `image-png` (or
+`image-ico`) feature — not in tauri's defaults, so a tray build fails E0599
+without it. New tray icons land in the Win11 overflow flyout, which has no UIA
+window until opened: prove registration read-only via
+`HKCU:\Control Panel\NotifyIconSettings` (ExecutablePath + InitialTooltip),
+not by walking Shell_TrayWnd (its only "DJ Assistant" button is the taskbar
+app button).
+
+## F-022 · `file_hash` is a dedup fingerprint — the peaks cache key is the integrity check (2026-11-19)
+
+`tracks.file_hash` is **BLAKE3(file_size LE + the first 1 MiB)**
+(`crates/core/src/fingerprint.rs`), deliberately *not* a content hash. Comparing it against a
+whole-file SHA-256 reports every file as "changed" — that false FAIL was the wrong measure, not a
+broken guarantee.
+
+The cheap correct check: `audio_load` derives the peaks cache key from a **fresh** re-fingerprint of
+the file on disk (`apps/desktop/src-tauri/src/commands.rs:433-441`), so a `v3-<stored file_hash>.json`
+entry written by today's load proves the on-disk fingerprint still equals the imported value. Pair
+that with `file_size` equality and mtime, and the "source audio not modified" row closes without
+hashing anything.
+
+**Rule:** read the definition of a stored hash before using it as evidence. A mismatch is a
+methodology finding until the algorithm is confirmed.
+
+## F-023 · A library imported before Slice 4 cannot answer artwork QA rows (2026-11-19)
+
+`artwork_path` / `artwork_hash` are NULL for **all 94** rows although the MP3s carry APIC frames:
+the cache scanner runs at scan time and nothing backfills existing rows (the same shape as the
+`beatgrid_confidence` gap, issue #89). T2.1.9's with-art and no-bleed rows and T2.4.5's with-art row
+are therefore **BLOCKED, not failed** — with zero cached art there is nothing that *could* bleed, and
+a placeholder-only pass has to say so.
+
+Backfilling means a re-scan that writes 94 artwork rows plus cache files — a real mutation of the
+user's library, so it is a deliberate task and not a QA step.
+
+## F-024 · Computer Use has no hover — park the pointer with a zero-delta scroll (2026-11-19)
+
+The SDK exposes no hover/move op, but `scroll({x, y, scrollX: 0, scrollY: 0})` moves the pointer to
+that pixel and leaves it there, which fires CSS `:hover` — the only way to raise a `group-hover`
+overlay (the artwork play button) in the running window.
+
+Two mechanics that cost retries: a `screenshotId` is invalidated by **`activate_window`**, so observe
+*after* activating rather than before; and the window can be minimized outside the session — recover
+with `activate_window` → `get_window` → `get_window_state` before any coordinate input.
+
+**Rule:** use element indexes, not coordinates, for a tab strip — the labels sit ~30 px apart and a
+missed click is silent.

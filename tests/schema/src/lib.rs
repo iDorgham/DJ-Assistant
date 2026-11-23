@@ -21,10 +21,21 @@ pub const MIGRATION_007: &str =
     include_str!("../../../apps/desktop/src-tauri/migrations/007_track_tags_table.sql");
 pub const MIGRATION_008: &str =
     include_str!("../../../apps/desktop/src-tauri/migrations/008_tracks_removed_at.sql");
+const MIGRATION_009: &str =
+    include_str!("../../../apps/desktop/src-tauri/migrations/009_beatgrid_confidence.sql");
+const MIGRATION_010: &str =
+    include_str!("../../../apps/desktop/src-tauri/migrations/010_track_extra_metadata.sql");
+const MIGRATION_011: &str =
+    include_str!("../../../apps/desktop/src-tauri/migrations/011_tag_aliases.sql");
+const MIGRATION_012: &str =
+    include_str!("../../../apps/desktop/src-tauri/migrations/012_duplicates.sql");
 
 /// The migrations this crate's contract tests need, in the order `db.rs`
 /// applies them: the base schema, the tag columns, the enrichment columns, the
 /// energy column, the custom-tag table and the soft-removal column.
+/// Migration 009 adds the beat-grid confidence; 010 adds the import-time
+/// metadata fields (Comment 2, composer, ISRC and the rest); 012 adds the
+/// duplicate-review tables.
 /// Migrations 004-005 (enrichment candidates, chart snapshots) are deliberately
 /// left out — no contract here reads those tables.
 const MIGRATIONS: &[(i64, &str)] = &[
@@ -34,6 +45,10 @@ const MIGRATIONS: &[(i64, &str)] = &[
     (6, MIGRATION_006),
     (7, MIGRATION_007),
     (8, MIGRATION_008),
+    (9, MIGRATION_009),
+    (10, MIGRATION_010),
+    (11, MIGRATION_011),
+    (12, MIGRATION_012),
 ];
 
 /// Opens (or creates) a **file-backed** database at `path`, applies the pragmas and
@@ -183,13 +198,17 @@ fn without_applied_alters(conn: &Connection, sql: &str) -> rusqlite::Result<Stri
 pub const TRACK_DETAIL_COLUMNS: &str =
     "id, file_path, file_hash, title, artist, album, genre, label, year, bpm, key_camelot, key_classical, \
      duration_ms, format, analysis_status, user_rating, energy, comments, artwork_hash, created_at, updated_at, \
+     comment_2, composer, album_artist, remixer, producer, grouping, track_number, disc_number, isrc, \
+     catalog_number, release_date, copyright, mood, mix_name, lyrics, bitrate_kbps, \
      file_size, sample_rate, channels, bit_depth, loudness_lufs, \
-     vocal_presence, phrase_confidence, analysis_version, notes";
+     vocal_presence, phrase_confidence, analysis_version, notes, beatgrid_confidence";
 
 /// Column list must match `list_tracks`'s SELECT in commands.rs.
 pub const TRACK_SUMMARY_COLUMNS: &str =
     "id, file_path, file_hash, title, artist, album, genre, label, year, bpm, key_camelot, key_classical, \
-     duration_ms, format, analysis_status, user_rating, energy, comments, artwork_hash, created_at, updated_at";
+     duration_ms, format, analysis_status, user_rating, energy, comments, artwork_hash, created_at, updated_at, \
+     comment_2, composer, album_artist, remixer, producer, grouping, track_number, disc_number, isrc, \
+     catalog_number, release_date, copyright, mood, mix_name, lyrics, bitrate_kbps";
 
 /// Column list must match the cue SELECT in `get_track`.
 pub const CUE_COLUMNS: &str =
@@ -299,9 +318,11 @@ mod tests {
             .prepare(&sql)
             .expect("get_track SELECT must match the migrated schema");
 
+        // The detail-only columns start after the 37 summary columns, so
+        // file_size is column 37 - the same base `get_track` maps from.
         let (title, duration, file_size): (String, i64, i64) = stmt
             .query_row([&track_id], |row| {
-                Ok((row.get(3)?, row.get(12)?, row.get(21)?))
+                Ok((row.get(3)?, row.get(12)?, row.get(37)?))
             })
             .expect("row mapping must succeed");
 

@@ -4,7 +4,7 @@ import { RELATION_LABELS, type HarmonicMatch } from "../lib/harmonic";
 import { formatKeyForNotation, type KeyNotation } from "../lib/key-format";
 
 /**
- * Coloured key pill (T2.1.8, `docs/ui/01-DESIGN-SYSTEM.md` §4).
+ * Coloured key pill (T2.1.8, `docs/ui-ux/01-DESIGN-SYSTEM.md` §4).
  *
  * The hue comes from the Camelot wheel, and the fill strength comes from the
  * relation to the reference track: same key is strongest, then ±1, then the

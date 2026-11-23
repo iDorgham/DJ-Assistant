@@ -190,8 +190,8 @@ is a ranking, not a visibility filter — see §4.
   `skills:prune --restore`, or any edit to the hot list. See
   [D-015](./memory/decisions.md).
 - **Skills are advisory, not authority.** For anything UI-facing,
-  [`docs/ui/01-DESIGN-SYSTEM.md`](../ui/01-DESIGN-SYSTEM.md) and the rest of
-  [`docs/ui/`](../ui/README.md) win over any generic design skill.
+  [`docs/ui-ux/01-DESIGN-SYSTEM.md`](../ui-ux/01-DESIGN-SYSTEM.md) and the rest of
+  [`docs/ui-ux/`](../ui-ux/README.md) win over any generic design skill.
 - **Everything stays advertised.** The full library costs ~15.4k tokens/step; the
   only way to reduce that is pruning installed skills, not hiding them. The
   `prune` list in `skills.policy.json` is the project's answer — it names the

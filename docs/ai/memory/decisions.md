@@ -5,7 +5,9 @@ the ledger, and the date in each heading is when the decision was made, which is
 not necessarily when it was written down (D-002 and D-005 predate D-001). Each
 entry records **what** was chosen, **why**, and what would reverse it. Never edit
 an old entry — add a new one that supersedes it, and never renumber or reorder,
-because the IDs are cited from other files.
+because the IDs are cited from other files. Exception: a link or path that
+only moved (see D-021) may be updated in place, since the decision itself is
+unchanged.
 
 ## D-001 · Canonical AI memory is shared, not per-tool (2026-10-20)
 
@@ -37,7 +39,7 @@ ID after hiding).
 so there is exactly one home for AI documentation.
 **Reverses if:** the team prefers AI docs spread by consumer.
 
-## D-005 · Skills are advisory; `docs/ui/` is authoritative (2026-10-19)
+## D-005 · Skills are advisory; `docs/ui-ux/` is authoritative (2026-10-19)
 
 Generic design skills inform technique but never override the project's own
 tokens, components, or layout spec.
@@ -79,7 +81,7 @@ OpenCode's `tools` map. No project plugin is ever added (D-002), no MCP owns
 analysis or library truth, and the agent reads the app's database through a
 read-only Rust binary rather than a server that could write to it. Template,
 safety envelope and rollback:
-[`docs/enhancements/mcb-plugin-enhancement-plan.md`](../../enhancements/mcb-plugin-enhancement-plan.md).
+[`docs/ai/mcp/mcb-plugin-enhancement-plan.md`](../mcp/mcb-plugin-enhancement-plan.md).
 **Reverses if:** OpenCode gains a first-class bundle primitive, or the
 tool-disable guarantee proves unenforceable in a shipped build.
 
@@ -199,12 +201,12 @@ forces the restore to be transactional.
 own note — that is a second column and a second editor field, not a change of
 this decision.
 
-## D-014 · The approved v1 plan is mirrored under `docs/plan/` (2026-10-23)
+## D-014 · The approved v1 plan is mirrored under `docs/plans/v1/` (2026-10-23)
 
-The product plan approved on 2026-10-23 is mirrored at `docs/plan/`; it is the
+The product plan approved on 2026-10-23 is mirrored at `docs/plans/v1/`; it is the
 implementation reference for v1. Its **D-001–D-052** IDs are scoped to that
 tree and are not the same namespace as this repository's agent-memory ledger
-(this entry is the repo's D-014). `docs/product` and `docs/ui/` remain
+(this entry is the repo's D-014). `docs/product` and `docs/ui-ux/` remain
 authoritative for the canonical product spec and shipped UI tokens; the plan
 is the approved v1 scope and delivery order. A conflict between them is a
 decision to record, not something to resolve by silently mixing both.
@@ -253,3 +255,60 @@ defect was the moving ground, not the hue.
 **Reverses if:** the library rows stop changing background by state, or a design-system-wide
 muted-ink audit lands (that audit is the recorded follow-up) and makes the row grounds close
 enough together that inheritance is safe.
+
+## D-018 · main is protected by the "Protect main" branch ruleset (2026-11-19)
+
+GitHub ruleset "Protect main" (Settings → Rules → Rulesets): Active, target =
+default branch; Restrict deletions + Block force pushes; required status checks
+**JS/TS Lint, Typecheck, Test** and **Rust Fmt, Clippy, Test** (GitHub Actions
+source); bypass = Repository admin role, Always allow.
+**Why:** the Desktop Build matrix children (`… / macos-latest`, `… / windows-latest`)
+are reusable-workflow jobs — on docs-only and Dependabot PRs the calling job is
+skipped and the child check runs are never created, so requiring them would
+block those PRs forever; job-level skips of plain jobs (Rust) do report and
+count as pass. DeepSource stays advisory. The admin bypass keeps the owner's
+direct post-merge tick commits to main working (require-status-checks otherwise
+rejects direct pushes whose commit never ran checks on another ref).
+**Reverses if:** the tick-on-main workflow moves to PRs (drop the bypass), or
+Desktop Build becomes a plain always-reporting job (then it can be required).
+
+## D-019 · The brand mark is the Groove Meter (2026-11-19)
+
+App icon, tray glyphs, marks, wordmarks, banner and social card use the Groove
+Meter: EQ bars with detached peak-hold caps over vinyl grooves (rings, sheen
+arc, spindle), in dark and light cuts; the tray is a tile-free five-bar PNG pair
+swapped on OS theme change (`src-tauri/src/tray.rs`).
+**Why:** the user chose "Vinyl + EQ hybrid" over pure-EQ and pure-disc
+directions; it reads as library + level monitoring down to 16px.
+**Reverses if:** the user picks a new mark direction. Geometry is shared between
+`assets/*.svg` and `scripts/make_icon.py` — change both or neither.
+**Superseded by D-020 (2026-11-19)** — the reversal clause was invoked.
+
+## D-020 · The brand mark is The Stack (2026-11-19, supersedes D-019)
+
+App icon, tray glyphs, marks, wordmarks, banner and social card use **The Stack**:
+three rounded library tiles rising in perspective with a rounded play triangle on
+the front tile, in dark and light cuts. The tray/favicon cut is a two-layer glyph
+whose play triangle is a transparent even-odd knockout, so any taskbar colour shows
+through; the tray PNG pair still swaps on OS theme change (`src-tauri/src/tray.rs`,
+filenames unchanged). The app tile is inset (8/128 margin, rx26) to sit natively in
+the macOS Dock and read on Windows 11.
+**Why:** the user supplied five inspiration PNGs (stacked rounded tiles with play
+knockouts) and chose "Stack + Play" over the alternatives, then approved the design
+with "build". It reads as library + press play down to 16px. D-019's reversal
+clause ("the user picks a new mark direction") was invoked.
+**Reverses if:** the user picks a new mark direction. Geometry is shared between
+`assets/*.svg` and `scripts/make_icon.py` — change both or neither; the geometry
+tables live in `assets/README.md`.
+
+## D-021 · One folder per docs question; `docs/ui-ux/` is the single UI home (2026-11-22)
+`docs/` is organised by the question a document answers (product, specs, ui-ux,
+architecture, adr, sdd, plans, tasks, audits, qa, diagrams, engineering, devops, ai,
+prompts) — map in [`docs/README.md`](../../README.md). The old `docs/ui/` spec is now
+`docs/ui-ux/` (D-005 applies to it); the Phase 0 set is `docs/ui-ux/archive/phase0/`.
+The v1 plan was split by kind: delivery stays together in `docs/plans/v1/`.
+`sdd/04-TASKS.md` is the only task tracker.
+**Why:** two UI folders, plans in four places and two task trackers had drifted apart
+(audit `docs/audits/2026-11-22-docs-and-plans-audit.md`).
+**Reverses if:** the team adopts a docs tool that imposes its own layout. Old → new
+paths: `scripts/docs-reorg-2026-11.cjs`.

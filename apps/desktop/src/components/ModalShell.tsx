@@ -1,7 +1,7 @@
 import { useEffect, useRef, type ReactNode } from "react";
 
 /**
- * Accessible modal foundation (docs/ui/08): role="dialog", aria-modal, focus
+ * Accessible modal foundation (docs/ui-ux/08): role="dialog", aria-modal, focus
  * moved in on open, Tab focus trapped inside, Escape closes, and focus
  * returns to the opener on close.
  */
@@ -73,7 +73,7 @@ export function ModalShell({ onClose, ariaLabel, panelClassName, children }: Mod
     <div
       className="fixed inset-0 bg-[#161616]/70 backdrop-blur-[1px] z-30 flex items-center justify-center p-6"
       onClick={(event) => {
-        // Clicking the scrim (not the panel) dismisses, matching docs/ui/08.
+        // Clicking the scrim (not the panel) dismisses, matching docs/ui-ux/08.
         if (event.target === event.currentTarget) onCloseRef.current();
       }}
     >

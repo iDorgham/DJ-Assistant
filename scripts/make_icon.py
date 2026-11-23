@@ -1,7 +1,9 @@
-"""Generate the DJ Assistant source app icon (1024x1024 PNG).
+"""Generate the DJ Assistant source app icon (1024x1024 PNG) and tray glyphs.
 
-Design: rounded-square dark tile with a diagonal gradient, a soft top sheen,
-glowing EQ bars, and a subtle gradient border. Mirrors ``assets/logo.svg``.
+Design ("The Stack"): rounded-square dark tile holding three rounded library
+tiles in perspective with a glowing play triangle on the front. Mirrors
+``assets/logo.svg``; the tray glyphs mirror ``assets/tray-on-dark.svg`` /
+``tray-on-light.svg`` (two-layer stack, triangle knocked out).
 
 Run:  python scripts/make_icon.py
 Then: pnpm --filter @dj-assistant/desktop exec tauri icon <output png>
@@ -9,6 +11,7 @@ Then: pnpm --filter @dj-assistant/desktop exec tauri icon <output png>
 
 from __future__ import annotations
 
+import math
 import os
 
 import numpy as np
@@ -20,15 +23,57 @@ S = SIZE * SS
 
 OUT_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "apps", "desktop", "src-tauri")
 OUT_PNG = os.path.abspath(os.path.join(OUT_DIR, "app-icon.png"))
+ICONS_DIR = os.path.join(OUT_DIR, "icons")
 
 # Brand palette (from assets/logo.svg)
 BG_TOP = (23, 27, 37)         # #171B25
 BG_BOTTOM = (10, 12, 17)      # #0A0C11
-BAR_TOP = (92, 225, 255)      # #5CE1FF
-BAR_BOTTOM = (0, 144, 255)    # #0090FF
+PLAY_TOP = (92, 225, 255)     # #5CE1FF
+PLAY_BOTTOM = (0, 144, 255)   # #0090FF
 BORDER_TOP = (46, 52, 74)     # #2E344A
 BORDER_BOTTOM = (26, 31, 43)  # #1A1F2B
+LAYER_TOP = (35, 41, 57)      # #232939
+LAYER_MID = BORDER_TOP        # #2E344A
+FRONT_TOP = (42, 49, 69)      # #2A3145
+FRONT_BOTTOM = BORDER_BOTTOM  # #1A1F2B
+FRONT_LINE = (58, 66, 88)     # #3A4258
 SHEEN_ALPHA = 20              # ~8% white highlight at the top edge
+
+# The Stack geometry on the 128-unit canvas (shared with assets/logo.svg)
+TILE_BOX = (8, 8, 120, 120)
+TILE_R = 26
+TOP_BOX = (42, 24, 86, 44)
+TOP_R = 9
+MID_BOX = (33, 36, 95, 62)
+MID_R = 10
+FRONT_BOX = (24, 50, 104, 106)
+FRONT_R = 12
+FRONT_LINE_W = 1.5
+TRI_A = (56, 65)
+TRI_B = (56, 91)
+TRI_C = (81, 78)
+TRI_ROUND = 4
+
+# Tray glyph geometry on the 32-unit canvas (shared with assets/tray-*.svg)
+TRAY_SIZE = 32
+TRAY_BACK_BOX = (8, 3, 24, 11)
+TRAY_BACK_R = 3.5
+TRAY_FRONT_BOX = (4, 8, 28, 29)
+TRAY_FRONT_R = 5.5
+TRAY_TRI_A = (13, 13.5)
+TRAY_TRI_B = (13, 23.5)
+TRAY_TRI_C = (22.5, 18.5)
+TRAY_TRI_ROUND = 1.8
+TRAY_DARK = {
+    "back": PLAY_BOTTOM,
+    "front_top": PLAY_TOP,
+    "front_bottom": PLAY_BOTTOM,
+}
+TRAY_LIGHT = {
+    "back": (96, 165, 250),    # #60A5FA
+    "front_top": (6, 182, 212),   # #06B6D4
+    "front_bottom": (37, 99, 235),  # #2563EB
+}
 
 
 def make_diagonal_gradient(size: int, top_color, bottom_color) -> Image.Image:
@@ -71,65 +116,128 @@ def make_sheen(size: int, mask: Image.Image) -> Image.Image:
     return Image.fromarray(arr, "RGBA")
 
 
+def rounded_triangle_points(a, b, c, t: float, steps: int = 12):
+    """Sample the rounded play triangle (quadratic corners, radius ~t)."""
+    verts = (a, b, c)
+    pts = []
+    for i, v in enumerate(verts):
+        p, n = verts[i - 1], verts[(i + 1) % 3]
+
+        def unit(src, dst):
+            dx, dy = dst[0] - src[0], dst[1] - src[1]
+            length = math.hypot(dx, dy)
+            return (dx / length, dy / length)
+
+        u_in = unit(v, p)
+        u_out = unit(v, n)
+        p_in = (v[0] + t * u_in[0], v[1] + t * u_in[1])
+        p_out = (v[0] + t * u_out[0], v[1] + t * u_out[1])
+        if i == 0:
+            pts.append(p_out)
+        else:
+            pts.append(p_in)
+            for s in range(1, steps + 1):
+                q = s / steps
+                x = (1 - q) ** 2 * p_in[0] + 2 * (1 - q) * q * v[0] + q ** 2 * p_out[0]
+                y = (1 - q) ** 2 * p_in[1] + 2 * (1 - q) * q * v[1] + q ** 2 * p_out[1]
+                pts.append((x, y))
+    # close the last corner (A) back to the first point
+    v = verts[0]
+    p, n = verts[-1], verts[1]
+    u_in = (p[0] - v[0], p[1] - v[1])
+    length = math.hypot(*u_in)
+    u_in = (u_in[0] / length, u_in[1] / length)
+    u_out = (n[0] - v[0], n[1] - v[1])
+    length = math.hypot(*u_out)
+    u_out = (u_out[0] / length, u_out[1] / length)
+    p_in = (v[0] + t * u_in[0], v[1] + t * u_in[1])
+    p_out = pts[0]
+    for s in range(1, steps + 1):
+        q = s / steps
+        x = (1 - q) ** 2 * p_in[0] + 2 * (1 - q) * q * v[0] + q ** 2 * p_out[0]
+        y = (1 - q) ** 2 * p_in[1] + 2 * (1 - q) * q * v[1] + q ** 2 * p_out[1]
+        pts.append((x, y))
+    return pts
+
+
+def gradient_fill(tile: Image.Image, box, radius, grad: Image.Image, sx) -> None:
+    """Paste a full-ramp vertical gradient into a rounded box."""
+    x0, y0, x1, y1 = (int(sx(v)) for v in box)
+    w, h = x1 - x0, y1 - y0
+    piece = Image.new("RGBA", (w, h), (0, 0, 0, 0))
+    piece.paste(grad.crop((0, 0, 1, grad.size[1])).resize((w, h)), (0, 0))
+    mask = Image.new("L", (w, h), 0)
+    ImageDraw.Draw(mask).rounded_rectangle([0, 0, w - 1, h - 1], radius=int(sx(radius)), fill=255)
+    piece.putalpha(mask)
+    tile.paste(piece, (x0, y0), mask)
+
+
 def build() -> Image.Image:
-    # --- Background tile -------------------------------------------------
-    tile = Image.new("RGBA", (S, S), (0, 0, 0, 0))
-    bg_grad = make_diagonal_gradient(S, BG_TOP, BG_BOTTOM).convert("RGBA")
-    mask = rounded_mask(S, radius=int(S * 0.22))
-    tile.paste(bg_grad, (0, 0), mask)
-
-    # --- Soft top sheen (depth) -----------------------------------------
-    tile.alpha_composite(make_sheen(S, mask))
-
-    # --- EQ bars ---------------------------------------------------------
-    # SVG: 7 bars centered, each 8 wide, heights 26..88, y positions 51..20
-    # Scale from 128 to S
     def sx(v: float) -> float:
         return v * S / 128.0
 
-    bar_w = sx(8)
-    bar_xs = [sx(18), sx(32), sx(46), sx(60), sx(74), sx(88), sx(102)]
-    bar_ys = [sx(51), sx(41), sx(30), sx(20), sx(30), sx(41), sx(51)]
-    bar_hs = [sx(26), sx(46), sx(68), sx(88), sx(68), sx(46), sx(26)]
+    # --- Background tile -------------------------------------------------
+    tile = Image.new("RGBA", (S, S), (0, 0, 0, 0))
+    bg_grad = make_diagonal_gradient(S, BG_TOP, BG_BOTTOM).convert("RGBA")
+    mask = Image.new("L", (S, S), 0)
+    ImageDraw.Draw(mask).rounded_rectangle(
+        [sx(TILE_BOX[0]), sx(TILE_BOX[1]), sx(TILE_BOX[2]), sx(TILE_BOX[3])],
+        radius=int(sx(TILE_R)),
+        fill=255,
+    )
+    tile.paste(bg_grad, (0, 0), mask)
+    tile.alpha_composite(make_sheen(S, mask))
+
+    # --- The Stack: two back layers, then the front tile ------------------
+    layers = Image.new("RGBA", (S, S), (0, 0, 0, 0))
+    ld = ImageDraw.Draw(layers)
+    ld.rounded_rectangle([sx(v) for v in TOP_BOX], radius=int(sx(TOP_R)), fill=LAYER_TOP + (255,))
+    ld.rounded_rectangle([sx(v) for v in MID_BOX], radius=int(sx(MID_R)), fill=LAYER_MID + (255,))
+    tile.alpha_composite(layers)
+
+    front_grad = make_vertical_gradient(S, FRONT_TOP, FRONT_BOTTOM).convert("RGBA")
+    gradient_fill(tile, FRONT_BOX, FRONT_R, front_grad, sx)
+    line = Image.new("RGBA", (S, S), (0, 0, 0, 0))
+    ImageDraw.Draw(line).rounded_rectangle(
+        [sx(v) for v in FRONT_BOX], radius=int(sx(FRONT_R)),
+        outline=FRONT_LINE + (255,), width=max(1, int(sx(FRONT_LINE_W))),
+    )
+    tile.alpha_composite(line)
+
+    # --- Play triangle: soft bloom + tight halo, then gradient fill -------
+    tri = [(sx(x), sx(y)) for x, y in rounded_triangle_points(TRI_A, TRI_B, TRI_C, TRI_ROUND)]
 
     def glow(std: float, opacity: float) -> Image.Image:
-        """Blurred copy of the bars at the given opacity."""
         layer = Image.new("RGBA", (S, S), (0, 0, 0, 0))
-        ld = ImageDraw.Draw(layer)
-        for x, y, h in zip(bar_xs, bar_ys, bar_hs):
-            ld.rounded_rectangle([x, y, x + bar_w, y + h], radius=sx(4), fill=BAR_TOP + (255,))
+        ImageDraw.Draw(layer).polygon(tri, fill=PLAY_TOP + (255,))
         layer = layer.filter(ImageFilter.GaussianBlur(std))
         a = np.array(layer)
         a[:, :, 3] = (a[:, :, 3] * opacity).astype(np.uint8)
         return Image.fromarray(a, "RGBA")
 
-    # Two layers: a wide soft bloom plus a tight halo.
-    tile.alpha_composite(glow(sx(5), 0.55))
-    tile.alpha_composite(glow(sx(1.5), 0.9))
+    tile.alpha_composite(glow(sx(4), 0.5))
+    tile.alpha_composite(glow(sx(1.2), 0.85))
 
-    # Solid bars with vertical gradient
-    bar_grad = make_vertical_gradient(S, BAR_TOP, BAR_BOTTOM).convert("RGBA")
-    for x, y, h in zip(bar_xs, bar_ys, bar_hs):
-        # Full gradient ramp per bar: crop a 1px-wide full-height column and
-        # resize it to the bar so every bar spans cyan→blue (cropping the top
-        # h/S would leave tall bars short of blue and tint short bars cyan).
-        bar_tile = Image.new("RGBA", (int(bar_w), int(h)), (0, 0, 0, 0))
-        bar_tile.paste(bar_grad.crop((0, 0, 1, S)).resize((int(bar_w), int(h))), (0, 0))
-        # Round the corners of the bar tile
-        bar_mask = Image.new("L", (int(bar_w), int(h)), 0)
-        ImageDraw.Draw(bar_mask).rounded_rectangle(
-            [0, 0, int(bar_w) - 1, int(h) - 1], radius=int(sx(4)), fill=255
-        )
-        bar_tile.putalpha(bar_mask)
-        tile.paste(bar_tile, (int(x), int(y)), bar_mask)
+    play_grad = make_vertical_gradient(S, PLAY_TOP, PLAY_BOTTOM).convert("RGBA")
+    x0 = int(min(p[0] for p in tri))
+    y0 = int(min(p[1] for p in tri))
+    x1 = int(max(p[0] for p in tri)) + 1
+    y1 = int(max(p[1] for p in tri)) + 1
+    w, h = x1 - x0, y1 - y0
+    piece = Image.new("RGBA", (w, h), (0, 0, 0, 0))
+    piece.paste(play_grad.crop((0, 0, 1, S)).resize((w, h)), (0, 0))
+    tri_mask = Image.new("L", (w, h), 0)
+    ImageDraw.Draw(tri_mask).polygon([(x - x0, y - y0) for x, y in tri], fill=255)
+    piece.putalpha(tri_mask)
+    tile.paste(piece, (x0, y0), tri_mask)
 
     # --- Gradient border -------------------------------------------------
     ring = Image.new("L", (S, S), 0)
     ImageDraw.Draw(ring).rounded_rectangle(
-        [sx(1.5), sx(1.5), sx(126.5), sx(126.5)],
-        radius=int(sx(30)),
+        [sx(TILE_BOX[0]), sx(TILE_BOX[1]), sx(TILE_BOX[2]), sx(TILE_BOX[3])],
+        radius=int(sx(TILE_R)),
         outline=255,
-        width=int(sx(3)),
+        width=max(1, int(sx(2.5))),
     )
     border_grad = make_vertical_gradient(S, BORDER_TOP, BORDER_BOTTOM).convert("RGBA")
     tile.paste(border_grad, (0, 0), ring)
@@ -140,11 +248,44 @@ def build() -> Image.Image:
     return out.resize((SIZE, SIZE), Image.LANCZOS)
 
 
+def build_tray(colors: dict) -> Image.Image:
+    """Tile-free tray glyph at 4x supersampling, downscaled to 32px."""
+    t = TRAY_SIZE * SS
+
+    def sx(v: float) -> float:
+        return v * t / TRAY_SIZE
+
+    img = Image.new("RGBA", (t, t), (0, 0, 0, 0))
+    d = ImageDraw.Draw(img)
+    d.rounded_rectangle([sx(v) for v in TRAY_BACK_BOX], radius=int(sx(TRAY_BACK_R)), fill=colors["back"] + (255,))
+
+    tri = [(sx(x), sx(y)) for x, y in rounded_triangle_points(TRAY_TRI_A, TRAY_TRI_B, TRAY_TRI_C, TRAY_TRI_ROUND)]
+    front_mask = Image.new("L", (t, t), 0)
+    fd = ImageDraw.Draw(front_mask)
+    fd.rounded_rectangle([sx(v) for v in TRAY_FRONT_BOX], radius=int(sx(TRAY_FRONT_R)), fill=255)
+    fd.polygon(tri, fill=0)  # knock the play triangle out
+
+    grad = make_vertical_gradient(t, colors["front_top"], colors["front_bottom"]).convert("RGBA")
+    x0, y0, x1, y1 = (int(sx(v)) for v in TRAY_FRONT_BOX)
+    w, h = x1 - x0, y1 - y0
+    piece = Image.new("RGBA", (w, h), (0, 0, 0, 0))
+    piece.paste(grad.crop((0, 0, 1, t)).resize((w, h)), (0, 0))
+    img.paste(piece, (x0, y0), front_mask.crop((x0, y0, x1, y1)))
+    return img.resize((TRAY_SIZE, TRAY_SIZE), Image.LANCZOS)
+
+
 def main() -> None:
     os.makedirs(OUT_DIR, exist_ok=True)
+    os.makedirs(ICONS_DIR, exist_ok=True)
     icon = build()
     icon.save(OUT_PNG, "PNG")
     print(f"Wrote {OUT_PNG} ({icon.size[0]}x{icon.size[1]})")
+    for name, colors in (("tray-on-dark", TRAY_DARK), ("tray-on-light", TRAY_LIGHT)):
+        glyph = build_tray(colors)
+        for suffix, size in (("", TRAY_SIZE), ("@2x", TRAY_SIZE * 2)):
+            path = os.path.join(ICONS_DIR, f"{name}{suffix}.png")
+            glyph.resize((size, size), Image.LANCZOS).save(path, "PNG")
+            print(f"Wrote {path} ({size}x{size})")
 
 
 if __name__ == "__main__":

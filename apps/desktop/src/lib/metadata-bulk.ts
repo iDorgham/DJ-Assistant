@@ -1,5 +1,5 @@
 /**
- * Bulk metadata editing (T2.1.3, `docs/ui/03-LIBRARY-VIEW.md` §3.5).
+ * Bulk metadata editing (T2.1.3, `docs/ui-ux/03-LIBRARY-VIEW.md` §6 Bulk actions).
  *
  * The rules the dialog needs when the write targets a selection rather than one
  * row, kept out of the component so they are testable without a DOM:
@@ -27,6 +27,7 @@ export const BULK_FIELDS = [
   "year",
   "tags",
   "comments",
+  "comment2",
 ] as const;
 
 export type BulkField = (typeof BULK_FIELDS)[number];
@@ -41,6 +42,7 @@ export const FIELD_LABELS: Record<BulkField, string> = {
   year: "Year",
   tags: "Tags",
   comments: "Comment",
+  comment2: "Comment 2",
 };
 
 /** The text a diff shows for a field the write empties. */
@@ -73,6 +75,8 @@ function fieldValue(track: MetadataSource, field: BulkField): string {
       return (track.artist ?? "").trim();
     case "comments":
       return (track.comments ?? "").trim();
+    case "comment2":
+      return (track.comment2 ?? "").trim();
     default:
       return (track[field] ?? "").trim();
   }
@@ -112,6 +116,7 @@ export function bulkSeedValues(tracks: MetadataSource[]): MetadataEditorValues {
     label: seed("label"),
     year: seed("year"),
     comments: seed("comments"),
+    comment2: seed("comment2"),
     tags: tags.state === "single" && tags.value ? tags.value.split(", ") : [],
   };
 }

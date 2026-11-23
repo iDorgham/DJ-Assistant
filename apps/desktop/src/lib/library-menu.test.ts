@@ -117,7 +117,7 @@ test("no blocked action is missing from the menu", () => {
 });
 
 // --- The blocked stubs (T2.1.10 Batch B/C) ---------------------------------
-// `docs/ui/03-LIBRARY-VIEW.md` §3.5 lists menu items whose features do not
+// `docs/ui-ux/03-LIBRARY-VIEW.md` §3.5 lists menu items whose features do not
 // exist yet. The spec for this batch is that they are *visible but disabled,
 // with a tooltip that says when they land* — so a user can see the shape of
 // the feature and is not left guessing whether the app forgot the item.
@@ -342,4 +342,15 @@ test("clicking the lit star clears the rating; any other star sets it", () => {
   assert.equal(starClickRating(3, 5), 5);
   assert.equal(starClickRating(null, 4), 4);
   assert.equal(starClickRating(0, 1), 1);
+});
+
+// --- Fix tags goes live with the Tag Surgeon scan (T2.2.1) ------------------
+
+test("fixTags is live: not disabled, no stub tooltip, whole-selection", () => {
+  assert.equal(isDisabled("fixTags"), false);
+  assert.equal(isBlocked("fixTags"), false);
+  const entry = itemsOf(MENU_LAYOUT).find((item) => item.id === "fixTags");
+  assert.ok(entry, "fixTags must stay in the layout");
+  assert.equal(itemTooltip(entry), undefined, "the stub tooltip must be gone");
+  assert.equal(appliesToWholeSelection("fixTags"), true);
 });

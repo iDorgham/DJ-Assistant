@@ -14,7 +14,7 @@ duplicate of the instructions.
 
 - Architecture & specs: [`docs/product/CANONICAL_DOCUMENTATION.md`](docs/product/CANONICAL_DOCUMENTATION.md)
 - Memory layers (facts, conventions, decisions, feedback, state): [`docs/ai/MEMORY.md`](docs/ai/MEMORY.md)
-- UI source of truth: [`docs/ui/01-DESIGN-SYSTEM.md`](docs/ui/01-DESIGN-SYSTEM.md)
+- UI source of truth: [`docs/ui-ux/01-DESIGN-SYSTEM.md`](docs/ui-ux/01-DESIGN-SYSTEM.md)
 
 Machine-specific notes go in `AGENTS.local.md` / `CLAUDE.local.md` (both
 gitignored) — see [`AGENTS.local.example.md`](./AGENTS.local.example.md).

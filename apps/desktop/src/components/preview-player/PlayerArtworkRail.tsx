@@ -14,7 +14,7 @@ interface PlayerArtworkRailProps {
 
 /**
  * Artwork-only left rail. BPM/key deliberately live on the track line — the
- * artwork column carries the cover and nothing else (docs/ui/06A §8.1).
+ * artwork column carries the cover and nothing else (docs/ui-ux/06A §8.1).
  */
 export function PlayerArtworkRail({ track, size = "full" }: PlayerArtworkRailProps) {
   const [artworkSrc, setArtworkSrc] = useState<string | null>(null);

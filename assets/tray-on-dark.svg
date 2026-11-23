@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32" role="img" aria-label="DJ Assistant">
+  <title>DJ Assistant</title>
+  <!-- Tray glyph for dark taskbars: two-layer Stack, play triangle knocked
+       out (transparent) so any taskbar colour shows through. Mirrored by
+       scripts/make_icon.py. -->
+  <defs>
+    <linearGradient id="trayDarkPlay" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#5CE1FF"/>
+      <stop offset="1" stop-color="#0090FF"/>
+    </linearGradient>
+  </defs>
+  <rect x="8" y="3" width="16" height="8" rx="3.5" fill="#0090FF"/>
+  <path fill="url(#trayDarkPlay)" fill-rule="evenodd" d="M9.5 8 H22.5 Q28 8 28 13.5 V23.5 Q28 29 22.5 29 H9.5 Q4 29 4 23.5 V13.5 Q4 8 9.5 8 Z
+           M13 15.3 L13 21.7 Q13 23.5 14.59 22.66 L20.91 19.34 Q22.5 18.5 20.91 17.66 L14.59 14.34 Q13 13.5 13 15.3 Z"/>
+</svg>

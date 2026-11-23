@@ -181,5 +181,5 @@ into the spec when the graph changes.
 - [Architecture](./ARCHITECTURE.md) — Analysis pipeline
 - [Data Model](./DATA_MODEL.md) — Where results are stored
 - [Development Guide](../engineering/DEVELOPMENT.md) — Setup & model download
-- [ADR-0003: Local-first ONNX Analysis](../ADR/0003-local-first-onnx-analysis.md)
+- [ADR-0003: Local-first ONNX Analysis](../adr/0003-local-first-onnx-analysis.md)
 - [Canonical Documentation §3.2](../product/CANONICAL_DOCUMENTATION.md)

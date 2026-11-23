@@ -20,6 +20,13 @@ const MIGRATIONS: &[(i64, &str)] = &[
     (6, include_str!("../migrations/006_track_energy.sql")),
     (7, include_str!("../migrations/007_track_tags_table.sql")),
     (8, include_str!("../migrations/008_tracks_removed_at.sql")),
+    (9, include_str!("../migrations/009_beatgrid_confidence.sql")),
+    (
+        10,
+        include_str!("../migrations/010_track_extra_metadata.sql"),
+    ),
+    (11, include_str!("../migrations/011_tag_aliases.sql")),
+    (12, include_str!("../migrations/012_duplicates.sql")),
 ];
 
 impl Database {
@@ -206,6 +213,8 @@ mod tests {
             "streaming_exports",
             "streaming_matches",
             "track_tags",
+            "duplicate_files",
+            "duplicate_dismissals",
         ] {
             assert!(
                 present.contains(&table.to_string()),

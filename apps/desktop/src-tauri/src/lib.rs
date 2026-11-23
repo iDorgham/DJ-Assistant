@@ -5,10 +5,12 @@ pub mod charts;
 pub mod commands;
 pub mod db;
 pub mod enrichment;
+pub mod maintain;
 pub mod models;
 pub mod scanner;
 pub mod security;
 pub mod streaming;
+pub mod tray;
 
 use std::ffi::OsStr;
 use std::path::{Path, PathBuf};
@@ -62,7 +64,14 @@ pub fn run() {
             app.manage(enrichment::RateLimiter::default());
             app.manage(Arc::new(Mutex::new(audio::AudioEngine::new())));
 
+            tray::setup(app_handle)?;
+
             Ok(())
+        })
+        .on_window_event(|window, event| {
+            if let tauri::WindowEvent::ThemeChanged(theme) = event {
+                tray::apply_theme(window.app_handle(), *theme);
+            }
         })
         .invoke_handler(tauri::generate_handler![
             commands::scan_folder,
@@ -72,6 +81,8 @@ pub fn run() {
             commands::get_track,
             commands::get_artwork,
             commands::backfill_artwork,
+            commands::refresh_artwork,
+            commands::backfill_grid_confidence,
             commands::audio_load,
             commands::audio_play,
             commands::audio_pause,
@@ -82,6 +93,13 @@ pub fn run() {
             commands::analyze_library,
             commands::find_similar_tracks,
             commands::track_tag_health,
+            commands::tag_cluster,
+            commands::tag_preview_tracks,
+            commands::tag_apply_renames,
+            commands::tag_history,
+            commands::list_tag_aliases_command,
+            commands::add_tag_alias,
+            commands::remove_tag_alias,
             commands::store_links_for_track,
             commands::provider_status,
             commands::update_track_metadata,
@@ -92,6 +110,12 @@ pub fn run() {
             commands::list_removed_tracks,
             commands::restore_tracks,
             commands::reveal_in_file_manager,
+            maintain::library_duplicates,
+            maintain::dismiss_duplicate_group,
+            maintain::forget_duplicate_copy,
+            maintain::library_versions,
+            maintain::library_health,
+            maintain::prep_audit,
             enrichment::enrichment_preview,
             enrichment::enrichment_apply,
             enrichment::enrichment_undo,

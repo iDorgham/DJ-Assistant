@@ -9,6 +9,8 @@ import type {
   GetTrackResponse,
   GetArtworkRequest,
   GetArtworkResponse,
+  RefreshArtworkResponse,
+  BackfillGridConfidenceResponse,
   UpdateTrackMetadataRequest,
   UpdateTrackMetadataResponse,
   SetTrackRatingRequest,
@@ -31,6 +33,16 @@ import type {
   AnalysisCompletedEvent,
   FindSimilarTracksRequest,
   FindSimilarTracksResponse,
+  TagClusterRequest,
+  TagClusterReport,
+  TagApplyRequest,
+  TagApplyResponse,
+  TagHistoryEntry,
+  TagAlias,
+  AddTagAliasRequest,
+  RemoveTagAliasRequest,
+  TagPreviewRequest,
+  TagPreviewTrack,
   TagHealthRequest,
   TagHealthResponse,
   StoreLinksRequest,
@@ -54,6 +66,13 @@ import type {
   BackfillArtworkResponse,
   ArtworkBackfillProgressEvent,
   ArtworkBackfillCompletedEvent,
+  LibraryDuplicatesResponse,
+  DismissDuplicateGroupRequest,
+  ForgetDuplicateCopyRequest,
+  LibraryVersionsResponse,
+  LibraryHealthResponse,
+  PrepAuditRequest,
+  PrepAuditResponse,
 } from "@dj-assistant/shared";
 
 // Safe Tauri invocation wrapper with mock fallback for web development
@@ -121,12 +140,40 @@ export async function getArtwork(req: GetArtworkRequest): Promise<GetArtworkResp
   return invoke<GetArtworkResponse>("get_artwork", { request: req });
 }
 
+/**
+ * One-time repair for libraries imported before embedded artwork was cached.
+ * Reads the audio files and fills the app's own artwork pointers — no audio is
+ * modified. Safe to call on every launch; it is a no-op once rows are filled.
+ */
+export async function refreshArtwork(): Promise<RefreshArtworkResponse> {
+  if (!isTauri) {
+    return { scanned: 0, updated: 0, missing: 0, failed: 0, errors: [] };
+  }
+  const { invoke } = await import("@tauri-apps/api/core");
+  return invoke<RefreshArtworkResponse>("refresh_artwork");
+}
+
+/**
+ * One-time backfill of the beat-grid confidence for tracks analysed before it
+ * was stored (issue #89). Decodes those files and recomputes the beat grid
+ * only; no audio is modified and no other column changes. A no-op once filled.
+ */
+export async function backfillGridConfidence(): Promise<BackfillGridConfidenceResponse> {
+  if (!isTauri) {
+    return { scanned: 0, updated: 0, noTempo: 0, mismatched: 0, failed: 0, errors: [] };
+  }
+  const { invoke } = await import("@tauri-apps/api/core");
+  return invoke<BackfillGridConfidenceResponse>("backfill_grid_confidence");
+}
+
 export interface GetWaveformPeaksRequest {
   trackId: string;
 }
 
 export interface GetWaveformPeaksResponse {
   peaks: number[];
+  /** Overview-rail resolution, its own buffer (T2.4.1). */
+  overviewPeaks: number[];
   durationMs: number;
   sampleRate: number;
   isReal: boolean;
@@ -136,7 +183,7 @@ export async function getWaveformPeaks(
   req: GetWaveformPeaksRequest
 ): Promise<GetWaveformPeaksResponse> {
   if (!isTauri) {
-    return { peaks: [], durationMs: 0, sampleRate: 0, isReal: false };
+    return { peaks: [], overviewPeaks: [], durationMs: 0, sampleRate: 0, isReal: false };
   }
   const { invoke } = await import("@tauri-apps/api/core");
   return invoke<GetWaveformPeaksResponse>("get_waveform_peaks", { request: req });
@@ -145,6 +192,8 @@ export async function getWaveformPeaks(
 /** Peak layers of a decoded `get_waveform_peaks` response, shaped for `WaveformData`. */
 export interface DecodedPeakLayers {
   peaks: Float32Array;
+  /** The overview layer's own buffer — never the detail array (T2.4.1). */
+  overviewPeaks: Float32Array;
   lowPeaks: Float32Array;
   midPeaks: Float32Array;
   highPeaks: Float32Array;
@@ -163,18 +212,28 @@ export interface DecodedPeakLayers {
  *
  * Upsampling the decoded peaks to 16000 would fix the indexing but keep those
  * synthetic bands, and this patch clears `isEstimated`, which tells the UI the
- * waveform was decoded (docs/ui/06 forbids passing invented analysis off as
+ * waveform was decoded (docs/ui-ux/06 forbids passing invented analysis off as
  * decoded). The bands are dropped instead: zero-filled at the decoded length.
  * The waveform still renders — `DetailedWaveform` always draws the body layer
  * and simply has no mid/low height left to draw.
+ *
+ * `overviewPeaks` is the backend's second peak layer (T2.4.1): the overview
+ * rail and Mini read it instead of the detail buffer, so the two layers never
+ * share one array.
  */
-export function decodedPeakLayers(peaks: number[]): DecodedPeakLayers {
-  const body = new Float32Array(peaks.length);
-  peaks.forEach((value, i) => {
-    body[i] = Number.isFinite(value) ? Math.min(Math.max(value, 0), 1) : 0;
+function clampPeaks(values: number[]): Float32Array {
+  const out = new Float32Array(values.length);
+  values.forEach((value, i) => {
+    out[i] = Number.isFinite(value) ? Math.min(Math.max(value, 0), 1) : 0;
   });
+  return out;
+}
+
+export function decodedPeakLayers(peaks: number[], overviewPeaks: number[]): DecodedPeakLayers {
+  const body = clampPeaks(peaks);
   return {
     peaks: body,
+    overviewPeaks: clampPeaks(overviewPeaks),
     lowPeaks: new Float32Array(body.length),
     midPeaks: new Float32Array(body.length),
     highPeaks: new Float32Array(body.length),
@@ -317,6 +376,134 @@ export async function trackTagHealth(req: TagHealthRequest = {}): Promise<TagHea
   }
   const { invoke } = await import("@tauri-apps/api/core");
   return invoke<TagHealthResponse>("track_tag_health", { request: req });
+}
+
+/**
+ * The Tag Surgeon's read-only scan (T2.2.1): duplicate-spelling clusters and
+ * advisory prefix edges over the selection's tags. A browser tab is a mock:
+ * it returns an empty report, never a fake cluster.
+ */
+export async function tagCluster(req: TagClusterRequest = {}): Promise<TagClusterReport> {
+  if (!isTauri) {
+    return { scannedTags: 0, ignoredTags: 0, clusters: [], prefixEdges: [] };
+  }
+  const { invoke } = await import("@tauri-apps/api/core");
+  return invoke<TagClusterReport>("tag_cluster", { request: req });
+}
+
+/**
+ * The Tag Surgeon preview's sample tracks (T2.2.3): title, artist and every
+ * tag each track carries. Read-only. A browser tab is a mock, so it returns
+ * no samples rather than invented ones.
+ */
+export async function tagPreviewTracks(req: TagPreviewRequest): Promise<TagPreviewTrack[]> {
+  // Only the browser mock short-circuits. An empty selection reaches the
+  // backend, whose validator rejects it.
+  if (!isTauri) return [];
+  const { invoke } = await import("@tauri-apps/api/core");
+  return invoke<TagPreviewTrack[]>("tag_preview_tracks", { request: req });
+}
+
+/**
+ * Applies the Tag Surgeon's confirmed spelling rewrites (T2.2.4). Reverted with
+ * `undoTrackMetadata` using the returned `undoId`. Unlike the read-only calls,
+ * a browser tab cannot apply a write, so it refuses rather than pretending.
+ */
+export async function tagApplyRenames(req: TagApplyRequest): Promise<TagApplyResponse> {
+  if (!isTauri) throw new Error("Applying tag changes needs the desktop app.");
+  const { invoke } = await import("@tauri-apps/api/core");
+  return invoke<TagApplyResponse>("tag_apply_renames", { request: req });
+}
+
+/**
+ * The Tag Surgeon's past applies, newest first (T2.2.6). Undo an entry with
+ * `undoTrackMetadata` and its `undoId`. A browser tab has no history to show.
+ */
+export async function tagHistory(): Promise<TagHistoryEntry[]> {
+  if (!isTauri) return [];
+  const { invoke } = await import("@tauri-apps/api/core");
+  return invoke<TagHistoryEntry[]>("tag_history");
+}
+
+/**
+ * Duplicate review (T2.3.1): same-ISRC and near-match groups over the present
+ * library, plus byte-identical files the scanner skipped. Read-only. A browser
+ * tab is a mock and reports nothing rather than invented duplicates.
+ */
+export async function libraryDuplicates(): Promise<LibraryDuplicatesResponse> {
+  if (!isTauri) return { groups: [], copies: [], dismissedCount: 0 };
+  const { invoke } = await import("@tauri-apps/api/core");
+  return invoke<LibraryDuplicatesResponse>("library_duplicates");
+}
+
+/** "Keep both": hides a duplicate group until its membership changes. */
+export async function dismissDuplicateGroup(req: DismissDuplicateGroupRequest): Promise<void> {
+  if (!isTauri) throw new Error("Keeping both copies needs the desktop app.");
+  const { invoke } = await import("@tauri-apps/api/core");
+  await invoke("dismiss_duplicate_group", { request: req });
+}
+
+/** Forgets a recorded file copy. Deletes the record, never the file. */
+export async function forgetDuplicateCopy(req: ForgetDuplicateCopyRequest): Promise<boolean> {
+  if (!isTauri) throw new Error("Forgetting a copy needs the desktop app.");
+  const { invoke } = await import("@tauri-apps/api/core");
+  return invoke<boolean>("forget_duplicate_copy", { request: req });
+}
+
+/** Version families (T2.3.2): Radio / Extended / Club / Instrumental and the rest. */
+export async function libraryVersions(): Promise<LibraryVersionsResponse> {
+  if (!isTauri) return { groups: [] };
+  const { invoke } = await import("@tauri-apps/api/core");
+  return invoke<LibraryVersionsResponse>("library_versions");
+}
+
+/**
+ * The Library Health Score (T2.3.3) with every category's counts and failing
+ * tracks. A browser tab has no library to score, so it reports an empty one.
+ */
+export async function libraryHealth(): Promise<LibraryHealthResponse> {
+  if (!isTauri) return { score: null, trackCount: 0, categories: [] };
+  const { invoke } = await import("@tauri-apps/api/core");
+  return invoke<LibraryHealthResponse>("library_health");
+}
+
+/**
+ * The Prep Auditor checklist (T2.3.4) over the selected tracks, or the whole
+ * library. A browser tab has no library to audit, so it reports an empty one.
+ */
+export async function prepAudit(req: PrepAuditRequest): Promise<PrepAuditResponse> {
+  if (!isTauri) {
+    return {
+      verdict: "empty",
+      scope: req.trackIds ? "selection" : "library",
+      trackCount: 0,
+      skippedCount: 0,
+      checks: [],
+    };
+  }
+  const { invoke } = await import("@tauri-apps/api/core");
+  return invoke<PrepAuditResponse>("prep_audit", { request: req });
+}
+
+/** The stored tag aliases (T2.2.5). A browser tab has none to show. */
+export async function listTagAliases(): Promise<TagAlias[]> {
+  if (!isTauri) return [];
+  const { invoke } = await import("@tauri-apps/api/core");
+  return invoke<TagAlias[]>("list_tag_aliases_command");
+}
+
+/** Adds or re-points a tag alias (T2.2.5). Returns the full list. */
+export async function addTagAlias(req: AddTagAliasRequest): Promise<TagAlias[]> {
+  if (!isTauri) throw new Error("Saving a tag alias needs the desktop app.");
+  const { invoke } = await import("@tauri-apps/api/core");
+  return invoke<TagAlias[]>("add_tag_alias", { request: req });
+}
+
+/** Removes a tag alias (T2.2.5). Returns the full list. */
+export async function removeTagAlias(req: RemoveTagAliasRequest): Promise<TagAlias[]> {
+  if (!isTauri) throw new Error("Removing a tag alias needs the desktop app.");
+  const { invoke } = await import("@tauri-apps/api/core");
+  return invoke<TagAlias[]>("remove_tag_alias", { request: req });
 }
 
 /**

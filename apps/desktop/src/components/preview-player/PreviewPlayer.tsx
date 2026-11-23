@@ -42,6 +42,11 @@ export interface PreviewPlayerProps {
   onInspectTrack?: (track: TrackSummary, trigger?: HTMLElement | null) => void;
   activeView?: string;
   isDarkTheme?: boolean;
+  /**
+   * Beat-grid confidence (T2.4.3) for the loaded track, read off the detail
+   * row the caller already fetched. `null` (or omitted) hides the chip.
+   */
+  beatgridConfidence?: number | null;
 }
 
 const STORAGE_CUES_PREFIX = "dj-assistant.hot-cues.v1:";
@@ -59,6 +64,7 @@ export function PreviewPlayer({
   onInspectTrack,
   activeView = "library",
   isDarkTheme = true,
+  beatgridConfidence = null,
 }: PreviewPlayerProps) {
   // Height state: supports live dragging continuum
   const [height, setHeight] = useState<number>(() =>
@@ -84,7 +90,7 @@ export function PreviewPlayer({
   const [hotCues, setHotCues] = useState<HotCueData[]>([]);
   const [tempCueMs, setTempCueMs] = useState<number | null>(0);
   const [cueActive, setCueActive] = useState(false);
-  // Undo affordance for destructive cue clearing (docs/ui/08: every destructive
+  // Undo affordance for destructive cue clearing (docs/ui-ux/08: every destructive
   // action gets a visible, keyboard-reachable Undo — not a hidden modifier).
   const [clearedCue, setClearedCue] = useState<HotCueData | null>(null);
   const undoTimerRef = useRef<number | null>(null);
@@ -147,7 +153,7 @@ export function PreviewPlayer({
         if (cancelled || !res.isReal || res.peaks.length === 0) return;
         setWaveform((current) =>
           current && current.trackId === trackId
-            ? { ...current, ...decodedPeakLayers(res.peaks) }
+            ? { ...current, ...decodedPeakLayers(res.peaks, res.overviewPeaks) }
             : current
         );
       })
@@ -454,7 +460,7 @@ export function PreviewPlayer({
         <div className="w-12 h-[2px] rounded-full bg-dj-border-strong group-hover:bg-dj-accent transition-colors" />
       </div>
 
-      {/* ── Cue-clear undo toast (docs/ui/08: visible, keyboard-reachable Undo) ── */}
+      {/* ── Cue-clear undo toast (docs/ui-ux/08: visible, keyboard-reachable Undo) ── */}
       {clearedCue && (
         <div
           role="status"
@@ -546,6 +552,7 @@ export function PreviewPlayer({
                 durationMs={playback.durationMs}
                 bpm={effectiveBpm}
                 gridOffsetMs={gridOffsetMs}
+                beatgridConfidence={beatgridConfidence}
                 isDarkTheme={isDarkTheme}
                 onInspect={
                   track && onInspectTrack ? (trigger) => onInspectTrack(track, trigger) : undefined
@@ -700,6 +707,7 @@ export function PreviewPlayer({
               positionMs={playback.positionMs}
               durationMs={playback.durationMs}
               bpm={effectiveBpm}
+              beatgridConfidence={beatgridConfidence}
               isDarkTheme={isDarkTheme}
               onInspect={
                 track && onInspectTrack ? (trigger) => onInspectTrack(track, trigger) : undefined

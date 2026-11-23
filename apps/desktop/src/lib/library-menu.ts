@@ -5,7 +5,7 @@
  * `node --test` — the component itself is `.tsx` and the desktop harness runs
  * `.test.ts` only, so anything decided here is decided where it can be proven.
  *
- * `docs/ui/03-LIBRARY-VIEW.md` §3.5 is the source for both lists below: which
+ * `docs/ui-ux/03-LIBRARY-VIEW.md` §3.5 is the source for both lists below: which
  * items exist, which of them are not built yet, and which ones act on the whole
  * selection rather than the row under the pointer.
  */
@@ -142,7 +142,7 @@ const item = (id: string, label: string, tooltip?: string): MenuEntry => ({
 const divider: MenuEntry = { kind: "divider" };
 
 /**
- * The menu, in `docs/ui/03-LIBRARY-VIEW.md` §3.5 order.
+ * The menu, in `docs/ui-ux/03-LIBRARY-VIEW.md` §3.5 order.
  *
  * The order lives here rather than in the component because the component is
  * `.tsx` and the desktop harness runs `.test.ts` — a row moved in the JSX could
@@ -154,7 +154,7 @@ export const MENU_LAYOUT: readonly MenuEntry[] = [
   item("analyze", "Analyze"),
   divider,
   item("editTags", "Edit tags…"),
-  item("fixTags", "Fix tags", "Tag cleaning arrives with the Tag Surgeon (T2.2)"),
+  item("fixTags", "Fix tags"),
   item("rate", "Rate"),
   divider,
   item("addToPlaylist", "Add to playlist…"),
@@ -176,20 +176,18 @@ export const MENU_LAYOUT: readonly MenuEntry[] = [
 /**
  * Whether the menu renders this id greyed out.
  *
- * `fixTags` is the one stub that is not in `BLOCKED_ACTIONS`: its feature exists
- * on the roadmap (Tag Surgeon, T2.2) rather than being blocked, so it is
- * disabled with its own line in the layout.
+ * The blocked stubs are the only disabled items; `fixTags` went live with the
+ * Tag Surgeon's read-only scan (T2.2.1).
  */
 export function isDisabled(id: string): boolean {
-  return isBlocked(id) || id === "fixTags";
+  return isBlocked(id);
 }
 
 /**
  * The explanation a disabled item shows.
  *
- * Blocked stubs come from `BLOCKED_ACTIONS`; `fixTags` is a stub whose feature
- * is scheduled elsewhere, so it carries its own line in the layout. Everything
- * else is live and has no reason to explain.
+ * Blocked stubs come from `BLOCKED_ACTIONS`. Everything else is live and has
+ * no reason to explain.
  */
 export function itemTooltip(entry: MenuEntry): string | undefined {
   if (entry.kind !== "item") return undefined;

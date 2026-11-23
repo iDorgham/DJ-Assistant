@@ -11,7 +11,7 @@ interface TransportCoreProps {
 /**
  * CUE + Play/Pause. Leads the transport row, immediately right of the artwork
  * and left of the volume group. There is no Stop button — pause is the
- * stop-like action (docs/plan/03-player/player-model-and-layouts.md §7).
+ * stop-like action (docs/specs/player/player-model-and-layouts.md §7).
  */
 export function TransportCore({
   isPlaying,
@@ -45,7 +45,7 @@ export function TransportCore({
         title={
           isPlaying
             ? "Pause preview (Space)"
-            : "Play preview — synthesized timing beat; decoding the real audio file is not implemented yet (Space)"
+            : "Play preview — real audio in the desktop app; a synthesized timing beat when the native engine is unavailable (Space)"
         }
         aria-label={isPlaying ? "Pause" : "Play"}
         className={`flex select-none items-center justify-center rounded px-3 transition ${

@@ -43,13 +43,13 @@ No significant feature is built without a corresponding entry in Spec → Design
 | `DJ-Assistant-AI-Native-Build-Plan.docx` *(external, not committed)* | AI design principles & intelligence architecture |
 | `DJ-Assistant-Detailed-Build-Plan.docx` *(external, not committed)* | Original phase plan & workstreams |
 | `docs/architecture/ARCHITECTURE.md` | Living architecture reference |
-| `docs/engineering/DEVELOPMENT_TASK_LIST.md` | Earlier task checklist (superseded in detail by `04-TASKS.md`) |
+| `docs/tasks/archive/DEVELOPMENT_TASK_LIST.md` | Earlier task checklist (superseded in detail by `04-TASKS.md`) |
 | `docs/architecture/SKILLS_SYSTEM.md` | Skills design detail |
 | `docs/architecture/DATA_MODEL.md` | Data design detail (migrations 001–005) |
 | `docs/architecture/SKILLS_SYSTEM.md` | Skills design detail |
-| `docs/audit/` | Spec/function/settings audits → `TA.1–TA.14` in `04-TASKS.md` |
-| [ADR-0006](../ADR/0006-spotify-playlist-export.md) / [ADR-0007](../ADR/0007-similar-tracks-enrichment-multiprovider.md) | Streaming-export + discovery/enrichment strategy |
-| `docs/context/PROJECT_CONTEXT.md` | Single-file digest (plan + progress snapshot §17) |
+| `docs/audits/2026-10-14-spec-audit/` | Spec/function/settings audits → `TA.1–TA.14` in `04-TASKS.md` |
+| [ADR-0006](../adr/0006-spotify-playlist-export.md) / [ADR-0007](../adr/0007-similar-tracks-enrichment-multiprovider.md) | Streaming-export + discovery/enrichment strategy |
+| `docs/product/PROJECT_CONTEXT.md` | Single-file digest (plan + progress snapshot §17) |
 | `docs/engineering/SECURITY_AND_PRIVACY.md` | Security & privacy constraints |
 
 The SDD set does **not** replace the Canonical Documentation. It organizes the path from specification to executable work.

@@ -18,6 +18,13 @@ export interface WaveformData {
   durationMs: number;
   bpm: number;
   peaks: Float32Array; // Normalized amplitude 0.0 - 1.0 (16,000 points)
+  /**
+   * Overview-rail resolution, its own buffer (T2.4.1): the overview and
+   * Mini surfaces never read `peaks`. Synthesized by max decimation of
+   * `peaks` into 4,000 proportional bins; the decoded path fills it from the
+   * backend's second peak layer.
+   */
+  overviewPeaks: Float32Array;
   lowPeaks: Float32Array; // Bass/kick energy
   midPeaks: Float32Array; // Lead/synth/vocal energy
   highPeaks: Float32Array; // Hi-hats/cymbals/air
@@ -25,7 +32,7 @@ export interface WaveformData {
   /**
    * True while peaks are synthesized locally (PRNG) instead of decoded from
    * the audio file. The UI discloses this in the Play tooltip and the
-   * waveform's accessible description — docs/ui/06 forbids presenting
+   * waveform's accessible description — docs/ui-ux/06 forbids presenting
    * fabricated analysis data as if it were decoded.
    */
   isEstimated: boolean;
@@ -155,11 +162,27 @@ export function getOrGenerateWaveform(
     highPeaks[i] = amp * (0.4 + (beatFraction > 0.4 && beatFraction < 0.6 ? 0.4 : 0.1));
   }
 
+  // Overview resolution: max decimation of the same shape into 4,000
+  // proportional bins — the identical convention the Rust layers use, so
+  // synthesized and decoded tracks keep the same two-layer structure.
+  const overviewCount = 4000;
+  const overviewPeaks = new Float32Array(overviewCount);
+  for (let j = 0; j < overviewCount; j++) {
+    const start = Math.floor((j * pointCount) / overviewCount);
+    const end = Math.floor(((j + 1) * pointCount) / overviewCount);
+    let max = 0;
+    for (let i = start; i < end; i++) {
+      if (peaks[i] > max) max = peaks[i];
+    }
+    overviewPeaks[j] = max;
+  }
+
   const result: WaveformData = {
     trackId,
     durationMs: safeDuration,
     bpm: safeBpm,
     peaks,
+    overviewPeaks,
     lowPeaks,
     midPeaks,
     highPeaks,

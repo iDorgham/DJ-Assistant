@@ -239,18 +239,7 @@ fn undo(conn: &Connection, undo_id: &str) -> usize {
 
 /// A patch with every field absent — the bulk editor sends only what changed.
 fn patch() -> MetadataPatch {
-    MetadataPatch {
-        title: None,
-        artist: None,
-        album: None,
-        genre: None,
-        label: None,
-        year: None,
-        comments: None,
-        rating: None,
-        energy: None,
-        tags: None,
-    }
+    MetadataPatch::default()
 }
 
 fn three_tracks() -> Connection {

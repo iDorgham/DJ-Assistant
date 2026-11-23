@@ -46,7 +46,7 @@ export function CompactWaveform({
     ctx.scale(dpr, dpr);
     ctx.clearRect(0, 0, width, height);
 
-    if (!waveform || waveform.peaks.length === 0) {
+    if (!waveform || waveform.overviewPeaks.length === 0) {
       // Carbon: gray-90 dark / gray-10 light
       ctx.fillStyle = isDarkTheme ? "#262626" : "#f4f4f4";
       ctx.fillRect(0, 0, width, height);
@@ -55,7 +55,7 @@ export function CompactWaveform({
 
     const centerY = height * 0.5;
     const maxH = height * 0.44;
-    const totalPeaks = waveform.peaks.length;
+    const totalPeaks = waveform.overviewPeaks.length;
     const playedX = (positionMs / safeDuration) * width;
 
     // IBM Carbon: Cyan-40 played / Teal-70 muted (dark), Cyan-60 played / Cyan-30 muted (light)
@@ -66,7 +66,7 @@ export function CompactWaveform({
     const step = 2;
     for (let x = 0; x < width; x += step) {
       const peakIdx = Math.min(totalPeaks - 1, Math.max(0, Math.floor((x / width) * totalPeaks)));
-      const amp = waveform.peaks[peakIdx] || 0.1;
+      const amp = waveform.overviewPeaks[peakIdx] || 0.1;
       const h = amp * maxH;
       const isPlayed = x <= playedX;
 
@@ -152,7 +152,7 @@ export function CompactWaveform({
     setHoverX(e.clientX - rect.left);
   };
 
-  // Keyboard seeking (docs/ui/10): arrows seek ±2s (Shift ±10s), Home/End jump.
+  // Keyboard seeking (docs/ui-ux/10): arrows seek ±2s (Shift ±10s), Home/End jump.
   const handleKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
     let nextMs: number | null = null;
     if (e.key === "ArrowLeft" || e.key === "ArrowDown") {

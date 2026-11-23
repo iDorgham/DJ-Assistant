@@ -4,6 +4,7 @@ import { PanelRight } from "lucide-react";
 import { formatTimecode, getBeatPosition } from "../../lib/waveform-generator";
 import { formatBpm, formatKey } from "../../lib/library";
 import { camelotColor } from "../../lib/camelot";
+import { formatGridConfidence, gridConfidenceTier } from "../../lib/grid-confidence";
 
 interface PlayerTrackLineProps {
   track: TrackSummary | null;
@@ -11,6 +12,8 @@ interface PlayerTrackLineProps {
   durationMs: number;
   bpm: number;
   gridOffsetMs?: number;
+  /** Beat-grid confidence 0..=1 from the detail row (T2.4.3); hidden when null. */
+  beatgridConfidence?: number | null;
   /** Full uses the 24px line with hundredths; Mini uses the 20px line. */
   large?: boolean;
   isDarkTheme?: boolean;
@@ -29,6 +32,7 @@ export function PlayerTrackLine({
   durationMs,
   bpm,
   gridOffsetMs = 0,
+  beatgridConfidence = null,
   large = false,
   isDarkTheme = true,
   onInspect,
@@ -43,6 +47,9 @@ export function PlayerTrackLine({
   const keyLabel = track ? formatKey(track.keyCamelot, track.keyClassical) : "-";
   const keyColor = camelotColor(track?.keyCamelot, isDarkTheme ? "dark" : "light");
   const beatPosition = getBeatPosition(positionMs, bpm || track?.bpm || 124, gridOffsetMs);
+  // The chip only appears once the detail row reports a grid confidence
+  // (T2.4.3): an unanalysed track must not look like a trusted 0% grid.
+  const gridConfidenceLabel = formatGridConfidence(beatgridConfidence);
 
   return (
     <div className={`flex w-full min-w-0 shrink-0 items-center gap-3 ${large ? "h-6" : "h-5"}`}>
@@ -76,6 +83,24 @@ export function PlayerTrackLine({
             <span className="text-[9px] uppercase tracking-wider text-dj-text-muted">BPM</span>
             <span className="tabular-nums">{formatBpm(bpm || track.bpm)}</span>
           </span>
+
+          {gridConfidenceLabel && (
+            <span
+              className={`flex items-center gap-1 rounded-sm border px-2 py-0.5 font-mono text-[11px] font-semibold ${
+                gridConfidenceTier(beatgridConfidence) === "low"
+                  ? "border-dj-warning/40 bg-dj-warning/10 text-dj-warning"
+                  : "border-dj-border bg-dj-elevated text-dj-text"
+              }`}
+              title={
+                gridConfidenceTier(beatgridConfidence) === "low"
+                  ? `Low beat-grid confidence (${gridConfidenceLabel}) — check the grid against the downbeat`
+                  : `Beat-grid confidence: ${gridConfidenceLabel}`
+              }
+            >
+              <span className="text-[9px] uppercase tracking-wider text-dj-text-muted">Grid</span>
+              <span className="tabular-nums">{gridConfidenceLabel}</span>
+            </span>
+          )}
 
           {(track.keyCamelot || track.keyClassical) && (
             <span

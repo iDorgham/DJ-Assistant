@@ -12,7 +12,7 @@ import {
 import { StarRating } from "./StarRating";
 
 /**
- * Bulk action bar (T2.1.3, `docs/ui/03-LIBRARY-VIEW.md` §6).
+ * Bulk action bar (T2.1.3, `docs/ui-ux/03-LIBRARY-VIEW.md` §6).
  *
  * Appears above the table for a real multi-selection. The scope is announced
  * first, then the actions — the live ones are wired, and the rest are shown

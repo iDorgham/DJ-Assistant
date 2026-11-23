@@ -32,6 +32,24 @@ export interface TrackSummary {
   artworkHash?: string | null;
   createdAt: string;
   updatedAt: string;
+  /** Second comment field (Traktor / Serato Comment 2). */
+  comment2?: string | null;
+  composer?: string | null;
+  albumArtist?: string | null;
+  remixer?: string | null;
+  producer?: string | null;
+  grouping?: string | null;
+  trackNumber?: number | null;
+  discNumber?: number | null;
+  isrc?: string | null;
+  catalogNumber?: string | null;
+  releaseDate?: string | null;
+  copyright?: string | null;
+  mood?: string | null;
+  mixName?: string | null;
+  lyrics?: string | null;
+  /** Derived at scan time from file size and duration. */
+  bitrateKbps?: number | null;
 }
 
 export interface CuePoint {
@@ -54,6 +72,8 @@ export interface TrackDetail extends TrackSummary {
   loudnessLufs?: number | null;
   vocalPresence?: boolean | null;
   phraseConfidence?: number | null;
+  /** Beat-grid alignment confidence 0..=1 (migration 009); null until re-analysed. */
+  beatgridConfidence?: number | null;
   analysisVersion?: string | null;
   cues: CuePoint[];
   notes?: string | null;
@@ -216,6 +236,36 @@ export interface ArtworkBackfillCompletedEvent {
   durationMs: number;
 }
 
+/** Result of filling artwork pointers for tracks imported without them. */
+/** Outcome of the one-time beat-grid confidence backfill (issue #89). */
+export interface BackfillGridConfidenceResponse {
+  /** Rows owed a confidence: complete at the current version, still empty. */
+  scanned: number;
+  /** Rows that now carry one. */
+  updated: number;
+  /** Rows where no tempo could be established now. */
+  noTempo: number;
+  /** Rows whose recomputed BPM is not the stored one, left for a forced re-analysis. */
+  mismatched: number;
+  /** Rows whose file could not be decoded, or whose write failed. */
+  failed: number;
+  /** The first few per-track failures. */
+  errors: string[];
+}
+
+export interface RefreshArtworkResponse {
+  /** Rows whose embedded artwork was missing from the cache. */
+  scanned: number;
+  /** Rows now pointing at a cached image. */
+  updated: number;
+  /** Rows whose files have no embedded artwork. */
+  missing: number;
+  /** Rows whose file or cache write failed. */
+  failed: number;
+  /** First few failures, for logs and the status bar. */
+  errors: string[];
+}
+
 // --- Track metadata writes (T2.1.4 rating, T2.1.6 energy) ---
 // Every write is logged as a `skill_runs` row that holds the pre-write values,
 // so the UI can offer a real Undo instead of a hopeful re-read.
@@ -246,6 +296,24 @@ export interface UpdateTrackMetadataRequest {
   year?: number;
   /** Free-text comment. `""` clears the comment. */
   comments?: string;
+  /** Second comment field. Empty string clears it. */
+  comment2?: string;
+  composer?: string;
+  albumArtist?: string;
+  remixer?: string;
+  producer?: string;
+  grouping?: string;
+  /** Track number. 0 clears it. */
+  trackNumber?: number;
+  /** Disc number. 0 clears it. */
+  discNumber?: number;
+  isrc?: string;
+  catalogNumber?: string;
+  releaseDate?: string;
+  copyright?: string;
+  mood?: string;
+  mixName?: string;
+  lyrics?: string;
   /**
    * The **complete** set of custom tags. `[]` removes every tag; omitting
    * the field leaves the tags untouched.
@@ -432,6 +500,114 @@ export interface SimilarTrackResult extends TrackSummary {
 export interface FindSimilarTracksResponse {
   seedTrackId: string;
   results: SimilarTrackResult[];
+}
+
+// --- Tag Surgeon (T2.2.1): read-only duplicate-spelling scan ---
+
+export interface TagClusterRequest {
+  /** Restrict to these tracks; omit to scan the whole library. An empty list is refused. */
+  trackIds?: string[];
+}
+
+export interface ClusterMember {
+  raw: string;
+  trackCount: number;
+}
+
+export interface SpellingCluster {
+  /** Internal fold key — never rendered; the UI shows raw spellings. */
+  key: string;
+  /** Track count desc, then raw asc — members[0] is the representative spelling. */
+  members: ClusterMember[];
+  /** Union of member track ids, never the sum. */
+  distinctTrackCount: number;
+  /** Suggested single spelling (T2.2.2): the representative, trimmed and collapsed. */
+  canonical: string;
+  /** Union of track ids carrying any spelling other than `canonical`. */
+  rewriteTrackCount: number;
+  /** Up to 5 ids from that rewrite set, ascending: the preview's sample tracks (T2.2.3). */
+  sampleTrackIds: string[];
+}
+
+/** Sample tracks for the Tag Surgeon preview (T2.2.3). Read-only. */
+export interface TagPreviewRequest {
+  /** The sample track ids to describe. An empty list is refused. */
+  trackIds: string[];
+}
+
+/** One sample track with every tag it carries. */
+export interface TagPreviewTrack {
+  trackId: string;
+  title: string;
+  artist: string;
+  tags: string[];
+}
+
+/** One confirmed spelling rewrite: every track carrying `from` gets `to`. */
+export interface TagRenameRequest {
+  from: string;
+  to: string;
+}
+
+/** Applies the Tag Surgeon's confirmed rewrites to the scanned tracks (T2.2.4). */
+export interface TagApplyRequest {
+  /** The scope the scan covered. An empty list is refused. */
+  trackIds: string[];
+  /** The spellings to rewrite, exactly as the preview showed them. */
+  renames: TagRenameRequest[];
+}
+
+/** A tag spelling alias: tags written with `alias` are saved as `canonical` (T2.2.5). */
+export interface TagAlias {
+  alias: string;
+  canonical: string;
+}
+
+export interface AddTagAliasRequest {
+  alias: string;
+  canonical: string;
+}
+
+export interface RemoveTagAliasRequest {
+  alias: string;
+}
+
+export interface TagApplyResponse {
+  /** Id of the undo snapshot, or empty if no track changed. Undo with `undoTrackMetadata`. */
+  undoId: string;
+  /** Number of tracks whose tag set changed. */
+  updated: number;
+}
+
+/** One past Tag Surgeon apply in the history list (T2.2.6). */
+export interface TagHistoryEntry {
+  /** The snapshot id; undo it with `undoTrackMetadata`. */
+  undoId: string;
+  /** When the apply ran: UTC, `YYYY-MM-DD HH:MM:SS` (SQLite `datetime('now')`). */
+  createdAt: string;
+  /** Already undone, so it cannot be undone again. */
+  undone: boolean;
+  /** The spellings it rewrote. */
+  renames: TagRenameRequest[];
+  /** Tracks whose tag set it changed. */
+  trackCount: number;
+}
+
+export interface PrefixEdge {
+  narrowerKey: string;
+  narrowerLabel: string;
+  narrowerTracks: number;
+  broaderKey: string;
+  broaderLabel: string;
+  broaderTracks: number;
+  sharedPrefix: string;
+}
+
+export interface TagClusterReport {
+  scannedTags: number;
+  ignoredTags: number;
+  clusters: SpellingCluster[];
+  prefixEdges: PrefixEdge[];
 }
 
 // --- Tag health / enrichment gaps (B) ---
@@ -704,4 +880,141 @@ export interface ChartListResponse {
   snapshotDate: string;
   entries: ChartEntry[];
   total: number;
+}
+
+// --- Library › Maintain: duplicates (T2.3.1), versions (T2.3.2), health (T2.3.3) ---
+
+/** The track fields every Maintain list renders. */
+export interface MaintainTrack {
+  id: string;
+  title: string;
+  artist: string;
+  album?: string | null;
+  durationMs: number;
+  format?: string | null;
+  bitrateKbps?: number | null;
+  filePath: string;
+  isrc?: string | null;
+}
+
+/** Why a group's tracks are believed to be one recording. */
+export type DuplicateReason = "same_isrc" | "near_match";
+
+export interface DuplicateGroupView {
+  /** Hash of the membership; a "Keep both" lapses when a track joins or leaves. */
+  key: string;
+  reason: DuplicateReason;
+  tracks: MaintainTrack[];
+}
+
+/** A byte-identical file the scanner skipped because `track` already owns it. */
+export interface DuplicateCopyView {
+  copyPath: string;
+  detectedAt: string;
+  track: MaintainTrack;
+}
+
+export interface LibraryDuplicatesResponse {
+  groups: DuplicateGroupView[];
+  copies: DuplicateCopyView[];
+  /** Groups hidden by an earlier "Keep both". */
+  dismissedCount: number;
+}
+
+export interface DismissDuplicateGroupRequest {
+  key: string;
+}
+
+export interface ForgetDuplicateCopyRequest {
+  path: string;
+}
+
+export type VersionKind =
+  | "original"
+  | "radio"
+  | "extended"
+  | "club"
+  | "instrumental"
+  | "acapella"
+  | "dub"
+  | "vip"
+  | "remix"
+  | "edit"
+  | "live"
+  | "other";
+
+export interface VersionMemberView {
+  track: MaintainTrack;
+  kind: VersionKind;
+  /** The marker as written ("Extended Mix"); absent for an unmarked title. */
+  label?: string | null;
+}
+
+export interface VersionGroupView {
+  key: string;
+  artist: string;
+  baseTitle: string;
+  members: VersionMemberView[];
+}
+
+export interface LibraryVersionsResponse {
+  groups: VersionGroupView[];
+}
+
+export interface HealthCountView {
+  label: string;
+  count: number;
+}
+
+export interface HealthCategoryView {
+  id: string;
+  label: string;
+  /** Locked v1 weight in percent (D-050). */
+  weight: number;
+  /** False while the app cannot measure the category; it is neutral. */
+  configured: boolean;
+  /** 0–100; null when not configured. */
+  score: number | null;
+  counts: HealthCountView[];
+  /** Up to 500 failing tracks, for drill-down. */
+  affected: MaintainTrack[];
+  affectedTotal: number;
+}
+
+export interface LibraryHealthResponse {
+  /** 0–100 over the configured categories; null for an empty library. */
+  score: number | null;
+  trackCount: number;
+  categories: HealthCategoryView[];
+}
+
+/** The Prep Auditor's scope (T2.3.4): selected tracks, or the whole library. */
+export interface PrepAuditRequest {
+  /** Omit (or null) for the whole library; an empty list is refused. */
+  trackIds?: string[] | null;
+}
+
+export type PrepSeverity = "blocker" | "warning";
+
+export type PrepVerdict = "ready" | "almost_ready" | "not_ready" | "empty";
+
+export interface PrepCheckView {
+  /** "files" | "analysis" | "stale_analysis" | "beatgrid" | "cues" | "tags" | "duplicates". */
+  id: string;
+  label: string;
+  severity: PrepSeverity;
+  /** What fixing it means, in the user's words. */
+  fix: string;
+  /** Up to 500 failing tracks, for drill-down. */
+  failing: MaintainTrack[];
+  failingTotal: number;
+}
+
+export interface PrepAuditResponse {
+  verdict: PrepVerdict;
+  scope: "selection" | "library";
+  trackCount: number;
+  /** Selected ids no longer in the library (removed meanwhile). */
+  skippedCount: number;
+  checks: PrepCheckView[];
 }

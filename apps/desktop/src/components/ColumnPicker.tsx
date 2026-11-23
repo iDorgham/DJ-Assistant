@@ -5,7 +5,7 @@ import { canHideColumn, columnDefinition } from "../lib/library-columns";
 import type { ColumnId, ColumnState } from "../lib/library-columns";
 
 /**
- * Column checklist for the Library table (T2.1.5, docs/ui/03 §3.2).
+ * Column checklist for the Library table (T2.1.5, docs/ui-ux/03 §3.2).
  *
  * It only ever edits the column list through the pure helpers in
  * `lib/library-columns` — the invariant that a table keeps at least one identity
@@ -65,14 +65,27 @@ export function ColumnPicker({
             <li
               key={column.id}
               draggable
-              onDragStart={() => setDraggedId(column.id)}
+              onDragStart={(event) => {
+                // WebView2 only starts an HTML5 drag when the payload is set,
+                // and the payload also survives a re-render between drag start
+                // and drop. The Tauri window disables native file-drop so these
+                // events reach the webview at all (dragDropEnabled: false).
+                event.dataTransfer.setData("text/plain", column.id);
+                event.dataTransfer.effectAllowed = "move";
+                setDraggedId(column.id);
+              }}
               onDragEnd={() => setDraggedId(null)}
               onDragOver={(event) => {
-                if (draggedId && draggedId !== column.id) event.preventDefault();
+                if (draggedId && draggedId !== column.id) {
+                  event.preventDefault();
+                  event.dataTransfer.dropEffect = "move";
+                }
               }}
               onDrop={(event) => {
                 event.preventDefault();
-                if (draggedId) onMove(draggedId, column.id);
+                const dropped = event.dataTransfer.getData("text/plain");
+                const movedId = (dropped || draggedId) as ColumnId | null;
+                if (movedId) onMove(movedId, column.id);
                 setDraggedId(null);
               }}
               className={`group flex items-center gap-2 px-3 py-1 text-xs transition ${

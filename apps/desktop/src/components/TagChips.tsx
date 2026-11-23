@@ -1,7 +1,7 @@
 import { summarizeTags } from "../lib/tags";
 
 /**
- * Custom tag chips (T2.1.7, `docs/ui/01-DESIGN-SYSTEM.md` §3 "Tag chips").
+ * Custom tag chips (T2.1.7, `docs/ui-ux/01-DESIGN-SYSTEM.md` §3 "Tag chips").
  *
  * The chip treatment is fixed by the design system: `bg.elevated`,
  * `text.secondary`, `radius.sm`, a hairline border and compact padding. A

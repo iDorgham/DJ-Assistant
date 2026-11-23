@@ -42,6 +42,7 @@ pub fn persist_analysis_results(
             loudness_lufs       = ?,
             vocal_presence      = ?,
             phrase_confidence   = ?,
+            beatgrid_confidence = ?,
             analysis_status     = ?,
             analysis_version    = ?,
             updated_at          = ?
@@ -53,6 +54,7 @@ pub fn persist_analysis_results(
             results.loudness_lufs.map(f64::from),
             if results.vocal_presence { 1i64 } else { 0i64 },
             results.phrase_confidence.map(f64::from),
+            results.beatgrid_confidence.map(f64::from),
             status,
             &results.analysis_version,
             now,
@@ -79,6 +81,7 @@ pub fn persist_analysis_failure(
             loudness_lufs       = NULL,
             vocal_presence      = 0,
             phrase_confidence   = NULL,
+            beatgrid_confidence = NULL,
             analysis_status     = 'failed',
             analysis_version    = ?,
             updated_at          = ?
@@ -187,6 +190,7 @@ mod tests {
     fn base_results() -> AnalysisResults {
         AnalysisResults {
             bpm: Some(128.0),
+            beatgrid_confidence: Some(0.9),
             key_camelot: Some("8A".to_string()),
             key_classical: Some("A minor".to_string()),
             loudness_lufs: Some(-8.0),
@@ -244,5 +248,57 @@ mod tests {
         let mut r = base_results();
         r.phrase_confidence = None;
         assert_eq!(classify_analysis_status(&r), "needs_review");
+    }
+
+    #[test]
+    fn persist_analysis_results_round_trips_the_beatgrid_confidence() {
+        // T2.4.3 contract: the writer in persist_analysis_results must land on
+        // the same column the get_track detail projection reads. The column
+        // list itself is contract-tested in tests/schema.
+        let conn = Connection::open_in_memory().unwrap();
+        conn.execute_batch(
+            "CREATE TABLE tracks (
+                id TEXT PRIMARY KEY,
+                bpm REAL,
+                key_camelot TEXT,
+                key_classical TEXT,
+                loudness_lufs REAL,
+                vocal_presence INTEGER,
+                phrase_confidence REAL,
+                beatgrid_confidence REAL,
+                analysis_status TEXT,
+                analysis_version TEXT,
+                updated_at TEXT
+            );
+            INSERT INTO tracks (id, analysis_status) VALUES ('t1', 'pending');",
+        )
+        .unwrap();
+
+        let results = base_results();
+        persist_analysis_results(&conn, "t1", &results).unwrap();
+
+        let stored: Option<f64> = conn
+            .query_row(
+                "SELECT beatgrid_confidence FROM tracks WHERE id = 't1'",
+                [],
+                |row| row.get(0),
+            )
+            .unwrap();
+        assert_eq!(
+            stored,
+            results.beatgrid_confidence.map(f64::from),
+            "the written confidence must equal the reported one"
+        );
+
+        // A failed analysis must clear it, never leave a stale value behind.
+        persist_analysis_failure(&conn, "t1", "test").unwrap();
+        let cleared: Option<f64> = conn
+            .query_row(
+                "SELECT beatgrid_confidence FROM tracks WHERE id = 't1'",
+                [],
+                |row| row.get(0),
+            )
+            .unwrap();
+        assert_eq!(cleared, None, "failure must NULL the stale confidence");
     }
 }
