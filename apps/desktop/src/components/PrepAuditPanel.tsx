@@ -51,7 +51,7 @@ export function PrepAuditPanel({ audit, error, onRetry, onOpenTrack }: PrepAudit
   const renderCheck = (check: PrepCheckView) => {
     const expanded = openCheck === check.id;
     const canDrill = check.failing.length > 0;
-    const note = affectedNote(check.failing.length, check.failingTotal);
+    const note = affectedNote(Math.min(drillLimit, check.failing.length), check.failingTotal);
     return (
       <li key={check.id} className="rounded-md border border-dj-border bg-dj-elevated/40">
         <button

@@ -133,7 +133,7 @@ fn blank(value: &Option<String>) -> bool {
 
 /// Tracks whose tag the Tag Surgeon would rewrite: within the scope's tag
 /// vocabulary, every track carrying a spelling other than its cluster's
-/// canonical one.
+/// canonical one, in clusters that span at least two tracks.
 pub fn tag_clash_ids(values: &[TagValue]) -> BTreeSet<String> {
     let by_raw: HashMap<&str, &[String]> = values
         .iter()
@@ -141,6 +141,11 @@ pub fn tag_clash_ids(values: &[TagValue]) -> BTreeSet<String> {
         .collect();
     let mut ids = BTreeSet::new();
     for cluster in cluster_tags(values).clusters {
+        // Two spellings on one track are tidy-up, not a clash with another
+        // track.
+        if cluster.distinct_track_count < 2 {
+            continue;
+        }
         for member in &cluster.members {
             if member.raw == cluster.canonical {
                 continue;
@@ -456,6 +461,21 @@ mod tests {
         // "deep house" is the canonical spelling; the other two are rewritten.
         let ids = tag_clash_ids(&values);
         assert_eq!(ids, ["d".to_string(), "e".to_string()].into());
+    }
+
+    #[test]
+    fn two_spellings_on_one_track_are_not_a_clash() {
+        let values = vec![
+            TagValue {
+                raw: "deep house".into(),
+                track_ids: vec!["a".into()],
+            },
+            TagValue {
+                raw: "déep house".into(),
+                track_ids: vec!["a".into()],
+            },
+        ];
+        assert!(tag_clash_ids(&values).is_empty());
     }
 
     #[test]

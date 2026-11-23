@@ -401,8 +401,21 @@ fn prep_report(
 
     // Duplicates and tag spellings are judged within the scope: a track is
     // flagged for clashing with another track the user is about to play.
-    let (groups, _) = open_groups_over(rows.iter().copied(), &snapshot.dismissed);
-    let duplicate_ids: BTreeSet<String> = groups.into_iter().flat_map(|g| g.track_ids).collect();
+    // Groups are formed over the whole library, so a "Keep both" stored under
+    // the full group's key still applies; a group counts when at least two of
+    // its members are in scope.
+    let (groups, _) = open_groups(&snapshot);
+    let duplicate_ids: BTreeSet<String> = groups
+        .into_iter()
+        .map(|g| {
+            g.track_ids
+                .into_iter()
+                .filter(|id| in_scope(id))
+                .collect::<Vec<_>>()
+        })
+        .filter(|members| members.len() > 1)
+        .flatten()
+        .collect();
     let mut by_tag: std::collections::BTreeMap<String, Vec<String>> =
         std::collections::BTreeMap::new();
     for (track_id, tag) in tag_rows {
