@@ -9,7 +9,7 @@ fact, it belongs in [`facts.md`](./facts.md). Delete anything stale.
 - `origin/main` = `11f87333`. Merged since 11-19: PR #91 (library table pass, migration 010,
   `refresh_artwork`), #92 (state audit correction), #96 (issue #89 `beatgrid_confidence`
   backfill; issue closed), #98 (T2.3.1–T2.3.3 Maintain dialog: duplicates, versions, Library
-  Health Score; migration 012) and #99 (T2.3.4 Prep Auditor). **No PRs open.**
+  Health Score; migration 012) and #99 (T2.3.4 Prep Auditor). **Open: PR #100 (this refresh) and PR #101 (QA close-out).**
 - **Code-shipped, waiting on running-window QA + the human tick (F-012):** T2.1.x boxes still
   open, Tag Surgeon T2.2.1–T2.2.6 (T2.2.1 QA recorded, tick only), T2.3.1–T2.3.4, #89 backfill.
 - **Unbuilt in Phase 2:** T2.3.5–T2.3.6 Cue Master, T2.4.4 gain/limiter + temp loop, T2.4.5
