@@ -251,17 +251,27 @@ pub async fn library_health(
         .map_err(|e| format!("health check failed: {e}"))?
 }
 
-/// What opening a track's file says about it, without decoding any audio.
+/// What a track's file looks like on disk, without decoding any audio.
+///
+/// The type is checked before anything is opened: opening a named pipe with
+/// no writer blocks, which would hang the whole report.
 fn file_state(path: &str) -> FileState {
-    match std::fs::File::open(path) {
-        Ok(file) => match file.metadata() {
-            // A directory at a track path is not an audio file, however full.
-            Ok(meta) if meta.is_file() && meta.len() > 0 => FileState::Present,
-            _ => FileState::Unreadable,
+    match std::fs::metadata(path) {
+        // A directory or pipe at a track path is not an audio file.
+        Ok(meta) if meta.is_file() && meta.len() > 0 => match std::fs::File::open(path) {
+            Ok(_) => FileState::Present,
+            Err(_) => FileState::Unreadable,
         },
+        Ok(_) => FileState::Unreadable,
         Err(err) if err.kind() == std::io::ErrorKind::NotFound => FileState::Missing,
         Err(_) => FileState::Unreadable,
     }
+}
+
+/// Whether a recorded copy's file is confirmed gone. Any other error (a
+/// permission problem, an unplugged drive's odd error) keeps it counted.
+fn copy_is_gone(path: &str) -> bool {
+    matches!(std::fs::metadata(path), Err(err) if err.kind() == std::io::ErrorKind::NotFound)
 }
 
 fn health_report(db: &Mutex<Database>) -> Result<LibraryHealthResponse, String> {
@@ -279,7 +289,12 @@ fn health_report(db: &Mutex<Database>) -> Result<LibraryHealthResponse, String> 
             }
         }
     }
-    for (_, track_id, _) in &snapshot.copies {
+    // A copy deleted outside the app no longer duplicates anything.
+    for (_, track_id, _) in snapshot
+        .copies
+        .iter()
+        .filter(|(path, _, _)| !copy_is_gone(path))
+    {
         extras += 1;
         if seen.insert(track_id.clone()) {
             duplicate_ids.push(track_id.clone());
