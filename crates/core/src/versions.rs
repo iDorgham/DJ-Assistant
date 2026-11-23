@@ -163,7 +163,10 @@ fn is_credit_or_note(text: &str) -> bool {
     let remaster_note = words.iter().any(is_remaster_word)
         && words.iter().all(|w| {
             is_remaster_word(w)
-                || matches!(*w, "digital" | "digitally" | "version" | "edition")
+                || matches!(
+                    *w,
+                    "digital" | "digitally" | "version" | "edition" | "original" | "master"
+                )
                 || (w.len() == 4 && w.chars().all(|c| c.is_ascii_digit()))
         });
     matches!(words.first(), Some(&("feat" | "ft" | "featuring" | "with"))) || remaster_note
@@ -194,9 +197,21 @@ fn split_trailing_group(title: &str) -> Option<(&str, &str)> {
         ']' => '[',
         _ => return None,
     };
-    let start = trimmed.rfind(open)?;
-    let inner = &trimmed[start + open.len_utf8()..trimmed.len() - close.len_utf8()];
-    Some((&trimmed[..start], inner))
+    // Walk back to the opener that balances the final closer, so
+    // `Song (Live at Arena (2024))` yields `Live at Arena (2024)`.
+    let mut depth = 0usize;
+    for (index, c) in trimmed.char_indices().rev() {
+        if c == close {
+            depth += 1;
+        } else if c == open {
+            depth -= 1;
+            if depth == 0 {
+                let inner = &trimmed[index + open.len_utf8()..trimmed.len() - close.len_utf8()];
+                return Some((&trimmed[..index], inner));
+            }
+        }
+    }
+    None
 }
 
 /// Reads the version out of a title, falling back to the `mix_name` tag.
@@ -214,6 +229,12 @@ pub fn parse_version(title: &str, mix_name: Option<&str>) -> ParsedVersion {
     while let Some((head, inner)) = split_trailing_group(&rest) {
         let inner = inner.trim().to_string();
         let head = head.trim_end().to_string();
+        // A credit or release note is dropped before any marker check, so
+        // `[Original Master Remastered 2024]` is not read as "Original".
+        if is_credit_or_note(&inner) {
+            rest = head;
+            continue;
+        }
         if found.is_none() {
             if let Some(kind) = classify_marker(&inner) {
                 found = Some((kind, inner));
@@ -221,18 +242,24 @@ pub fn parse_version(title: &str, mix_name: Option<&str>) -> ParsedVersion {
                 continue;
             }
         }
-        if !is_credit_or_note(&inner) {
-            break;
-        }
-        rest = head;
+        break;
     }
 
     // ` - Extended Mix` style suffix.
     if found.is_none() {
         if let Some(index) = rest.rfind(" - ") {
             let suffix = rest[index + 3..].trim().to_string();
-            if let Some(kind) = classify_marker(&suffix) {
-                found = Some((kind, suffix));
+            // `Song - Live at Arena (Part 2)`: the bracket loop kept `(Part 2)`
+            // as part of the title, so only the text before it is the marker.
+            let (marker, kept) = match split_trailing_group(&suffix) {
+                Some((head, _)) if !head.trim().is_empty() => (
+                    head.trim().to_string(),
+                    Some(suffix[head.len()..].trim().to_string()),
+                ),
+                _ => (suffix.clone(), None),
+            };
+            if let Some(kind) = classify_marker(&marker) {
+                found = Some((kind, marker));
                 rest = rest[..index].trim_end().to_string();
                 // `Song (feat. Kim) - Extended Mix`: the credit before the
                 // suffix drops too, as it does before a bracketed marker.
@@ -241,6 +268,9 @@ pub fn parse_version(title: &str, mix_name: Option<&str>) -> ParsedVersion {
                         break;
                     }
                     rest = head.trim_end().to_string();
+                }
+                if let Some(kept) = kept {
+                    rest = format!("{rest} {kept}");
                 }
             }
         }
@@ -363,6 +393,35 @@ mod tests {
         let bracketed = parse_version("Song (Extended Mix)", None);
         assert_eq!(dashed.base_title, bracketed.base_title);
         assert_eq!(dashed.kind, bracketed.kind);
+    }
+
+    #[test]
+    fn a_nested_group_is_read_whole() {
+        let parsed = parse_version("Song (Live at Arena (2024))", None);
+        assert_eq!(parsed.kind, VersionKind::Live);
+        assert_eq!(parsed.base_title, "Song");
+    }
+
+    #[test]
+    fn a_release_note_is_dropped_before_the_marker_is_read() {
+        let parsed = parse_version("Song (Radio Edit) [Original Master Remastered 2024]", None);
+        assert_eq!(parsed.kind, VersionKind::Radio);
+        assert_eq!(parsed.base_title, "Song");
+        assert_eq!(
+            parse_version("Song (Original Mix)", None).kind,
+            VersionKind::Original
+        );
+    }
+
+    #[test]
+    fn a_dashed_marker_keeps_a_title_part_after_it() {
+        let parsed = parse_version("Song - Live at Arena (Part 2)", None);
+        assert_eq!(parsed.kind, VersionKind::Live);
+        assert_eq!(parsed.base_title, "Song (Part 2)");
+        assert_eq!(
+            parse_version("Song - Extended Mix", None).base_title,
+            "Song"
+        );
     }
 
     #[test]

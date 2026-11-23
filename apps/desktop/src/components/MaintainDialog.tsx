@@ -356,7 +356,10 @@ export function MaintainDialog({
     const tone = category.configured ? scoreTone(category.score) : "neutral";
     const expanded = openCategory === category.id;
     const canDrill = category.affected.length > 0;
-    const note = affectedNote(category.affected.length, category.affectedTotal);
+    const note = affectedNote(
+      Math.min(drillLimit, category.affected.length),
+      category.affectedTotal
+    );
     return (
       <li key={category.id} className="rounded-md border border-dj-border bg-dj-elevated/40">
         <button
