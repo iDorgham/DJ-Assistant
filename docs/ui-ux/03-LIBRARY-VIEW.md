@@ -116,6 +116,9 @@ Supported notations (user preference; can show both):
 
 - Key column = colored **pills** relative to **currently playing** track (harmonic compatibility)  
 - Filter: **Compatible only** (Strict vs Wide)  
+  - No harmonic reference and the intent **off** → the box is disabled and dimmed with the help line `Play or select a track with a key to use this filter` (`canToggleCompatibleOnly`, tested in `apps/desktop/src/lib/library.test.ts`).
+  - An **applied** intent that then loses its reference → the box stays checked, enabled and removable, and the derived Key chip drops with it. Apply writes nothing while no reference resolves.
+  - *(This resolves the Pass-4 K9 "stays enabled" wording, which described only the second case.)*
 - Settings → Library / Analysis: default notation + Strict/Wide  
 
 ### 3.4 Rating — editable 5 stars
