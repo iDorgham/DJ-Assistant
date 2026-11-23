@@ -113,6 +113,7 @@ pub fn run() {
             maintain::forget_duplicate_copy,
             maintain::library_versions,
             maintain::library_health,
+            maintain::prep_audit,
             enrichment::enrichment_preview,
             enrichment::enrichment_apply,
             enrichment::enrichment_undo,

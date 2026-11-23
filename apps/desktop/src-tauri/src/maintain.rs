@@ -1,6 +1,6 @@
 //! Library › Maintain reads and the two small duplicate-review writes:
-//! duplicates (T2.3.1), versions (T2.3.2) and the Library Health Score
-//! (T2.3.3).
+//! duplicates (T2.3.1), versions (T2.3.2), the Library Health Score (T2.3.3)
+//! and the Prep Auditor checklist (T2.3.4).
 //!
 //! The rules live in `dj-assistant-core` (`duplicates`, `versions`,
 //! `library_health`, `library_hygiene`) and are tested there and in
@@ -8,7 +8,7 @@
 //! Nothing here deletes a file or a track row: "keep this one" is the existing
 //! undoable soft remove, called by the renderer.
 
-use std::collections::{HashMap, HashSet};
+use std::collections::{BTreeSet, HashMap, HashSet};
 use std::sync::{Arc, Mutex};
 
 use tauri::State;
@@ -21,14 +21,17 @@ use dj_assistant_core::library_hygiene::{
     HygieneRow, DISMISSED_KEYS_SQL, DISMISS_GROUP_SQL, DUPLICATE_COPIES_SQL, FORGET_COPY_SQL,
     HYGIENE_TRACKS_SQL,
 };
+use dj_assistant_core::library_reads::tag_vocabulary_rows;
+use dj_assistant_core::prep_audit::{audit, tag_clash_ids, PrepContext, CUE_COUNTS_SQL};
+use dj_assistant_core::tag_clustering::TagValue;
 use dj_assistant_core::versions::group_versions;
 
 use crate::db::Database;
 use crate::models::{
     DismissDuplicateGroupRequest, DuplicateCopyView, DuplicateGroupView,
     ForgetDuplicateCopyRequest, HealthCategoryView, HealthCountView, LibraryDuplicatesResponse,
-    LibraryHealthResponse, LibraryVersionsResponse, MaintainTrack, VersionGroupView,
-    VersionMemberView,
+    LibraryHealthResponse, LibraryVersionsResponse, MaintainTrack, PrepAuditRequest,
+    PrepAuditResponse, PrepCheckView, VersionGroupView, VersionMemberView,
 };
 
 /// Everything the three reads share, captured under one lock.
@@ -62,6 +65,7 @@ fn hygiene_row(row: &rusqlite::Row<'_>) -> rusqlite::Result<HygieneRow> {
         file_path: row.get(17)?,
         has_tags: row.get(18)?,
         beatgrid_confidence: row.get(19)?,
+        analysis_version: row.get(20)?,
     })
 }
 
@@ -109,16 +113,20 @@ fn track_view(row: &HygieneRow) -> MaintainTrack {
 
 /// Open (not dismissed) duplicate groups over the snapshot's rows.
 fn open_groups(snapshot: &Snapshot) -> (Vec<DuplicateGroup>, usize) {
-    let inputs: Vec<_> = snapshot
-        .rows
-        .iter()
-        .map(HygieneRow::duplicate_input)
-        .collect();
+    open_groups_over(snapshot.rows.iter(), &snapshot.dismissed)
+}
+
+/// Open duplicate groups over `rows`, and how many were dismissed.
+fn open_groups_over<'a>(
+    rows: impl Iterator<Item = &'a HygieneRow>,
+    dismissed: &HashSet<String>,
+) -> (Vec<DuplicateGroup>, usize) {
+    let inputs: Vec<_> = rows.map(HygieneRow::duplicate_input).collect();
     let all = find_duplicate_groups(&inputs, DEFAULT_DURATION_TOLERANCE_MS);
     let total = all.len();
     let open: Vec<DuplicateGroup> = all
         .into_iter()
-        .filter(|g| !snapshot.dismissed.contains(&g.key))
+        .filter(|g| !dismissed.contains(&g.key))
         .collect();
     let dismissed = total - open.len();
     (open, dismissed)
@@ -358,5 +366,126 @@ fn health_report(db: &Mutex<Database>) -> Result<LibraryHealthResponse, String> 
         score: report.score,
         track_count: report.track_count,
         categories,
+    })
+}
+
+/// The Prep Auditor (T2.3.4) over the selected tracks, or the whole library.
+#[tauri::command]
+pub async fn prep_audit(
+    db: State<'_, Arc<Mutex<Database>>>,
+    request: PrepAuditRequest,
+) -> Result<PrepAuditResponse, String> {
+    if request.track_ids.as_ref().is_some_and(Vec::is_empty) {
+        return Err("no tracks selected to audit".to_string());
+    }
+    // Same as the health report: the disk checks run on a blocking thread and
+    // the lock is held only for the reads.
+    let db = Arc::clone(&db);
+    tauri::async_runtime::spawn_blocking(move || prep_report(&db, request.track_ids))
+        .await
+        .map_err(|e| format!("prep audit failed: {e}"))?
+}
+
+fn prep_report(
+    db: &Mutex<Database>,
+    track_ids: Option<Vec<String>>,
+) -> Result<PrepAuditResponse, String> {
+    let (snapshot, cue_counts, tag_rows) = {
+        let guard = db.lock().map_err(|e| e.to_string())?;
+        let conn = guard.conn();
+        let snapshot = read_snapshot(conn)?;
+        let cue_counts: HashMap<String, u32> = read_all(conn, CUE_COUNTS_SQL, |row| {
+            Ok((row.get::<_, String>(0)?, row.get::<_, u32>(1)?))
+        })?;
+        // The whole vocabulary, filtered to the scope below: a selection of
+        // thousands of ids would not fit one IN list.
+        let read = tag_vocabulary_rows(None).map_err(|e| e.to_string())?;
+        let tag_rows: Vec<(String, String)> = read_all(conn, &read.sql, |row| {
+            Ok((row.get::<_, String>(0)?, row.get::<_, String>(1)?))
+        })?;
+        (snapshot, cue_counts, tag_rows)
+    };
+
+    let selected: Option<HashSet<&str>> = track_ids
+        .as_ref()
+        .map(|ids| ids.iter().map(String::as_str).collect());
+    let in_scope = |id: &str| selected.as_ref().is_none_or(|set| set.contains(id));
+    let rows: Vec<&HygieneRow> = snapshot.rows.iter().filter(|r| in_scope(&r.id)).collect();
+    let skipped_count = selected
+        .as_ref()
+        .map_or(0, |set| set.len().saturating_sub(rows.len()) as u64);
+
+    // Duplicates and tag spellings are judged within the scope: a track is
+    // flagged for clashing with another track the user is about to play.
+    // Groups are formed over the whole library, so a "Keep both" stored under
+    // the full group's key still applies; a group counts when at least two of
+    // its members are in scope.
+    let (groups, _) = open_groups(&snapshot);
+    let duplicate_ids: BTreeSet<String> = groups
+        .into_iter()
+        .map(|g| {
+            g.track_ids
+                .into_iter()
+                .filter(|id| in_scope(id))
+                .collect::<Vec<_>>()
+        })
+        .filter(|members| members.len() > 1)
+        .flatten()
+        .collect();
+    let mut by_tag: std::collections::BTreeMap<String, Vec<String>> =
+        std::collections::BTreeMap::new();
+    for (track_id, tag) in tag_rows {
+        if in_scope(&track_id) {
+            by_tag.entry(tag).or_default().push(track_id);
+        }
+    }
+    let values: Vec<TagValue> = by_tag
+        .into_iter()
+        .map(|(raw, track_ids)| TagValue { raw, track_ids })
+        .collect();
+    let context = PrepContext {
+        duplicate_ids,
+        tag_clash_ids: tag_clash_ids(&values),
+        current_analysis_version: Some(dj_assistant_analysis::analysis_version()),
+    };
+
+    let tracks: Vec<_> = rows
+        .iter()
+        .map(|row| {
+            let cues = cue_counts.get(&row.id).copied().unwrap_or(0);
+            row.prep_track(file_state(&row.file_path), cues)
+        })
+        .collect();
+    let report = audit(&tracks, &context);
+
+    let by_id: HashMap<&str, &HygieneRow> = rows.iter().map(|r| (r.id.as_str(), *r)).collect();
+    let checks = report
+        .checks
+        .into_iter()
+        .map(|check| PrepCheckView {
+            id: check.id.to_string(),
+            label: check.label.to_string(),
+            severity: check.severity.as_str().to_string(),
+            fix: check.fix.to_string(),
+            failing: check
+                .failing_ids
+                .iter()
+                .filter_map(|id| by_id.get(id.as_str()).map(|r| track_view(r)))
+                .collect(),
+            failing_total: check.failing_total,
+        })
+        .collect();
+
+    Ok(PrepAuditResponse {
+        verdict: report.verdict.as_str().to_string(),
+        scope: if selected.is_some() {
+            "selection"
+        } else {
+            "library"
+        }
+        .to_string(),
+        track_count: report.track_count,
+        skipped_count,
+        checks,
     })
 }

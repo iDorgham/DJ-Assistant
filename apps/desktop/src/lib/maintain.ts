@@ -1,19 +1,23 @@
 /**
  * Wording and small decisions for Library › Maintain: duplicates (T2.3.1),
- * versions (T2.3.2) and the Library Health Score (T2.3.3). Pure, so they are
+ * versions (T2.3.2), the Library Health Score (T2.3.3) and the Prep Auditor
+ * (T2.3.4). Pure, so they are
  * unit tested without a DOM; the rules themselves live in `dj-assistant-core`.
  */
 import type {
   DuplicateReason,
   HealthCategoryView,
   MaintainTrack,
+  PrepAuditResponse,
+  PrepCheckView,
   VersionKind,
 } from "@dj-assistant/shared";
 
-export type MaintainTab = "health" | "duplicates" | "versions";
+export type MaintainTab = "health" | "prep" | "duplicates" | "versions";
 
 export const MAINTAIN_TABS: { id: MaintainTab; label: string }[] = [
   { id: "health", label: "Health" },
+  { id: "prep", label: "Prep audit" },
   { id: "duplicates", label: "Duplicates" },
   { id: "versions", label: "Versions" },
 ];
@@ -150,4 +154,63 @@ export function healthSummary(score: number | null, trackCount: number): string 
   const rounded = Math.round(score);
   if (rounded >= 95) return "Your library looks healthy. Keep it that way.";
   return `Scored over ${trackCount} ${trackCount === 1 ? "track" : "tracks"}. Open a category to see what needs care.`;
+}
+
+// --- Prep Auditor (T2.3.4) ---------------------------------------------------
+
+function plural(count: number, one: string, many: string): string {
+  return `${count} ${count === 1 ? one : many}`;
+}
+
+/** What was audited: "12 selected tracks" or "the whole library (94 tracks)". */
+export function prepScopeText(
+  audit: Pick<PrepAuditResponse, "scope" | "trackCount" | "skippedCount">
+): string {
+  const base =
+    audit.scope === "selection"
+      ? plural(audit.trackCount, "selected track", "selected tracks")
+      : `the whole library (${plural(audit.trackCount, "track", "tracks")})`;
+  if (audit.skippedCount === 0) return base;
+  return `${base}; ${plural(audit.skippedCount, "selected track is", "selected tracks are")} no longer in the library`;
+}
+
+/** The headline: the verdict with its blocker and warning counts. */
+export function prepVerdictText(
+  audit: Pick<PrepAuditResponse, "verdict" | "scope" | "checks">
+): string {
+  const failing = (severity: PrepCheckView["severity"]) =>
+    audit.checks.filter((c) => c.severity === severity && c.failingTotal > 0).length;
+  const counts = [
+    failing("blocker") > 0 ? plural(failing("blocker"), "blocker", "blockers") : null,
+    failing("warning") > 0 ? plural(failing("warning"), "warning", "warnings") : null,
+  ]
+    .filter(Boolean)
+    .join(" · ");
+  switch (audit.verdict) {
+    case "ready":
+      return "Ready to play — every check passes.";
+    case "almost_ready":
+      return `Almost ready — ${counts}.`;
+    case "not_ready":
+      return `Not ready — ${counts}.`;
+    default:
+      return audit.scope === "selection"
+        ? "None of the selected tracks are in the library any more."
+        : "No tracks yet. Import a folder, then audit it before a gig.";
+  }
+}
+
+export type PrepTone = "good" | "fair" | "poor" | "neutral";
+
+export function prepVerdictTone(verdict: PrepAuditResponse["verdict"]): PrepTone {
+  if (verdict === "ready") return "good";
+  if (verdict === "almost_ready") return "fair";
+  if (verdict === "not_ready") return "poor";
+  return "neutral";
+}
+
+/** A check's status line: "All clear" or "3 tracks — Analyze these tracks". */
+export function prepCheckDetail(check: Pick<PrepCheckView, "failingTotal" | "fix">): string {
+  if (check.failingTotal === 0) return "All clear";
+  return `${plural(check.failingTotal, "track", "tracks")} — ${check.fix}`;
 }

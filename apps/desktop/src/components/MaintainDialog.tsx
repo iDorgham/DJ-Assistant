@@ -1,11 +1,4 @@
-import {
-  useCallback,
-  useEffect,
-  useRef,
-  useState,
-  type KeyboardEvent,
-  type ReactNode,
-} from "react";
+import { useCallback, useEffect, useRef, useState, type KeyboardEvent } from "react";
 import { X } from "lucide-react";
 
 import type {
@@ -14,16 +7,27 @@ import type {
   LibraryDuplicatesResponse,
   LibraryHealthResponse,
   LibraryVersionsResponse,
-  MaintainTrack,
+  PrepAuditResponse,
 } from "@dj-assistant/shared";
 
 import { ModalShell } from "./ModalShell";
+import {
+  DRILL_PAGE,
+  DrillRow,
+  LoadError,
+  TrackLine,
+  buttonClass,
+  errorClass,
+  quietButtonClass,
+} from "./MaintainParts";
+import { PrepAuditPanel } from "./PrepAuditPanel";
 import {
   dismissDuplicateGroup,
   forgetDuplicateCopy,
   libraryDuplicates,
   libraryHealth,
   libraryVersions,
+  prepAudit,
   revealInFileManager,
 } from "../services/api";
 import {
@@ -47,8 +51,8 @@ import {
 import { ReadGate, tabsToRefreshAfterWrite } from "../lib/read-gate";
 
 /**
- * Library › Maintain: the Library Health Score (T2.3.3), duplicate review
- * (T2.3.1) and version families (T2.3.2).
+ * Library › Maintain: the Library Health Score (T2.3.3), the Prep Auditor
+ * checklist (T2.3.4), duplicate review (T2.3.1) and version families (T2.3.2).
  *
  * Nothing here deletes. "Keep this one" hands the other copies to the
  * caller's soft remove, which is undoable from its toast and from the removed
@@ -65,6 +69,8 @@ interface MaintainDialogProps {
   onRemoveTracks: (trackIds: string[]) => Promise<MaintainRemoval | null>;
   /** Restores a removal made from this dialog; whether it worked. */
   onUndoRemove: (undoId: string) => Promise<boolean>;
+  /** The library selection the Prep audit checks; null audits the library. */
+  auditTrackIds?: string[] | null;
   initialTab?: MaintainTab;
 }
 
@@ -82,15 +88,6 @@ const TONE_BAR: Record<ScoreTone, string> = {
   neutral: "bg-dj-border",
 };
 
-/** Rows rendered per drill-down before "Show more". */
-const DRILL_PAGE = 50;
-
-const buttonClass =
-  "shrink-0 rounded-md border border-dj-border bg-dj-elevated px-2 py-0.5 text-[11px] text-dj-text-secondary transition hover:bg-dj-hover disabled:opacity-50";
-const quietButtonClass =
-  "shrink-0 rounded-md px-2 py-0.5 text-[11px] text-dj-text-muted transition hover:bg-dj-hover disabled:opacity-50";
-const errorClass =
-  "rounded-sm border border-dj-danger/30 bg-dj-danger/10 px-2 py-1.5 text-[11px] text-dj-danger";
 const sectionHeading = "text-[11px] font-semibold uppercase tracking-wider text-dj-text-muted";
 
 function logUnexpected(err: unknown) {
@@ -118,30 +115,6 @@ function CategoryHeading({ category, tone }: { category: HealthCategoryView; ton
       </p>
       <p className="truncate text-[11px] text-dj-text-muted">{categoryDetail(category)}</p>
       <ScoreBar tone={tone} width={category.configured ? Math.round(category.score ?? 0) : 0} />
-    </div>
-  );
-}
-
-/** One track in a category drill-down, with its Open button. */
-function DrillRow({ children, onOpen }: { children: ReactNode; onOpen: () => void }) {
-  return (
-    <li className="flex items-center justify-between gap-2">
-      {children}
-      <button type="button" onClick={onOpen} className={buttonClass}>
-        Open
-      </button>
-    </li>
-  );
-}
-
-/** A failed load with a way to try again without reopening the dialog. */
-function LoadError({ message, onRetry }: { message: string; onRetry: () => void }) {
-  return (
-    <div className="flex items-start gap-2">
-      <p className={`${errorClass} flex-1`}>{message}</p>
-      <button type="button" onClick={onRetry} className={buttonClass}>
-        Retry
-      </button>
     </div>
   );
 }
@@ -198,6 +171,7 @@ export function MaintainDialog({
   onOpenTrack,
   onRemoveTracks,
   onUndoRemove,
+  auditTrackIds = null,
   initialTab = "health",
 }: MaintainDialogProps) {
   const [tab, setTab] = useState<MaintainTab>(initialTab);
@@ -225,6 +199,15 @@ export function MaintainDialog({
   const [busy, setBusy] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
 
+  // The selection is fixed while the dialog is open (it is modal), so the
+  // fetch keeps one identity for the dialog's lifetime.
+  const [auditScope] = useState(() =>
+    auditTrackIds && auditTrackIds.length > 0 ? [...auditTrackIds] : null
+  );
+  const fetchPrep = useCallback(() => prepAudit({ trackIds: auditScope }), [auditScope]);
+  const prepRead = useTabRead<PrepAuditResponse>(fetchPrep);
+  const reloadPrep = prepRead.reload;
+
   const versionsRead = useTabRead<LibraryVersionsResponse>(libraryVersions);
   const versions = versionsRead.data;
   const versionsError = versionsRead.error;
@@ -239,9 +222,11 @@ export function MaintainDialog({
     // Health always starts a fresh scan: one already running may have checked
     // the disk before a drive went away.
     if (tab === "health") reloadHealth().catch(logUnexpected);
+    // The audit checks files on disk too, so it is always fresh.
+    if (tab === "prep") reloadPrep().catch(logUnexpected);
     if (tab === "duplicates") loadDuplicates().catch(logUnexpected);
     if (tab === "versions") loadVersions().catch(logUnexpected);
-  }, [tab, reloadHealth, loadDuplicates, loadVersions]);
+  }, [tab, reloadHealth, reloadPrep, loadDuplicates, loadVersions]);
 
   /**
    * After a write every tab is stale. Cached results and pending reads are
@@ -251,8 +236,14 @@ export function MaintainDialog({
    */
   const afterWrite = async () => {
     healthRead.reset();
+    prepRead.reset();
     versionsRead.reset();
-    const reads = { health: healthRead, duplicates: duplicatesRead, versions: versionsRead };
+    const reads = {
+      health: healthRead,
+      prep: prepRead,
+      duplicates: duplicatesRead,
+      versions: versionsRead,
+    };
     await Promise.all(tabsToRefreshAfterWrite(tabRef.current).map((t) => reads[t].reload()));
   };
 
@@ -336,20 +327,6 @@ export function MaintainDialog({
     document.getElementById(`maintain-tab-${next.id}`)?.focus();
   };
 
-  const trackLine = (track: MaintainTrack) => (
-    <div className="min-w-0">
-      <p className="truncate text-xs text-dj-text">
-        {track.title || "Untitled"}
-        <span className="text-dj-text-secondary"> — {track.artist || "Unknown artist"}</span>
-      </p>
-      <p className="truncate text-[11px] text-dj-text-muted" title={track.filePath}>
-        {[formatDuration(track.durationMs), formatQuality(track), track.filePath]
-          .filter(Boolean)
-          .join(" · ")}
-      </p>
-    </div>
-  );
-
   // --- Health ---------------------------------------------------------------
 
   const renderCategory = (category: HealthCategoryView) => {
@@ -382,7 +359,7 @@ export function MaintainDialog({
             <ul className="space-y-1.5">
               {category.affected.slice(0, drillLimit).map((track) => (
                 <DrillRow key={track.id} onOpen={() => onOpenTrack(track.id)}>
-                  {trackLine(track)}
+                  <TrackLine track={track} />
                 </DrillRow>
               ))}
             </ul>
@@ -444,7 +421,7 @@ export function MaintainDialog({
         <ul className="space-y-1.5">
           {group.tracks.map((track) => (
             <li key={track.id} className="flex items-center justify-between gap-2">
-              {trackLine(track)}
+              <TrackLine track={track} />
               <div className="flex shrink-0 items-center gap-1">
                 {track.id === keeper && (
                   <span className="text-[10px] uppercase tracking-wider text-dj-accent">
@@ -680,7 +657,7 @@ export function MaintainDialog({
   return (
     <ModalShell
       onClose={onClose}
-      ariaLabel="Maintain — library health, duplicates and versions"
+      ariaLabel="Maintain — library health, prep audit, duplicates and versions"
       panelClassName="w-[640px] max-w-full max-h-full overflow-y-auto bg-dj-panel border border-dj-border rounded-lg shadow-2xl"
     >
       <div className="flex items-center justify-between border-b border-dj-border px-4 py-3">
@@ -730,6 +707,16 @@ export function MaintainDialog({
         className="px-4 py-3"
       >
         {tab === "health" && healthPanel}
+        {tab === "prep" && (
+          <PrepAuditPanel
+            audit={prepRead.data}
+            error={prepRead.error}
+            onRetry={() => {
+              reloadPrep().catch(logUnexpected);
+            }}
+            onOpenTrack={onOpenTrack}
+          />
+        )}
         {tab === "duplicates" && duplicatesPanel}
         {tab === "versions" && versionsPanel}
       </div>

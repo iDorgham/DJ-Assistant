@@ -953,3 +953,34 @@ export interface LibraryHealthResponse {
   trackCount: number;
   categories: HealthCategoryView[];
 }
+
+/** The Prep Auditor's scope (T2.3.4): selected tracks, or the whole library. */
+export interface PrepAuditRequest {
+  /** Omit (or null) for the whole library; an empty list is refused. */
+  trackIds?: string[] | null;
+}
+
+export type PrepSeverity = "blocker" | "warning";
+
+export type PrepVerdict = "ready" | "almost_ready" | "not_ready" | "empty";
+
+export interface PrepCheckView {
+  /** "files" | "analysis" | "stale_analysis" | "beatgrid" | "cues" | "tags" | "duplicates". */
+  id: string;
+  label: string;
+  severity: PrepSeverity;
+  /** What fixing it means, in the user's words. */
+  fix: string;
+  /** Up to 500 failing tracks, for drill-down. */
+  failing: MaintainTrack[];
+  failingTotal: number;
+}
+
+export interface PrepAuditResponse {
+  verdict: PrepVerdict;
+  scope: "selection" | "library";
+  trackCount: number;
+  /** Selected ids no longer in the library (removed meanwhile). */
+  skippedCount: number;
+  checks: PrepCheckView[];
+}

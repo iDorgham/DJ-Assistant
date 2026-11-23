@@ -9,6 +9,7 @@
 
 use crate::duplicates::DuplicateInput;
 use crate::library_health::{FileState, HealthTrack};
+use crate::prep_audit::PrepTrack;
 use crate::versions::VersionInput;
 
 /// One present track with every field the three Maintain reads need, in
@@ -16,7 +17,8 @@ use crate::versions::VersionInput;
 pub const HYGIENE_TRACKS_SQL: &str = "SELECT id, title, artist, album, genre, year, label, \
      mood, energy, bpm, key_camelot, analysis_status, isrc, mix_name, duration_ms, format, \
      bitrate_kbps, file_path, \
-     EXISTS(SELECT 1 FROM track_tags tt WHERE tt.track_id = tracks.id), beatgrid_confidence \
+     EXISTS(SELECT 1 FROM track_tags tt WHERE tt.track_id = tracks.id), beatgrid_confidence, \
+     analysis_version \
      FROM tracks WHERE removed_at IS NULL ORDER BY id";
 
 /// The workspace a library scan imports into. The scanner binds this one value
@@ -97,6 +99,8 @@ pub struct HygieneRow {
     pub file_path: String,
     pub has_tags: bool,
     pub beatgrid_confidence: Option<f64>,
+    /// The analysis pipeline's version stamp; `None` before analysis.
+    pub analysis_version: Option<String>,
 }
 
 impl HygieneRow {
@@ -137,6 +141,21 @@ impl HygieneRow {
             key: self.key.clone(),
             analysis_status: self.analysis_status.clone(),
             has_beatgrid: self.beatgrid_confidence.is_some(),
+            file,
+        }
+    }
+
+    /// `file` is the caller's disk check; `cue_count` comes from
+    /// [`crate::prep_audit::CUE_COUNTS_SQL`].
+    pub fn prep_track(&self, file: FileState, cue_count: u32) -> PrepTrack {
+        PrepTrack {
+            id: self.id.clone(),
+            bpm: self.bpm,
+            key: self.key.clone(),
+            analysis_status: self.analysis_status.clone(),
+            beatgrid_confidence: self.beatgrid_confidence,
+            analysis_version: self.analysis_version.clone(),
+            cue_count,
             file,
         }
     }

@@ -25,6 +25,7 @@ pub mod library_writes;
 pub mod metadata;
 pub mod mp3;
 pub mod patch;
+pub mod prep_audit;
 pub mod providers;
 pub mod reveal;
 pub mod riff;
