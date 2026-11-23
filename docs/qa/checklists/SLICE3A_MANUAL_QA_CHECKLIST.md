@@ -1,6 +1,14 @@
 # Slice 3A — manual running-window QA (T2.1.7 · T2.1.13)
 
-**Status:** **NOT EXECUTED** — implementation ready, checklist pending (2026-10-22)
+**Status:** **EXECUTED, GATES MOSTLY CLOSED** — Pass 3 ran 2026-11-09 into 2026-11-10 on the live
+94-track library: **46 of 48 rows pass** (F1 partial after a real process restart, E3 blocked by the
+single-slot undo token). B4 FAILed at the time of the pass and A7/F6 were stale expectations; B4 was
+fixed by PR #78 (`fad2d5eb`, 2026-11-15) and **re-ran PASS on 2026-11-19**, and the A7/F6 rows were
+corrected to the shipped behaviour the same day — see
+[`../evidence/2026-11-19-PHASE2-QA-CLOSEOUT.md`](../evidence/2026-11-19-PHASE2-QA-CLOSEOUT.md) §1.
+T2.1.13's comment rows are therefore all green; T2.1.7 still owes E3 (and F1's restart half).
+Ticking stays with the human on `main`.
+**Original status (2026-10-22):** implementation ready, checklist pending.
 **Scope:** the Definition-of-Done gate for **T2.1.7** (the tags UI) and
 **T2.1.13** (comment editing). Both task boxes stay **unticked** until this
 checklist runs and every item has a recorded PASS.
@@ -64,7 +72,7 @@ the real ones, not paraphrase (`apps/desktop/src/App.tsx`,
 | A4 | The menu is open, press **ArrowDown** / **ArrowUp** | The focus moves between the menu items and stays inside the menu |
 | A5 | Right-click near the **right edge** of the window | The menu opens **towards** the cursor and stays inside the viewport |
 | A6 | Right-click a row, then choose **Edit tags…** | The metadata editor opens for that row |
-| A7 | Right-click a row that is **not** selected | The editor opens for that row; the selection is untouched |
+| A7 | Right-click a row that is **not** selected | The editor opens for that row **and that row becomes the whole selection** — `handleRowContextMenu` in `App.tsx` clears a prior multi-selection deliberately, so a menu action can never land on rows the pointer never touched. *(Expectation corrected 2026-11-19 after Pass 3 logged this as a deviation; the shipped behavior is the intended one.)* |
 
 ## 4. Section B — The metadata editor (T2.1.7 · T2.1.13)
 
@@ -130,7 +138,7 @@ the real ones, not paraphrase (`apps/desktop/src/App.tsx`,
 | F3 | Click the **Rating** / **Energy** headers | The sort is unchanged; unrated tracks stay last |
 | F4 | The tag column is on, the table is sorted and filtered | The row count matches the DB for the same sort + filter |
 | F5 | Watch the console during edits, undos, filters and sorts | No errors or warnings |
-| F6 | Right-click a row, then press **Escape** twice | The menu closes on the first Escape; the app-level Escape does not close the inspector behind it |
+| F6 | Right-click a row, then press **Escape** twice | The first Escape closes the menu. The panel is **not** guaranteed to survive the second: the window-level Escape handler deliberately closes the track panel, the modals, both dropdowns, the menu and the editor in one pass when the focus sits outside the panel (`App.tsx`, the window `keydown` effect calling `closeTrackPanel`). Pass 3 observed the panel closing on the second Escape, which is that fallback working as designed. *(Expectation corrected 2026-11-19; the row previously demanded the panel stay open.)* |
 
 ---
 

@@ -327,3 +327,43 @@ window until opened: prove registration read-only via
 `HKCU:\Control Panel\NotifyIconSettings` (ExecutablePath + InitialTooltip),
 not by walking Shell_TrayWnd (its only "DJ Assistant" button is the taskbar
 app button).
+
+## F-022 · `file_hash` is a dedup fingerprint — the peaks cache key is the integrity check (2026-11-19)
+
+`tracks.file_hash` is **BLAKE3(file_size LE + the first 1 MiB)**
+(`crates/core/src/fingerprint.rs`), deliberately *not* a content hash. Comparing it against a
+whole-file SHA-256 reports every file as "changed" — that false FAIL was the wrong measure, not a
+broken guarantee.
+
+The cheap correct check: `audio_load` derives the peaks cache key from a **fresh** re-fingerprint of
+the file on disk (`apps/desktop/src-tauri/src/commands.rs:433-441`), so a `v3-<stored file_hash>.json`
+entry written by today's load proves the on-disk fingerprint still equals the imported value. Pair
+that with `file_size` equality and mtime, and the "source audio not modified" row closes without
+hashing anything.
+
+**Rule:** read the definition of a stored hash before using it as evidence. A mismatch is a
+methodology finding until the algorithm is confirmed.
+
+## F-023 · A library imported before Slice 4 cannot answer artwork QA rows (2026-11-19)
+
+`artwork_path` / `artwork_hash` are NULL for **all 94** rows although the MP3s carry APIC frames:
+the cache scanner runs at scan time and nothing backfills existing rows (the same shape as the
+`beatgrid_confidence` gap, issue #89). T2.1.9's with-art and no-bleed rows and T2.4.5's with-art row
+are therefore **BLOCKED, not failed** — with zero cached art there is nothing that *could* bleed, and
+a placeholder-only pass has to say so.
+
+Backfilling means a re-scan that writes 94 artwork rows plus cache files — a real mutation of the
+user's library, so it is a deliberate task and not a QA step.
+
+## F-024 · Computer Use has no hover — park the pointer with a zero-delta scroll (2026-11-19)
+
+The SDK exposes no hover/move op, but `scroll({x, y, scrollX: 0, scrollY: 0})` moves the pointer to
+that pixel and leaves it there, which fires CSS `:hover` — the only way to raise a `group-hover`
+overlay (the artwork play button) in the running window.
+
+Two mechanics that cost retries: a `screenshotId` is invalidated by **`activate_window`**, so observe
+*after* activating rather than before; and the window can be minimized outside the session — recover
+with `activate_window` → `get_window` → `get_window_state` before any coordinate input.
+
+**Rule:** use element indexes, not coordinates, for a tab strip — the labels sit ~30 px apart and a
+missed click is silent.
