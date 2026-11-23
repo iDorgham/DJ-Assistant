@@ -1,4 +1,11 @@
-import { useCallback, useEffect, useRef, useState, type KeyboardEvent } from "react";
+import {
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  type KeyboardEvent,
+  type ReactNode,
+} from "react";
 import { X } from "lucide-react";
 
 import type {
@@ -95,6 +102,34 @@ function ScoreBar({ tone, width }: { tone: ScoreTone; width: number }) {
     <div className="mt-1 h-1 w-full rounded-full bg-dj-border/60">
       <div className={`h-1 rounded-full ${TONE_BAR[tone]}`} style={{ width: `${width}%` }} />
     </div>
+  );
+}
+
+/** A Health category's name, weight, failing counts and score bar. */
+function CategoryHeading({ category, tone }: { category: HealthCategoryView; tone: ScoreTone }) {
+  return (
+    <div className="min-w-0 flex-1">
+      <p className="text-xs font-medium text-dj-text">
+        {category.label}
+        <span className="ml-1.5 text-[11px] font-normal text-dj-text-muted">
+          {category.weight}%
+        </span>
+      </p>
+      <p className="truncate text-[11px] text-dj-text-muted">{categoryDetail(category)}</p>
+      <ScoreBar tone={tone} width={category.configured ? Math.round(category.score ?? 0) : 0} />
+    </div>
+  );
+}
+
+/** One track in a category drill-down, with its Open button. */
+function DrillRow({ children, onOpen }: { children: ReactNode; onOpen: () => void }) {
+  return (
+    <li className="flex items-center justify-between gap-2">
+      {children}
+      <button type="button" onClick={onOpen} className={buttonClass}>
+        Open
+      </button>
+    </li>
   );
 }
 
@@ -340,19 +375,7 @@ export function MaintainDialog({
           aria-expanded={canDrill ? expanded : undefined}
           className="flex w-full items-center gap-3 px-3 py-2 text-left transition enabled:hover:bg-dj-hover"
         >
-          <div className="min-w-0 flex-1">
-            <p className="text-xs font-medium text-dj-text">
-              {category.label}
-              <span className="ml-1.5 text-[11px] font-normal text-dj-text-muted">
-                {category.weight}%
-              </span>
-            </p>
-            <p className="truncate text-[11px] text-dj-text-muted">{categoryDetail(category)}</p>
-            <ScoreBar
-              tone={tone}
-              width={category.configured ? Math.round(category.score ?? 0) : 0}
-            />
-          </div>
+          <CategoryHeading category={category} tone={tone} />
           <span className={`w-10 text-right text-sm font-semibold tabular-nums ${TONE_TEXT[tone]}`}>
             {category.configured ? scoreText(category.score) : "–"}
           </span>
@@ -361,16 +384,9 @@ export function MaintainDialog({
           <div className="border-t border-dj-border px-3 py-2">
             <ul className="space-y-1.5">
               {category.affected.slice(0, drillLimit).map((track) => (
-                <li key={track.id} className="flex items-center justify-between gap-2">
+                <DrillRow key={track.id} onOpen={() => onOpenTrack(track.id)}>
                   {trackLine(track)}
-                  <button
-                    type="button"
-                    onClick={() => onOpenTrack(track.id)}
-                    className={buttonClass}
-                  >
-                    Open
-                  </button>
-                </li>
+                </DrillRow>
               ))}
             </ul>
             {category.affected.length > drillLimit && (
