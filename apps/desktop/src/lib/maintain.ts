@@ -18,10 +18,13 @@ export const MAINTAIN_TABS: { id: MaintainTab; label: string }[] = [
   { id: "versions", label: "Versions" },
 ];
 
-/** `m:ss`, or an en dash for an unknown length. */
+/**
+ * `m:ss`, or an en dash for an unknown length. Whole seconds are floored, as
+ * the library table and Track panel do, so one track reads the same everywhere.
+ */
 export function formatDuration(ms: number): string {
   if (!Number.isFinite(ms) || ms <= 0) return "–";
-  const total = Math.round(ms / 1000);
+  const total = Math.floor(ms / 1000);
   const minutes = Math.floor(total / 60);
   const seconds = total % 60;
   return `${minutes}:${String(seconds).padStart(2, "0")}`;
