@@ -164,10 +164,16 @@ fn is_credit_or_note(text: &str) -> bool {
 /// `(kind, normalised label)` with "Original Mix" folded into the unmarked
 /// title — the same version, written two ways. Version families and duplicate
 /// matching both compare versions through this.
+///
+/// Only "Original" and "Original Mix" fold; "Original Cut" stays its own
+/// version.
 pub fn version_identity(kind: VersionKind, label: Option<&str>) -> (VersionKind, String) {
-    match kind {
-        VersionKind::Original => (kind, String::default()),
-        _ => (kind, label.map(normalize_name).unwrap_or_default()),
+    let label = label.map(normalize_name).unwrap_or_default();
+    let plain_original = matches!(label.as_str(), "" | "original" | "original mix");
+    if kind == VersionKind::Original && plain_original {
+        (kind, String::default())
+    } else {
+        (kind, label)
     }
 }
 

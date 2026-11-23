@@ -53,7 +53,10 @@ interface MaintainDialogProps {
   /** Opens the shared Track panel for a track id. */
   onOpenTrack: (trackId: string) => void;
   /** Soft-removes tracks; resolves true when the remove went through. */
-  onRemoveTracks: (trackIds: string[]) => Promise<boolean>;
+  /** Soft-removes the tracks; `null` when it failed (the caller reported it). */
+  onRemoveTracks: (trackIds: string[]) => Promise<MaintainRemoval | null>;
+  /** Restores a removal made from this dialog; whether it worked. */
+  onUndoRemove: (undoId: string) => Promise<boolean>;
   initialTab?: MaintainTab;
 }
 
@@ -111,74 +114,83 @@ function errorText(err: unknown): string {
   return err instanceof Error ? err.message : String(err);
 }
 
+/** What a "Keep this" removal returns, so the dialog can offer its own Undo. */
+export interface MaintainRemoval {
+  message: string;
+  undoId: string | null;
+}
+
+/**
+ * One tab's read. Every request takes a token and only the newest one may
+ * publish, so a scan that finishes after a write (or after a newer request)
+ * cannot put stale data back on screen. `load` joins a pending request — a
+ * tab switch mid-scan does not start a second one; `reload` always starts a
+ * fresh request and orphans any pending one.
+ */
+function useTabRead<T>(fetch: () => Promise<T>) {
+  const [data, setData] = useState<T | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const latest = useRef(0);
+  const pending = useRef(false);
+
+  const run = useCallback(
+    async (force: boolean) => {
+      if (pending.current && !force) return;
+      latest.current += 1;
+      const request = latest.current;
+      pending.current = true;
+      setError(null);
+      try {
+        const result = await fetch();
+        if (request === latest.current) setData(result);
+      } catch (err) {
+        if (request === latest.current) setError(errorText(err));
+      } finally {
+        if (request === latest.current) pending.current = false;
+      }
+    },
+    [fetch]
+  );
+  const load = useCallback(() => run(false), [run]);
+  const reload = useCallback(() => run(true), [run]);
+  /** Drops the cached result and orphans any pending request. */
+  const reset = useCallback(() => {
+    latest.current += 1;
+    pending.current = false;
+    setData(null);
+  }, []);
+  return { data, error, load, reload, reset };
+}
+
 export function MaintainDialog({
   onClose,
   onOpenTrack,
   onRemoveTracks,
+  onUndoRemove,
   initialTab = "health",
 }: MaintainDialogProps) {
   const [tab, setTab] = useState<MaintainTab>(initialTab);
 
-  const [health, setHealth] = useState<LibraryHealthResponse | null>(null);
-  const [healthError, setHealthError] = useState<string | null>(null);
+  const healthRead = useTabRead<LibraryHealthResponse>(libraryHealth);
+  const health = healthRead.data;
+  const healthError = healthRead.error;
+  const loadHealth = healthRead.load;
   const [openCategory, setOpenCategory] = useState<string | null>(null);
   const [drillLimit, setDrillLimit] = useState(DRILL_PAGE);
 
-  const [duplicates, setDuplicates] = useState<LibraryDuplicatesResponse | null>(null);
-  const [duplicatesError, setDuplicatesError] = useState<string | null>(null);
+  const duplicatesRead = useTabRead<LibraryDuplicatesResponse>(libraryDuplicates);
+  const duplicates = duplicatesRead.data;
+  const duplicatesError = duplicatesRead.error;
+  const loadDuplicates = duplicatesRead.load;
+  const [lastRemoval, setLastRemoval] = useState<MaintainRemoval | null>(null);
   const [confirmKeep, setConfirmKeep] = useState<{ groupKey: string; keepId: string } | null>(null);
   const [busy, setBusy] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
 
-  const [versions, setVersions] = useState<LibraryVersionsResponse | null>(null);
-  const [versionsError, setVersionsError] = useState<string | null>(null);
-
-  // One request per tab at a time: switching tabs while a scan is still
-  // running must not start a second one.
-  const inFlight = useRef<Record<MaintainTab, boolean>>({
-    health: false,
-    duplicates: false,
-    versions: false,
-  });
-
-  const loadHealth = useCallback(async () => {
-    if (inFlight.current.health) return;
-    inFlight.current.health = true;
-    setHealthError(null);
-    try {
-      setHealth(await libraryHealth());
-    } catch (err) {
-      setHealthError(errorText(err));
-    } finally {
-      inFlight.current.health = false;
-    }
-  }, []);
-
-  const loadDuplicates = useCallback(async () => {
-    if (inFlight.current.duplicates) return;
-    inFlight.current.duplicates = true;
-    setDuplicatesError(null);
-    try {
-      setDuplicates(await libraryDuplicates());
-    } catch (err) {
-      setDuplicatesError(errorText(err));
-    } finally {
-      inFlight.current.duplicates = false;
-    }
-  }, []);
-
-  const loadVersions = useCallback(async () => {
-    if (inFlight.current.versions) return;
-    inFlight.current.versions = true;
-    setVersionsError(null);
-    try {
-      setVersions(await libraryVersions());
-    } catch (err) {
-      setVersionsError(errorText(err));
-    } finally {
-      inFlight.current.versions = false;
-    }
-  }, []);
+  const versionsRead = useTabRead<LibraryVersionsResponse>(libraryVersions);
+  const versions = versionsRead.data;
+  const versionsError = versionsRead.error;
+  const loadVersions = versionsRead.load;
 
   // Each tab reloads every time it is shown: the health score checks files on
   // disk, so a result from an earlier visit can already be wrong. The previous
@@ -193,9 +205,25 @@ export function MaintainDialog({
 
   /** After a write every tab is stale; refetch the visible one, drop the rest. */
   const afterWrite = async () => {
-    setHealth(null);
-    setVersions(null);
-    await loadDuplicates();
+    healthRead.reset();
+    versionsRead.reset();
+    // A scan that started before the write would publish pre-write data, so
+    // the refresh starts a new request rather than joining that one.
+    await duplicatesRead.reload();
+  };
+
+  const undoRemoval = async (removal: MaintainRemoval) => {
+    if (!removal.undoId) return;
+    setBusy(true);
+    setActionError(null);
+    try {
+      if (await onUndoRemove(removal.undoId)) {
+        setLastRemoval(null);
+        await afterWrite();
+      }
+    } finally {
+      setBusy(false);
+    }
   };
 
   const keepOne = async (group: DuplicateGroupView, keepId: string) => {
@@ -204,8 +232,12 @@ export function MaintainDialog({
     setBusy(true);
     setActionError(null);
     try {
-      if (await onRemoveTracks(others)) {
+      const removal = await onRemoveTracks(others);
+      if (removal) {
         setConfirmKeep(null);
+        // The app's Undo toast sits behind this dialog, so Undo lives here
+        // too, for as long as the dialog stays open.
+        setLastRemoval(removal);
         await afterWrite();
       }
     } finally {
@@ -463,6 +495,25 @@ export function MaintainDialog({
         <p className="text-xs text-dj-text-muted">Looking for duplicates…</p>
       )}
       {actionError && <p className={errorClass}>{actionError}</p>}
+      {lastRemoval && (
+        <div className="flex items-center gap-2 rounded-sm border border-dj-border bg-dj-elevated px-2 py-1.5">
+          <p className="flex-1 text-[11px] text-dj-text-secondary" role="status">
+            {lastRemoval.message}
+          </p>
+          {lastRemoval.undoId && (
+            <button
+              type="button"
+              className={buttonClass}
+              disabled={busy}
+              onClick={() => {
+                undoRemoval(lastRemoval).catch(logUnexpected);
+              }}
+            >
+              Undo
+            </button>
+          )}
+        </div>
+      )}
       {duplicates && (
         <>
           <p className="text-xs text-dj-text-secondary">

@@ -270,6 +270,30 @@ mod tests {
     }
 
     #[test]
+    fn only_plain_original_labels_match_an_unmarked_title() {
+        let groups = find_duplicate_groups(
+            &[
+                t("a", "X", "Song (Original Cut)", None, 300_000),
+                t("b", "X", "Song", None, 300_100),
+            ],
+            DEFAULT_DURATION_TOLERANCE_MS,
+        );
+        assert!(groups.is_empty());
+    }
+
+    #[test]
+    fn non_version_title_groups_keep_tracks_apart() {
+        let groups = find_duplicate_groups(
+            &[
+                t("a", "X", "Song (Part 1)", None, 300_000),
+                t("b", "X", "Song (Part 2)", None, 300_000),
+            ],
+            DEFAULT_DURATION_TOLERANCE_MS,
+        );
+        assert!(groups.is_empty());
+    }
+
+    #[test]
     fn unknown_duration_never_near_matches() {
         let groups = find_duplicate_groups(
             &[t("a", "X", "Song", None, 0), t("b", "X", "Song", None, 0)],

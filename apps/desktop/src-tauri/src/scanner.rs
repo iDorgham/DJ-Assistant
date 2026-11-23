@@ -9,7 +9,9 @@ use dj_assistant_core::{
     files_have_same_content, ScanDeduplicator,
 };
 
-use dj_assistant_core::library_hygiene::{is_distinct_copy, RECORD_COPY_SQL, TRACK_BY_HASH_SQL};
+use dj_assistant_core::library_hygiene::{
+    is_distinct_copy, COPY_IS_RECORDED_SQL, RECORD_COPY_SQL, RELOCATE_TRACK_SQL, TRACK_BY_HASH_SQL,
+};
 
 use crate::db::Database;
 use crate::models::{ScanCompletedEvent, ScanProgressEvent, TrackSummary};
@@ -86,9 +88,9 @@ pub fn run_scan(
             if duplicate_kind.is_duplicate() {
                 total_duplicates += 1;
                 // A byte-identical file at another path can never become a row of
-                // its own (UNIQUE file_hash), so record it for the Duplicates review
-                // — otherwise the copy is invisible. A rescan of the same file is
-                // not a copy and records nothing.
+                // its own (UNIQUE file_hash): re-point a row whose file moved, or
+                // record the copy for the Duplicates review — otherwise it is
+                // invisible. A rescan of the same file changes nothing.
                 if let Err(err) = record_duplicate_copy(&db, &hash, &path_str) {
                     log::warn!("Failed to record duplicate copy {}: {}", path_str, err);
                 }
@@ -310,34 +312,57 @@ pub fn run_scan(
     });
 }
 
-/// Records `path` as a byte-identical copy of the library row that owns
-/// `hash`. Returns whether a copy was recorded.
+/// The workspace a scan imports into (the scanner's INSERT uses the same id).
+const SCAN_WORKSPACE: &str = "default";
+
+/// Handles a scanned file whose fingerprint already belongs to a library row.
 ///
-/// Nothing is recorded when `path` *is* that row's file (a rescan), when the
-/// row's own file is gone (the file was moved or renamed, so `path` is the
-/// track, not a second copy of it), or when the two files only share a
-/// fingerprint — it covers the length and first MiB, so the bytes are compared
-/// in full before anything is called identical. The comparison runs with the
-/// database lock released.
-fn record_duplicate_copy(db: &Mutex<Database>, hash: &str, path: &str) -> Result<bool, String> {
+/// * The row's own file (a rescan): nothing to do.
+/// * The row's file is gone: the file was moved or renamed, so the row is
+///   re-pointed to `path` — a rescan is how a relocated library recovers.
+/// * Both files exist: `path` is recorded as a copy for the Duplicates review,
+///   but only after the bytes match in full, since the fingerprint covers the
+///   length and first MiB only. A path already recorded against the same
+///   track and fingerprint is not compared again, so rescans stay cheap.
+///
+/// The full comparison runs with the database lock released.
+fn record_duplicate_copy(db: &Mutex<Database>, hash: &str, path: &str) -> Result<(), String> {
     use rusqlite::OptionalExtension;
-    let owner: Option<(String, String)> = {
-        let guard = db
-            .lock()
-            .map_err(|_| "database lock poisoned".to_string())?;
-        guard
-            .conn()
-            .query_row(TRACK_BY_HASH_SQL, [hash], |row| {
-                Ok((row.get(0)?, row.get(1)?))
-            })
-            .optional()
-            .map_err(|e| e.to_string())?
-    };
+    let lock = || db.lock().map_err(|_| "database lock poisoned".to_string());
+    let owner: Option<(String, String)> = lock()?
+        .conn()
+        .query_row(
+            TRACK_BY_HASH_SQL,
+            rusqlite::params![SCAN_WORKSPACE, hash],
+            |row| Ok((row.get(0)?, row.get(1)?)),
+        )
+        .optional()
+        .map_err(|e| e.to_string())?;
     let Some((track_id, owner_path)) = owner else {
-        return Ok(false);
+        return Ok(());
     };
-    if !is_distinct_copy(&owner_path, path) || !std::path::Path::new(&owner_path).exists() {
-        return Ok(false);
+    if !is_distinct_copy(&owner_path, path) {
+        return Ok(());
+    }
+    if !std::path::Path::new(&owner_path).exists() {
+        let now = chrono::Utc::now().to_rfc3339();
+        lock()?
+            .conn()
+            .execute(RELOCATE_TRACK_SQL, rusqlite::params![path, now, track_id])
+            .map_err(|e| e.to_string())?;
+        log::info!("Track {} moved: {} -> {}", track_id, owner_path, path);
+        return Ok(());
+    }
+    let already_recorded: bool = lock()?
+        .conn()
+        .query_row(
+            COPY_IS_RECORDED_SQL,
+            rusqlite::params![path, track_id, hash],
+            |row| row.get(0),
+        )
+        .map_err(|e| e.to_string())?;
+    if already_recorded {
+        return Ok(());
     }
     if !files_have_same_content(&owner_path, path).map_err(|e| e.to_string())? {
         log::info!(
@@ -345,14 +370,11 @@ fn record_duplicate_copy(db: &Mutex<Database>, hash: &str, path: &str) -> Result
             path,
             owner_path
         );
-        return Ok(false);
+        return Ok(());
     }
-    let guard = db
-        .lock()
-        .map_err(|_| "database lock poisoned".to_string())?;
-    guard
+    lock()?
         .conn()
         .execute(RECORD_COPY_SQL, rusqlite::params![path, track_id, hash])
         .map_err(|e| e.to_string())?;
-    Ok(true)
+    Ok(())
 }

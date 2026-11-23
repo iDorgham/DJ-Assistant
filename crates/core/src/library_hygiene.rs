@@ -19,8 +19,20 @@ pub const HYGIENE_TRACKS_SQL: &str = "SELECT id, title, artist, album, genre, ye
      EXISTS(SELECT 1 FROM track_tags tt WHERE tt.track_id = tracks.id), beatgrid_confidence \
      FROM tracks WHERE removed_at IS NULL ORDER BY id";
 
-/// The library row a fingerprint already belongs to: `(id, file_path)`.
-pub const TRACK_BY_HASH_SQL: &str = "SELECT id, file_path FROM tracks WHERE file_hash = ?1 LIMIT 1";
+/// The row a fingerprint already belongs to in one workspace (`?1`):
+/// `(id, file_path)`. `UNIQUE(workspace_id, file_hash)` makes it at most one
+/// row; the `ORDER BY` only keeps the choice deterministic.
+pub const TRACK_BY_HASH_SQL: &str = "SELECT id, file_path FROM tracks \
+     WHERE workspace_id = ?1 AND file_hash = ?2 ORDER BY id LIMIT 1";
+
+/// Re-points a track whose file moved: `?1` new path, `?2` timestamp, `?3` id.
+pub const RELOCATE_TRACK_SQL: &str =
+    "UPDATE tracks SET file_path = ?1, updated_at = ?2 WHERE id = ?3";
+
+/// Whether `?1` is already recorded as a copy of track `?2` with fingerprint
+/// `?3` — a rescan then skips the full byte comparison.
+pub const COPY_IS_RECORDED_SQL: &str = "SELECT EXISTS(SELECT 1 FROM duplicate_files \
+     WHERE file_path = ?1 AND track_id = ?2 AND file_hash = ?3)";
 
 /// Records (or re-points) a skipped byte-identical copy: `?1` path, `?2` the
 /// library track it duplicates, `?3` the shared fingerprint.

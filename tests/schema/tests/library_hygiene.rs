@@ -6,8 +6,8 @@
 use dj_assistant_core::duplicates::{find_duplicate_groups, DEFAULT_DURATION_TOLERANCE_MS};
 use dj_assistant_core::library_health::{compute_health, FileState, HealthContext};
 use dj_assistant_core::library_hygiene::{
-    HygieneRow, DISMISSED_KEYS_SQL, DISMISS_GROUP_SQL, DUPLICATE_COPIES_SQL, FORGET_COPY_SQL,
-    HYGIENE_TRACKS_SQL, RECORD_COPY_SQL, TRACK_BY_HASH_SQL,
+    HygieneRow, COPY_IS_RECORDED_SQL, DISMISSED_KEYS_SQL, DISMISS_GROUP_SQL, DUPLICATE_COPIES_SQL,
+    FORGET_COPY_SQL, HYGIENE_TRACKS_SQL, RECORD_COPY_SQL, RELOCATE_TRACK_SQL, TRACK_BY_HASH_SQL,
 };
 use dj_assistant_core::versions::group_versions;
 use dj_assistant_schema_tests::open_migrated;
@@ -136,7 +136,9 @@ fn copies_are_recorded_listed_repointed_and_forgotten() {
     insert(&conn, "a", "/m/a.mp3", "h1", "Song", None);
 
     let (id, path): (String, String) = conn
-        .query_row(TRACK_BY_HASH_SQL, ["h1"], |r| Ok((r.get(0)?, r.get(1)?)))
+        .query_row(TRACK_BY_HASH_SQL, ["default", "h1"], |r| {
+            Ok((r.get(0)?, r.get(1)?))
+        })
         .expect("hash lookup");
     assert_eq!((id.as_str(), path.as_str()), ("a", "/m/a.mp3"));
 
@@ -214,6 +216,50 @@ fn a_copy_path_imported_as_its_own_track_leaves_the_list() {
     )
     .unwrap();
     assert_eq!(count(&conn), 1);
+}
+
+#[test]
+fn the_hash_lookup_is_scoped_to_the_workspace() {
+    let conn = open_migrated();
+    insert(&conn, "a", "/m/a.mp3", "h1", "Song", None);
+    let other: Option<String> = conn
+        .query_row(TRACK_BY_HASH_SQL, ["elsewhere", "h1"], |r| r.get(0))
+        .ok();
+    assert_eq!(other, None);
+}
+
+#[test]
+fn a_moved_track_is_repointed_and_a_recorded_copy_is_known() {
+    let conn = open_migrated();
+    insert(&conn, "a", "/m/a.mp3", "h1", "Song", None);
+    conn.execute(
+        RELOCATE_TRACK_SQL,
+        params!["/new/a.mp3", "2026-11-23T00:00:00Z", "a"],
+    )
+    .unwrap();
+    let path: String = conn
+        .query_row("SELECT file_path FROM tracks WHERE id = 'a'", [], |r| {
+            r.get(0)
+        })
+        .unwrap();
+    assert_eq!(path, "/new/a.mp3");
+
+    let known = |conn: &Connection, hash: &str| -> bool {
+        conn.query_row(
+            COPY_IS_RECORDED_SQL,
+            params!["/backup/a.mp3", "a", hash],
+            |r| r.get(0),
+        )
+        .unwrap()
+    };
+    assert!(!known(&conn, "h1"));
+    conn.execute(RECORD_COPY_SQL, params!["/backup/a.mp3", "a", "h1"])
+        .unwrap();
+    assert!(known(&conn, "h1"));
+    assert!(
+        !known(&conn, "h2"),
+        "a changed fingerprint is compared again"
+    );
 }
 
 #[test]
